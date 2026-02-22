@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { noSSR } from 'foxact/no-ssr'
+import { Suspense, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -95,7 +96,9 @@ export function DashboardContent({
 				{/* Left — overview + work items */}
 				<div className="lg:w-1/2 lg:min-h-0 lg:overflow-hidden flex flex-col gap-3 lg:pr-2">
 					{/* Activity marquee */}
-					<ActivityMarquee activity={activity} />
+					<Suspense fallback={<ActivityMarqueeSkeleton />}>
+						<ActivityMarquee activity={activity} />
+					</Suspense>
 
 					{/* Stats */}
 					<div className="shrink-0 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
@@ -846,7 +849,27 @@ function getMarqueeItem(
 	}
 }
 
+function ActivityMarqueeSkeleton() {
+	return (
+		<div className="shrink-0 relative overflow-hidden border-y border-border">
+			<div className="flex items-center gap-3 py-2 px-3">
+				{Array.from({ length: 4 }).map((_, i) => (
+					<div key={i} className="flex items-center gap-1 shrink-0">
+						<div className="w-8 h-3 rounded bg-muted-foreground/10 animate-pulse" />
+						<div className="w-3 h-3 rounded bg-muted-foreground/10 animate-pulse" />
+						<div
+							className="h-3 rounded bg-muted-foreground/10 animate-pulse"
+							style={{ width: `${80 + i * 20}px` }}
+						/>
+					</div>
+				))}
+			</div>
+		</div>
+	);
+}
+
 function ActivityMarquee({ activity }: { activity: Array<ActivityEvent> }) {
+	noSSR()
 	const items = activity.map((e) => getMarqueeItem(e)).filter(Boolean) as Array<{
 		icon: React.ReactNode;
 		text: string;
