@@ -78,8 +78,7 @@ export function AppNavbar({ session }: AppNavbarProps) {
 										className="w-6 h-6 rounded-full border border-border/60 dark:border-white/8 group-hover:border-foreground/20 transition-colors"
 									/>
 								</button>
-							</DropdownMenuTrigger
-								>
+							</DropdownMenuTrigger>
 							<DropdownMenuContent
 								align="end"
 								className="w-52"
