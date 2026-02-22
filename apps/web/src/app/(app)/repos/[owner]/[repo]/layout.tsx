@@ -83,7 +83,7 @@ export default async function RepoLayout({
 						description={repoData.description ?? null}
 						stars={repoData.stargazers_count}
 						forks={repoData.forks_count}
-						watchers={repoData.watchers_count}
+						watchers={repoData.subscribers_count}
 						openIssuesCount={navCounts.openIssues}
 						isPrivate={repoData.private}
 						defaultBranch={repoData.default_branch}
