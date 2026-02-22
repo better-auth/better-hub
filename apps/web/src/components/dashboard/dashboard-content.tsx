@@ -64,14 +64,6 @@ export function DashboardContent({
 	activity,
 	trending,
 }: DashboardContentProps) {
-	const greeting = getGreeting();
-	const today = new Date().toLocaleDateString("en-US", {
-		weekday: "long",
-		month: "long",
-		day: "numeric",
-		year: "numeric",
-	});
-
 	const hasWork =
 		reviewRequests.items.length > 0 ||
 		myOpenPRs.items.length > 0 ||
@@ -80,14 +72,9 @@ export function DashboardContent({
 	return (
 		<div className="flex flex-col flex-1 min-h-0 w-full">
 			{/* Header */}
-			<div className="shrink-0 pb-3">
-				<h1 className="text-sm font-medium" suppressHydrationWarning>
-					{greeting}, {user.name || user.login}
-				</h1>
-				<p className="text-[11px] text-muted-foreground font-mono" suppressHydrationWarning>
-					{today}
-				</p>
-			</div>
+			<Suspense fallback={<GreetingHeaderSkeleton />}>
+				<GreetingHeader userName={user.name || user.login} />
+			</Suspense>
 
 			<ExtensionBanner />
 
@@ -847,6 +834,37 @@ function getMarqueeItem(
 		default:
 			return null;
 	}
+}
+
+function GreetingHeaderSkeleton() {
+	return (
+		<div className="shrink-0 pb-3">
+			<div className="h-5 w-48 rounded bg-muted-foreground/10 animate-pulse" />
+			<div className="h-3.5 w-56 rounded bg-muted-foreground/10 animate-pulse mt-1" />
+		</div>
+	);
+}
+
+function GreetingHeader({ userName }: { userName: string }) {
+	noSSR();
+	const greeting = getGreeting();
+	const today = new Date().toLocaleDateString("en-US", {
+		weekday: "long",
+		month: "long",
+		day: "numeric",
+		year: "numeric",
+	});
+
+	return (
+		<div className="shrink-0 pb-3">
+			<h1 className="text-sm font-medium">
+				{greeting}, {userName}
+			</h1>
+			<p className="text-[11px] text-muted-foreground font-mono">
+				{today}
+			</p>
+		</div>
+	);
 }
 
 function ActivityMarqueeSkeleton() {
