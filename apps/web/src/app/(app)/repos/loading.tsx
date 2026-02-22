@@ -17,7 +17,9 @@ export default function ReposLoading() {
 							<div className="flex items-center gap-2">
 								<div
 									className="h-3.5 rounded bg-muted/40"
-									style={{ width: `${130 + (i % 5) * 30}px` }}
+									style={{
+										width: `${130 + (i % 5) * 30}px`,
+									}}
 								/>
 								{i % 4 === 0 && (
 									<div className="h-4 w-14 rounded-full bg-muted/25" />
@@ -25,7 +27,9 @@ export default function ReposLoading() {
 							</div>
 							<div
 								className="h-2.5 rounded bg-muted/20"
-								style={{ width: `${200 + (i % 3) * 50}px` }}
+								style={{
+									width: `${200 + (i % 3) * 50}px`,
+								}}
 							/>
 							<div className="flex items-center gap-3">
 								<div className="flex items-center gap-1">

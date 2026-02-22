@@ -282,12 +282,12 @@ function RepoResultItem({ item }: { item: RepoSearchItem }) {
 							<span className="flex items-center gap-1.5">
 								<span
 									className="w-2 h-2 rounded-full shrink-0"
-								style={{
-									backgroundColor:
-										getLanguageColor(
-											item.language,
-										),
-								}}
+									style={{
+										backgroundColor:
+											getLanguageColor(
+												item.language,
+											),
+									}}
 								/>
 								{item.language}
 							</span>
@@ -716,12 +716,12 @@ export function SearchContent({
 							>
 								<span
 									className="w-2 h-2 rounded-full shrink-0"
-								style={{
-									backgroundColor:
-										getLanguageColor(
-											lang,
-										),
-								}}
+									style={{
+										backgroundColor:
+											getLanguageColor(
+												lang,
+											),
+									}}
 								/>
 								{lang}
 							</button>

@@ -124,9 +124,17 @@ export function IssuesList({
 			setCountAdjustments((prev) => {
 				switch (event.type) {
 					case "issue:closed":
-						return { ...prev, open: prev.open - 1, closed: prev.closed + 1 };
+						return {
+							...prev,
+							open: prev.open - 1,
+							closed: prev.closed + 1,
+						};
 					case "issue:reopened":
-						return { ...prev, open: prev.open + 1, closed: prev.closed - 1 };
+						return {
+							...prev,
+							open: prev.open + 1,
+							closed: prev.closed - 1,
+						};
 					case "issue:created":
 						return { ...prev, open: prev.open + 1 };
 					default:
@@ -943,13 +951,17 @@ export function IssuesList({
 							key: "open" as TabState,
 							label: "Open",
 							icon: <CircleDot className="w-3 h-3" />,
-							count: currentOpenIssues.length + countAdjustments.open,
+							count:
+								currentOpenIssues.length +
+								countAdjustments.open,
 						},
 						{
 							key: "closed" as TabState,
 							label: "Closed",
 							icon: <CheckCircle2 className="w-3 h-3" />,
-							count: closedCompleted.length + countAdjustments.closed,
+							count:
+								closedCompleted.length +
+								countAdjustments.closed,
 						},
 						{
 							key: "not_planned" as TabState,

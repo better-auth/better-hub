@@ -29,17 +29,14 @@ export function PinButton({
 	const [pinned, setPinned] = useState(initialPinned);
 	const { mutate, isPending } = useMutation();
 
-	useMutationSubscription(
-		["pin:added", "pin:removed"],
-		(event: MutationEvent) => {
-			if (!isRepoEvent(event, owner, repo)) return;
-			if (event.type === "pin:added" && event.url === url) {
-				setPinned(true);
-			} else if (event.type === "pin:removed" && event.url === url) {
-				setPinned(false);
-			}
-		},
-	);
+	useMutationSubscription(["pin:added", "pin:removed"], (event: MutationEvent) => {
+		if (!isRepoEvent(event, owner, repo)) return;
+		if (event.type === "pin:added" && event.url === url) {
+			setPinned(true);
+		} else if (event.type === "pin:removed" && event.url === url) {
+			setPinned(false);
+		}
+	});
 
 	function handleClick(e: React.MouseEvent) {
 		e.preventDefault();
@@ -76,11 +73,7 @@ export function PinButton({
 			)}
 			title={pinned ? "Unpin from overview" : "Pin to overview"}
 		>
-			{pinned ? (
-				<PinOff className="w-3 h-3" />
-			) : (
-				<Pin className="w-3 h-3" />
-			)}
+			{pinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
 		</button>
 	);
 }

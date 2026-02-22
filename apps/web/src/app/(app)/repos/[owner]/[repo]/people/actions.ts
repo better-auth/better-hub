@@ -20,8 +20,7 @@ export async function inviteOrgMember(
 		revalidatePath(`/repos/${org}`);
 		return { success: true };
 	} catch (e: unknown) {
-		const msg =
-			e instanceof Error ? e.message : "Failed to invite member";
+		const msg = e instanceof Error ? e.message : "Failed to invite member";
 		return { success: false, error: msg };
 	}
 }
@@ -38,8 +37,7 @@ export async function removeOrgMember(
 		revalidatePath(`/repos/${org}`);
 		return { success: true };
 	} catch (e: unknown) {
-		const msg =
-			e instanceof Error ? e.message : "Failed to remove member";
+		const msg = e instanceof Error ? e.message : "Failed to remove member";
 		return { success: false, error: msg };
 	}
 }

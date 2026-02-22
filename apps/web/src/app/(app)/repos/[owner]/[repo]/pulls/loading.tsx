@@ -23,7 +23,9 @@ export default function PullsLoading() {
 								<div className="h-3 w-8 rounded bg-muted/30" />
 								<div
 									className="h-3.5 rounded bg-muted/40"
-									style={{ width: `${150 + Math.random() * 200}px` }}
+									style={{
+										width: `${150 + Math.random() * 200}px`,
+									}}
 								/>
 								{i % 4 === 0 && (
 									<div className="h-4 w-14 rounded-full bg-muted/30" />

@@ -69,10 +69,7 @@ export interface BranchRef {
 	name: string;
 }
 
-export async function getCachedBranches(
-	owner: string,
-	repo: string,
-): Promise<BranchRef[] | null> {
+export async function getCachedBranches(owner: string, repo: string): Promise<BranchRef[] | null> {
 	return redis.get<BranchRef[]>(branchesKey(owner, repo));
 }
 
@@ -84,18 +81,11 @@ export async function setCachedBranches(
 	await redis.set(branchesKey(owner, repo), branches);
 }
 
-export async function getCachedTags(
-	owner: string,
-	repo: string,
-): Promise<BranchRef[] | null> {
+export async function getCachedTags(owner: string, repo: string): Promise<BranchRef[] | null> {
 	return redis.get<BranchRef[]>(tagsKey(owner, repo));
 }
 
-export async function setCachedTags(
-	owner: string,
-	repo: string,
-	tags: BranchRef[],
-): Promise<void> {
+export async function setCachedTags(owner: string, repo: string, tags: BranchRef[]): Promise<void> {
 	await redis.set(tagsKey(owner, repo), tags);
 }
 
@@ -105,7 +95,11 @@ export async function getCachedRepoPageData<T>(owner: string, repo: string): Pro
 	return redis.get<T>(repoKey(owner, repo, "repo_page_data"));
 }
 
-export async function setCachedRepoPageData<T>(owner: string, repo: string, data: T): Promise<void> {
+export async function setCachedRepoPageData<T>(
+	owner: string,
+	repo: string,
+	data: T,
+): Promise<void> {
 	await redis.set(repoKey(owner, repo, "repo_page_data"), data);
 }
 
@@ -123,7 +117,11 @@ export async function getCachedOverviewPRs<T>(owner: string, repo: string): Prom
 	return redis.get<T[]>(repoKey(owner, repo, "overview_prs"));
 }
 
-export async function setCachedOverviewPRs<T>(owner: string, repo: string, data: T[]): Promise<void> {
+export async function setCachedOverviewPRs<T>(
+	owner: string,
+	repo: string,
+	data: T[],
+): Promise<void> {
 	await redis.set(repoKey(owner, repo, "overview_prs"), data);
 }
 
@@ -131,7 +129,11 @@ export async function getCachedOverviewIssues<T>(owner: string, repo: string): P
 	return redis.get<T[]>(repoKey(owner, repo, "overview_issues"));
 }
 
-export async function setCachedOverviewIssues<T>(owner: string, repo: string, data: T[]): Promise<void> {
+export async function setCachedOverviewIssues<T>(
+	owner: string,
+	repo: string,
+	data: T[],
+): Promise<void> {
 	await redis.set(repoKey(owner, repo, "overview_issues"), data);
 }
 
@@ -139,15 +141,26 @@ export async function getCachedOverviewEvents<T>(owner: string, repo: string): P
 	return redis.get<T[]>(repoKey(owner, repo, "overview_events"));
 }
 
-export async function setCachedOverviewEvents<T>(owner: string, repo: string, data: T[]): Promise<void> {
+export async function setCachedOverviewEvents<T>(
+	owner: string,
+	repo: string,
+	data: T[],
+): Promise<void> {
 	await redis.set(repoKey(owner, repo, "overview_events"), data);
 }
 
-export async function getCachedOverviewCommitActivity<T>(owner: string, repo: string): Promise<T[] | null> {
+export async function getCachedOverviewCommitActivity<T>(
+	owner: string,
+	repo: string,
+): Promise<T[] | null> {
 	return redis.get<T[]>(repoKey(owner, repo, "overview_commit_activity"));
 }
 
-export async function setCachedOverviewCommitActivity<T>(owner: string, repo: string, data: T[]): Promise<void> {
+export async function setCachedOverviewCommitActivity<T>(
+	owner: string,
+	repo: string,
+	data: T[],
+): Promise<void> {
 	await redis.set(repoKey(owner, repo, "overview_commit_activity"), data);
 }
 
@@ -165,10 +178,19 @@ function authorDossierKey(owner: string, repo: string, login: string): string {
 	return `author_dossier:${owner.toLowerCase()}/${repo.toLowerCase()}/${login.toLowerCase()}`;
 }
 
-export async function getCachedAuthorDossier<T>(owner: string, repo: string, login: string): Promise<T | null> {
+export async function getCachedAuthorDossier<T>(
+	owner: string,
+	repo: string,
+	login: string,
+): Promise<T | null> {
 	return redis.get<T>(authorDossierKey(owner, repo, login));
 }
 
-export async function setCachedAuthorDossier<T>(owner: string, repo: string, login: string, data: T): Promise<void> {
+export async function setCachedAuthorDossier<T>(
+	owner: string,
+	repo: string,
+	login: string,
+	data: T,
+): Promise<void> {
 	await redis.set(authorDossierKey(owner, repo, login), data);
 }

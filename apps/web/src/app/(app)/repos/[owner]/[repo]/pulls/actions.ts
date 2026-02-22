@@ -70,12 +70,12 @@ export async function fetchPRPage(
 	return { prs, pageInfo };
 }
 
-export async function fetchAllCheckStatuses(
-	owner: string,
-	repo: string,
-	prNumbers: number[],
-) {
-	return batchFetchCheckStatuses(owner, repo, prNumbers.map((n) => ({ number: n })));
+export async function fetchAllCheckStatuses(owner: string, repo: string, prNumbers: number[]) {
+	return batchFetchCheckStatuses(
+		owner,
+		repo,
+		prNumbers.map((n) => ({ number: n })),
+	);
 }
 
 export async function prefetchPRDetail(
@@ -89,10 +89,14 @@ export async function prefetchPRDetail(
 		files: () => getPullRequestFiles(owner, repo, pullNumber),
 		repo: () => getRepo(owner, repo),
 		authorProfile: () => (authorLogin ? getUser(authorLogin) : Promise.resolve(null)),
-		authorRepos: () => (authorLogin ? getUserPublicRepos(authorLogin, 6) : Promise.resolve([])),
-		authorOrgs: () => (authorLogin ? getUserPublicOrgs(authorLogin) : Promise.resolve([])),
+		authorRepos: () =>
+			authorLogin ? getUserPublicRepos(authorLogin, 6) : Promise.resolve([]),
+		authorOrgs: () =>
+			authorLogin ? getUserPublicOrgs(authorLogin) : Promise.resolve([]),
 		authorActivity: () =>
-			authorLogin ? getPersonRepoActivity(owner, repo, authorLogin) : Promise.resolve(null),
+			authorLogin
+				? getPersonRepoActivity(owner, repo, authorLogin)
+				: Promise.resolve(null),
 		contributors: () => getRepoContributors(owner, repo),
 	});
 }

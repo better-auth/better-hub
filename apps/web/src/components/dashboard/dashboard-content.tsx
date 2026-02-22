@@ -1,6 +1,6 @@
 "use client";
 
-import { noSSR } from 'foxact/no-ssr'
+import { noSSR } from "foxact/no-ssr";
 import { Suspense, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -84,7 +84,10 @@ export function DashboardContent({
 				<h1 className="text-sm font-medium" suppressHydrationWarning>
 					{greeting}, {user.name || user.login}
 				</h1>
-				<p className="text-[11px] text-muted-foreground font-mono" suppressHydrationWarning>
+				<p
+					className="text-[11px] text-muted-foreground font-mono"
+					suppressHydrationWarning
+				>
 					{today}
 				</p>
 			</div>
@@ -869,7 +872,7 @@ function ActivityMarqueeSkeleton() {
 }
 
 function ActivityMarquee({ activity }: { activity: Array<ActivityEvent> }) {
-	noSSR()
+	noSSR();
 	const items = activity.map((e) => getMarqueeItem(e)).filter(Boolean) as Array<{
 		icon: React.ReactNode;
 		text: string;

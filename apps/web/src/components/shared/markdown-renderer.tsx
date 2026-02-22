@@ -206,7 +206,10 @@ function markBadgeParagraphs(html: string): string {
 			const existing = attrs || "";
 			if (/class\s*=\s*"/i.test(existing)) {
 				// Append to existing class attribute
-				const newAttrs = existing.replace(/class\s*=\s*"/i, 'class="ghmd-badges ');
+				const newAttrs = existing.replace(
+					/class\s*=\s*"/i,
+					'class="ghmd-badges ',
+				);
 				return `<p${newAttrs}>${content}</p>`;
 			}
 			return `<p${existing} class="ghmd-badges">${content}</p>`;
@@ -284,7 +287,11 @@ function getInstallVariants(code: string): PkgVariant[] | null {
 }
 
 function escapeHtml(str: string): string {
-	return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+	return str
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;");
 }
 
 function buildInstallTabsHtml(variants: PkgVariant[], id: number): string {
@@ -321,7 +328,10 @@ export async function renderMarkdownToHtml(
 			const id = blockId++;
 			const variants = getInstallVariants(code.trimEnd());
 			if (variants) {
-				installBlocks.push({ id, html: buildInstallTabsHtml(variants, id) });
+				installBlocks.push({
+					id,
+					html: buildInstallTabsHtml(variants, id),
+				});
 				return `<div data-install-block="${id}"></div>`;
 			}
 			codeBlocks.push({ code: code.trimEnd(), lang: lang || "text", id });

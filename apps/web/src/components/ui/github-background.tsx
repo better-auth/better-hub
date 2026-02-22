@@ -44,8 +44,7 @@ export function GitHubBackground() {
 			<div
 				className="absolute inset-0"
 				style={{
-					maskImage:
-						"radial-gradient(ellipse 85% 75% at 45% 35%, black 15%, transparent 60%)",
+					maskImage: "radial-gradient(ellipse 85% 75% at 45% 35%, black 15%, transparent 60%)",
 					WebkitMaskImage:
 						"radial-gradient(ellipse 85% 75% at 45% 35%, black 15%, transparent 60%)",
 				}}
@@ -56,8 +55,7 @@ export function GitHubBackground() {
 					style={{
 						top: "8%",
 						left: "50%",
-						transform:
-							"translate(-50%, 0) perspective(500px) rotateX(30deg) rotateZ(-2deg) scale(1.3)",
+						transform: "translate(-50%, 0) perspective(500px) rotateX(30deg) rotateZ(-2deg) scale(1.3)",
 						transformOrigin: "center top",
 						opacity: 0.4,
 					}}

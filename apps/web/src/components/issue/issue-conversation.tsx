@@ -362,25 +362,23 @@ function ChatMessage({
 						No description provided.
 					</p>
 				)}
-				{entry.reactions && (
-					<div className="mt-1.5">
-						<ReactionDisplay
-							reactions={entry.reactions}
-							owner={owner}
-							repo={repo}
-							contentType={
-								entry.type === "description"
-									? "issue"
-									: "issueComment"
-							}
-							contentId={
-								entry.type === "description"
-									? issueNumber
-									: (entry.id as number)
-							}
-						/>
-					</div>
-				)}
+				<div className="mt-1.5">
+					<ReactionDisplay
+						reactions={entry.reactions ?? {}}
+						owner={owner}
+						repo={repo}
+						contentType={
+							entry.type === "description"
+								? "issue"
+								: "issueComment"
+						}
+						contentId={
+							entry.type === "description"
+								? issueNumber
+								: (entry.id as number)
+						}
+					/>
+				</div>
 			</div>
 		);
 	}
@@ -440,43 +438,41 @@ function ChatMessage({
 					</span>
 				</div>
 
-			{hasBody && renderedBody ? (
-				<div className="px-3 py-2.5">
-					{isLong ? (
-						<CollapsibleBody>
-							{renderedBody}
-						</CollapsibleBody>
-					) : (
-						renderedBody
-					)}
-				</div>
-			) : (
-				<div className="px-3 py-3">
-					<p className="text-xs text-muted-foreground/30 italic">
-						No description provided.
-					</p>
-				</div>
-			)}
-
-				{entry.reactions && (
-					<div className="px-3 pb-2">
-						<ReactionDisplay
-							reactions={entry.reactions}
-							owner={owner}
-							repo={repo}
-							contentType={
-								entry.type === "description"
-									? "issue"
-									: "issueComment"
-							}
-							contentId={
-								entry.type === "description"
-									? issueNumber
-									: (entry.id as number)
-							}
-						/>
+				{hasBody && renderedBody ? (
+					<div className="px-3 py-2.5">
+						{isLong ? (
+							<CollapsibleBody>
+								{renderedBody}
+							</CollapsibleBody>
+						) : (
+							renderedBody
+						)}
+					</div>
+				) : (
+					<div className="px-3 py-3">
+						<p className="text-xs text-muted-foreground/30 italic">
+							No description provided.
+						</p>
 					</div>
 				)}
+
+				<div className="px-3 pb-2">
+					<ReactionDisplay
+						reactions={entry.reactions ?? {}}
+						owner={owner}
+						repo={repo}
+						contentType={
+							entry.type === "description"
+								? "issue"
+								: "issueComment"
+						}
+						contentId={
+							entry.type === "description"
+								? issueNumber
+								: (entry.id as number)
+						}
+					/>
+				</div>
 			</div>
 		</div>
 	);

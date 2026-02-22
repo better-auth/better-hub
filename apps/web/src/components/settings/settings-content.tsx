@@ -26,10 +26,7 @@ interface SettingsContentProps {
 	user: { name: string; email: string; image: string | null };
 }
 
-export function SettingsContent({
-	initialSettings,
-	user,
-}: SettingsContentProps) {
+export function SettingsContent({ initialSettings, user }: SettingsContentProps) {
 	const [activeTab, setActiveTab] = useState<TabId>("general");
 	const [settings, setSettings] = useState(initialSettings);
 	const { emit } = useMutationEvents();

@@ -61,7 +61,12 @@ export function EditableBaseBranch({
 		startTransition(async () => {
 			const result = await updatePRBaseBranch(owner, repo, pullNumber, branch);
 			if (result.success) {
-				emit({ type: "pr:branch-updated", owner, repo, number: pullNumber });
+				emit({
+					type: "pr:branch-updated",
+					owner,
+					repo,
+					number: pullNumber,
+				});
 				setOpen(false);
 				router.refresh();
 			}

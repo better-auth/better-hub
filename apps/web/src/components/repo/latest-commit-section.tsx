@@ -29,11 +29,7 @@ const COMMIT_EVENTS = [
 	"repo:file-committed",
 ] as const;
 
-export function LatestCommitSection({
-	owner,
-	repoName,
-	initialCommit,
-}: LatestCommitSectionProps) {
+export function LatestCommitSection({ owner, repoName, initialCommit }: LatestCommitSectionProps) {
 	const [commit, setCommit] = useState(initialCommit);
 	const [, startTransition] = useTransition();
 
@@ -45,16 +41,13 @@ export function LatestCommitSection({
 		});
 	}, [owner, repoName]);
 
-	useMutationSubscription(
-		[...COMMIT_EVENTS],
-		(event: MutationEvent) => {
-			if (!isRepoEvent(event, owner, repoName)) return;
-			startTransition(async () => {
-				const latest = await fetchLatestCommit(owner, repoName);
-				if (latest) setCommit(latest);
-			});
-		},
-	);
+	useMutationSubscription([...COMMIT_EVENTS], (event: MutationEvent) => {
+		if (!isRepoEvent(event, owner, repoName)) return;
+		startTransition(async () => {
+			const latest = await fetchLatestCommit(owner, repoName);
+			if (latest) setCommit(latest);
+		});
+	});
 
 	if (!commit) return null;
 

@@ -29,6 +29,7 @@ export default async function ActivityPage({
 						action?: string;
 						ref?: string;
 						ref_type?: string;
+						size?: number;
 						commits?: { sha: string; message: string }[];
 						pull_request?: { number: number; title: string };
 						issue?: { number: number; title: string };

@@ -1,100 +1,177 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <title>Better Hub — Icon Generator</title>
-  <style>
-    body { background: #1a1a1a; color: #e5e5e5; font-family: system-ui; padding: 40px; }
-    .row { display: flex; gap: 32px; align-items: flex-end; margin-bottom: 32px; }
-    .item { text-align: center; }
-    .item p { font-size: 12px; color: #888; margin: 8px 0 4px; font-family: monospace; }
-    canvas { border: 1px solid #333; display: block; }
-    a.dl { display: inline-block; margin-top: 6px; color: #22c55e; font-size: 11px; font-family: monospace; text-decoration: none; padding: 4px 12px; border: 1px solid #22c55e33; border-radius: 4px; cursor: pointer; }
-    a.dl:hover { background: #22c55e11; }
-    h2 { font-size: 14px; color: #666; font-family: monospace; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; }
-    .note { max-width: 500px; font-size: 13px; color: #888; line-height: 1.6; margin-bottom: 32px; border: 1px dashed #333; padding: 16px; }
-  </style>
-</head>
-<body>
-  <h1 style="font-size:20px;margin-bottom:8px">Better Hub — Icon Generator</h1>
-  <div class="note">
-    Click each <strong>Download</strong> link to save the icon PNG.<br>
-    Place all downloaded files in the <code>icons/</code> folder, then reload the extension.
-  </div>
+	<head>
+		<title>Better Hub — Icon Generator</title>
+		<style>
+			body {
+				background: #1a1a1a;
+				color: #e5e5e5;
+				font-family: system-ui;
+				padding: 40px;
+			}
+			.row {
+				display: flex;
+				gap: 32px;
+				align-items: flex-end;
+				margin-bottom: 32px;
+			}
+			.item {
+				text-align: center;
+			}
+			.item p {
+				font-size: 12px;
+				color: #888;
+				margin: 8px 0 4px;
+				font-family: monospace;
+			}
+			canvas {
+				border: 1px solid #333;
+				display: block;
+			}
+			a.dl {
+				display: inline-block;
+				margin-top: 6px;
+				color: #22c55e;
+				font-size: 11px;
+				font-family: monospace;
+				text-decoration: none;
+				padding: 4px 12px;
+				border: 1px solid #22c55e33;
+				border-radius: 4px;
+				cursor: pointer;
+			}
+			a.dl:hover {
+				background: #22c55e11;
+			}
+			h2 {
+				font-size: 14px;
+				color: #666;
+				font-family: monospace;
+				text-transform: uppercase;
+				letter-spacing: 0.05em;
+				margin-bottom: 16px;
+			}
+			.note {
+				max-width: 500px;
+				font-size: 13px;
+				color: #888;
+				line-height: 1.6;
+				margin-bottom: 32px;
+				border: 1px dashed #333;
+				padding: 16px;
+			}
+		</style>
+	</head>
+	<body>
+		<h1 style="font-size: 20px; margin-bottom: 8px">Better Hub — Icon Generator</h1>
+		<div class="note">
+			Click each <strong>Download</strong> link to save the icon PNG.<br />
+			Place all downloaded files in the <code>icons/</code> folder, then reload
+			the extension.
+		</div>
 
-  <h2>Active Icons</h2>
-  <div class="row" id="active-row"></div>
+		<h2>Active Icons</h2>
+		<div class="row" id="active-row"></div>
 
-  <h2>Disabled Icons</h2>
-  <div class="row" id="disabled-row"></div>
+		<h2>Disabled Icons</h2>
+		<div class="row" id="disabled-row"></div>
 
-<script>
-const LOGO_SVG = `<svg width="315" height="312" viewBox="0 0 315 312" fill="none" xmlns="http://www.w3.org/2000/svg">
+		<script>
+			const LOGO_SVG = `<svg width="315" height="312" viewBox="0 0 315 312" fill="none" xmlns="http://www.w3.org/2000/svg">
 <rect x="314.838" y="14" width="283" height="314.838" transform="rotate(90 314.838 14)" fill="BGFILL"/>
 <path d="M77.32 241V70.6H133.72C153.56 70.6 168.44 74.36 178.36 81.88C188.28 89.24 193.24 100.76 193.24 116.44C193.24 123.8 191.56 130.36 188.2 136.12C185 141.88 180.36 146.36 174.28 149.56C168.2 152.76 161.08 154.36 152.92 154.36L152.68 152.92C167.56 152.92 179.24 156.76 187.72 164.44C196.2 172.12 200.44 182.2 200.44 194.68C200.44 210.04 195.56 221.64 185.8 229.48C176.04 237.16 161.88 241 143.32 241H77.32ZM93.64 225.16H143.32C156.44 225.16 166.36 222.52 173.08 217.24C179.96 211.96 183.4 204.2 183.4 193.96C183.4 184.2 179.88 176.6 172.84 171.16C165.8 165.56 155.96 162.76 143.32 162.76H93.64V225.16ZM93.64 146.92H133.72C147.32 146.92 157.8 144.36 165.16 139.24C172.52 133.96 176.2 126.52 176.2 116.92C176.2 106.68 172.68 99.08 165.64 94.12C158.6 89 147.96 86.44 133.72 86.44H93.64V146.92ZM225.884 241V217.72H248.684V241H225.884Z" fill="FGFILL"/>
 </svg>`;
 
-function drawIcon(canvas, size, disabled) {
-  return new Promise((resolve) => {
-    const ctx = canvas.getContext('2d');
-    const r = Math.round(size * 0.18);
-    ctx.clearRect(0, 0, size, size);
+			function drawIcon(canvas, size, disabled) {
+				return new Promise((resolve) => {
+					const ctx = canvas.getContext("2d");
+					const r = Math.round(size * 0.18);
+					ctx.clearRect(0, 0, size, size);
 
-    // Rounded rect clip
-    ctx.beginPath();
-    ctx.roundRect(0, 0, size, size, r);
-    ctx.clip();
+					// Rounded rect clip
+					ctx.beginPath();
+					ctx.roundRect(0, 0, size, size, r);
+					ctx.clip();
 
-    const bg = disabled ? '#1e1e1e' : '#0a0a0a';
-    const fg = disabled ? '#666' : '#ffffff';
-    const svgStr = LOGO_SVG.replace('BGFILL', bg).replace('FGFILL', fg);
-    const blob = new Blob([svgStr], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-    img.onload = () => {
-      ctx.drawImage(img, 0, 0, size, size);
-      URL.revokeObjectURL(url);
-      resolve();
-    };
-    img.src = url;
-  });
-}
+					const bg = disabled ? "#1e1e1e" : "#0a0a0a";
+					const fg = disabled ? "#666" : "#ffffff";
+					const svgStr = LOGO_SVG.replace("BGFILL", bg).replace(
+						"FGFILL",
+						fg,
+					);
+					const blob = new Blob([svgStr], { type: "image/svg+xml" });
+					const url = URL.createObjectURL(blob);
+					const img = new Image();
+					img.onload = () => {
+						ctx.drawImage(img, 0, 0, size, size);
+						URL.revokeObjectURL(url);
+						resolve();
+					};
+					img.src = url;
+				});
+			}
 
-async function createItem(container, size, disabled, filename) {
-  const div = document.createElement('div');
-  div.className = 'item';
+			async function createItem(container, size, disabled, filename) {
+				const div = document.createElement("div");
+				div.className = "item";
 
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const displaySize = Math.max(size, 64);
-  canvas.style.width = displaySize + 'px';
-  canvas.style.height = displaySize + 'px';
-  if (size <= 48) canvas.style.imageRendering = 'pixelated';
-  await drawIcon(canvas, size, disabled);
+				const canvas = document.createElement("canvas");
+				canvas.width = size;
+				canvas.height = size;
+				const displaySize = Math.max(size, 64);
+				canvas.style.width = displaySize + "px";
+				canvas.style.height = displaySize + "px";
+				if (size <= 48) canvas.style.imageRendering = "pixelated";
+				await drawIcon(canvas, size, disabled);
 
-  const label = document.createElement('p');
-  label.textContent = filename + ' (' + size + 'x' + size + ')';
+				const label = document.createElement("p");
+				label.textContent = filename + " (" + size + "x" + size + ")";
 
-  const link = document.createElement('a');
-  link.className = 'dl';
-  link.textContent = 'Download';
-  link.download = filename;
-  link.href = canvas.toDataURL('image/png');
+				const link = document.createElement("a");
+				link.className = "dl";
+				link.textContent = "Download";
+				link.download = filename;
+				link.href = canvas.toDataURL("image/png");
 
-  div.appendChild(canvas);
-  div.appendChild(label);
-  div.appendChild(link);
-  container.appendChild(div);
-}
+				div.appendChild(canvas);
+				div.appendChild(label);
+				div.appendChild(link);
+				container.appendChild(div);
+			}
 
-(async () => {
-  await createItem(document.getElementById('active-row'), 16, false, 'icon-16.png');
-  await createItem(document.getElementById('active-row'), 48, false, 'icon-48.png');
-  await createItem(document.getElementById('active-row'), 128, false, 'icon-128.png');
+			(async () => {
+				await createItem(
+					document.getElementById("active-row"),
+					16,
+					false,
+					"icon-16.png",
+				);
+				await createItem(
+					document.getElementById("active-row"),
+					48,
+					false,
+					"icon-48.png",
+				);
+				await createItem(
+					document.getElementById("active-row"),
+					128,
+					false,
+					"icon-128.png",
+				);
 
-  await createItem(document.getElementById('disabled-row'), 16, true, 'icon-disabled-16.png');
-  await createItem(document.getElementById('disabled-row'), 48, true, 'icon-disabled-48.png');
-})();
-</script>
-</body>
+				await createItem(
+					document.getElementById("disabled-row"),
+					16,
+					true,
+					"icon-disabled-16.png",
+				);
+				await createItem(
+					document.getElementById("disabled-row"),
+					48,
+					true,
+					"icon-disabled-48.png",
+				);
+			})();
+		</script>
+	</body>
 </html>

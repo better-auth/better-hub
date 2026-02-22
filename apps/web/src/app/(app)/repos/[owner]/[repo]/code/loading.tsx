@@ -17,10 +17,14 @@ export default function CodeLoading() {
 						key={i}
 						className="flex items-center gap-3 px-3 py-2 border-b border-border/40 last:border-b-0"
 					>
-						<div className={`h-4 w-4 rounded ${i < 4 ? "bg-muted/50" : "bg-muted/30"}`} />
+						<div
+							className={`h-4 w-4 rounded ${i < 4 ? "bg-muted/50" : "bg-muted/30"}`}
+						/>
 						<div
 							className="h-3 rounded bg-muted/40"
-							style={{ width: `${60 + Math.random() * 120}px` }}
+							style={{
+								width: `${60 + Math.random() * 120}px`,
+							}}
 						/>
 						{i >= 4 && (
 							<div className="h-3 w-12 rounded bg-muted/20 ml-auto" />

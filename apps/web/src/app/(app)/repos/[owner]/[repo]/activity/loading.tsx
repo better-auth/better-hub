@@ -9,7 +9,9 @@ export default function ActivityLoading() {
 						<div
 							key={i}
 							className="flex-1 rounded-sm bg-muted/30"
-							style={{ height: `${15 + Math.random() * 70}%` }}
+							style={{
+								height: `${15 + Math.random() * 70}%`,
+							}}
 						/>
 					))}
 				</div>
@@ -25,7 +27,9 @@ export default function ActivityLoading() {
 								<div className="h-3 w-20 rounded bg-muted/35" />
 								<div
 									className="h-3 rounded bg-muted/25"
-									style={{ width: `${100 + Math.random() * 200}px` }}
+									style={{
+										width: `${100 + Math.random() * 200}px`,
+									}}
 								/>
 							</div>
 							<div className="h-2.5 w-16 rounded bg-muted/15" />

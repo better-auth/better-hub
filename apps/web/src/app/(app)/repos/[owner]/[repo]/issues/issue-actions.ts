@@ -6,11 +6,7 @@ import { getErrorMessage } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { invalidateRepoCache } from "@/lib/repo-data-cache-vc";
 
-export async function fetchIssueComments(
-	owner: string,
-	repo: string,
-	issueNumber: number,
-) {
+export async function fetchIssueComments(owner: string, repo: string, issueNumber: number) {
 	const comments = await getIssueComments(owner, repo, issueNumber);
 	if (!Array.isArray(comments)) return comments;
 

@@ -44,7 +44,8 @@ export function IssueCommentsClient({
 }) {
 	const { data: comments = initialComments } = useQuery({
 		queryKey: ["issue-comments", owner, repo, issueNumber],
-		queryFn: () => fetchIssueComments(owner, repo, issueNumber) as Promise<IssueComment[]>,
+		queryFn: () =>
+			fetchIssueComments(owner, repo, issueNumber) as Promise<IssueComment[]>,
 		initialData: initialComments,
 		staleTime: Infinity,
 		gcTime: Infinity,

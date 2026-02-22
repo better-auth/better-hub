@@ -84,10 +84,7 @@ export async function revalidateContributorAvatars(
 	}
 }
 
-export async function revalidateBranches(
-	owner: string,
-	repo: string,
-): Promise<BranchRef[] | null> {
+export async function revalidateBranches(owner: string, repo: string): Promise<BranchRef[] | null> {
 	const octokit = await getOctokit();
 	if (!octokit) return null;
 
@@ -105,10 +102,7 @@ export async function revalidateBranches(
 	}
 }
 
-export async function revalidateTags(
-	owner: string,
-	repo: string,
-): Promise<BranchRef[] | null> {
+export async function revalidateTags(owner: string, repo: string): Promise<BranchRef[] | null> {
 	const octokit = await getOctokit();
 	if (!octokit) return null;
 

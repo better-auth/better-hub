@@ -15,7 +15,9 @@ export default function PromptsLoading() {
 						<div className="flex-1 space-y-1.5">
 							<div
 								className="h-3.5 rounded bg-muted/40"
-								style={{ width: `${120 + Math.random() * 180}px` }}
+								style={{
+									width: `${120 + Math.random() * 180}px`,
+								}}
 							/>
 							<div className="flex items-center gap-2">
 								<div className="h-5 w-14 rounded-full bg-muted/25" />

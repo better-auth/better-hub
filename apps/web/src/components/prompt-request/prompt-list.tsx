@@ -91,22 +91,23 @@ export function PromptList({ owner, repo, promptRequests }: PromptListProps) {
 		setCountAdjustments({ open: 0, rejected: 0 });
 	}, [promptRequests]);
 
-	useMutationSubscription(
-		["prompt:rejected", "prompt:created"],
-		(event: MutationEvent) => {
-			if (!isRepoEvent(event, owner, repo)) return;
-			setCountAdjustments((prev) => {
-				switch (event.type) {
-					case "prompt:rejected":
-						return { ...prev, open: prev.open - 1, rejected: prev.rejected + 1 };
-					case "prompt:created":
-						return { ...prev, open: prev.open + 1 };
-					default:
-						return prev;
-				}
-			});
-		},
-	);
+	useMutationSubscription(["prompt:rejected", "prompt:created"], (event: MutationEvent) => {
+		if (!isRepoEvent(event, owner, repo)) return;
+		setCountAdjustments((prev) => {
+			switch (event.type) {
+				case "prompt:rejected":
+					return {
+						...prev,
+						open: prev.open - 1,
+						rejected: prev.rejected + 1,
+					};
+				case "prompt:created":
+					return { ...prev, open: prev.open + 1 };
+				default:
+					return prev;
+			}
+		});
+	});
 
 	const counts = useMemo(() => {
 		const c = { open: 0, completed: 0, rejected: 0 };

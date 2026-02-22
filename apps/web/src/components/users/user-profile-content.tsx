@@ -170,10 +170,7 @@ export function UserProfileContent({
 		[repos],
 	);
 
-	const totalForks = useMemo(
-		() => repos.reduce((sum, r) => sum + r.forks_count, 0),
-		[repos],
-	);
+	const totalForks = useMemo(() => repos.reduce((sum, r) => sum + r.forks_count, 0), [repos]);
 
 	return (
 		<div className="flex flex-col lg:flex-row gap-8 flex-1 min-h-0">
@@ -348,9 +345,10 @@ export function UserProfileContent({
 									className="h-full first:rounded-l-full last:rounded-r-full transition-all duration-300"
 									style={{
 										width: `${Math.max(lang.percentage, 2)}%`,
-										backgroundColor: getLanguageColor(
-											lang.language,
-										),
+										backgroundColor:
+											getLanguageColor(
+												lang.language,
+											),
 									}}
 									title={`${lang.language}: ${lang.percentage.toFixed(1)}%`}
 								/>
@@ -358,32 +356,36 @@ export function UserProfileContent({
 						</div>
 						{/* Legend */}
 						<div className="flex flex-wrap gap-x-3 gap-y-1 mt-2.5">
-							{languageDistribution.slice(0, 6).map((lang) => (
-								<button
-									key={lang.language}
-									onClick={() =>
-										setSearch(lang.language)
-									}
-									className="flex items-center gap-1.5 text-[10px] text-muted-foreground/70 font-mono hover:text-foreground transition-colors cursor-pointer"
-								>
-									<span
-										className="w-1.5 h-1.5 rounded-full shrink-0"
-										style={{
-											backgroundColor:
-												getLanguageColor(
-													lang.language,
-												),
-										}}
-									/>
-									{lang.language}
-									<span className="text-muted-foreground/30">
-										{lang.percentage.toFixed(
-											0,
-										)}
-										%
-									</span>
-								</button>
-							))}
+							{languageDistribution
+								.slice(0, 6)
+								.map((lang) => (
+									<button
+										key={lang.language}
+										onClick={() =>
+											setSearch(
+												lang.language,
+											)
+										}
+										className="flex items-center gap-1.5 text-[10px] text-muted-foreground/70 font-mono hover:text-foreground transition-colors cursor-pointer"
+									>
+										<span
+											className="w-1.5 h-1.5 rounded-full shrink-0"
+											style={{
+												backgroundColor:
+													getLanguageColor(
+														lang.language,
+													),
+											}}
+										/>
+										{lang.language}
+										<span className="text-muted-foreground/30">
+											{lang.percentage.toFixed(
+												0,
+											)}
+											%
+										</span>
+									</button>
+								))}
 						</div>
 					</div>
 				)}
@@ -418,7 +420,9 @@ export function UserProfileContent({
 							).map(([value, label]) => (
 								<button
 									key={value}
-									onClick={() => setFilter(value)}
+									onClick={() =>
+										setFilter(value)
+									}
 									className={cn(
 										"px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
 										filter === value
@@ -436,7 +440,8 @@ export function UserProfileContent({
 								setSort((current) =>
 									current === "updated"
 										? "stars"
-										: current === "stars"
+										: current ===
+											  "stars"
 											? "name"
 											: "updated",
 								)
@@ -455,33 +460,37 @@ export function UserProfileContent({
 					<div className="flex items-center justify-between mb-4">
 						{languages.length > 0 && (
 							<div className="flex items-center gap-1.5 flex-wrap flex-1">
-								{languages.slice(0, 10).map((lang) => (
-									<button
-										key={lang}
-										onClick={() =>
-											setSearch(
-												lang || "",
-											)
-										}
-										className={cn(
-											"flex items-center gap-1.5 px-2 py-1 text-[11px] border border-border transition-colors cursor-pointer font-mono rounded-md",
-											search === lang
-												? "bg-muted/80 dark:bg-white/6 text-foreground border-foreground/15"
-												: "text-muted-foreground hover:bg-muted/60 dark:hover:bg-white/3",
-										)}
-									>
-										<span
-											className="w-2 h-2 rounded-full"
-											style={{
-												backgroundColor:
-													getLanguageColor(
-														lang,
-													),
-											}}
-										/>
-										{lang}
-									</button>
-								))}
+								{languages
+									.slice(0, 10)
+									.map((lang) => (
+										<button
+											key={lang}
+											onClick={() =>
+												setSearch(
+													lang ||
+														"",
+												)
+											}
+											className={cn(
+												"flex items-center gap-1.5 px-2 py-1 text-[11px] border border-border transition-colors cursor-pointer font-mono rounded-md",
+												search ===
+													lang
+													? "bg-muted/80 dark:bg-white/6 text-foreground border-foreground/15"
+													: "text-muted-foreground hover:bg-muted/60 dark:hover:bg-white/3",
+											)}
+										>
+											<span
+												className="w-2 h-2 rounded-full"
+												style={{
+													backgroundColor:
+														getLanguageColor(
+															lang,
+														),
+												}}
+											/>
+											{lang}
+										</button>
+									))}
 							</div>
 						)}
 						<span className="text-[11px] text-muted-foreground/30 font-mono shrink-0 ml-auto">

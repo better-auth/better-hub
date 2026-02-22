@@ -77,8 +77,7 @@ export function AccountTab({ user, settings, onUpdate }: AccountTabProps) {
 							primary
 						</span>
 					</div>
-
-					</div>
+				</div>
 			</div>
 
 			{/* GitHub Accounts */}

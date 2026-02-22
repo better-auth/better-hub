@@ -1,0 +1,16 @@
+services:
+        postgres:
+                image: postgres:16-alpine
+                container_name: better-hub-postgres
+                restart: unless-stopped
+                environment:
+                        POSTGRES_USER: postgres
+                        POSTGRES_PASSWORD: postgres
+                        POSTGRES_DB: better_hub
+                ports:
+                        - "54320:5432"
+                volumes:
+                        - postgres_data:/var/lib/postgresql/data
+
+volumes:
+        postgres_data:

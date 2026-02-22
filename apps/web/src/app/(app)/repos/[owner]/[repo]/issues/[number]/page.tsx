@@ -52,7 +52,12 @@ export default async function IssueDetailPage({
 
 	// Start pin check in parallel with markdown rendering
 	const pinnedPromise = session?.user?.id
-		? isItemPinned(session.user.id, owner, repo, `/${owner}/${repo}/issues/${issueNumber}`)
+		? isItemPinned(
+				session.user.id,
+				owner,
+				repo,
+				`/${owner}/${repo}/issues/${issueNumber}`,
+			)
 		: Promise.resolve(false);
 
 	// Fire-and-forget: embed issue content for semantic search
@@ -92,9 +97,13 @@ export default async function IssueDetailPage({
 	// Pre-render markdown for description and initial comments
 	const issueRefCtx = { owner, repo };
 	const [descriptionHtml, ...commentHtmls] = await Promise.all([
-		issue.body ? renderMarkdownToHtml(issue.body, undefined, issueRefCtx) : Promise.resolve(""),
+		issue.body
+			? renderMarkdownToHtml(issue.body, undefined, issueRefCtx)
+			: Promise.resolve(""),
 		...(comments || []).map((c) =>
-			c.body ? renderMarkdownToHtml(c.body, undefined, issueRefCtx) : Promise.resolve(""),
+			c.body
+				? renderMarkdownToHtml(c.body, undefined, issueRefCtx)
+				: Promise.resolve(""),
 		),
 	]);
 	const issuePinned = await pinnedPromise;
@@ -167,12 +176,12 @@ export default async function IssueDetailPage({
 				}
 				panelHeader={<IssueParticipants participants={participants} />}
 				conversationPanel={
-				<IssueCommentsClient
-					owner={owner}
-					repo={repo}
-					issueNumber={issueNumber}
-					initialComments={commentsWithHtml}
-				/>
+					<IssueCommentsClient
+						owner={owner}
+						repo={repo}
+						issueNumber={issueNumber}
+						initialComments={commentsWithHtml}
+					/>
 				}
 				commentForm={
 					<IssueCommentForm

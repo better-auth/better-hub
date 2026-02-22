@@ -61,22 +61,22 @@ export function TrendingContent({ weekly, daily, monthly }: TrendingContentProps
 							<span className="text-[11px] font-mono text-muted-foreground/30 tabular-nums w-5 text-right shrink-0 pt-1">
 								{i + 1}
 							</span>
-						<Image
-							src={repo.owner?.avatar_url ?? ""}
-							alt={repo.owner?.login ?? ""}
-							width={32}
-							height={32}
-							className="rounded-sm shrink-0 w-8 h-8 object-cover mt-0.5"
-						/>
-						<div className="flex-1 min-w-0">
-							<div className="flex items-center gap-2">
-								<span className="text-sm font-mono truncate group-hover:text-foreground transition-colors">
-									<span className="text-muted-foreground/50">
-										{
-											repo
-												.owner
-												?.login
-										}
+							<Image
+								src={repo.owner?.avatar_url ?? ""}
+								alt={repo.owner?.login ?? ""}
+								width={32}
+								height={32}
+								className="rounded-sm shrink-0 w-8 h-8 object-cover mt-0.5"
+							/>
+							<div className="flex-1 min-w-0">
+								<div className="flex items-center gap-2">
+									<span className="text-sm font-mono truncate group-hover:text-foreground transition-colors">
+										<span className="text-muted-foreground/50">
+											{
+												repo
+													.owner
+													?.login
+											}
 										</span>
 										<span className="text-muted-foreground/30 mx-0.5">
 											/

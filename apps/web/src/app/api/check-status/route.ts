@@ -20,6 +20,9 @@ export async function GET(request: NextRequest) {
 		const checkStatus = await fetchCheckStatusForRef(octokit, owner, repo, ref);
 		return NextResponse.json(checkStatus);
 	} catch {
-		return NextResponse.json({ error: "Failed to fetch check status" }, { status: 500 });
+		return NextResponse.json(
+			{ error: "Failed to fetch check status" },
+			{ status: 500 },
+		);
 	}
 }

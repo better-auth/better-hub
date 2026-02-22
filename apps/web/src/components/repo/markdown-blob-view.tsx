@@ -130,7 +130,7 @@ export function MarkdownBlobView({
 					>
 						Preview
 					</button>
-					</div>
+				</div>
 				{fileSize != null && (
 					<span className="text-[11px] font-mono text-muted-foreground/60">
 						{formatBytes(fileSize)}
@@ -191,7 +191,14 @@ export function MarkdownBlobView({
 					</div>
 				)}
 			</div>
-			<div className={cn(mode === "raw" ? "block" : "hidden", wordWrap && "word-wrap")}>{rawView}</div>
+			<div
+				className={cn(
+					mode === "raw" ? "block" : "hidden",
+					wordWrap && "word-wrap",
+				)}
+			>
+				{rawView}
+			</div>
 			<div className={mode === "preview" ? "block" : "hidden"}>{previewView}</div>
 			{mode === "edit" && (
 				<div className="border border-border rounded-md">

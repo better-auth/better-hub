@@ -10,7 +10,10 @@ export default function PeopleLoading() {
 			{/* People grid */}
 			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 				{Array.from({ length: 12 }).map((_, i) => (
-					<div key={i} className="border border-border/40 rounded-md p-4 space-y-3">
+					<div
+						key={i}
+						className="border border-border/40 rounded-md p-4 space-y-3"
+					>
 						<div className="flex items-center gap-3">
 							<div className="h-10 w-10 rounded-full bg-muted/40 shrink-0" />
 							<div className="space-y-1">

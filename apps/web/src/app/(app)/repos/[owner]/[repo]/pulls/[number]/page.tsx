@@ -102,7 +102,11 @@ export default async function PRDetailPage({
 				prFiles.map(async (file) => {
 					if (file.patch) {
 						try {
-							data[file.filename] = await highlightDiffLines(file.patch, file.filename);
+							data[file.filename] =
+								await highlightDiffLines(
+									file.patch,
+									file.filename,
+								);
 						} catch {
 							// highlight error — skip file
 						}
@@ -113,14 +117,23 @@ export default async function PRDetailPage({
 		return data;
 	})();
 
-	const { checkStatus: checkStatusResult, prPinned, authorDossier } = await all({
+	const {
+		checkStatus: checkStatusResult,
+		prPinned,
+		authorDossier,
+	} = await all({
 		checkStatus: async () => {
 			if (!isOpen) return undefined;
 			const cached = await getCachedCheckStatus(owner, repo, pullNumber);
 			if (cached) return cached;
 			try {
 				const octokit = await getOctokit();
-				const cs = await fetchCheckStatusForRef(octokit, owner, repo, pr.head.sha);
+				const cs = await fetchCheckStatusForRef(
+					octokit,
+					owner,
+					repo,
+					pr.head.sha,
+				);
 				return cs ?? undefined;
 			} catch {
 				return undefined;
@@ -128,7 +141,12 @@ export default async function PRDetailPage({
 		},
 		prPinned: () =>
 			session?.user?.id
-				? isItemPinned(session.user.id, owner, repo, `/${owner}/${repo}/pulls/${pullNumber}`)
+				? isItemPinned(
+						session.user.id,
+						owner,
+						repo,
+						`/${owner}/${repo}/pulls/${pullNumber}`,
+					)
 				: Promise.resolve(false),
 		authorDossier: () =>
 			pr.user?.login
@@ -187,6 +205,7 @@ export default async function PRDetailPage({
 				path: rc.path || "",
 				line: rc.line,
 				created_at: rc.created_at,
+				reactions: rc.reactions,
 			});
 			reviewCommentsByReviewId.set(reviewId, existing);
 		}
@@ -496,7 +515,9 @@ export default async function PRDetailPage({
 								topRepos={dossier.topRepos}
 								isOrgMember={dossier.isOrgMember}
 								score={dossier.score}
-								contributionCount={dossier.contributionCount}
+								contributionCount={
+									dossier.contributionCount
+								}
 								repoActivity={dossier.repoActivity}
 								openedAt={pr.created_at}
 							/>

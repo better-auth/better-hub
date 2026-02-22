@@ -40,15 +40,42 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 								</Suspense>
 							</div>
 							<OnboardingOverlay
-								userName={session?.githubUser?.name || session?.githubUser?.login || ""}
-								userAvatar={session?.githubUser?.avatar_url || ""}
+								userName={
+									session?.githubUser?.name ||
+									session?.githubUser
+										?.login ||
+									""
+								}
+								userAvatar={
+									session?.githubUser
+										?.avatar_url || ""
+								}
 								bio={session?.githubUser?.bio || ""}
-								company={session?.githubUser?.company || ""}
-								location={session?.githubUser?.location || ""}
-								publicRepos={session?.githubUser?.public_repos ?? 0}
-								followers={session?.githubUser?.followers ?? 0}
-								createdAt={session?.githubUser?.created_at || ""}
-								onboardingDone={session?.user?.onboardingDone ?? false}
+								company={
+									session?.githubUser
+										?.company || ""
+								}
+								location={
+									session?.githubUser
+										?.location || ""
+								}
+								publicRepos={
+									session?.githubUser
+										?.public_repos ?? 0
+								}
+								followers={
+									session?.githubUser
+										?.followers ?? 0
+								}
+								createdAt={
+									session?.githubUser
+										?.created_at || ""
+								}
+								onboardingDone={
+									session?.user
+										?.onboardingDone ??
+									false
+								}
 							/>
 						</GitHubLinkInterceptor>
 					</CodeThemeProvider>

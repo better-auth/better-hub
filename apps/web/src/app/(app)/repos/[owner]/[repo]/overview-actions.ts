@@ -46,6 +46,7 @@ export interface OverviewRepoEvent {
 		action?: string;
 		ref?: string;
 		ref_type?: string;
+		size?: number;
 		commits?: { sha: string; message: string }[];
 		pull_request?: { number: number; title: string };
 		issue?: { number: number; title: string };
@@ -55,10 +56,7 @@ export interface OverviewRepoEvent {
 	};
 }
 
-export async function fetchOverviewPRs(
-	owner: string,
-	repo: string,
-): Promise<OverviewPRItem[]> {
+export async function fetchOverviewPRs(owner: string, repo: string): Promise<OverviewPRItem[]> {
 	const raw = await getRepoPullRequests(owner, repo, "open");
 	if (!raw) return [];
 	const result = raw.map((pr: any) => ({

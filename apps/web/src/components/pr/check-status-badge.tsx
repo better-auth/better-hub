@@ -272,7 +272,12 @@ export function CheckStatusBadge({
 				<CheckIcon state={checkStatus.state} className="w-3 h-3" />
 				{checkStatus.success}/{checkStatus.total}
 				{showChevron && (
-					<ChevronDown className={cn("w-3 h-3 text-muted-foreground/70 transition-transform duration-150", open && "rotate-180")} />
+					<ChevronDown
+						className={cn(
+							"w-3 h-3 text-muted-foreground/70 transition-transform duration-150",
+							open && "rotate-180",
+						)}
+					/>
 				)}
 			</button>
 

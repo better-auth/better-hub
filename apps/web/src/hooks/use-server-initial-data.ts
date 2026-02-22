@@ -19,11 +19,7 @@ import { useQueryClient, type QueryKey } from "@tanstack/react-query";
  * @param fingerprint - A lightweight string derived from the server data
  *   that changes whenever the data is meaningfully different
  */
-export function useServerInitialData<T>(
-	queryKey: QueryKey,
-	serverData: T,
-	fingerprint: string,
-) {
+export function useServerInitialData<T>(queryKey: QueryKey, serverData: T, fingerprint: string) {
 	const queryClient = useQueryClient();
 
 	useLayoutEffect(() => {

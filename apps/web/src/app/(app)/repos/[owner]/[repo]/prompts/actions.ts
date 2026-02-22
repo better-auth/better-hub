@@ -94,7 +94,8 @@ export async function deletePromptComment(commentId: string, promptRequestId: st
 
 	const comment = await getPromptRequestComment(commentId);
 	if (!comment) throw new Error("Comment not found");
-	if (comment.userId !== session.user.id) throw new Error("Not authorized to delete this comment");
+	if (comment.userId !== session.user.id)
+		throw new Error("Not authorized to delete this comment");
 
 	const pr = await getPromptRequest(promptRequestId);
 	if (!pr) throw new Error("Prompt request not found");

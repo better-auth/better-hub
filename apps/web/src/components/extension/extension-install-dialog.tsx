@@ -55,10 +55,7 @@ interface ExtensionInstallDialogProps {
 	onOpenChange: (open: boolean) => void;
 }
 
-export function ExtensionInstallDialog({
-	open,
-	onOpenChange,
-}: ExtensionInstallDialogProps) {
+export function ExtensionInstallDialog({ open, onOpenChange }: ExtensionInstallDialogProps) {
 	const [downloaded, setDownloaded] = useState(false);
 
 	return (
@@ -76,9 +73,8 @@ export function ExtensionInstallDialog({
 									Install Extension
 								</DialogTitle>
 								<DialogDescription className="text-[11px] font-mono text-muted-foreground/50 mt-0.5">
-									Redirect GitHub
-									to Better Hub
-									automatically
+									Redirect GitHub to Better
+									Hub automatically
 								</DialogDescription>
 							</div>
 						</div>
@@ -130,14 +126,10 @@ export function ExtensionInstallDialog({
 								</div>
 								<div className="flex-1 min-w-0">
 									<span className="text-xs font-medium">
-										{
-											step.label
-										}
+										{step.label}
 									</span>
 									<span className="text-[11px] text-muted-foreground/40 ml-2">
-										{
-											step.detail
-										}
+										{step.detail}
 									</span>
 								</div>
 							</li>

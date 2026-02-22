@@ -264,7 +264,8 @@ export function OrgDetailContent({ org, repos }: { org: OrgDetails; repos: OrgRe
 					<CreateRepoDialog org={org.login} />
 					<span className="text-[11px] text-muted-foreground/50 font-mono tabular-nums">
 						{filtered.length}
-						{filtered.length !== repos.length && ` / ${repos.length}`}
+						{filtered.length !== repos.length &&
+							` / ${repos.length}`}
 					</span>
 				</div>
 			</div>

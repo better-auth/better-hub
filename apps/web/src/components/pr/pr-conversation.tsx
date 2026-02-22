@@ -53,6 +53,7 @@ export interface ReviewCommentEntry {
 	path: string;
 	line: number | null;
 	created_at: string;
+	reactions?: Reactions;
 }
 
 export interface CommitEntry {
@@ -309,17 +310,15 @@ async function ChatMessage({
 					</div>
 				)}
 
-				{entry.reactions && (
-					<div className="px-1 pb-2 pt-1">
-						<ReactionDisplay
-							reactions={entry.reactions}
-							owner={owner}
-							repo={repo}
-							contentType="issue"
-							contentId={pullNumber}
-						/>
-					</div>
-				)}
+				<div className="px-1 pb-2 pt-1">
+					<ReactionDisplay
+						reactions={entry.reactions ?? {}}
+						owner={owner}
+						repo={repo}
+						contentType="issue"
+						contentId={pullNumber}
+					/>
+				</div>
 			</div>
 		);
 	}
@@ -380,17 +379,15 @@ async function ChatMessage({
 					</div>
 				)}
 
-				{entry.reactions && (
-					<div className="px-3 pb-2">
-						<ReactionDisplay
-							reactions={entry.reactions}
-							owner={owner}
-							repo={repo}
-							contentType="issueComment"
-							contentId={entry.id as number}
-						/>
-					</div>
-				)}
+				<div className="px-3 pb-2">
+					<ReactionDisplay
+						reactions={entry.reactions ?? {}}
+						owner={owner}
+						repo={repo}
+						contentType="issueComment"
+						contentId={entry.id as number}
+					/>
+				</div>
 			</div>
 		</div>
 	);
@@ -430,6 +427,8 @@ async function ReviewCardWrapper({
 			timestamp={entry.submitted_at || entry.created_at}
 			comments={entry.comments}
 			bodyContent={bodyContent}
+			owner={owner}
+			repo={repo}
 		/>
 	);
 }

@@ -17,12 +17,16 @@ export default function TrendingLoading() {
 							<div className="flex items-center gap-2">
 								<div
 									className="h-3.5 rounded bg-muted/40"
-									style={{ width: `${120 + (i % 6) * 25}px` }}
+									style={{
+										width: `${120 + (i % 6) * 25}px`,
+									}}
 								/>
 							</div>
 							<div
 								className="h-2.5 rounded bg-muted/20"
-								style={{ width: `${180 + (i % 4) * 40}px` }}
+								style={{
+									width: `${180 + (i % 4) * 40}px`,
+								}}
 							/>
 							<div className="flex items-center gap-3">
 								<div className="flex items-center gap-1">

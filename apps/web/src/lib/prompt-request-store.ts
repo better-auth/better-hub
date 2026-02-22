@@ -241,9 +241,7 @@ export async function deletePromptRequestComment(id: string): Promise<void> {
 	await prisma.promptRequestComment.delete({ where: { id } });
 }
 
-export async function getPromptRequestComment(
-	id: string,
-): Promise<PromptRequestComment | null> {
+export async function getPromptRequestComment(id: string): Promise<PromptRequestComment | null> {
 	const row = await prisma.promptRequestComment.findUnique({ where: { id } });
 	return row ? toPromptRequestComment(row) : null;
 }

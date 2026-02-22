@@ -7,6 +7,7 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { ClientMarkdown } from "@/components/shared/client-markdown";
+import { ReactionDisplay, type Reactions } from "@/components/shared/reaction-display";
 
 const reviewStateBadge: Record<string, { label: string; className: string }> = {
 	APPROVED: {
@@ -32,6 +33,7 @@ interface ReviewComment {
 	body: string;
 	path: string;
 	line: number | null;
+	reactions?: Reactions;
 }
 
 interface CollapsibleReviewCardProps {
@@ -40,6 +42,8 @@ interface CollapsibleReviewCardProps {
 	timestamp: string;
 	comments: ReviewComment[];
 	bodyContent: React.ReactNode;
+	owner: string;
+	repo: string;
 }
 
 export function CollapsibleReviewCard({
@@ -48,6 +52,8 @@ export function CollapsibleReviewCard({
 	timestamp,
 	comments,
 	bodyContent,
+	owner,
+	repo,
 }: CollapsibleReviewCardProps) {
 	const [expanded, setExpanded] = useState(true);
 	const badge = reviewStateBadge[state] || reviewStateBadge.COMMENTED;
@@ -154,6 +160,22 @@ export function CollapsibleReviewCard({
 										<ClientMarkdown
 											content={
 												comment.body
+											}
+										/>
+									</div>
+									<div className="mt-1">
+										<ReactionDisplay
+											reactions={
+												comment.reactions ??
+												{}
+											}
+											owner={
+												owner
+											}
+											repo={repo}
+											contentType="pullRequestReviewComment"
+											contentId={
+												comment.id
 											}
 										/>
 									</div>

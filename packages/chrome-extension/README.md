@@ -20,15 +20,15 @@ Click the extension icon to:
 
 ## Route Mappings
 
-| GitHub URL | Redirects to |
-|---|---|
-| `github.com` | `/dashboard` |
-| `github.com/:owner/:repo` | `/:owner/:repo` |
-| `github.com/:owner/:repo/pull/:n` | `/:owner/:repo/pull/:n` |
+| GitHub URL                            | Redirects to                |
+| ------------------------------------- | --------------------------- |
+| `github.com`                          | `/dashboard`                |
+| `github.com/:owner/:repo`             | `/:owner/:repo`             |
+| `github.com/:owner/:repo/pull/:n`     | `/:owner/:repo/pull/:n`     |
 | `github.com/:owner/:repo/commit/:sha` | `/:owner/:repo/commit/:sha` |
-| `github.com/notifications` | `/notifications` |
-| `github.com/issues` | `/issues` |
-| `github.com/pulls` | `/prs` |
-| `github.com/trending` | `/trending` |
+| `github.com/notifications`            | `/notifications`            |
+| `github.com/issues`                   | `/issues`                   |
+| `github.com/pulls`                    | `/prs`                      |
+| `github.com/trending`                 | `/trending`                 |
 
 GitHub-only pages (`/settings`, `/marketplace`, `/login`, etc.) are excluded.

@@ -1,32 +1,32 @@
 {
-  "manifest_version": 3,
-  "name": "Better Hub",
-  "version": "1.0.0",
-  "description": "Redirect GitHub pages to your Better Hub instance",
-  "permissions": ["storage", "declarativeNetRequest", "activeTab"],
-  "host_permissions": ["*://github.com/*"],
-  "icons": {
-    "16": "icons/icon-16.png",
-    "48": "icons/icon-48.png",
-    "128": "icons/icon-128.png"
-  },
-  "action": {
-    "default_popup": "popup.html",
-    "default_icon": {
-      "16": "icons/icon-16.png",
-      "48": "icons/icon-48.png"
-    }
-  },
-  "background": {
-    "service_worker": "background.js"
-  },
-  "declarative_net_request": {
-    "rule_resources": [
-      {
-        "id": "redirect_rules",
-        "enabled": true,
-        "path": "rules.json"
-      }
-    ]
-  }
+	"manifest_version": 3,
+	"name": "Better Hub",
+	"version": "1.0.0",
+	"description": "Redirect GitHub pages to your Better Hub instance",
+	"permissions": ["storage", "declarativeNetRequest", "activeTab"],
+	"host_permissions": ["*://github.com/*"],
+	"icons": {
+		"16": "icons/icon-16.png",
+		"48": "icons/icon-48.png",
+		"128": "icons/icon-128.png"
+	},
+	"action": {
+		"default_popup": "popup.html",
+		"default_icon": {
+			"16": "icons/icon-16.png",
+			"48": "icons/icon-48.png"
+		}
+	},
+	"background": {
+		"service_worker": "background.js"
+	},
+	"declarative_net_request": {
+		"rule_resources": [
+			{
+				"id": "redirect_rules",
+				"enabled": true,
+				"path": "rules.json"
+			}
+		]
+	}
 }

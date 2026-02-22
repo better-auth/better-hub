@@ -16,7 +16,10 @@ export default function SecurityLoading() {
 				<div className="h-4 w-36 rounded bg-muted/40 mb-4" />
 				<div className="space-y-3">
 					{Array.from({ length: 4 }).map((_, i) => (
-						<div key={i} className="flex items-center gap-3 p-3 rounded border border-border/30">
+						<div
+							key={i}
+							className="flex items-center gap-3 p-3 rounded border border-border/30"
+						>
 							<div
 								className={`h-4 w-4 rounded shrink-0 ${
 									i === 0
@@ -29,7 +32,9 @@ export default function SecurityLoading() {
 							<div className="flex-1 space-y-1">
 								<div
 									className="h-3.5 rounded bg-muted/35"
-									style={{ width: `${150 + Math.random() * 200}px` }}
+									style={{
+										width: `${150 + Math.random() * 200}px`,
+									}}
 								/>
 								<div className="h-2.5 w-20 rounded bg-muted/15" />
 							</div>

@@ -21,7 +21,10 @@ export default function CommitDetailLoading() {
 
 			{/* File diffs */}
 			{Array.from({ length: 3 }).map((_, f) => (
-				<div key={f} className="border border-border rounded-md overflow-hidden mb-3">
+				<div
+					key={f}
+					className="border border-border rounded-md overflow-hidden mb-3"
+				>
 					<div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/20">
 						<div className="h-2.5 w-2.5 rounded-full bg-muted/40" />
 						<div className="h-3 w-48 rounded bg-muted/30" />
@@ -46,7 +49,9 @@ export default function CommitDetailLoading() {
 								<div className="w-10 h-full bg-muted/10" />
 								<div
 									className="h-3 rounded bg-muted/15 ml-2"
-									style={{ width: `${60 + Math.random() * 250}px` }}
+									style={{
+										width: `${60 + Math.random() * 250}px`,
+									}}
 								/>
 							</div>
 						))}

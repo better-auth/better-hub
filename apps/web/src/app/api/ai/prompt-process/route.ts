@@ -378,13 +378,9 @@ function buildSandboxTools(
 						{ cwd: repoPath },
 					);
 					const output = infoResult.stdout;
-					const branchMatch =
-						output.match(/__BRANCH__(.+?)__END__/);
+					const branchMatch = output.match(/__BRANCH__(.+?)__END__/);
 					const defaultBranch = branchMatch?.[1]?.trim() || "main";
-					const files = output.replace(
-						/__BRANCH__.*__END__\n?/,
-						"",
-					);
+					const files = output.replace(/__BRANCH__.*__END__\n?/, "");
 					return { success: true, repoPath, defaultBranch, files };
 				} catch (e: any) {
 					if (sandbox) await sandbox.kill().catch(() => {});
@@ -415,7 +411,8 @@ function buildSandboxTools(
 					cwd: repoPath,
 					timeoutMs: (timeout ?? 120) * 1000,
 				});
-				const output = result.stdout + (result.stderr ? `\n${result.stderr}` : "");
+				const output =
+					result.stdout + (result.stderr ? `\n${result.stderr}` : "");
 				const maxLen = 10000;
 				const stdout =
 					output.length > maxLen
@@ -441,7 +438,8 @@ function buildSandboxTools(
 					: `${repoPath}/${filePath}`;
 				try {
 					const content = await sandbox.files.read(absPath);
-					if (!content) return { error: `File not found: ${absPath}` };
+					if (!content)
+						return { error: `File not found: ${absPath}` };
 					return { path: filePath, content };
 				} catch (e: any) {
 					return { error: e.message || "Failed to read file" };

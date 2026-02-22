@@ -1,13 +1,18 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useTransition } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
+import { SmilePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
 	getReactionUsers,
-	type ReactionUser,
+	addReaction,
+	removeReaction,
+	getCurrentUser,
+	type ReactionWithId,
+	type ReactionContent,
 } from "@/app/(app)/repos/[owner]/[repo]/reaction-actions";
 
 export interface Reactions {
@@ -23,26 +28,25 @@ export interface Reactions {
 	[key: string]: unknown;
 }
 
-const REACTION_EMOJI: [string, string][] = [
-	["+1", "\uD83D\uDC4D"],
-	["-1", "\uD83D\uDC4E"],
-	["laugh", "\uD83D\uDE04"],
-	["hooray", "\uD83C\uDF89"],
-	["confused", "\uD83D\uDE15"],
-	["heart", "\u2764\uFE0F"],
-	["rocket", "\uD83D\uDE80"],
-	["eyes", "\uD83D\uDC40"],
+const REACTION_EMOJI: [ReactionContent, string][] = [
+	["+1", "👍"],
+	["-1", "👎"],
+	["laugh", "😄"],
+	["hooray", "🎉"],
+	["confused", "😕"],
+	["heart", "❤️"],
+	["rocket", "🚀"],
+	["eyes", "👀"],
 ];
-
-const EMOJI_MAP = Object.fromEntries(REACTION_EMOJI);
 
 interface ReactionDisplayProps {
 	reactions: Reactions;
 	owner?: string;
 	repo?: string;
-	contentType?: "issue" | "issueComment";
+	contentType?: "issue" | "issueComment" | "pullRequestReviewComment";
 	contentId?: number;
 	className?: string;
+	interactive?: boolean;
 }
 
 // Portal-based tooltip that escapes overflow:hidden
@@ -93,7 +97,7 @@ function ReactionsContextMenu({
 	x: number;
 	y: number;
 	entries: { key: string; emoji: string; count: number }[];
-	reactionUsers: ReactionUser[] | null;
+	reactionUsers: ReactionWithId[] | null;
 	onClose: () => void;
 }) {
 	const menuRef = useRef<HTMLDivElement>(null);
@@ -194,6 +198,89 @@ function ReactionsContextMenu({
 	);
 }
 
+function ReactionPicker({
+	anchorRef,
+	onSelect,
+	onClose,
+	existingReactions,
+}: {
+	anchorRef: React.RefObject<HTMLElement | null>;
+	onSelect: (content: ReactionContent) => void;
+	onClose: () => void;
+	existingReactions: Set<string>;
+}) {
+	const pickerRef = useRef<HTMLDivElement>(null);
+	const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+	useEffect(() => {
+		const el = anchorRef.current;
+		if (!el) return;
+		const rect = el.getBoundingClientRect();
+		const pickerWidth = 240;
+		let left = rect.left + window.scrollX;
+		if (left + pickerWidth > window.innerWidth) {
+			left = window.innerWidth - pickerWidth - 8;
+		}
+		setPos({
+			top: rect.bottom + window.scrollY + 4,
+			left,
+		});
+	}, [anchorRef]);
+
+	useEffect(() => {
+		const handler = (e: MouseEvent) => {
+			if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+				onClose();
+			}
+		};
+		const escHandler = (e: KeyboardEvent) => {
+			if (e.key === "Escape") onClose();
+		};
+		document.addEventListener("mousedown", handler);
+		document.addEventListener("keydown", escHandler);
+		return () => {
+			document.removeEventListener("mousedown", handler);
+			document.removeEventListener("keydown", escHandler);
+		};
+	}, [onClose]);
+
+	if (!pos) return null;
+
+	return createPortal(
+		<div
+			ref={pickerRef}
+			className="fixed z-[9999] bg-card border border-border rounded-lg shadow-xl p-2"
+			style={{ top: pos.top, left: pos.left }}
+		>
+			<div className="flex gap-1">
+				{REACTION_EMOJI.map(([key, emoji]) => {
+					const hasReacted = existingReactions.has(key);
+					return (
+						<button
+							key={key}
+							type="button"
+							onClick={() => onSelect(key)}
+							className={cn(
+								"w-8 h-8 flex items-center justify-center rounded-md text-base transition-all hover:bg-muted hover:scale-110",
+								hasReacted &&
+									"bg-primary/20 ring-1 ring-primary/40",
+							)}
+							title={
+								hasReacted
+									? `Remove ${key} reaction`
+									: `React with ${key}`
+							}
+						>
+							{emoji}
+						</button>
+					);
+				})}
+			</div>
+		</div>,
+		document.body,
+	);
+}
+
 export function ReactionDisplay({
 	reactions,
 	owner,
@@ -201,16 +288,29 @@ export function ReactionDisplay({
 	contentType,
 	contentId,
 	className,
+	interactive = true,
 }: ReactionDisplayProps) {
 	const [hoveredKey, setHoveredKey] = useState<string | null>(null);
-	const [reactionUsers, setReactionUsers] = useState<ReactionUser[] | null>(null);
+	const [reactionUsers, setReactionUsers] = useState<ReactionWithId[] | null>(null);
 	const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+	const [showPicker, setShowPicker] = useState(false);
+	const [currentUser, setCurrentUser] = useState<{
+		login: string;
+		avatar_url: string;
+	} | null>(null);
+	const [optimisticReactions, setOptimisticReactions] = useState<Reactions>(reactions);
+	const [, startTransition] = useTransition();
 	const hoverTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
 	const hoveredRef = useRef<HTMLSpanElement | null>(null);
+	const addButtonRef = useRef<HTMLButtonElement | null>(null);
 
 	const canFetch = !!(owner && repo && contentType && contentId);
+	const canInteract = interactive && canFetch;
 
-	// Pre-fetch reaction users on mount
+	useEffect(() => {
+		setOptimisticReactions(reactions);
+	}, [reactions]);
+
 	useEffect(() => {
 		if (!canFetch) return;
 		let cancelled = false;
@@ -221,6 +321,17 @@ export function ReactionDisplay({
 			cancelled = true;
 		};
 	}, [canFetch, owner, repo, contentType, contentId]);
+
+	useEffect(() => {
+		if (!canInteract) return;
+		let cancelled = false;
+		getCurrentUser().then((user) => {
+			if (!cancelled) setCurrentUser(user);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, [canInteract]);
 
 	const handleMouseEnter = (key: string, el: HTMLSpanElement) => {
 		hoverTimeout.current = setTimeout(() => {
@@ -244,18 +355,121 @@ export function ReactionDisplay({
 		setContextMenu(null);
 	}, []);
 
-	const entries = REACTION_EMOJI.map(([key, emoji]) => ({
-		key,
-		emoji,
-		count: (typeof reactions[key] === "number" ? reactions[key] : 0) as number,
-	})).filter((r) => r.count > 0);
-
-	if (entries.length === 0) return null;
-
-	const getUsersForReaction = (key: string): ReactionUser[] => {
+	const getUsersForReaction = (key: string): ReactionWithId[] => {
 		if (!reactionUsers) return [];
 		return reactionUsers.filter((u) => u.content === key);
 	};
+
+	const currentUserReactions = new Set(
+		reactionUsers
+			?.filter((u) => u.login === currentUser?.login)
+			.map((u) => u.content) ?? [],
+	);
+
+	const handleToggleReaction = useCallback(
+		async (content: ReactionContent) => {
+			if (!canInteract || !currentUser) return;
+
+			const existingReaction = reactionUsers?.find(
+				(u) => u.login === currentUser.login && u.content === content,
+			);
+
+			if (existingReaction) {
+				setOptimisticReactions((prev) => ({
+					...prev,
+					[content]: Math.max(
+						0,
+						((prev[content] as number) || 0) - 1,
+					),
+				}));
+				setReactionUsers((prev) =>
+					prev
+						? prev.filter((u) => u.id !== existingReaction.id)
+						: prev,
+				);
+
+				startTransition(async () => {
+					const result = await removeReaction(
+						owner!,
+						repo!,
+						contentType!,
+						contentId!,
+						existingReaction.id,
+					);
+					if (!result.success) {
+						setOptimisticReactions((prev) => ({
+							...prev,
+							[content]:
+								((prev[content] as number) || 0) +
+								1,
+						}));
+						setReactionUsers((prev) =>
+							prev
+								? [...prev, existingReaction]
+								: [existingReaction],
+						);
+					}
+				});
+			} else {
+				setOptimisticReactions((prev) => ({
+					...prev,
+					[content]: ((prev[content] as number) || 0) + 1,
+				}));
+
+				startTransition(async () => {
+					const result = await addReaction(
+						owner!,
+						repo!,
+						contentType!,
+						contentId!,
+						content,
+					);
+					if (result.success && result.reactionId) {
+						setReactionUsers((prev) => [
+							...(prev ?? []),
+							{
+								id: result.reactionId!,
+								login: currentUser.login,
+								avatar_url: currentUser.avatar_url,
+								content,
+							},
+						]);
+					} else {
+						setOptimisticReactions((prev) => ({
+							...prev,
+							[content]: Math.max(
+								0,
+								((prev[content] as number) || 0) -
+									1,
+							),
+						}));
+					}
+				});
+			}
+
+			setShowPicker(false);
+		},
+		[canInteract, currentUser, reactionUsers, owner, repo, contentType, contentId],
+	);
+
+	const handleReactionClick = useCallback(
+		(key: ReactionContent) => {
+			if (!canInteract) return;
+			handleToggleReaction(key);
+		},
+		[canInteract, handleToggleReaction],
+	);
+
+	const entries = REACTION_EMOJI.map(([key, emoji]) => ({
+		key,
+		emoji,
+		count: (typeof optimisticReactions[key] === "number"
+			? optimisticReactions[key]
+			: 0) as number,
+	})).filter((r) => r.count > 0);
+
+	const showEmptyState = entries.length === 0 && !canInteract;
+	if (showEmptyState) return null;
 
 	return (
 		<>
@@ -266,13 +480,26 @@ export function ReactionDisplay({
 				{entries.map((r) => {
 					const isHovered = hoveredKey === r.key;
 					const users = getUsersForReaction(r.key);
-					// Show up to 3 avatars
 					const displayAvatars = users.slice(0, 3);
+					const hasReacted = currentUserReactions.has(r.key);
 
 					return (
 						<span
 							key={r.key}
-							className="relative inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-border bg-muted/40 dark:bg-white/[0.03] text-[11px] cursor-default select-none"
+							className={cn(
+								"relative inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[11px] select-none transition-colors",
+								canInteract
+									? "cursor-pointer hover:bg-muted/60"
+									: "cursor-default",
+								hasReacted
+									? "border-primary/50 bg-primary/10"
+									: "border-border bg-muted/40 dark:bg-white/[0.03]",
+							)}
+							onClick={() =>
+								handleReactionClick(
+									r.key as ReactionContent,
+								)
+							}
 							onMouseEnter={(e) =>
 								handleMouseEnter(
 									r.key,
@@ -283,7 +510,6 @@ export function ReactionDisplay({
 						>
 							<span>{r.emoji}</span>
 
-							{/* Small user avatars */}
 							{displayAvatars.length > 0 && (
 								<span className="inline-flex -space-x-1">
 									{displayAvatars.map((u) =>
@@ -318,11 +544,17 @@ export function ReactionDisplay({
 								</span>
 							)}
 
-							<span className="font-mono text-muted-foreground/70 text-[10px]">
+							<span
+								className={cn(
+									"font-mono text-[10px]",
+									hasReacted
+										? "text-primary"
+										: "text-muted-foreground/70",
+								)}
+							>
 								{r.count}
 							</span>
 
-							{/* Portal tooltip */}
 							{isHovered && (
 								<Tooltip anchorRef={hoveredRef}>
 									<div className="bg-card text-foreground text-[10px] font-mono px-2 py-1 rounded shadow-lg border border-border whitespace-nowrap max-w-[220px]">
@@ -368,9 +600,33 @@ export function ReactionDisplay({
 						</span>
 					);
 				})}
+
+				{canInteract && (
+					<button
+						ref={addButtonRef}
+						type="button"
+						onClick={() => setShowPicker((v) => !v)}
+						className={cn(
+							"inline-flex items-center justify-center w-6 h-6 rounded-full border border-dashed border-border text-muted-foreground/50 hover:text-muted-foreground hover:border-border/80 hover:bg-muted/40 transition-colors",
+							showPicker &&
+								"bg-muted/60 border-border/80 text-muted-foreground",
+						)}
+						title="Add reaction"
+					>
+						<SmilePlus className="w-3.5 h-3.5" />
+					</button>
+				)}
 			</div>
 
-			{/* Right-click context menu */}
+			{showPicker && (
+				<ReactionPicker
+					anchorRef={addButtonRef}
+					onSelect={handleToggleReaction}
+					onClose={() => setShowPicker(false)}
+					existingReactions={currentUserReactions}
+				/>
+			)}
+
 			{contextMenu && (
 				<ReactionsContextMenu
 					x={contextMenu.x}

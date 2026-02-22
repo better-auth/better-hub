@@ -3,10 +3,7 @@ import { getConversation } from "@/lib/chat-store";
 import { streamContext } from "@/lib/resumable-stream";
 import { headers } from "next/headers";
 
-export async function GET(
-	req: Request,
-	{ params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
 	const session = await auth.api.getSession({ headers: await headers() });
 	if (!session?.user?.id) {
 		return new Response("Unauthorized", { status: 401 });

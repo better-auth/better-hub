@@ -33,7 +33,11 @@ import {
 	addPromptComment,
 	deletePromptComment,
 } from "@/app/(app)/repos/[owner]/[repo]/prompts/actions";
-import type { PromptRequest, PromptRequestStatus, PromptRequestComment } from "@/lib/prompt-request-store";
+import type {
+	PromptRequest,
+	PromptRequestStatus,
+	PromptRequestComment,
+} from "@/lib/prompt-request-store";
 
 const statusColors: Record<PromptRequestStatus, string> = {
 	open: "bg-green-500/15 text-green-400",
@@ -66,7 +70,13 @@ interface PromptDetailProps {
 	currentUser: { id: string; name: string; image: string } | null;
 }
 
-export function PromptDetail({ owner, repo, promptRequest, comments, currentUser }: PromptDetailProps) {
+export function PromptDetail({
+	owner,
+	repo,
+	promptRequest,
+	comments,
+	currentUser,
+}: PromptDetailProps) {
 	const router = useRouter();
 	const {
 		openChat,
@@ -96,7 +106,12 @@ export function PromptDetail({ owner, repo, promptRequest, comments, currentUser
 	const [isSubmittingComment, startCommentTransition] = useTransition();
 	const [optimisticComments, addOptimisticComment] = useOptimistic(
 		comments,
-		(state: PromptRequestComment[], action: { type: "add"; comment: PromptRequestComment } | { type: "delete"; id: string }) => {
+		(
+			state: PromptRequestComment[],
+			action:
+				| { type: "add"; comment: PromptRequestComment }
+				| { type: "delete"; id: string },
+		) => {
 			if (action.type === "add") return [...state, action.comment];
 			return state.filter((c) => c.id !== action.id);
 		},
@@ -457,7 +472,8 @@ export function PromptDetail({ owner, repo, promptRequest, comments, currentUser
 			<div className="space-y-4">
 				<div className="flex items-center gap-2 text-xs text-muted-foreground/60 font-mono">
 					<MessageSquare className="w-3.5 h-3.5" />
-					{optimisticComments.length} comment{optimisticComments.length !== 1 ? "s" : ""}
+					{optimisticComments.length} comment
+					{optimisticComments.length !== 1 ? "s" : ""}
 				</div>
 
 				{optimisticComments.length > 0 && (
@@ -467,14 +483,20 @@ export function PromptDetail({ owner, repo, promptRequest, comments, currentUser
 								key={comment.id}
 								className={cn(
 									"border border-border rounded-lg p-3 space-y-2",
-									comment.id.startsWith("optimistic-") && "opacity-60",
+									comment.id.startsWith(
+										"optimistic-",
+									) && "opacity-60",
 								)}
 							>
 								<div className="flex items-center gap-2">
 									{comment.userAvatarUrl ? (
 										<Image
-											src={comment.userAvatarUrl}
-											alt={comment.userName}
+											src={
+												comment.userAvatarUrl
+											}
+											alt={
+												comment.userName
+											}
 											width={20}
 											height={20}
 											className="rounded-full"
@@ -486,21 +508,37 @@ export function PromptDetail({ owner, repo, promptRequest, comments, currentUser
 										{comment.userName}
 									</span>
 									<span className="text-[11px] text-muted-foreground/50 font-mono">
-										<TimeAgo date={comment.createdAt} />
+										<TimeAgo
+											date={
+												comment.createdAt
+											}
+										/>
 									</span>
 									<div className="flex-1" />
-									{currentUser?.id === comment.userId && !comment.id.startsWith("optimistic-") && (
-										<button
-											onClick={() => handleDeleteComment(comment.id)}
-											className="text-muted-foreground/30 hover:text-red-400 transition-colors cursor-pointer"
-											title="Delete comment"
-										>
-											<Trash2 className="w-3 h-3" />
-										</button>
-									)}
+									{currentUser?.id ===
+										comment.userId &&
+										!comment.id.startsWith(
+											"optimistic-",
+										) && (
+											<button
+												onClick={() =>
+													handleDeleteComment(
+														comment.id,
+													)
+												}
+												className="text-muted-foreground/30 hover:text-red-400 transition-colors cursor-pointer"
+												title="Delete comment"
+											>
+												<Trash2 className="w-3 h-3" />
+											</button>
+										)}
 								</div>
 								<div className="pl-7">
-									<ClientMarkdown content={comment.body} />
+									<ClientMarkdown
+										content={
+											comment.body
+										}
+									/>
 								</div>
 							</div>
 						))}
@@ -516,7 +554,10 @@ export function PromptDetail({ owner, repo, promptRequest, comments, currentUser
 							compact
 							rows={3}
 							onKeyDown={(e) => {
-								if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+								if (
+									e.key === "Enter" &&
+									(e.metaKey || e.ctrlKey)
+								) {
 									e.preventDefault();
 									handleAddComment();
 								}
@@ -525,7 +566,10 @@ export function PromptDetail({ owner, repo, promptRequest, comments, currentUser
 						<div className="flex justify-end">
 							<button
 								onClick={handleAddComment}
-								disabled={!commentBody.trim() || isSubmittingComment}
+								disabled={
+									!commentBody.trim() ||
+									isSubmittingComment
+								}
 								className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-foreground text-background rounded-md hover:opacity-90 transition-opacity disabled:opacity-40 cursor-pointer"
 							>
 								{isSubmittingComment ? (

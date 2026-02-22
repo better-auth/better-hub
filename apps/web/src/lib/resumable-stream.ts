@@ -9,8 +9,7 @@ import { EventEmitter } from "events";
 import { redis } from "./redis";
 
 const KEY_PREFIX = "resumable-stream:rs";
-const DONE_MESSAGE =
-	"\n\n\nDONE_SENTINEL_hasdfasudfyge374%$%^$EDSATRTYFtydryrte\n";
+const DONE_MESSAGE = "\n\n\nDONE_SENTINEL_hasdfasudfyge374%$%^$EDSATRTYFtydryrte\n";
 const DONE_VALUE = "DONE";
 const EXPIRY_SECONDS = 24 * 60 * 60;
 
@@ -53,9 +52,7 @@ export const streamContext = {
 		streamId: string,
 		skipCharacters?: number,
 	): Promise<ReadableStream<string> | null | undefined> {
-		const state = await redis.get<string>(
-			`${KEY_PREFIX}:sentinel:${streamId}`,
-		);
+		const state = await redis.get<string>(`${KEY_PREFIX}:sentinel:${streamId}`);
 		if (!state) return undefined;
 		if (state === DONE_VALUE) return null;
 		return resumeStream(streamId, skipCharacters);
@@ -85,16 +82,11 @@ async function createNewResumableStream(
 		debugLog("Connected to listener", parsed.listenerId);
 		listenerChannels.push(parsed.listenerId);
 
-		const chunksToSend = chunks
-			.join("")
-			.slice(parsed.skipCharacters || 0);
+		const chunksToSend = chunks.join("").slice(parsed.skipCharacters || 0);
 		emitter.emit(`${KEY_PREFIX}:chunk:${parsed.listenerId}`, chunksToSend);
 
 		if (isDone) {
-			emitter.emit(
-				`${KEY_PREFIX}:chunk:${parsed.listenerId}`,
-				DONE_MESSAGE,
-			);
+			emitter.emit(`${KEY_PREFIX}:chunk:${parsed.listenerId}`, DONE_MESSAGE);
 		}
 	};
 	emitter.on(`${KEY_PREFIX}:request:${streamId}`, onRequest);
@@ -183,7 +175,9 @@ function resumeStream(
 						}
 						if (Date.now() - start > 1000) {
 							controller.error(
-								new Error("Timeout waiting for ack"),
+								new Error(
+									"Timeout waiting for ack",
+								),
 							);
 						}
 					}, 1000);

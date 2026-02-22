@@ -9,8 +9,10 @@ export default async function IssuesListPage({
 }) {
 	const { owner, repo } = await params;
 
-	const { openIssues, closedIssues, openCount, closedCount } =
-		await getRepoIssuesPage(owner, repo);
+	const { openIssues, closedIssues, openCount, closedCount } = await getRepoIssuesPage(
+		owner,
+		repo,
+	);
 
 	return (
 		<IssuesList

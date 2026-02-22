@@ -5,9 +5,7 @@ import { usePathname } from "next/navigation";
 
 export function NavigationProgress() {
 	const pathname = usePathname();
-	const [state, setState] = useState<"idle" | "loading" | "completing">(
-		"idle",
-	);
+	const [state, setState] = useState<"idle" | "loading" | "completing">("idle");
 	const prevPathname = useRef(pathname);
 	const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 

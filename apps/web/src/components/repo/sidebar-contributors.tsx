@@ -58,7 +58,9 @@ export function SidebarContributors({
 					<Users className="w-3 h-3" />
 					Contributors
 					<span className="text-muted-foreground/70">
-						{totalCount > avatars.length ? `${totalCount}+` : totalCount}
+						{totalCount > avatars.length
+							? `${totalCount}+`
+							: totalCount}
 					</span>
 				</span>
 			</span>

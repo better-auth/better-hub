@@ -1,184 +1,260 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      width: 300px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      background: #0a0a0a;
-      color: #e5e5e5;
-      padding: 16px;
-    }
+	<head>
+		<meta charset="utf-8" />
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+			body {
+				width: 300px;
+				font-family:
+					-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+					sans-serif;
+				background: #0a0a0a;
+				color: #e5e5e5;
+				padding: 16px;
+			}
 
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-    }
-    .header h1 {
-      font-size: 14px;
-      font-weight: 600;
-      letter-spacing: -0.02em;
-    }
+			.header {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				margin-bottom: 16px;
+			}
+			.header h1 {
+				font-size: 14px;
+				font-weight: 600;
+				letter-spacing: -0.02em;
+			}
 
-    /* Toggle switch */
-    .toggle {
-      position: relative;
-      width: 40px;
-      height: 22px;
-      cursor: pointer;
-    }
-    .toggle input { display: none; }
-    .toggle .slider {
-      position: absolute;
-      inset: 0;
-      background: #333;
-      border-radius: 11px;
-      transition: background 0.2s;
-    }
-    .toggle .slider::before {
-      content: '';
-      position: absolute;
-      width: 16px;
-      height: 16px;
-      left: 3px;
-      top: 3px;
-      background: #888;
-      border-radius: 50%;
-      transition: transform 0.2s, background 0.2s;
-    }
-    .toggle input:checked + .slider { background: #22c55e; }
-    .toggle input:checked + .slider::before {
-      transform: translateX(18px);
-      background: #fff;
-    }
+			/* Toggle switch */
+			.toggle {
+				position: relative;
+				width: 40px;
+				height: 22px;
+				cursor: pointer;
+			}
+			.toggle input {
+				display: none;
+			}
+			.toggle .slider {
+				position: absolute;
+				inset: 0;
+				background: #333;
+				border-radius: 11px;
+				transition: background 0.2s;
+			}
+			.toggle .slider::before {
+				content: "";
+				position: absolute;
+				width: 16px;
+				height: 16px;
+				left: 3px;
+				top: 3px;
+				background: #888;
+				border-radius: 50%;
+				transition:
+					transform 0.2s,
+					background 0.2s;
+			}
+			.toggle input:checked + .slider {
+				background: #22c55e;
+			}
+			.toggle input:checked + .slider::before {
+				transform: translateX(18px);
+				background: #fff;
+			}
 
-    .status {
-      font-size: 11px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      color: #666;
-      margin-bottom: 14px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .status.active { color: #22c55e; }
+			.status {
+				font-size: 11px;
+				font-family: "SF Mono", "Fira Code", monospace;
+				color: #666;
+				margin-bottom: 14px;
+				text-transform: uppercase;
+				letter-spacing: 0.05em;
+			}
+			.status.active {
+				color: #22c55e;
+			}
 
-    .divider {
-      border: none;
-      border-top: 1px solid #1a1a1a;
-      margin: 12px 0;
-    }
+			.divider {
+				border: none;
+				border-top: 1px solid #1a1a1a;
+				margin: 12px 0;
+			}
 
-    label.field {
-      display: block;
-      font-size: 10px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #555;
-      margin-bottom: 6px;
-    }
+			label.field {
+				display: block;
+				font-size: 10px;
+				font-family: "SF Mono", "Fira Code", monospace;
+				text-transform: uppercase;
+				letter-spacing: 0.08em;
+				color: #555;
+				margin-bottom: 6px;
+			}
 
-    input[type="text"] {
-      width: 100%;
-      background: #141414;
-      border: 1px solid #222;
-      color: #e5e5e5;
-      font-size: 12px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      padding: 8px 10px;
-      border-radius: 4px;
-      outline: none;
-      transition: border-color 0.15s;
-    }
-    input[type="text"]:focus { border-color: #444; }
-    input[type="text"]::placeholder { color: #444; }
+			input[type="text"] {
+				width: 100%;
+				background: #141414;
+				border: 1px solid #222;
+				color: #e5e5e5;
+				font-size: 12px;
+				font-family: "SF Mono", "Fira Code", monospace;
+				padding: 8px 10px;
+				border-radius: 4px;
+				outline: none;
+				transition: border-color 0.15s;
+			}
+			input[type="text"]:focus {
+				border-color: #444;
+			}
+			input[type="text"]::placeholder {
+				color: #444;
+			}
 
-    .save-btn {
-      margin-top: 8px;
-      width: 100%;
-      background: #1a1a1a;
-      border: 1px solid #222;
-      color: #999;
-      font-size: 11px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      padding: 7px;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.15s;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .save-btn:hover { background: #222; color: #e5e5e5; border-color: #333; }
-    .save-btn.saved { color: #22c55e; border-color: #22c55e33; }
+			.save-btn {
+				margin-top: 8px;
+				width: 100%;
+				background: #1a1a1a;
+				border: 1px solid #222;
+				color: #999;
+				font-size: 11px;
+				font-family: "SF Mono", "Fira Code", monospace;
+				padding: 7px;
+				border-radius: 4px;
+				cursor: pointer;
+				transition: all 0.15s;
+				text-transform: uppercase;
+				letter-spacing: 0.05em;
+			}
+			.save-btn:hover {
+				background: #222;
+				color: #e5e5e5;
+				border-color: #333;
+			}
+			.save-btn.saved {
+				color: #22c55e;
+				border-color: #22c55e33;
+			}
 
-    .mappings {
-      margin-top: 4px;
-    }
-    .mappings summary {
-      font-size: 10px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      color: #444;
-      cursor: pointer;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      list-style: none;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .mappings summary::before { content: '+ '; }
-    .mappings[open] summary::before { content: '- '; }
-    .mappings .map-list {
-      margin-top: 8px;
-      font-size: 10px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      color: #555;
-      line-height: 1.8;
-    }
-    .mappings .from { color: #666; }
-    .mappings .arrow { color: #333; margin: 0 4px; }
-    .mappings .to { color: #888; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>Better Hub</h1>
-    <label class="toggle">
-      <input type="checkbox" id="toggle" checked>
-      <span class="slider"></span>
-    </label>
-  </div>
+			.mappings {
+				margin-top: 4px;
+			}
+			.mappings summary {
+				font-size: 10px;
+				font-family: "SF Mono", "Fira Code", monospace;
+				color: #444;
+				cursor: pointer;
+				text-transform: uppercase;
+				letter-spacing: 0.05em;
+				list-style: none;
+				display: flex;
+				align-items: center;
+				gap: 4px;
+			}
+			.mappings summary::before {
+				content: "+ ";
+			}
+			.mappings[open] summary::before {
+				content: "- ";
+			}
+			.mappings .map-list {
+				margin-top: 8px;
+				font-size: 10px;
+				font-family: "SF Mono", "Fira Code", monospace;
+				color: #555;
+				line-height: 1.8;
+			}
+			.mappings .from {
+				color: #666;
+			}
+			.mappings .arrow {
+				color: #333;
+				margin: 0 4px;
+			}
+			.mappings .to {
+				color: #888;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="header">
+			<h1>Better Hub</h1>
+			<label class="toggle">
+				<input type="checkbox" id="toggle" checked />
+				<span class="slider"></span>
+			</label>
+		</div>
 
-  <div class="status" id="status">Redirecting</div>
+		<div class="status" id="status">Redirecting</div>
 
-  <hr class="divider">
+		<hr class="divider" />
 
-  <label class="field" for="host">Instance URL</label>
-  <input type="text" id="host" placeholder="https://beta.better-hub.com">
-  <button class="save-btn" id="save">Save</button>
+		<label class="field" for="host">Instance URL</label>
+		<input type="text" id="host" placeholder="https://beta.better-hub.com" />
+		<button class="save-btn" id="save">Save</button>
 
-  <hr class="divider">
+		<hr class="divider" />
 
-  <details class="mappings">
-    <summary>Route mappings</summary>
-    <div class="map-list">
-      <div><span class="from">github.com</span><span class="arrow">&rarr;</span><span class="to">/dashboard</span></div>
-      <div><span class="from">/:owner/:repo</span><span class="arrow">&rarr;</span><span class="to">/:owner/:repo</span></div>
-      <div><span class="from">/pull/:n</span><span class="arrow">&rarr;</span><span class="to">/pull/:n</span></div>
-      <div><span class="from">/commit/:sha</span><span class="arrow">&rarr;</span><span class="to">/commit/:sha</span></div>
-      <div><span class="from">/actions/runs/:id</span><span class="arrow">&rarr;</span><span class="to">/actions/:id</span></div>
-      <div><span class="from">/notifications</span><span class="arrow">&rarr;</span><span class="to">/notifications</span></div>
-      <div><span class="from">/trending</span><span class="arrow">&rarr;</span><span class="to">/trending</span></div>
-      <div><span class="from">/pulls</span><span class="arrow">&rarr;</span><span class="to">/prs</span></div>
-      <div><span class="from">/issues</span><span class="arrow">&rarr;</span><span class="to">/issues</span></div>
-      <div><span class="from">/settings</span><span class="arrow">&rarr;</span><span class="to">/settings</span></div>
-    </div>
-  </details>
+		<details class="mappings">
+			<summary>Route mappings</summary>
+			<div class="map-list">
+				<div>
+					<span class="from">github.com</span
+					><span class="arrow">&rarr;</span
+					><span class="to">/dashboard</span>
+				</div>
+				<div>
+					<span class="from">/:owner/:repo</span
+					><span class="arrow">&rarr;</span
+					><span class="to">/:owner/:repo</span>
+				</div>
+				<div>
+					<span class="from">/pull/:n</span
+					><span class="arrow">&rarr;</span
+					><span class="to">/pull/:n</span>
+				</div>
+				<div>
+					<span class="from">/commit/:sha</span
+					><span class="arrow">&rarr;</span
+					><span class="to">/commit/:sha</span>
+				</div>
+				<div>
+					<span class="from">/actions/runs/:id</span
+					><span class="arrow">&rarr;</span
+					><span class="to">/actions/:id</span>
+				</div>
+				<div>
+					<span class="from">/notifications</span
+					><span class="arrow">&rarr;</span
+					><span class="to">/notifications</span>
+				</div>
+				<div>
+					<span class="from">/trending</span
+					><span class="arrow">&rarr;</span
+					><span class="to">/trending</span>
+				</div>
+				<div>
+					<span class="from">/pulls</span
+					><span class="arrow">&rarr;</span
+					><span class="to">/prs</span>
+				</div>
+				<div>
+					<span class="from">/issues</span
+					><span class="arrow">&rarr;</span
+					><span class="to">/issues</span>
+				</div>
+				<div>
+					<span class="from">/settings</span
+					><span class="arrow">&rarr;</span
+					><span class="to">/settings</span>
+				</div>
+			</div>
+		</details>
 
-  <script src="popup.js"></script>
-</body>
+		<script src="popup.js"></script>
+	</body>
 </html>

@@ -946,7 +946,12 @@ function SingleFileDiff({
 			setEditSha(null);
 			setEditTokens(null);
 			setEditView("edit");
-			emit({ type: "pr:file-committed", owner: owner!, repo: repo!, number: pullNumber! });
+			emit({
+				type: "pr:file-committed",
+				owner: owner!,
+				repo: repo!,
+				number: pullNumber!,
+			});
 			diffRouter.refresh();
 		},
 		[
@@ -3233,7 +3238,12 @@ function InlineCommentDisplay({
 				} catch {}
 				// Give GitHub time to process the new commit before refreshing
 				await new Promise((r) => setTimeout(r, 1500));
-				emit({ type: "pr:suggestion-committed", owner: owner!, repo: repo!, number: pullNumber! });
+				emit({
+					type: "pr:suggestion-committed",
+					owner: owner!,
+					repo: repo!,
+					number: pullNumber!,
+				});
 				router.refresh();
 			}
 		});
@@ -4633,7 +4643,9 @@ function SidebarCommits({
 		}
 
 		fetchAll();
-		return () => { cancelled = true; };
+		return () => {
+			cancelled = true;
+		};
 	}, [owner, repo, commits]);
 
 	if (commits.length === 0) {
@@ -4694,7 +4706,10 @@ function SidebarCommits({
 							<div className="flex items-start gap-1.5">
 								{c.author && (
 									<Image
-										src={c.author.avatar_url}
+										src={
+											c.author
+												.avatar_url
+										}
 										alt={c.author.login}
 										width={16}
 										height={16}
@@ -4704,7 +4719,9 @@ function SidebarCommits({
 								<div className="flex-1 min-w-0">
 									{commitUrl ? (
 										<Link
-											href={commitUrl}
+											href={
+												commitUrl
+											}
 											className="text-[11px] font-mono text-foreground/80 hover:text-foreground hover:underline line-clamp-2 break-words block"
 										>
 											{message}
@@ -4720,22 +4737,36 @@ function SidebarCommits({
 										</span>
 										{c.author && (
 											<span className="text-[9px] text-muted-foreground/50 truncate">
-												{c.author.login}
+												{
+													c
+														.author
+														.login
+												}
 											</span>
 										)}
 										{commitCheck && (
 											<span className="shrink-0">
 												<CheckStatusBadge
-													checkStatus={commitCheck}
+													checkStatus={
+														commitCheck
+													}
 													align="right"
-													owner={owner}
-													repo={repo}
+													owner={
+														owner
+													}
+													repo={
+														repo
+													}
 												/>
 											</span>
 										)}
 										{date && (
 											<span className="text-[9px] text-muted-foreground/40 ml-auto shrink-0">
-												<TimeAgo date={date} />
+												<TimeAgo
+													date={
+														date
+													}
+												/>
 											</span>
 										)}
 									</div>
@@ -4790,7 +4821,12 @@ function SidebarReviews({
 			} else {
 				await unresolveReviewThread(threadId, owner, repo, pullNumber);
 			}
-			emit({ type: resolve ? "pr:thread-resolved" : "pr:thread-unresolved", owner, repo, number: pullNumber });
+			emit({
+				type: resolve ? "pr:thread-resolved" : "pr:thread-unresolved",
+				owner,
+				repo,
+				number: pullNumber,
+			});
 			router.refresh();
 		});
 	};

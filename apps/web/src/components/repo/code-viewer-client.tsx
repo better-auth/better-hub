@@ -668,7 +668,8 @@ export function CodeViewerClient({
 			if (result.error) throw new Error(result.error);
 			if (result.newSha) setCurrentSha(result.newSha);
 			setIsEditing(false);
-			if (owner && repo) emitMutation({ type: "repo:file-committed", owner, repo });
+			if (owner && repo)
+				emitMutation({ type: "repo:file-committed", owner, repo });
 			codeRouter.refresh();
 		},
 		[owner, repo, branch, currentSha, filePath, editContent, codeRouter],
@@ -705,7 +706,9 @@ export function CodeViewerClient({
 							<div className="flex items-center gap-0.5">
 								<button
 									onClick={() =>
-										setWordWrap((w) => !w)
+										setWordWrap(
+											(w) => !w,
+										)
 									}
 									className={cn(
 										"flex items-center gap-1.5 px-2 py-1 text-[11px] font-mono transition-colors cursor-pointer rounded-md",
@@ -723,7 +726,9 @@ export function CodeViewerClient({
 											setEditContent(
 												content,
 											);
-											setIsEditing(true);
+											setIsEditing(
+												true,
+											);
 										}}
 										className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-mono text-muted-foreground/50 hover:text-foreground transition-colors cursor-pointer rounded-md hover:bg-muted/60"
 										title="Edit file"
@@ -974,9 +979,14 @@ export function CodeViewerClient({
 						/>
 						<button
 							onClick={() => {
-								navigator.clipboard.writeText(content);
+								navigator.clipboard.writeText(
+									content,
+								);
 								setCopiedAll(true);
-								setTimeout(() => setCopiedAll(false), 1500);
+								setTimeout(
+									() => setCopiedAll(false),
+									1500,
+								);
 							}}
 							className="absolute top-2 right-2 p-1.5 rounded-md text-muted-foreground/50 hover:text-foreground transition-all opacity-0 group-hover/code:opacity-100 cursor-pointer z-20"
 							title="Copy file contents"
@@ -989,8 +999,7 @@ export function CodeViewerClient({
 						</button>
 					</div>
 				)}
-
-				</div>
+			</div>
 
 			{/* Commit dialog */}
 			{commitDialogOpen && filePath && branch && (

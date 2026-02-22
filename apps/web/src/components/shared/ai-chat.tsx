@@ -599,7 +599,13 @@ export function AIChat({
 			new DefaultChatTransport({
 				api: apiEndpoint,
 				body: () => contextBodyRef.current,
-				prepareSendMessagesRequest: ({ id, messages, body, trigger, messageId }) => {
+				prepareSendMessagesRequest: ({
+					id,
+					messages,
+					body,
+					trigger,
+					messageId,
+				}) => {
 					return {
 						body: {
 							...body,
@@ -614,7 +620,9 @@ export function AIChat({
 				},
 				...(persistKey
 					? {
-							prepareReconnectToStreamRequest: ({ id }) => ({
+							prepareReconnectToStreamRequest: ({
+								id,
+							}) => ({
 								api: `/api/ai/ghost/${id}/stream`,
 							}),
 						}
@@ -666,7 +674,9 @@ export function AIChat({
 						}) => {
 							if (m.partsJson) {
 								try {
-									const parts = JSON.parse(m.partsJson);
+									const parts = JSON.parse(
+										m.partsJson,
+									);
 									return {
 										id: m.id,
 										role: m.role,
@@ -973,15 +983,19 @@ export function AIChat({
 	useEffect(() => {
 		if (!autoFocus) return;
 		const handler = (e: Event) => {
-			const { userMessage, assistantMessage, simulateDelay = 0 } =
-				(e as CustomEvent).detail ?? {};
+			const {
+				userMessage,
+				assistantMessage,
+				simulateDelay = 0,
+			} = (e as CustomEvent).detail ?? {};
 			if (!userMessage || !assistantMessage) return;
-			const mkMsg = (role: "user" | "assistant", text: string) => ({
-				id: `welcome-${role}-${Date.now()}`,
-				role,
-				content: text,
-				parts: [{ type: "text" as const, text }],
-			}) as unknown as UIMessage;
+			const mkMsg = (role: "user" | "assistant", text: string) =>
+				({
+					id: `welcome-${role}-${Date.now()}`,
+					role,
+					content: text,
+					parts: [{ type: "text" as const, text }],
+				}) as unknown as UIMessage;
 			// Show user message immediately
 			setMessagesRef.current([mkMsg("user", userMessage)]);
 			// Then reveal the assistant response after the simulated delay

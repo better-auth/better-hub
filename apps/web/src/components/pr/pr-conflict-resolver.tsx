@@ -365,7 +365,12 @@ export function PRConflictResolver({
 					type: "success",
 					message: "Conflicts resolved!",
 				});
-				emit({ type: "pr:conflict-resolved", owner, repo, number: pullNumber });
+				emit({
+					type: "pr:conflict-resolved",
+					owner,
+					repo,
+					number: pullNumber,
+				});
 				// Hard navigate to fully bust Next.js router cache + give GitHub a moment to recompute mergeable
 				setTimeout(() => {
 					window.location.href = `/${owner}/${repo}/pulls/${pullNumber}`;

@@ -19,7 +19,7 @@ const STEPS = [
 		number: "01",
 		title: "Download the extension",
 		description:
-			'Click the download button above to get the .zip file. Save it anywhere on your computer — your Downloads folder works fine.',
+			"Click the download button above to get the .zip file. Save it anywhere on your computer — your Downloads folder works fine.",
 		icon: Download,
 	},
 	{
@@ -106,10 +106,9 @@ export function ExtensionPageContent() {
 							</span>
 						</div>
 						<p className="text-sm text-muted-foreground mt-1">
-							Automatically redirects GitHub links to
-							your Better Hub instance.
+							Automatically redirects GitHub links to your
+							Better Hub instance.
 						</p>
-
 					</div>
 				</div>
 
@@ -129,8 +128,7 @@ export function ExtensionPageContent() {
 						{downloaded ? (
 							<>
 								<Check className="w-4 h-4" />
-								Downloaded — follow
-								steps below
+								Downloaded — follow steps below
 							</>
 						) : (
 							<>
@@ -149,128 +147,130 @@ export function ExtensionPageContent() {
 
 			{/* Scrollable content */}
 			<div className="flex-1 min-h-0 overflow-y-auto pt-6">
+				{/* Installation steps */}
+				<div className="mb-10">
+					<h2 className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest mb-5">
+						Installation Guide
+					</h2>
 
-			{/* Installation steps */}
-			<div className="mb-10">
-				<h2 className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest mb-5">
-					Installation Guide
-				</h2>
+					<div className="relative">
+						{/* Vertical connector line */}
+						<div className="absolute left-[19px] top-6 bottom-6 w-px bg-border" />
 
-				<div className="relative">
-					{/* Vertical connector line */}
-					<div className="absolute left-[19px] top-6 bottom-6 w-px bg-border" />
-
-					<div className="flex flex-col gap-0">
-						{STEPS.map((step, i) => (
-							<div
-								key={step.number}
-								className="relative flex gap-4 group"
-							>
-								{/* Step number circle */}
-								<div className="relative z-10 shrink-0 w-10 h-10 rounded-full border border-border bg-background flex items-center justify-center group-hover:border-foreground/20 transition-colors">
-									<span className="text-[11px] font-mono text-muted-foreground group-hover:text-foreground transition-colors">
-										{step.number}
-									</span>
-								</div>
-
-								{/* Content */}
+						<div className="flex flex-col gap-0">
+							{STEPS.map((step, i) => (
 								<div
-									className={cn(
-										"flex-1 pb-6",
-										i ===
-											STEPS.length -
-												1 &&
-											"pb-0",
-									)}
+									key={step.number}
+									className="relative flex gap-4 group"
 								>
-									<div className="flex items-center gap-2 mt-2">
-										<h3 className="text-sm font-medium">
+									{/* Step number circle */}
+									<div className="relative z-10 shrink-0 w-10 h-10 rounded-full border border-border bg-background flex items-center justify-center group-hover:border-foreground/20 transition-colors">
+										<span className="text-[11px] font-mono text-muted-foreground group-hover:text-foreground transition-colors">
 											{
-												step.title
+												step.number
 											}
-										</h3>
+										</span>
 									</div>
-									<p className="text-xs text-muted-foreground mt-1.5 max-w-lg leading-relaxed">
-										{
-											step.description
-										}
-									</p>
-									{step.code && (
-										<div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-md">
-											<code className="text-[11px] font-mono text-foreground/80">
+
+									{/* Content */}
+									<div
+										className={cn(
+											"flex-1 pb-6",
+											i ===
+												STEPS.length -
+													1 &&
+												"pb-0",
+										)}
+									>
+										<div className="flex items-center gap-2 mt-2">
+											<h3 className="text-sm font-medium">
 												{
-													step.code
+													step.title
 												}
-											</code>
-											<button
-												onClick={() =>
-													navigator.clipboard.writeText(
-														step.code!,
-													)
-												}
-												className="text-[10px] font-mono text-muted-foreground/40 hover:text-foreground transition-colors cursor-pointer"
-											>
-												copy
-											</button>
+											</h3>
 										</div>
-									)}
+										<p className="text-xs text-muted-foreground mt-1.5 max-w-lg leading-relaxed">
+											{
+												step.description
+											}
+										</p>
+										{step.code && (
+											<div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-md">
+												<code className="text-[11px] font-mono text-foreground/80">
+													{
+														step.code
+													}
+												</code>
+												<button
+													onClick={() =>
+														navigator.clipboard.writeText(
+															step.code!,
+														)
+													}
+													className="text-[10px] font-mono text-muted-foreground/40 hover:text-foreground transition-colors cursor-pointer"
+												>
+													copy
+												</button>
+											</div>
+										)}
+									</div>
 								</div>
+							))}
+						</div>
+					</div>
+				</div>
+
+				{/* Route mappings */}
+				<div className="mb-10">
+					<h2 className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest mb-4">
+						Route Mappings
+					</h2>
+					<div className="border border-border rounded-md divide-y divide-border overflow-hidden">
+						{ROUTE_MAPPINGS.map((r) => (
+							<div
+								key={r.from}
+								className="flex items-center px-4 py-2.5 text-[11px] font-mono"
+							>
+								<span className="text-muted-foreground/60 flex-1">
+									{r.from}
+								</span>
+								<ArrowRight className="w-3 h-3 text-muted-foreground/20 mx-4 shrink-0" />
+								<span className="text-muted-foreground flex-1 text-right">
+									{r.to}
+								</span>
 							</div>
 						))}
 					</div>
+					<p className="text-[10px] text-muted-foreground/30 font-mono mt-2">
+						GitHub-only pages (settings, marketplace, login,
+						etc.) are excluded and open normally.
+					</p>
 				</div>
-			</div>
 
-			{/* Route mappings */}
-			<div className="mb-10">
-				<h2 className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest mb-4">
-					Route Mappings
-				</h2>
-				<div className="border border-border rounded-md divide-y divide-border overflow-hidden">
-					{ROUTE_MAPPINGS.map((r) => (
-						<div
-							key={r.from}
-							className="flex items-center px-4 py-2.5 text-[11px] font-mono"
-						>
-							<span className="text-muted-foreground/60 flex-1">
-								{r.from}
-							</span>
-							<ArrowRight className="w-3 h-3 text-muted-foreground/20 mx-4 shrink-0" />
-							<span className="text-muted-foreground flex-1 text-right">
-								{r.to}
-							</span>
+				{/* After install note */}
+				<div className="border border-border rounded-md p-4 bg-card/30">
+					<div className="flex items-start gap-3">
+						<div className="shrink-0 w-8 h-8 rounded-lg bg-[var(--contrib-1)]/30 flex items-center justify-center mt-0.5">
+							<Zap className="w-4 h-4 text-[var(--contrib-3)]" />
 						</div>
-					))}
-				</div>
-				<p className="text-[10px] text-muted-foreground/30 font-mono mt-2">
-					GitHub-only pages (settings, marketplace, login, etc.)
-					are excluded and open normally.
-				</p>
-			</div>
-
-			{/* After install note */}
-			<div className="border border-border rounded-md p-4 bg-card/30">
-				<div className="flex items-start gap-3">
-					<div className="shrink-0 w-8 h-8 rounded-lg bg-[var(--contrib-1)]/30 flex items-center justify-center mt-0.5">
-						<Zap className="w-4 h-4 text-[var(--contrib-3)]" />
-					</div>
-					<div>
-						<h3 className="text-sm font-medium">
-							After installation
-						</h3>
-						<p className="text-xs text-muted-foreground mt-1 leading-relaxed max-w-lg">
-							The extension defaults to{" "}
-							<code className="text-[11px] font-mono px-1 py-0.5 bg-muted rounded text-foreground/70">
-								https://beta.better-hub.com
-							</code>
-							. You can change this anytime by clicking the
-							extension icon in your toolbar and updating the
-							Instance URL. Use the toggle to pause/resume
-							redirects without uninstalling.
-						</p>
+						<div>
+							<h3 className="text-sm font-medium">
+								After installation
+							</h3>
+							<p className="text-xs text-muted-foreground mt-1 leading-relaxed max-w-lg">
+								The extension defaults to{" "}
+								<code className="text-[11px] font-mono px-1 py-0.5 bg-muted rounded text-foreground/70">
+									https://beta.better-hub.com
+								</code>
+								. You can change this anytime by
+								clicking the extension icon in your
+								toolbar and updating the Instance
+								URL. Use the toggle to pause/resume
+								redirects without uninstalling.
+							</p>
+						</div>
 					</div>
 				</div>
-			</div>
 			</div>
 		</div>
 	);

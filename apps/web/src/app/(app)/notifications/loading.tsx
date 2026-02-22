@@ -19,7 +19,9 @@ export default function NotificationsLoading() {
 							<div className="flex items-center gap-2">
 								<div
 									className="h-3.5 rounded bg-muted/35"
-									style={{ width: `${150 + (i % 5) * 40}px` }}
+									style={{
+										width: `${150 + (i % 5) * 40}px`,
+									}}
 								/>
 							</div>
 							<div className="flex items-center gap-2">

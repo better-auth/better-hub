@@ -7,10 +7,13 @@ import {
 	deleteGithubCacheByPrefix,
 	enqueueGithubSyncJob,
 	getGithubCacheEntry,
+	getSharedCacheEntry,
 	markGithubSyncJobFailed,
 	markGithubSyncJobSucceeded,
 	touchGithubCacheEntrySyncedAt,
+	touchSharedCacheEntrySyncedAt,
 	upsertGithubCacheEntry,
+	upsertSharedCacheEntry,
 } from "./github-sync-store";
 import { redis } from "./redis";
 import { computeContributorScore } from "./contributor-score";
@@ -87,6 +90,41 @@ type GitDataSyncJobType =
 	| "org_members"
 	| "person_repo_activity"
 	| "pr_bundle";
+
+const SHAREABLE_CACHE_TYPES: ReadonlySet<string> = new Set([
+	"repo_contents",
+	"repo_tree",
+	"repo_branches",
+	"repo_tags",
+	"file_content",
+	"repo_readme",
+	"repo_issues",
+	"repo_pull_requests",
+	"issue",
+	"issue_comments",
+	"pull_request",
+	"pull_request_files",
+	"pull_request_comments",
+	"pull_request_reviews",
+	"pull_request_commits",
+	"repo_contributors",
+	"repo_workflows",
+	"repo_workflow_runs",
+	"repo_nav_counts",
+	"user_profile",
+	"user_public_repos",
+	"user_public_orgs",
+	"org",
+	"org_repos",
+	"org_members",
+	"trending_repos",
+	"pr_bundle",
+	"person_repo_activity",
+]);
+
+function isShareableCacheType(jobType: string): boolean {
+	return SHAREABLE_CACHE_TYPES.has(jobType);
+}
 
 interface GitDataSyncJobPayload {
 	owner?: string;
@@ -954,6 +992,30 @@ async function ghConditionalGet(
 	return { notModified: false, data, etag: resp.headers.get("etag") };
 }
 
+async function upsertCacheWithShared<T>(
+	userId: string,
+	cacheKey: string,
+	cacheType: string,
+	data: T,
+	etag: string | null = null,
+) {
+	await upsertGithubCacheEntry(userId, cacheKey, cacheType, data, etag);
+	if (isShareableCacheType(cacheType)) {
+		upsertSharedCacheEntry(cacheKey, data, etag).catch(() => {});
+	}
+}
+
+async function touchCacheWithShared(
+	userId: string,
+	cacheKey: string,
+	cacheType: string,
+) {
+	await touchGithubCacheEntrySyncedAt(userId, cacheKey);
+	if (isShareableCacheType(cacheType)) {
+		touchSharedCacheEntrySyncedAt(cacheKey).catch(() => {});
+	}
+}
+
 async function processGitDataSyncJob(
 	authCtx: GitHubAuthContext,
 	jobType: GitDataSyncJobType,
@@ -1008,7 +1070,7 @@ async function processGitDataSyncJob(
 		case "org": {
 			if (!payload.orgName) return;
 			const data = await fetchOrgFromGitHub(authCtx.octokit, payload.orgName);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildOrgCacheKey(payload.orgName),
 				"org",
@@ -1028,7 +1090,7 @@ async function processGitDataSyncJob(
 				type,
 				perPage,
 			);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildOrgReposCacheKey(payload.orgName, sort, type, perPage),
 				"org_repos",
@@ -1113,7 +1175,7 @@ async function processGitDataSyncJob(
 				perPage,
 				payload.language,
 			);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildTrendingReposCacheKey(since, perPage, payload.language),
 				"trending_repos",
@@ -1129,7 +1191,7 @@ async function processGitDataSyncJob(
 				payload.orgName,
 				perPage,
 			);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildOrgMembersCacheKey(payload.orgName, perPage),
 				"org_members",
@@ -1147,9 +1209,9 @@ async function processGitDataSyncJob(
 				upCached?.etag ?? null,
 			);
 			if (upResp.notModified) {
-				await touchGithubCacheEntrySyncedAt(authCtx.userId, upKey);
+				await touchCacheWithShared(authCtx.userId, upKey, "user_profile");
 			} else {
-				await upsertGithubCacheEntry(
+				await upsertCacheWithShared(
 					authCtx.userId,
 					upKey,
 					"user_profile",
@@ -1167,7 +1229,7 @@ async function processGitDataSyncJob(
 				payload.username,
 				perPage,
 			);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildUserPublicReposCacheKey(payload.username, perPage),
 				"user_public_repos",
@@ -1181,7 +1243,7 @@ async function processGitDataSyncJob(
 				authCtx.octokit,
 				payload.username,
 			);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildUserPublicOrgsCacheKey(payload.username),
 				"user_public_orgs",
@@ -1229,7 +1291,7 @@ async function processGitDataSyncJob(
 				path,
 				ref || undefined,
 			);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildRepoContentsCacheKey(owner, repo, path, ref),
 				"repo_contents",
@@ -1247,7 +1309,7 @@ async function processGitDataSyncJob(
 				payload.treeSha,
 				recursive,
 			);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildRepoTreeCacheKey(owner, repo, payload.treeSha, recursive),
 				"repo_tree",
@@ -1261,7 +1323,7 @@ async function processGitDataSyncJob(
 				owner,
 				repo,
 			);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildRepoBranchesCacheKey(owner, repo),
 				"repo_branches",
@@ -1271,7 +1333,7 @@ async function processGitDataSyncJob(
 		}
 		case "repo_tags": {
 			const data = await fetchRepoTagsFromGitHub(authCtx.octokit, owner, repo);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildRepoTagsCacheKey(owner, repo),
 				"repo_tags",
@@ -1289,7 +1351,7 @@ async function processGitDataSyncJob(
 				path,
 				ref || undefined,
 			);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildFileContentCacheKey(owner, repo, path, ref),
 				"file_content",
@@ -1309,7 +1371,7 @@ async function processGitDataSyncJob(
 					rdCached?.etag ?? null,
 				);
 				if (rdRes.notModified) {
-					await touchGithubCacheEntrySyncedAt(authCtx.userId, rdKey);
+					await touchCacheWithShared(authCtx.userId, rdKey, "repo_readme");
 				} else {
 					const rdData = rdRes.data as {
 						content: string;
@@ -1319,7 +1381,7 @@ async function processGitDataSyncJob(
 						rdData.content,
 						"base64",
 					).toString("utf-8");
-					await upsertGithubCacheEntry(
+					await upsertCacheWithShared(
 						authCtx.userId,
 						rdKey,
 						"repo_readme",
@@ -1329,7 +1391,7 @@ async function processGitDataSyncJob(
 				}
 			} catch (e: unknown) {
 				if (isOctokitNotFound(e)) {
-					await upsertGithubCacheEntry(
+					await upsertCacheWithShared(
 						authCtx.userId,
 						rdKey,
 						"repo_readme",
@@ -1349,7 +1411,7 @@ async function processGitDataSyncJob(
 				repo,
 				state,
 			);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildRepoIssuesCacheKey(owner, repo, state),
 				"repo_issues",
@@ -1365,7 +1427,7 @@ async function processGitDataSyncJob(
 				repo,
 				state,
 			);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildRepoPullRequestsCacheKey(owner, repo, state),
 				"repo_pull_requests",
@@ -1383,9 +1445,9 @@ async function processGitDataSyncJob(
 				isCached?.etag ?? null,
 			);
 			if (isRes.notModified) {
-				await touchGithubCacheEntrySyncedAt(authCtx.userId, isKey);
+				await touchCacheWithShared(authCtx.userId, isKey, "issue");
 			} else {
-				await upsertGithubCacheEntry(
+				await upsertCacheWithShared(
 					authCtx.userId,
 					isKey,
 					"issue",
@@ -1403,7 +1465,7 @@ async function processGitDataSyncJob(
 				repo,
 				payload.issueNumber,
 			);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildIssueCommentsCacheKey(owner, repo, payload.issueNumber),
 				"issue_comments",
@@ -1421,9 +1483,9 @@ async function processGitDataSyncJob(
 				prCached?.etag ?? null,
 			);
 			if (prRes.notModified) {
-				await touchGithubCacheEntrySyncedAt(authCtx.userId, prKey);
+				await touchCacheWithShared(authCtx.userId, prKey, "pull_request");
 			} else {
-				await upsertGithubCacheEntry(
+				await upsertCacheWithShared(
 					authCtx.userId,
 					prKey,
 					"pull_request",
@@ -1441,7 +1503,7 @@ async function processGitDataSyncJob(
 				repo,
 				payload.pullNumber,
 			);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildPullRequestFilesCacheKey(owner, repo, payload.pullNumber),
 				"pull_request_files",
@@ -1457,7 +1519,7 @@ async function processGitDataSyncJob(
 				repo,
 				payload.pullNumber,
 			);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildPullRequestCommentsCacheKey(owner, repo, payload.pullNumber),
 				"pull_request_comments",
@@ -1473,7 +1535,7 @@ async function processGitDataSyncJob(
 				repo,
 				payload.pullNumber,
 			);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildPullRequestReviewsCacheKey(owner, repo, payload.pullNumber),
 				"pull_request_reviews",
@@ -1489,7 +1551,7 @@ async function processGitDataSyncJob(
 				repo,
 				payload.pullNumber,
 			);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildPullRequestCommitsCacheKey(owner, repo, payload.pullNumber),
 				"pull_request_commits",
@@ -1505,7 +1567,7 @@ async function processGitDataSyncJob(
 				repo,
 				perPage,
 			);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildRepoContributorsCacheKey(owner, repo, perPage),
 				"repo_contributors",
@@ -1519,7 +1581,7 @@ async function processGitDataSyncJob(
 				owner,
 				repo,
 			);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildRepoWorkflowsCacheKey(owner, repo),
 				"repo_workflows",
@@ -1535,7 +1597,7 @@ async function processGitDataSyncJob(
 				repo,
 				perPage,
 			);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildRepoWorkflowRunsCacheKey(owner, repo, perPage),
 				"repo_workflow_runs",
@@ -1551,7 +1613,7 @@ async function processGitDataSyncJob(
 				repo,
 				openIssuesAndPrs,
 			);
-			await upsertGithubCacheEntry(
+			await upsertCacheWithShared(
 				authCtx.userId,
 				buildRepoNavCountsCacheKey(owner, repo),
 				"repo_nav_counts",
@@ -1568,7 +1630,7 @@ async function processGitDataSyncJob(
 				payload.pullNumber,
 			);
 			if (data) {
-				await upsertGithubCacheEntry(
+				await upsertCacheWithShared(
 					authCtx.userId,
 					buildPRBundleCacheKey(owner, repo, payload.pullNumber),
 					"pr_bundle",
@@ -1628,6 +1690,12 @@ async function enqueueGitDataSync(
 	cacheKey: string,
 	payload: GitDataSyncJobPayload,
 ) {
+	if (isShareableCacheType(jobType)) {
+		const shared = await getSharedCacheEntry(cacheKey);
+		if (shared && Date.now() - new Date(shared.syncedAt).getTime() < 2 * 60 * 1000) {
+			return; // Another user recently refreshed this data
+		}
+	}
 	await enqueueGithubSyncJob(authCtx.userId, `${jobType}:${cacheKey}`, jobType, payload);
 	triggerGitDataSyncDrain(authCtx);
 }
@@ -1643,10 +1711,15 @@ async function readLocalFirstGitData<T>({
 }: LocalFirstGitReadOptions<T>): Promise<T> {
 	if (!authCtx) return fallback;
 
+	const shareable = isShareableCacheType(cacheType);
+
 	if (authCtx.forceRefresh) {
 		try {
 			const data = await fetchRemote(authCtx.octokit);
 			await upsertGithubCacheEntry(authCtx.userId, cacheKey, cacheType, data);
+			if (shareable) {
+				upsertSharedCacheEntry(cacheKey, data).catch(() => {});
+			}
 			return data;
 		} catch {
 			// Fall through to cached data on error
@@ -1659,9 +1732,22 @@ async function readLocalFirstGitData<T>({
 		return cached.data;
 	}
 
+	// Check shared cache before hitting GitHub API
+	if (shareable) {
+		const shared = await getSharedCacheEntry<T>(cacheKey);
+		if (shared) {
+			upsertGithubCacheEntry(authCtx.userId, cacheKey, cacheType, shared.data, shared.etag).catch(() => {});
+			await enqueueGitDataSync(authCtx, jobType, cacheKey, jobPayload);
+			return shared.data;
+		}
+	}
+
 	try {
 		const data = await fetchRemote(authCtx.octokit);
 		await upsertGithubCacheEntry(authCtx.userId, cacheKey, cacheType, data);
+		if (shareable) {
+			upsertSharedCacheEntry(cacheKey, data).catch(() => {});
+		}
 		return data;
 	} catch (error) {
 		const rl = isRateLimitError(error);
@@ -2222,6 +2308,7 @@ export interface PRBundleData {
 		created_at: string;
 		user: { login: string; avatar_url: string; type?: string } | null;
 		pull_request_review_id: number;
+		reactions: ReactionSummary | undefined;
 	}[];
 	reviews: {
 		id: number;
@@ -2301,6 +2388,10 @@ const PR_BUNDLE_QUERY = `
                 originalLine
                 createdAt
                 author { __typename login avatarUrl }
+                reactionGroups {
+                  content
+                  reactors { totalCount }
+                }
               }
             }
           }
@@ -2447,6 +2538,7 @@ function transformGraphQLPRBundle(node: Record<string, any>): PRBundleData {
 						}
 					: null,
 				pull_request_review_id: reviewId,
+				reactions: mapReactionGroups(rc.reactionGroups),
 			});
 		}
 		return {

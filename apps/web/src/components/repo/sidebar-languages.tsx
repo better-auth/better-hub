@@ -72,9 +72,7 @@ export function SidebarLanguages({
 	const top5 = entries.slice(0, 5);
 	const otherBytes = entries.slice(5).reduce((sum, [, bytes]) => sum + bytes, 0);
 	const display =
-		otherBytes > 0
-			? [...top5, ["Other", otherBytes] as [string, number]]
-			: top5;
+		otherBytes > 0 ? [...top5, ["Other", otherBytes] as [string, number]] : top5;
 
 	return (
 		<div className="flex flex-col gap-2">

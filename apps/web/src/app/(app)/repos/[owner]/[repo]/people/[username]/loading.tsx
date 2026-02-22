@@ -26,7 +26,9 @@ export default function PersonDetailLoading() {
 							<div className="h-4 w-4 rounded bg-muted/25 shrink-0" />
 							<div
 								className="h-3 rounded bg-muted/25"
-								style={{ width: `${120 + Math.random() * 200}px` }}
+								style={{
+									width: `${120 + Math.random() * 200}px`,
+								}}
 							/>
 							<div className="h-2.5 w-14 rounded bg-muted/15 ml-auto shrink-0" />
 						</div>

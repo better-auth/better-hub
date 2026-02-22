@@ -949,8 +949,7 @@ Only GET requests are allowed. For mutations use the dedicated tools.`,
 		// ── Comment tools ────────────────────────────────────────────────────
 
 		comment: tool({
-			description:
-				"Add a comment to a GitHub issue or pull request.",
+			description: "Add a comment to a GitHub issue or pull request.",
 			inputSchema: z.object({
 				owner: z.string().describe("Repository owner"),
 				repo: z.string().describe("Repository name"),
@@ -2908,7 +2907,9 @@ The sandbox has git, node, npm, python, and common dev tools.
 					});
 					// Truncate large output — keep the tail where errors usually appear
 					const maxLen = 8000;
-					const output = result.stdout + (result.stderr ? `\n${result.stderr}` : "");
+					const output =
+						result.stdout +
+						(result.stderr ? `\n${result.stderr}` : "");
 					const stdout =
 						output.length > maxLen
 							? `...(truncated ${output.length - maxLen} chars)...\n` +
@@ -2917,7 +2918,9 @@ The sandbox has git, node, npm, python, and common dev tools.
 
 					if (result.exitCode !== 0) {
 						return {
-							error: stdout.trim() || `exit code ${result.exitCode}`,
+							error:
+								stdout.trim() ||
+								`exit code ${result.exitCode}`,
 							exitCode: result.exitCode,
 							stdout,
 						};
@@ -2953,7 +2956,8 @@ The sandbox has git, node, npm, python, and common dev tools.
 						? path
 						: `${repoPath}/${path}`;
 					const content = await sandbox.files.read(absPath);
-					if (!content) return { error: `File not found: ${absPath}` };
+					if (!content)
+						return { error: `File not found: ${absPath}` };
 					if (content.length > 30000) {
 						return {
 							path: absPath,
@@ -3363,7 +3367,11 @@ export async function POST(req: Request) {
 	let conversationId: string | null = null;
 	if (persistKey && persistChatType && userId) {
 		try {
-			const conv = await getOrCreateConversation(userId, persistChatType, persistKey);
+			const conv = await getOrCreateConversation(
+				userId,
+				persistChatType,
+				persistKey,
+			);
 			conversationId = conv.id;
 			// Clear any stale stream ID
 			await updateActiveStreamId(conversationId, null);
@@ -3391,8 +3399,13 @@ export async function POST(req: Request) {
 				generateMessageId: generateId,
 				async consumeSseStream({ stream }) {
 					const streamId = generateId();
-					await streamContext.createNewResumableStream(streamId, () => stream);
-					await updateActiveStreamId(convId, streamId).catch(() => {});
+					await streamContext.createNewResumableStream(
+						streamId,
+						() => stream,
+					);
+					await updateActiveStreamId(convId, streamId).catch(
+						() => {},
+					);
 				},
 				onFinish: async ({ messages: finishedMessages }) => {
 					try {
@@ -3403,8 +3416,16 @@ export async function POST(req: Request) {
 							content:
 								m.parts
 									?.filter(
-										(p): p is Extract<typeof p, { type: "text" }> =>
-											p.type === "text",
+										(
+											p,
+										): p is Extract<
+											typeof p,
+											{
+												type: "text";
+											}
+										> =>
+											p.type ===
+											"text",
 									)
 									.map((p) => p.text)
 									.join("") || "",

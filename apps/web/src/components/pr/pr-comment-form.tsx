@@ -67,7 +67,13 @@ export function PRCommentForm({
 			} else {
 				emit({ type: "pr:commented", owner, repo, number: pullNumber });
 				router.refresh();
-				setTimeout(() => setOptimisticComments((prev) => prev.filter((c) => c.id !== optimisticId)), 2000);
+				setTimeout(
+					() =>
+						setOptimisticComments((prev) =>
+							prev.filter((c) => c.id !== optimisticId),
+						),
+					2000,
+				);
 			}
 		})();
 	};

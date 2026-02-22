@@ -91,7 +91,13 @@ export function IssueCommentForm({
 			} else {
 				emit({ type: "issue:commented", owner, repo, number: issueNumber });
 				router.refresh();
-				setTimeout(() => setOptimisticComments((prev) => prev.filter((c) => c.id !== optimisticId)), 2000);
+				setTimeout(
+					() =>
+						setOptimisticComments((prev) =>
+							prev.filter((c) => c.id !== optimisticId),
+						),
+					2000,
+				);
 			}
 		})();
 	};

@@ -25,7 +25,9 @@ export default function ActionsLoading() {
 						<div className="flex-1 space-y-1">
 							<div
 								className="h-3.5 rounded bg-muted/40"
-								style={{ width: `${140 + Math.random() * 180}px` }}
+								style={{
+									width: `${140 + Math.random() * 180}px`,
+								}}
 							/>
 							<div className="flex items-center gap-2">
 								<div className="h-2.5 w-16 rounded bg-muted/20" />

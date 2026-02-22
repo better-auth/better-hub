@@ -7,9 +7,21 @@ import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
 import { cn, formatNumber } from "@/lib/utils";
 import type { CommitActivityWeek, CheckStatus } from "@/lib/github";
-import { GitPullRequest, CircleDot, MessageSquare, XCircle, Pin, GitCommit, Link2, X } from "lucide-react";
+import {
+	GitPullRequest,
+	CircleDot,
+	MessageSquare,
+	XCircle,
+	Pin,
+	GitCommit,
+	Link2,
+	X,
+} from "lucide-react";
 import { CheckStatusBadge } from "@/components/pr/check-status-badge";
-import { unpinFromOverview, fetchPinnedItemsForRepo } from "@/app/(app)/repos/[owner]/[repo]/pin-actions";
+import {
+	unpinFromOverview,
+	fetchPinnedItemsForRepo,
+} from "@/app/(app)/repos/[owner]/[repo]/pin-actions";
 import type { PinnedItem } from "@/lib/pinned-items-store";
 import { useMutationSubscription } from "@/hooks/use-mutation-subscription";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
@@ -211,7 +223,7 @@ function getEventDescription(event: RepoEvent): {
 	switch (event.type) {
 		case "PushEvent": {
 			const branch = p?.ref?.replace("refs/heads/", "") ?? "";
-			const commitCount = p?.commits?.length ?? 0;
+			const commitCount = p?.size ?? p?.commits?.length ?? 0;
 			const firstCommit = p?.commits?.[0];
 			const firstMsg = firstCommit?.message?.split("\n")[0] ?? "";
 			const commitHref =
@@ -220,8 +232,12 @@ function getEventDescription(event: RepoEvent): {
 					: base
 						? `${base}/commits`
 						: null;
+			const verb =
+				commitCount > 0
+					? `pushed ${commitCount} commit${commitCount !== 1 ? "s" : ""} to ${branch}`
+					: `pushed to ${branch}`;
 			return {
-				verb: `pushed ${commitCount} commit${commitCount !== 1 ? "s" : ""} to ${branch}`,
+				verb,
 				detail: firstMsg,
 				href: commitHref,
 			};
@@ -551,6 +567,7 @@ interface RepoEvent {
 		action?: string;
 		ref?: string;
 		ref_type?: string;
+		size?: number;
 		commits?: { sha: string; message: string }[];
 		pull_request?: { number: number; title: string };
 		issue?: { number: number; title: string };
@@ -685,32 +702,29 @@ function PinnedItemsSection({
 	const [localItems, setLocalItems] = useState(items);
 	const { emit } = useMutationEvents();
 
-	useMutationSubscription(
-		["pin:added", "pin:removed"],
-		(event: MutationEvent) => {
-			if (!isRepoEvent(event, owner, repo)) return;
-			if (event.type === "pin:added") {
-				setLocalItems((prev) => {
-					if (prev.some((i) => i.url === event.url)) return prev;
-					return [
-						{
-							id: crypto.randomUUID(),
-							userId: "",
-							owner,
-							repo,
-							url: event.url,
-							title: event.title,
-							itemType: event.itemType,
-							pinnedAt: new Date().toISOString(),
-						},
-						...prev,
-					];
-				});
-			} else if (event.type === "pin:removed") {
-				setLocalItems((prev) => prev.filter((i) => i.url !== event.url));
-			}
-		},
-	);
+	useMutationSubscription(["pin:added", "pin:removed"], (event: MutationEvent) => {
+		if (!isRepoEvent(event, owner, repo)) return;
+		if (event.type === "pin:added") {
+			setLocalItems((prev) => {
+				if (prev.some((i) => i.url === event.url)) return prev;
+				return [
+					{
+						id: crypto.randomUUID(),
+						userId: "",
+						owner,
+						repo,
+						url: event.url,
+						title: event.title,
+						itemType: event.itemType,
+						pinnedAt: new Date().toISOString(),
+					},
+					...prev,
+				];
+			});
+		} else if (event.type === "pin:removed") {
+			setLocalItems((prev) => prev.filter((i) => i.url !== event.url));
+		}
+	});
 
 	async function handleUnpin(url: string) {
 		setLocalItems((prev) => prev.filter((i) => i.url !== url));
@@ -745,7 +759,9 @@ function PinnedItemsSection({
 								{item.title}
 							</Link>
 							<button
-								onClick={() => handleUnpin(item.url)}
+								onClick={() =>
+									handleUnpin(item.url)
+								}
 								className="p-0.5 text-muted-foreground/30 hover:text-foreground opacity-0 group-hover:opacity-100 transition-all cursor-pointer shrink-0"
 								title="Unpin"
 							>
@@ -845,9 +861,7 @@ function CIStatusCard({
 function HighlightedActivityTicker({ items }: { items: HotItem[] }) {
 	const [activeIndex, setActiveIndex] = useState(0);
 	return (
-		<div
-			className="border border-dashed border-border/40 rounded-md overflow-hidden"
-		>
+		<div className="border border-dashed border-border/40 rounded-md overflow-hidden">
 			<div className="flex items-center justify-between px-4 pt-3 pb-1">
 				<h3 className="text-sm font-medium text-foreground">
 					Highlighted Activity
@@ -1064,7 +1078,9 @@ export function RepoOverview({
 						<MarkdownCopyHandler>
 							<div
 								className="ghmd"
-								dangerouslySetInnerHTML={{ __html: readmeHtml }}
+								dangerouslySetInnerHTML={{
+									__html: readmeHtml,
+								}}
 							/>
 						</MarkdownCopyHandler>
 					</div>

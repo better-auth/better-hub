@@ -43,7 +43,8 @@ export function MarkdownCopyHandler({ children }: { children: ReactNode }) {
 
 			// Determine the tab index (0=npm, 1=yarn, 2=pnpm, 3=bun)
 			const group = input.closest(".ghmd-pkg-tabs")!;
-			const radios = group.querySelectorAll<HTMLInputElement>('input[type="radio"]');
+			const radios =
+				group.querySelectorAll<HTMLInputElement>('input[type="radio"]');
 			let tabIndex = 0;
 			radios.forEach((r, i) => {
 				if (r === input) tabIndex = i;

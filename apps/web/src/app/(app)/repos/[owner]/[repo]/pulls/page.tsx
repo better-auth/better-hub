@@ -9,21 +9,38 @@ export default async function PullsListPage({
 }) {
 	const { owner, repo } = await params;
 
-	const { prs: openPRs, pageInfo, counts, mergedPreview, closedPreview } =
-		await getRepoPullRequestsWithStats(owner, repo, "open", {
-			includeCounts: true,
-			previewClosed: 10,
-			perPage: 20,
-		});
+	const {
+		prs: openPRs,
+		pageInfo,
+		counts,
+		mergedPreview,
+		closedPreview,
+	} = await getRepoPullRequestsWithStats(owner, repo, "open", {
+		includeCounts: true,
+		previewClosed: 10,
+		perPage: 20,
+	});
 
 	return (
 		<PRsList
 			owner={owner}
 			repo={repo}
-			initialOpenPRs={openPRs as unknown as Parameters<typeof PRsList>[0]["initialOpenPRs"]}
+			initialOpenPRs={
+				openPRs as unknown as Parameters<
+					typeof PRsList
+				>[0]["initialOpenPRs"]
+			}
 			initialPageInfo={pageInfo}
-			mergedPreview={mergedPreview as unknown as Parameters<typeof PRsList>[0]["mergedPreview"]}
-			closedPreview={closedPreview as unknown as Parameters<typeof PRsList>[0]["closedPreview"]}
+			mergedPreview={
+				mergedPreview as unknown as Parameters<
+					typeof PRsList
+				>[0]["mergedPreview"]
+			}
+			closedPreview={
+				closedPreview as unknown as Parameters<
+					typeof PRsList
+				>[0]["closedPreview"]
+			}
 			openCount={counts.open}
 			closedCount={counts.closed}
 			mergedCount={counts.merged}

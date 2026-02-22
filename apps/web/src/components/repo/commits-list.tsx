@@ -205,7 +205,9 @@ export function CommitsList({ owner, repo, commits, defaultBranch, branches }: C
 					owner,
 					repo,
 					since ? new Date(since).toISOString() : undefined,
-					until ? new Date(until + "T23:59:59").toISOString() : undefined,
+					until
+						? new Date(until + "T23:59:59").toISOString()
+						: undefined,
 					currentBranch,
 				);
 				setDisplayedCommits(result as Commit[]);

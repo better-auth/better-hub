@@ -58,6 +58,37 @@ export async function touchGithubCacheEntrySyncedAt(userId: string, cacheKey: st
 	await redis.set(key, entry, { keepTtl: true });
 }
 
+// ── Shared (cross-user) cache for public GitHub data ──
+
+function sharedRedisKey(cacheKey: string): string {
+	return `ghpub:${cacheKey}`;
+}
+
+export async function getSharedCacheEntry<T>(
+	cacheKey: string,
+): Promise<GithubCacheEntry<T> | null> {
+	const entry = await redis.get<GithubCacheEntry<T>>(sharedRedisKey(cacheKey));
+	return entry ?? null;
+}
+
+export async function upsertSharedCacheEntry<T>(
+	cacheKey: string,
+	data: T,
+	etag: string | null = null,
+) {
+	const now = new Date().toISOString();
+	const entry: GithubCacheEntry<T> = { data, syncedAt: now, etag };
+	await redis.set(sharedRedisKey(cacheKey), entry, { ex: 300 });
+}
+
+export async function touchSharedCacheEntrySyncedAt(cacheKey: string) {
+	const key = sharedRedisKey(cacheKey);
+	const entry = await redis.get<GithubCacheEntry<unknown>>(key);
+	if (!entry) return;
+	entry.syncedAt = new Date().toISOString();
+	await redis.set(key, entry, { ex: 300 });
+}
+
 export async function deleteGithubCacheByPrefix(userId: string, prefix: string) {
 	const pattern = `gh:${userId}:${prefix}*`;
 	let cursor = 0;
@@ -96,7 +127,12 @@ export async function enqueueGithubSyncJob<TPayload>(
 			update: {},
 		});
 	} catch (e) {
-		if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+		if (
+			e instanceof Prisma.PrismaClientKnownRequestError &&
+			(e.code === "P2002" || e.code === "P2025")
+		) {
+			// P2002: unique constraint violation (concurrent insert race)
+			// P2025: record not found during upsert (concurrent insert + delete race)
 			return;
 		}
 		throw e;

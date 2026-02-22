@@ -3,22 +3,77 @@
 export type PRMergedEvent = { type: "pr:merged"; owner: string; repo: string; number: number };
 export type PRClosedEvent = { type: "pr:closed"; owner: string; repo: string; number: number };
 export type PRReopenedEvent = { type: "pr:reopened"; owner: string; repo: string; number: number };
-export type PRCommentedEvent = { type: "pr:commented"; owner: string; repo: string; number: number };
+export type PRCommentedEvent = {
+	type: "pr:commented";
+	owner: string;
+	repo: string;
+	number: number;
+};
 export type PRReviewedEvent = { type: "pr:reviewed"; owner: string; repo: string; number: number };
 export type PRRenamedEvent = { type: "pr:renamed"; owner: string; repo: string; number: number };
-export type PRBranchUpdatedEvent = { type: "pr:branch-updated"; owner: string; repo: string; number: number };
-export type PRSuggestionCommittedEvent = { type: "pr:suggestion-committed"; owner: string; repo: string; number: number };
-export type PRFileCommittedEvent = { type: "pr:file-committed"; owner: string; repo: string; number: number };
-export type PRThreadResolvedEvent = { type: "pr:thread-resolved"; owner: string; repo: string; number: number };
-export type PRThreadUnresolvedEvent = { type: "pr:thread-unresolved"; owner: string; repo: string; number: number };
-export type PRConflictResolvedEvent = { type: "pr:conflict-resolved"; owner: string; repo: string; number: number };
+export type PRBranchUpdatedEvent = {
+	type: "pr:branch-updated";
+	owner: string;
+	repo: string;
+	number: number;
+};
+export type PRSuggestionCommittedEvent = {
+	type: "pr:suggestion-committed";
+	owner: string;
+	repo: string;
+	number: number;
+};
+export type PRFileCommittedEvent = {
+	type: "pr:file-committed";
+	owner: string;
+	repo: string;
+	number: number;
+};
+export type PRThreadResolvedEvent = {
+	type: "pr:thread-resolved";
+	owner: string;
+	repo: string;
+	number: number;
+};
+export type PRThreadUnresolvedEvent = {
+	type: "pr:thread-unresolved";
+	owner: string;
+	repo: string;
+	number: number;
+};
+export type PRConflictResolvedEvent = {
+	type: "pr:conflict-resolved";
+	owner: string;
+	repo: string;
+	number: number;
+};
 
 // ── Issue Events ──────────────────────────────────────────────
 
-export type IssueClosedEvent = { type: "issue:closed"; owner: string; repo: string; number: number };
-export type IssueReopenedEvent = { type: "issue:reopened"; owner: string; repo: string; number: number };
-export type IssueCreatedEvent = { type: "issue:created"; owner: string; repo: string; number: number };
-export type IssueCommentedEvent = { type: "issue:commented"; owner: string; repo: string; number: number };
+export type IssueClosedEvent = {
+	type: "issue:closed";
+	owner: string;
+	repo: string;
+	number: number;
+};
+export type IssueReopenedEvent = {
+	type: "issue:reopened";
+	owner: string;
+	repo: string;
+	number: number;
+};
+export type IssueCreatedEvent = {
+	type: "issue:created";
+	owner: string;
+	repo: string;
+	number: number;
+};
+export type IssueCommentedEvent = {
+	type: "issue:commented";
+	owner: string;
+	repo: string;
+	number: number;
+};
 
 // ── Repo Events ───────────────────────────────────────────────
 
@@ -38,7 +93,14 @@ export type PromptDeletedEvent = { type: "prompt:deleted"; owner: string; repo: 
 
 // ── Pin Events ───────────────────────────────────────────────
 
-export type PinAddedEvent = { type: "pin:added"; owner: string; repo: string; url: string; title: string; itemType: string };
+export type PinAddedEvent = {
+	type: "pin:added";
+	owner: string;
+	repo: string;
+	url: string;
+	title: string;
+	itemType: string;
+};
 export type PinRemovedEvent = { type: "pin:removed"; owner: string; repo: string; url: string };
 
 // ── Settings Events ───────────────────────────────────────────
@@ -92,10 +154,6 @@ export type MutationEventType = MutationEvent["type"];
 
 // ── Helpers ───────────────────────────────────────────────────
 
-export function isRepoEvent(
-	event: MutationEvent,
-	owner: string,
-	repo: string,
-): boolean {
+export function isRepoEvent(event: MutationEvent, owner: string, repo: string): boolean {
 	return "owner" in event && "repo" in event && event.owner === owner && event.repo === repo;
 }

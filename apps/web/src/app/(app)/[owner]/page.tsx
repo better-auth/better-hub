@@ -1,5 +1,12 @@
 import { notFound } from "next/navigation";
-import { getOrg, getOrgRepos, getUser, getUserPublicRepos, getUserPublicOrgs, getContributionData } from "@/lib/github";
+import {
+	getOrg,
+	getOrgRepos,
+	getUser,
+	getUserPublicRepos,
+	getUserPublicOrgs,
+	getContributionData,
+} from "@/lib/github";
 import { OrgDetailContent } from "@/components/orgs/org-detail-content";
 import { UserProfileContent } from "@/components/users/user-profile-content";
 import { ExternalLink, User } from "lucide-react";
@@ -39,7 +46,11 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 	const orgData = await getOrg(owner).catch(() => null);
 
 	if (orgData) {
-		const reposData = await getOrgRepos(owner, { perPage: 100, sort: "updated", type: "all" }).catch(() => []);
+		const reposData = await getOrgRepos(owner, {
+			perPage: 100,
+			sort: "updated",
+			type: "all",
+		}).catch(() => []);
 
 		return (
 			<OrgDetailContent
@@ -47,7 +58,9 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 					login: orgData.login,
 					name: orgData.name ?? null,
 					avatar_url: orgData.avatar_url,
-					html_url: orgData.html_url ?? `https://github.com/${orgData.login}`,
+					html_url:
+						orgData.html_url ??
+						`https://github.com/${orgData.login}`,
 					description: orgData.description ?? null,
 					blog: orgData.blog || null,
 					location: orgData.location || null,
