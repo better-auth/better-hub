@@ -53,7 +53,10 @@ export function AppNavbar({ session }: AppNavbarProps) {
 					<CommandMenu />
 					{session.user.image && (
 						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
+							<DropdownMenuTrigger
+								id={`user-${session.user.id}`}
+								asChild
+							>
 								<button
 									className="relative shrink-0 cursor-pointer group p-1.5 outline-none"
 									title={
