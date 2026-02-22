@@ -80,10 +80,10 @@ export function DashboardContent({
 		<div className="flex flex-col flex-1 min-h-0 w-full">
 			{/* Header */}
 			<div className="shrink-0 pb-3">
-				<h1 className="text-sm font-medium">
+				<h1 className="text-sm font-medium" suppressHydrationWarning>
 					{greeting}, {user.name || user.login}
 				</h1>
-				<p className="text-[11px] text-muted-foreground font-mono">
+				<p className="text-[11px] text-muted-foreground font-mono" suppressHydrationWarning>
 					{today}
 				</p>
 			</div>
