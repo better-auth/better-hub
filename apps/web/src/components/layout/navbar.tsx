@@ -111,7 +111,7 @@ export function AppNavbar({ session }: AppNavbarProps) {
 													detail: "search",
 												},
 											),
-										)
+									)
 									}
 									className="text-[11px] gap-2 h-7"
 								>
@@ -119,11 +119,11 @@ export function AppNavbar({ session }: AppNavbarProps) {
 									Search repos
 								</DropdownMenuItem>
 
-								{session.user.name && (
+								{session.githubUser.login && (
 									<DropdownMenuItem
 										onClick={() =>
 											window.open(
-												`https://github.com/${session.user.name}`,
+												`https://github.com/${session.githubUser.login}`,
 												"_blank",
 											)
 										}
