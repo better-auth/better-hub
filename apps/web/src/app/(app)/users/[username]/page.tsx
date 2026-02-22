@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getUser, getUserPublicRepos, getUserPublicOrgs, getContributionData } from "@/lib/github";
 import { UserProfileContent } from "@/components/users/user-profile-content";
 import { ExternalLink, User } from "lucide-react";
@@ -67,6 +68,7 @@ export default async function UserProfilePage({
 	}
 
 	return (
+		<Suspense fallback={<UserProfileSkeleton />}>
 		<UserProfileContent
 			user={{
 				login: userData.login,
@@ -106,5 +108,26 @@ export default async function UserProfilePage({
 			}))}
 			contributions={contributionData}
 		/>
+		</Suspense>
+	);
+}
+
+function UserProfileSkeleton() {
+	return (
+		<div className="animate-pulse">
+			<div className="flex items-start gap-6 mb-6">
+				<div className="w-20 h-20 rounded-full bg-muted shrink-0" />
+				<div className="flex-1 space-y-2 pt-1">
+					<div className="h-5 w-40 rounded bg-muted" />
+					<div className="h-3.5 w-24 rounded bg-muted/60" />
+					<div className="h-3 w-64 rounded bg-muted/40 mt-2" />
+				</div>
+			</div>
+			<div className="space-y-3">
+				{[0, 1, 2, 3].map((i) => (
+					<div key={i} className="h-16 rounded-md border border-border/40 bg-muted/20" />
+				))}
+			</div>
+		</div>
 	);
 }

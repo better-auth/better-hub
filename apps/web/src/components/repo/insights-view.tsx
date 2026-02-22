@@ -1,5 +1,6 @@
 "use client";
 
+import { noSSR } from "foxact/no-ssr";
 import { useState } from "react";
 import Image from "next/image";
 import { cn, formatNumber } from "@/lib/utils";
@@ -584,6 +585,7 @@ export function InsightsView({
 	languages,
 	contributors,
 }: InsightsViewProps) {
+	noSSR();
 	return (
 		<div className="space-y-4">
 			<PulseSection repo={repo} />

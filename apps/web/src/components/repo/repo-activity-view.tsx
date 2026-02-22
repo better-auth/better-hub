@@ -1,5 +1,6 @@
 "use client";
 
+import { noSSR } from "foxact/no-ssr";
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -150,6 +151,7 @@ interface RepoActivityViewProps {
 }
 
 export function RepoActivityView({ owner, repo, events, commitActivity }: RepoActivityViewProps) {
+	noSSR();
 	const base = `/${owner}/${repo}`;
 	const [filter, setFilter] = useState<"all" | "push" | "pr" | "issue">("all");
 

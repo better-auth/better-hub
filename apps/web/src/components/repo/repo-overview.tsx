@@ -1,5 +1,6 @@
 "use client";
 
+import { noSSR } from "foxact/no-ssr";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -1018,6 +1019,7 @@ export function RepoOverview({
 	initialCIStatus,
 	initialPinnedItems,
 }: RepoOverviewProps) {
+	noSSR();
 	const base = `/${owner}/${repo}`;
 	const branch = defaultBranch ?? "main";
 

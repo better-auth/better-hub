@@ -1,5 +1,6 @@
 "use client";
 
+import { noSSR } from "foxact/no-ssr";
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -67,6 +68,7 @@ function formatJoinedDate(value: string | null): string | null {
 }
 
 export function OrgDetailContent({ org, repos }: { org: OrgDetails; repos: OrgRepo[] }) {
+	noSSR();
 	const [search, setSearch] = useState("");
 	const [filter, setFilter] = useState<FilterType>("all");
 	const [sort, setSort] = useState<SortType>("updated");

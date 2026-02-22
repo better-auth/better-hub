@@ -1,5 +1,6 @@
 "use client";
 
+import { noSSR } from "foxact/no-ssr";
 import { useState, useTransition, useMemo, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -181,6 +182,7 @@ function groupByDate(commits: Commit[]) {
 }
 
 export function CommitsList({ owner, repo, commits, defaultBranch, branches }: CommitsListProps) {
+	noSSR();
 	const [search, setSearch] = useState("");
 	const [copiedSha, setCopiedSha] = useState<string | null>(null);
 	const [since, setSince] = useState("");

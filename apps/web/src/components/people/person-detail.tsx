@@ -1,5 +1,6 @@
 "use client";
 
+import { noSSR } from "foxact/no-ssr";
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -205,6 +206,7 @@ function ActivitySection({
 }
 
 export function PersonDetail({ owner, repo, user, activity, weeklyData }: PersonDetailProps) {
+	noSSR();
 	const [tab, setTab] = useState<Tab>("commits");
 	const [period, setPeriod] = useState<Period>("12w");
 

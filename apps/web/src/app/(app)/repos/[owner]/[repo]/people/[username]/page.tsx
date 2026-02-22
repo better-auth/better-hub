@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getUser, getPersonRepoActivity, getRepoContributorStats } from "@/lib/github";
 import { PersonDetail } from "@/components/people/person-detail";
 
@@ -18,12 +19,34 @@ export default async function PersonPage({
 	const weeklyData = userStats?.weeks ?? [];
 
 	return (
-		<PersonDetail
-			owner={owner}
-			repo={repo}
-			user={user}
-			activity={activity}
-			weeklyData={weeklyData}
-		/>
+		<Suspense fallback={<PersonDetailSkeleton />}>
+			<PersonDetail
+				owner={owner}
+				repo={repo}
+				user={user}
+				activity={activity}
+				weeklyData={weeklyData}
+			/>
+		</Suspense>
+	);
+}
+
+function PersonDetailSkeleton() {
+	return (
+		<div className="animate-pulse space-y-4">
+			<div className="flex items-center gap-4">
+				<div className="w-12 h-12 rounded-full bg-muted shrink-0" />
+				<div className="space-y-1.5">
+					<div className="h-4 w-32 rounded bg-muted" />
+					<div className="h-3 w-20 rounded bg-muted/60" />
+				</div>
+			</div>
+			<div className="grid grid-cols-4 gap-2">
+				{[0, 1, 2, 3].map((i) => (
+					<div key={i} className="h-14 rounded border border-border/40 bg-muted/20" />
+				))}
+			</div>
+			<div className="h-48 rounded border border-border/40 bg-muted/20" />
+		</div>
 	);
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { noSSR } from "foxact/no-ssr";
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
 	Search,
@@ -494,6 +495,7 @@ export function SearchContent({
 	initialPage: number;
 	initialType?: SearchCategory;
 }) {
+	noSSR();
 	const [query, setQuery] = useState(initialQuery);
 	const [language, setLanguage] = useState(initialLanguage);
 	const [page, setPage] = useState(initialPage);

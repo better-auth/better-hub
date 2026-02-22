@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getRepoPageData } from "@/lib/github";
 import { TrackView } from "@/components/shared/track-view";
 import { RepoOverview, type RepoOverviewProps } from "@/components/repo/repo-overview";
@@ -64,22 +65,49 @@ export default async function RepoPage({
 				subtitle={repoData.description || "No description"}
 				image={repoData.owner.avatar_url}
 			/>
-			<RepoOverview
-				owner={owner}
-				repo={repo}
-				repoData={repoData}
-				isMaintainer={isMaintainer}
-				openPRCount={navCounts.openPrs}
-				openIssueCount={navCounts.openIssues}
-				defaultBranch={repoData.default_branch}
-				initialReadmeHtml={readmeHtml}
-				initialPRs={initialPRs}
-				initialIssues={initialIssues}
-				initialEvents={initialEvents}
-				initialCommitActivity={initialCommitActivity}
-				initialCIStatus={initialCIStatus}
-				initialPinnedItems={initialPinnedItems}
-			/>
+			<Suspense fallback={<RepoOverviewSkeleton />}>
+				<RepoOverview
+					owner={owner}
+					repo={repo}
+					repoData={repoData}
+					isMaintainer={isMaintainer}
+					openPRCount={navCounts.openPrs}
+					openIssueCount={navCounts.openIssues}
+					defaultBranch={repoData.default_branch}
+					initialReadmeHtml={readmeHtml}
+					initialPRs={initialPRs}
+					initialIssues={initialIssues}
+					initialEvents={initialEvents}
+					initialCommitActivity={initialCommitActivity}
+					initialCIStatus={initialCIStatus}
+					initialPinnedItems={initialPinnedItems}
+				/>
+			</Suspense>
+		</div>
+	);
+}
+
+function RepoOverviewSkeleton() {
+	return (
+		<div className="flex flex-col gap-4 animate-pulse pb-4">
+			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+				{[0, 1, 2].map((i) => (
+					<div key={i} className="p-4 rounded-md border border-border/40">
+						<div className="h-4 w-28 rounded bg-muted mb-4" />
+						<div className="space-y-2">
+							{[0, 1, 2].map((j) => (
+								<div key={j} className="flex items-start gap-2.5 py-2">
+									<div className="w-3.5 h-3.5 rounded bg-muted shrink-0 mt-0.5" />
+									<div className="flex-1 space-y-1.5">
+										<div className="h-3 rounded bg-muted" style={{ width: `${80 - j * 10}%` }} />
+										<div className="h-2.5 w-24 rounded bg-muted/60" />
+									</div>
+								</div>
+							))}
+						</div>
+					</div>
+				))}
+			</div>
 		</div>
 	);
 }
