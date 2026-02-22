@@ -6,6 +6,11 @@ import { CodeContentWrapper } from "@/components/repo/code-content-wrapper";
 import { RepoLayoutWrapper } from "@/components/repo/repo-layout-wrapper";
 import { ChatPageActivator } from "@/components/shared/chat-page-activator";
 import { RepoRevalidator } from "@/components/repo/repo-revalidator";
+import { cookies } from "next/headers";
+import {
+	REPO_SIDEBAR_COOKIE,
+	type RepoSidebarState,
+} from "@/components/repo/repo-sidebar-constants";
 import {
 	getCachedContributorAvatars,
 	getCachedRepoLanguages,
@@ -115,6 +120,15 @@ export default async function RepoLayout({
 	const [cachedTree, cachedContributors, cachedLanguages, cachedBranches, cachedTags] =
 		await cachePromise;
 
+	const cookieStore = await cookies();
+	const sidebarCookie = cookieStore.get(REPO_SIDEBAR_COOKIE);
+	let sidebarState: RepoSidebarState | null = null;
+	if (sidebarCookie?.value) {
+		try {
+			sidebarState = JSON.parse(sidebarCookie.value);
+		} catch {}
+	}
+
 	let tree: FileTreeNode[] | null = cachedTree;
 	if (!tree) {
 		const treeResult = await getRepoTree(
@@ -140,6 +154,8 @@ export default async function RepoLayout({
 			<RepoLayoutWrapper
 				owner={owner}
 				repo={repoName}
+				initialCollapsed={sidebarState?.collapsed}
+				initialWidth={sidebarState?.width}
 				sidebar={
 					<RepoSidebar
 						owner={owner}
