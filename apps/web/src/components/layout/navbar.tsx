@@ -65,15 +65,6 @@ export function AppNavbar({ session }: AppNavbarProps) {
 					</div>
 					<div className="flex items-center gap-2">
 						<CommandMenu />
-						<button
-							onClick={() =>
-								setExtensionOpen(true)
-							}
-							className="shrink-0 p-1.5 text-muted-foreground/50 hover:text-foreground transition-colors cursor-pointer"
-							title="Install browser extension"
-						>
-							<Puzzle className="w-4 h-4" />
-						</button>
 						{session.user.image && (
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>

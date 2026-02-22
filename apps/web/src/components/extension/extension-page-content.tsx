@@ -106,9 +106,8 @@ export function ExtensionPageContent() {
 							</span>
 						</div>
 						<p className="text-sm text-muted-foreground mt-1">
-							Seamlessly redirect GitHub pages to Better
-							Hub. Browse repositories, pull requests, and
-							issues with a better interface — automatically.
+							Automatically redirects GitHub links to
+							your Better Hub instance.
 						</p>
 
 					</div>
