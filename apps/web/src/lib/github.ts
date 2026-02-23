@@ -572,8 +572,13 @@ async function fetchUserOrgsFromGitHub(octokit: Octokit, perPage: number) {
 }
 
 async function fetchOrgFromGitHub(octokit: Octokit, org: string) {
-	const { data } = await octokit.orgs.get({ org });
-	return data;
+	try {
+		const { data } = await octokit.orgs.get({ org });
+		return data;
+	} catch (error) {
+		// 404
+		return null;
+	}
 }
 
 async function fetchOrgReposFromGitHub(

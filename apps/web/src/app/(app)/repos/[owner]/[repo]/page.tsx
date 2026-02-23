@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getRepoPageData } from "@/lib/github";
 import { TrackView } from "@/components/shared/track-view";
 import { RepoOverview, type RepoOverviewProps } from "@/components/repo/repo-overview";
@@ -11,6 +12,15 @@ import {
 } from "@/lib/repo-data-cache";
 import { fetchPinnedItemsForRepo } from "./pin-actions";
 import { revalidateReadme } from "./readme-actions";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ owner: string; repo: string }>;
+}): Promise<Metadata> {
+	const { owner, repo } = await params;
+	return { title: `${owner}/${repo}` };
+}
 
 export default async function RepoPage({
 	params,

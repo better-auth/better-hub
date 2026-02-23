@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import {
 	getPullRequestBundle,
 	getPullRequestFiles,
@@ -34,6 +35,24 @@ import { headers } from "next/headers";
 import { inngest } from "@/lib/inngest";
 import { isItemPinned } from "@/lib/pinned-items-store";
 import { all } from "better-all";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ owner: string; repo: string; number: string }>;
+}): Promise<Metadata> {
+	const { owner, repo, number: numStr } = await params;
+	const pullNumber = parseInt(numStr, 10);
+	const bundle = await getPullRequestBundle(owner, repo, pullNumber);
+
+	if (!bundle) {
+		return { title: `PR #${pullNumber} · ${owner}/${repo}` };
+	}
+
+	return {
+		title: `${bundle.pr.title} · PR #${pullNumber} · ${owner}/${repo}`,
+	};
+}
 
 type GitHubPRFile = {
 	filename: string;

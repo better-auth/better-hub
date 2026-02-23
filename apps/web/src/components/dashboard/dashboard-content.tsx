@@ -77,6 +77,16 @@ export function DashboardContent({
 		myOpenPRs.items.length > 0 ||
 		myIssues.items.length > 0;
 
+	const [activeTab, setActiveTab] = useState<TabKey>("reviews");
+
+	const handleStatClick = (tab: TabKey) => {
+		setActiveTab(tab);
+		document.getElementById("work-tabs")?.scrollIntoView({
+			behavior: "smooth",
+			block: "nearest",
+		});
+	};
+
 	return (
 		<div className="flex flex-col flex-1 min-h-0 w-full">
 			{/* Header */}
@@ -98,11 +108,6 @@ export function DashboardContent({
 			<div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-4 pb-2">
 				{/* Left — overview + work items */}
 				<div className="lg:w-1/2 lg:min-h-0 lg:overflow-hidden flex flex-col gap-3 lg:pr-2">
-					{/* Activity marquee */}
-					<Suspense fallback={<ActivityMarqueeSkeleton />}>
-						<ActivityMarquee activity={activity} />
-					</Suspense>
-
 					{/* Stats */}
 					<div className="shrink-0 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
 						<Stat
@@ -110,6 +115,7 @@ export function DashboardContent({
 							label="Reviews"
 							value={reviewRequests.total_count}
 							accent={reviewRequests.total_count > 0}
+							onClick={() => handleStatClick("reviews")}
 						/>
 						<Stat
 							icon={
@@ -118,12 +124,14 @@ export function DashboardContent({
 							label="Open PRs"
 							value={myOpenPRs.total_count}
 							accent={myOpenPRs.total_count > 0}
+							onClick={() => handleStatClick("prs")}
 						/>
 						<Stat
 							icon={<CircleDot className="w-3.5 h-3.5" />}
-							label="Issues"
+							label="Assigned Issues"
 							value={myIssues.total_count}
 							accent={myIssues.total_count > 0}
+							onClick={() => handleStatClick("issues")}
 						/>
 						<Stat
 							icon={<Bell className="w-3.5 h-3.5" />}
@@ -133,6 +141,7 @@ export function DashboardContent({
 									(n) => n.unread,
 								).length
 							}
+							onClick={() => handleStatClick("notifs")}
 						/>
 					</div>
 
@@ -141,7 +150,10 @@ export function DashboardContent({
 						reviewRequests={reviewRequests}
 						myOpenPRs={myOpenPRs}
 						myIssues={myIssues}
+						notifications={notifications}
 						hasWork={hasWork}
+						activeTab={activeTab}
+						activity={activity ?? []}
 					/>
 				</div>
 
@@ -196,28 +208,26 @@ function ExtensionBanner() {
 		</div>
 	);
 }
-type TabKey = "reviews" | "prs" | "issues";
+type TabKey = "reviews" | "prs" | "issues" | "notifs";
 
 function WorkTabs({
 	reviewRequests,
 	myOpenPRs,
 	myIssues,
+	notifications,
 	hasWork,
+	activeTab,
+	activity,
 }: {
 	reviewRequests: SearchResult<IssueItem>;
 	myOpenPRs: SearchResult<IssueItem>;
 	myIssues: SearchResult<IssueItem>;
+	notifications: Array<NotificationItem>;
 	hasWork: boolean;
+	activeTab: TabKey;
+	activity: Array<ActivityEvent>;
 }) {
-	const [activeTab, setActiveTab] = useState<TabKey>("reviews");
-
-	const tabs: { key: TabKey; label: string; count: number }[] = [
-		{ key: "reviews", label: "Needs your review", count: reviewRequests.total_count },
-		{ key: "prs", label: "PRs", count: myOpenPRs.total_count },
-		{ key: "issues", label: "Assigned to you", count: myIssues.total_count },
-	];
-
-	if (!hasWork) {
+	if (!hasWork && activeTab !== "notifs") {
 		return (
 			<div className="flex-1 min-h-0 border border-border py-12 text-center">
 				<CheckCircle2 className="w-5 h-5 text-muted-foreground/40 mx-auto mb-2" />
@@ -229,66 +239,46 @@ function WorkTabs({
 	}
 
 	return (
-		<div className="flex-1 min-h-0 flex flex-col border border-border">
-			{/* Tab header */}
-			<div className="shrink-0 flex items-center border-b border-border overflow-x-auto no-scrollbar">
-				{tabs.map((tab) => (
-					<button
-						key={tab.key}
-						onClick={() => setActiveTab(tab.key)}
-						className={cn(
-							"flex items-center gap-2 px-3 sm:px-4 py-2.5 text-[11px] font-mono uppercase tracking-wider whitespace-nowrap shrink-0 transition-colors cursor-pointer",
-							activeTab === tab.key
-								? "text-foreground bg-muted/50 dark:bg-white/[0.04]"
-								: "text-muted-foreground hover:text-foreground/60",
-						)}
-					>
-						{tab.label}
-						<span
-							className={cn(
-								"text-[10px] tabular-nums",
-								activeTab === tab.key
-									? "text-foreground/50"
-									: "text-muted-foreground/50",
-							)}
-						>
-							{tab.count}
-						</span>
-					</button>
+		<div
+			id="work-tabs"
+			className="flex-1 min-h-0 flex flex-col border border-border overflow-y-auto"
+		>
+			{/* Activity marquee */}
+			<Suspense fallback={<ActivityMarqueeSkeleton />}>
+				<ActivityMarquee activity={activity ?? []} />
+			</Suspense>
+			{activeTab === "reviews" &&
+				(reviewRequests.items.length > 0 ? (
+					reviewRequests.items.map((pr) => (
+						<ItemRow key={pr.id} item={pr} type="pr" />
+					))
+				) : (
+					<EmptyTab message="No reviews requested" />
 				))}
-			</div>
-
-			{/* Tab content — scrollable */}
-			<div className="flex-1 min-h-0 overflow-y-auto">
-				{activeTab === "reviews" &&
-					(reviewRequests.items.length > 0 ? (
-						reviewRequests.items.map((pr) => (
-							<ItemRow key={pr.id} item={pr} type="pr" />
-						))
-					) : (
-						<EmptyTab message="No reviews requested" />
-					))}
-				{activeTab === "prs" &&
-					(myOpenPRs.items.length > 0 ? (
-						myOpenPRs.items.map((pr) => (
-							<ItemRow key={pr.id} item={pr} type="pr" />
-						))
-					) : (
-						<EmptyTab message="No open PRs" />
-					))}
-				{activeTab === "issues" &&
-					(myIssues.items.length > 0 ? (
-						myIssues.items.map((issue) => (
-							<ItemRow
-								key={issue.id}
-								item={issue}
-								type="issue"
-							/>
-						))
-					) : (
-						<EmptyTab message="No assigned issues" />
-					))}
-			</div>
+			{activeTab === "prs" &&
+				(myOpenPRs.items.length > 0 ? (
+					myOpenPRs.items.map((pr) => (
+						<ItemRow key={pr.id} item={pr} type="pr" />
+					))
+				) : (
+					<EmptyTab message="No open PRs" />
+				))}
+			{activeTab === "issues" &&
+				(myIssues.items.length > 0 ? (
+					myIssues.items.map((issue) => (
+						<ItemRow key={issue.id} item={issue} type="issue" />
+					))
+				) : (
+					<EmptyTab message="No assigned issues" />
+				))}
+			{activeTab === "notifs" &&
+				(notifications.length > 0 ? (
+					notifications.map((notif) => (
+						<NotificationRow key={notif.id} notif={notif} />
+					))
+				) : (
+					<EmptyTab message="No notifications" />
+				))}
 		</div>
 	);
 }
@@ -298,6 +288,87 @@ function EmptyTab({ message }: { message: string }) {
 		<div className="py-10 text-center">
 			<p className="text-xs text-muted-foreground/50 font-mono">{message}</p>
 		</div>
+	);
+}
+
+const reasonLabels: Record<string, string> = {
+	assign: "Assigned",
+	author: "Author",
+	comment: "Comment",
+	ci_activity: "CI",
+	invitation: "Invited",
+	manual: "Subscribed",
+	mention: "Mentioned",
+	review_requested: "Review requested",
+	security_alert: "Security",
+	state_change: "State change",
+	subscribed: "Watching",
+	team_mention: "Team mention",
+};
+
+function getNotificationHref(notif: NotificationItem): string {
+	const repo = notif.repository.full_name;
+	if (!notif.subject.url) return `/${repo}`;
+	const match = notif.subject.url.match(/repos\/[^/]+\/[^/]+\/(pulls|issues)\/(\d+)/);
+	if (match) {
+		const type = match[1] === "pulls" ? "pulls" : "issues";
+		return `/${repo}/${type}/${match[2]}`;
+	}
+	return `/${repo}`;
+}
+
+function NotificationRow({ notif }: { notif: NotificationItem }) {
+	const href = getNotificationHref(notif);
+	const repo = notif.repository.full_name;
+	const icon =
+		notif.subject.type === "PullRequest" ? (
+			<GitPullRequest className="w-3.5 h-3.5" />
+		) : notif.subject.type === "Issue" ? (
+			<CircleDot className="w-3.5 h-3.5" />
+		) : (
+			<Bell className="w-3.5 h-3.5" />
+		);
+
+	return (
+		<Link
+			href={href}
+			className="group flex items-center gap-3 px-4 py-2 hover:bg-muted/50 dark:hover:bg-white/2 transition-colors border-b border-border/60 last:border-b-0"
+		>
+			<span className="text-muted-foreground/70 shrink-0">{icon}</span>
+			<div className="flex-1 min-w-0">
+				<div className="flex items-center gap-2">
+					{notif.unread && (
+						<span className="w-1.5 h-1.5 rounded-full bg-foreground shrink-0" />
+					)}
+					<span className="text-sm truncate group-hover:text-foreground transition-colors">
+						{notif.subject.title}
+					</span>
+				</div>
+				<div className="flex items-center gap-2 mt-px">
+					<span className="text-[11px] font-mono text-muted-foreground/70">
+						{repo}
+					</span>
+					<span
+						className={cn(
+							"text-[9px] font-mono px-1 py-0.5 border",
+							notif.reason === "review_requested"
+								? "border-warning/30 text-warning"
+								: notif.reason === "mention" ||
+									  notif.reason ===
+											"team_mention"
+									? "border-foreground/20 text-foreground/60"
+									: "border-border text-muted-foreground",
+						)}
+					>
+						{reasonLabels[notif.reason] || notif.reason}
+					</span>
+					<span className="text-[11px] text-muted-foreground/50">
+						<TimeAgo date={notif.updated_at} />
+					</span>
+				</div>
+			</div>
+			<ChevronRight className="w-3 h-3 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+		</Link>
 	);
 }
 
@@ -378,20 +449,18 @@ function Stat({
 	label,
 	value,
 	accent,
+	onClick,
+	href,
 }: {
 	icon: React.ReactNode;
 	label: string;
 	value: number;
 	accent?: boolean;
+	onClick?: () => void;
+	href?: string;
 }) {
-	return (
-		<div
-			className={cn(
-				"stat-card relative overflow-hidden rounded-lg px-3 py-3",
-				"border border-black/[0.04] dark:border-white/[0.06]",
-				"bg-gradient-to-br from-black/[0.02] via-black/[0.01] to-transparent dark:from-white/[0.04] dark:via-white/[0.02] dark:to-transparent",
-			)}
-		>
+	const content = (
+		<>
 			{/* Noise texture */}
 			<div className="pointer-events-none absolute inset-0 stat-noise opacity-[0.25] dark:opacity-[0.5] mix-blend-overlay" />
 			{/* Diagonal shine */}
@@ -427,7 +496,31 @@ function Stat({
 					)}
 				</div>
 			</div>
-		</div>
+		</>
+	);
+
+	const className = cn(
+		"stat-card relative overflow-hidden rounded-lg px-3 py-3 text-left w-full",
+		"border border-black/[0.04] dark:border-white/[0.06]",
+		"bg-gradient-to-br from-black/[0.02] via-black/[0.01] to-transparent dark:from-white/[0.04] dark:via-white/[0.02] dark:to-transparent",
+		"transition-all duration-150 cursor-pointer",
+		"hover:border-black/[0.08] dark:hover:border-white/[0.12]",
+		"hover:bg-gradient-to-br hover:from-black/[0.04] hover:via-black/[0.02] dark:hover:from-white/[0.06] dark:hover:via-white/[0.03]",
+		"dark:active:from-white/[0.03] dark:active:via-white/[0.02] transition-all duration-150",
+	);
+
+	if (href) {
+		return (
+			<Link href={href} className={className}>
+				{content}
+			</Link>
+		);
+	}
+
+	return (
+		<button type="button" onClick={onClick} className={className}>
+			{content}
+		</button>
 	);
 }
 
@@ -896,7 +989,7 @@ function ActivityMarquee({ activity }: { activity: Array<ActivityEvent> }) {
 	));
 
 	return (
-		<div className="shrink-0 relative overflow-hidden border-y border-border">
+		<div className="shrink-0 relative overflow-hidden border-b">
 			<div className="pointer-events-none absolute inset-y-0 left-0 w-16 z-10 bg-gradient-to-r from-background to-transparent" />
 			<div className="pointer-events-none absolute inset-y-0 right-0 w-16 z-10 bg-gradient-to-l from-background to-transparent" />
 			<div className="flex whitespace-nowrap marquee-track text-[11px] font-mono text-muted-foreground py-2 px-3">

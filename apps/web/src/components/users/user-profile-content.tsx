@@ -333,7 +333,7 @@ export function UserProfileContent({
 
 				{/* Language distribution */}
 				{languageDistribution.length > 0 && (
-					<div className="mt-5 pt-5 border-t border-border">
+					<div className="my-5 pt-5 border-t border-border">
 						<h2 className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest mb-3">
 							Languages
 						</h2>

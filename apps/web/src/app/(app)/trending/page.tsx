@@ -1,5 +1,10 @@
+import type { Metadata } from "next";
 import { getTrendingRepos } from "@/lib/github";
 import { TrendingContent } from "@/components/trending/trending-content";
+
+export const metadata: Metadata = {
+	title: "Trending",
+};
 
 export default async function TrendingPage() {
 	const [weekly, daily, monthly] = await Promise.all([

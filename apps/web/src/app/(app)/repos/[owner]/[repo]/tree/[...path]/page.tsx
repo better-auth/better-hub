@@ -1,6 +1,22 @@
+import type { Metadata } from "next";
 import { getRepoContents, getRepoBranches, getRepoTags } from "@/lib/github";
 import { parseRefAndPath } from "@/lib/github-utils";
 import { FileList } from "@/components/repo/file-list";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ owner: string; repo: string; path: string[] }>;
+}): Promise<Metadata> {
+	const { owner, repo, path: pathSegments } = await params;
+	const [branches, tags] = await Promise.all([
+		getRepoBranches(owner, repo),
+		getRepoTags(owner, repo),
+	]);
+	const branchNames = [...branches.map((b) => b.name), ...tags.map((t) => t.name)];
+	const { path } = parseRefAndPath(pathSegments, branchNames);
+	return { title: `${path || "/"} · ${owner}/${repo}` };
+}
 
 export default async function TreePage({
 	params,

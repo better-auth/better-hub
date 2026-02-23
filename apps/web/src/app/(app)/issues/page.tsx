@@ -1,5 +1,10 @@
+import type { Metadata } from "next";
 import { getAuthenticatedUser, searchIssues } from "@/lib/github";
 import { IssuesContent } from "@/components/issues/issues-content";
+
+export const metadata: Metadata = {
+	title: "Issues",
+};
 
 export default async function IssuesPage() {
 	const user = await getAuthenticatedUser();

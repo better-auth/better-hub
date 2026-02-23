@@ -1,5 +1,15 @@
+import type { Metadata } from "next";
 import { getRepoCommits, getRepo, getRepoBranches } from "@/lib/github";
 import { CommitsList } from "@/components/repo/commits-list";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ owner: string; repo: string }>;
+}): Promise<Metadata> {
+	const { owner, repo } = await params;
+	return { title: `Commits · ${owner}/${repo}` };
+}
 
 export default async function CommitsPage({
 	params,

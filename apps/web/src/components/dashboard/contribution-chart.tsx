@@ -133,7 +133,7 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 				</div>
 
 				<div
-					className="inline-grid pt-6"
+					className="inline-grid pt-0"
 					style={{ gridTemplateColumns: `auto 1fr` }}
 				>
 					{/* Day labels column */}

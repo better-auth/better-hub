@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import {
 	getRepo,
 	getRepoContents,
@@ -12,6 +13,15 @@ import { CodeToolbar } from "@/components/repo/code-toolbar";
 import { MarkdownRenderer } from "@/components/shared/markdown-renderer";
 import { TrackView } from "@/components/shared/track-view";
 import { deleteBranch } from "../actions";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ owner: string; repo: string }>;
+}): Promise<Metadata> {
+	const { owner, repo } = await params;
+	return { title: `Code · ${owner}/${repo}` };
+}
 
 export default async function CodePage({
 	params,

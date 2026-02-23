@@ -1,6 +1,22 @@
+import type { Metadata } from "next";
 import { getCommit } from "@/lib/github";
 import { highlightDiffLines, type SyntaxToken } from "@/lib/shiki";
 import { CommitDetail } from "@/components/repo/commit-detail";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ owner: string; repo: string; sha: string }>;
+}): Promise<Metadata> {
+	const { owner, repo, sha } = await params;
+	const commit = await getCommit(owner, repo, sha);
+	if (!commit) {
+		return { title: `Commit ${sha.slice(0, 7)} · ${owner}/${repo}` };
+	}
+	const message = commit.commit?.message?.split("\n")[0] || "";
+	const shortSha = sha.slice(0, 7);
+	return { title: `${message || shortSha} · ${owner}/${repo}` };
+}
 
 export default async function CommitDetailPage({
 	params,

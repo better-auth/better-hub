@@ -616,6 +616,7 @@ interface HotItem {
 	comments: number;
 	score: number;
 	href: string;
+	createdAt: string;
 }
 
 function computeHotItems(prs: PRItem[], issues: IssueItem[], base: string): HotItem[] {
@@ -627,6 +628,7 @@ function computeHotItems(prs: PRItem[], issues: IssueItem[], base: string): HotI
 		comments: pr.comments ?? 0,
 		score: (pr.comments ?? 0) * 2,
 		href: `${base}/pulls/${pr.number}`,
+		createdAt: pr.created_at,
 	}));
 	const fromIssues: HotItem[] = issues
 		.filter((i) => !i.pull_request)
@@ -638,6 +640,7 @@ function computeHotItems(prs: PRItem[], issues: IssueItem[], base: string): HotI
 			comments: issue.comments ?? 0,
 			score: (issue.comments ?? 0) * 2 + (issue.reactions?.total_count ?? 0),
 			href: `${base}/issues/${issue.number}`,
+			createdAt: issue.created_at,
 		}));
 	return [...fromPRs, ...fromIssues].sort((a, b) => b.score - a.score).slice(0, 6);
 }
@@ -647,7 +650,7 @@ function TickerCard({ item }: { item: HotItem }) {
 	return (
 		<Link
 			href={item.href}
-			className="w-full shrink-0 flex items-start gap-3 px-4 py-3 group hover:bg-muted transition-colors"
+			className="w-full shrink-0 flex items-start gap-3 px-4 py-3 group transition-colors hover:bg-muted/40"
 		>
 			<Icon className="w-3.5 h-3.5 mt-0.5 shrink-0 text-success" />
 			<div className="min-w-0 flex-1">
@@ -670,8 +673,11 @@ function TickerCard({ item }: { item: HotItem }) {
 					<span className="text-[10px] font-mono text-muted-foreground/50 truncate">
 						{item.user?.login ?? "unknown"}
 					</span>
+					<span className="text-[10px] font-mono text-muted-foreground/50 ml-auto shrink-0">
+						{timeAgo(item.createdAt)}
+					</span>
 					{item.comments > 0 && (
-						<span className="flex items-center gap-0.5 text-[10px] font-mono text-muted-foreground/50 ml-auto shrink-0">
+						<span className="flex items-center gap-0.5 text-[10px] font-mono text-muted-foreground/50 shrink-0">
 							<MessageSquare className="w-3 h-3" />
 							{item.comments}
 						</span>

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
 	getOrg,
@@ -9,34 +10,26 @@ import {
 } from "@/lib/github";
 import { OrgDetailContent } from "@/components/orgs/org-detail-content";
 import { UserProfileContent } from "@/components/users/user-profile-content";
-import { ExternalLink, User } from "lucide-react";
 
-function UnknownAccountPage({ name }: { name: string }) {
-	const githubUrl = `https://github.com/${encodeURIComponent(name)}`;
-
-	return (
-		<div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
-			<div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-				<User className="w-8 h-8 text-muted-foreground/50" />
-			</div>
-			<div>
-				<h1 className="text-base font-medium">{name}</h1>
-				<p className="text-xs text-muted-foreground/60 mt-1 max-w-[240px]">
-					This account can&apos;t be viewed here. It may be a bot,
-					app, or mannequin account.
-				</p>
-			</div>
-			<a
-				href={githubUrl}
-				target="_blank"
-				rel="noopener noreferrer"
-				className="flex items-center gap-1.5 text-[11px] font-mono px-3 py-1.5 border border-border text-muted-foreground hover:text-foreground hover:border-border transition-colors"
-			>
-				<ExternalLink className="w-3 h-3" />
-				View on GitHub
-			</a>
-		</div>
-	);
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ owner: string }>;
+}): Promise<Metadata> {
+	const { owner } = await params;
+	const orgData = await getOrg(owner).catch(() => null);
+	if (orgData) {
+		return { title: orgData.name || orgData.login };
+	}
+	const userData = await getUser(owner).catch(() => null);
+	if (userData) {
+		return {
+			title: userData.name
+				? `${userData.name} (${userData.login})`
+				: userData.login,
+		};
+	}
+	return { title: owner };
 }
 
 export default async function OwnerPage({ params }: { params: Promise<{ owner: string }> }) {

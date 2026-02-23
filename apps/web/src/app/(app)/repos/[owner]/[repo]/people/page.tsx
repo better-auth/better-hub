@@ -1,6 +1,16 @@
+import type { Metadata } from "next";
 import { getOrgMembers, getUser, getOctokit } from "@/lib/github";
 import { PeopleList } from "@/components/people/people-list";
 import { inviteOrgMember } from "./actions";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ owner: string; repo: string }>;
+}): Promise<Metadata> {
+	const { owner, repo } = await params;
+	return { title: `People · ${owner}/${repo}` };
+}
 
 export default async function PeoplePage({
 	params,

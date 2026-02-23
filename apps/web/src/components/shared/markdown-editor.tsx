@@ -360,7 +360,10 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
 				</div>
 
 				{/* Rich text editor */}
-				<div style={{ minHeight }} className="resize-y overflow-auto">
+				<div
+					style={{ minHeight, maxHeight: 400 }}
+					className="resize-y overflow-auto"
+				>
 					<EditorContent editor={editor} />
 				</div>
 			</div>

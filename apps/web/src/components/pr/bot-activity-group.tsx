@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { ChevronRight, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DeletedCommentsProvider, useDeletedComments } from "./deleted-comments-context";
 
 interface BotActivityGroupProps {
 	count: number;
@@ -13,7 +14,23 @@ interface BotActivityGroupProps {
 }
 
 export function BotActivityGroup({ count, botNames, avatars, children }: BotActivityGroupProps) {
+	return (
+		<DeletedCommentsProvider>
+			<BotActivityGroupInner count={count} botNames={botNames} avatars={avatars}>
+				{children}
+			</BotActivityGroupInner>
+		</DeletedCommentsProvider>
+	);
+}
+
+function BotActivityGroupInner({ count, botNames, avatars, children }: BotActivityGroupProps) {
 	const [expanded, setExpanded] = useState(false);
+	const deletedContext = useDeletedComments();
+	const displayCount = count - (deletedContext?.deletedCount ?? 0);
+
+	if (displayCount <= 0) {
+		return null;
+	}
 
 	const label =
 		botNames.length === 1
@@ -53,7 +70,7 @@ export function BotActivityGroup({ count, botNames, avatars, children }: BotActi
 					{label}
 				</span>
 				<span className="text-[10px] text-muted-foreground/30">
-					{count} {count === 1 ? "comment" : "comments"}
+					{displayCount} {displayCount === 1 ? "comment" : "comments"}
 				</span>
 			</button>
 

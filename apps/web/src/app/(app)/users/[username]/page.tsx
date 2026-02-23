@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getUser, getUserPublicRepos, getUserPublicOrgs, getContributionData } from "@/lib/github";
 import { UserProfileContent } from "@/components/users/user-profile-content";
 import { ExternalLink, User } from "lucide-react";
@@ -28,6 +29,19 @@ function UnknownUserPage({ username }: { username: string }) {
 			</a>
 		</div>
 	);
+}
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ username: string }>;
+}): Promise<Metadata> {
+	const { username } = await params;
+	const userData = await getUser(username).catch(() => null);
+	if (!userData) {
+		return { title: username };
+	}
+	return { title: userData.name ? `${userData.name} (${userData.login})` : userData.login };
 }
 
 export default async function UserProfilePage({

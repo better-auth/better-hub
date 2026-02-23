@@ -9,6 +9,7 @@ import { BotActivityGroup } from "./bot-activity-group";
 import { CommitActivityGroup } from "./commit-activity-group";
 import { ReactionDisplay, type Reactions } from "@/components/shared/reaction-display";
 import { CollapsibleDescription } from "./collapsible-description";
+import { ChatMessageWrapper } from "./chat-message-wrapper";
 
 interface BaseUser {
 	login: string;
@@ -200,9 +201,6 @@ export async function PRConversation({
 											entry={
 												entry
 											}
-											isFirst={
-												false
-											}
 											owner={
 												owner
 											}
@@ -227,7 +225,7 @@ export async function PRConversation({
 					);
 				}
 
-				const { entry, index } = item;
+				const { entry } = item;
 				if (entry.type === "review") {
 					return (
 						<ReviewCardWrapper
@@ -254,7 +252,6 @@ export async function PRConversation({
 								: `comment-${entry.id}`
 						}
 						entry={entry}
-						isFirst={index === 0}
 						owner={owner}
 						repo={repo}
 						pullNumber={pullNumber}
@@ -275,13 +272,11 @@ export async function PRConversation({
 
 async function ChatMessage({
 	entry,
-	isFirst,
 	owner,
 	repo,
 	pullNumber,
 }: {
 	entry: DescriptionEntry | CommentEntry;
-	isFirst: boolean;
 	owner: string;
 	repo: string;
 	pullNumber: number;
@@ -323,77 +318,87 @@ async function ChatMessage({
 		);
 	}
 
-	return (
-		<div className="group">
-			<div className="border border-border/60 rounded-lg overflow-hidden">
-				<div className="flex items-center gap-2 px-3 py-1.5 border-b border-border/60 bg-card/50">
-					{entry.user ? (
-						<Link
-							href={`/users/${entry.user.login}`}
-							className="flex items-center gap-2 hover:text-foreground transition-colors"
-						>
-							<Image
-								src={entry.user.avatar_url}
-								alt={entry.user.login}
-								width={16}
-								height={16}
-								className="rounded-full shrink-0"
-							/>
-							<span className="text-xs font-medium text-foreground/80">
-								{entry.user.login}
-							</span>
-						</Link>
-					) : (
-						<>
-							<div className="w-4 h-4 rounded-full bg-muted-foreground shrink-0" />
-							<span className="text-xs font-medium text-foreground/80">
-								ghost
-							</span>
-						</>
-					)}
-					{entry.type === "comment" &&
-						entry.author_association &&
-						entry.author_association !== "NONE" && (
-							<span className="text-[9px] px-1 py-px border border-border text-muted-foreground/50 rounded">
-								{entry.author_association.toLowerCase()}
-							</span>
-						)}
-					<span className="text-[10px] text-muted-foreground/40 ml-auto shrink-0">
-						<TimeAgo date={entry.created_at} />
-					</span>
-				</div>
-
-				{hasBody ? (
-					<div className="px-3 py-2.5">
-						<MarkdownRenderer
-							content={entry.body}
-							className="ghmd-sm"
-							issueRefContext={{ owner, repo }}
-						/>
-					</div>
-				) : (
-					<div className="px-3 py-3">
-						<p className="text-xs text-muted-foreground/30 italic">
-							No description provided.
-						</p>
-					</div>
-				)}
-
-				<div className="px-3 pb-2">
-					<ReactionDisplay
-						reactions={entry.reactions ?? {}}
-						owner={owner}
-						repo={repo}
-						contentType="issueComment"
-						contentId={entry.id as number}
+	const headerContent = (
+		<>
+			{entry.user ? (
+				<Link
+					href={`/users/${entry.user.login}`}
+					className="flex items-center gap-2 hover:text-foreground transition-colors"
+				>
+					<Image
+						src={entry.user.avatar_url}
+						alt={entry.user.login}
+						width={16}
+						height={16}
+						className="rounded-full shrink-0"
 					/>
-				</div>
-			</div>
+					<span className="text-xs font-medium text-foreground/80">
+						{entry.user.login}
+					</span>
+				</Link>
+			) : (
+				<>
+					<div className="w-4 h-4 rounded-full bg-muted-foreground shrink-0" />
+					<span className="text-xs font-medium text-foreground/80">
+						ghost
+					</span>
+				</>
+			)}
+			{entry.type === "comment" &&
+				entry.author_association &&
+				entry.author_association !== "NONE" && (
+					<span className="text-[9px] px-1 py-px border border-border text-muted-foreground/50 rounded">
+						{entry.author_association.toLowerCase()}
+					</span>
+				)}
+			<span className="text-[10px] text-muted-foreground/40 ml-auto shrink-0">
+				<TimeAgo date={entry.created_at} />
+			</span>
+		</>
+	);
+
+	const bodyContent = hasBody ? (
+		<div className="px-3 py-2.5">
+			<MarkdownRenderer
+				content={entry.body}
+				className="ghmd-sm"
+				issueRefContext={{ owner, repo }}
+			/>
 		</div>
+	) : (
+		<div className="px-3 py-3">
+			<p className="text-xs text-muted-foreground/30 italic">
+				No description provided.
+			</p>
+		</div>
+	);
+
+	const reactionsContent = (
+		<ReactionDisplay
+			reactions={entry.reactions ?? {}}
+			owner={owner}
+			repo={repo}
+			contentType="issueComment"
+			contentId={entry.id as number}
+		/>
+	);
+
+	return (
+		<ChatMessageWrapper
+			headerContent={headerContent}
+			bodyContent={bodyContent}
+			reactionsContent={reactionsContent}
+			owner={owner}
+			repo={repo}
+			contentType="pr"
+			pullNumber={pullNumber}
+			commentId={entry.id as number}
+			body={entry.body}
+		/>
 	);
 }
 
-async function ReviewCardWrapper({
+function ReviewCardWrapper({
 	entry,
 	owner,
 	repo,

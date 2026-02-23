@@ -1,5 +1,15 @@
+import type { Metadata } from "next";
 import { getRepo, getRepoEvents, getCommitActivity } from "@/lib/github";
 import { RepoActivityView } from "@/components/repo/repo-activity-view";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ owner: string; repo: string }>;
+}): Promise<Metadata> {
+	const { owner, repo } = await params;
+	return { title: `Activity · ${owner}/${repo}` };
+}
 
 export default async function ActivityPage({
 	params,

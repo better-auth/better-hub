@@ -4,6 +4,11 @@ import { useState, useCallback, useRef } from "react";
 import { PanelLeft } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { RepoBreadcrumb } from "@/components/repo/repo-breadcrumb";
+import { useState, useCallback, useRef, useEffect, useTransition } from "react";
+import Link from "next/link";
+import { PanelLeft } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { setRepoSidebarState } from "./repo-sidebar-actions";
 
 interface RepoLayoutWrapperProps {
 	sidebar: React.ReactNode;
@@ -11,6 +16,8 @@ interface RepoLayoutWrapperProps {
 	owner: string;
 	repo: string;
 	ownerType: string;
+	initialCollapsed?: boolean;
+	initialWidth?: number;
 }
 
 const DEFAULT_WIDTH = 260;
@@ -22,23 +29,37 @@ export function RepoLayoutWrapper({
 	children,
 	owner,
 	repo,
+	initialCollapsed = false,
+	initialWidth = DEFAULT_WIDTH,
 	ownerType,
 }: RepoLayoutWrapperProps) {
-	const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_WIDTH);
+  const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_WIDTH);
 	const lastOpenWidthRef = useRef(DEFAULT_WIDTH);
+	const [sidebarWidth, setSidebarWidth] = useState(initialCollapsed ? 0 : initialWidth);
+	const lastOpenWidthRef = useRef(initialWidth);
 	const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
 	const isDraggingRef = useRef(false);
 	const [isDragging, setIsDragging] = useState(false);
+	const [, startTransition] = useTransition();
 	const collapsed = sidebarWidth === 0;
 
-	const handleExpand = useCallback(() => {
-		setSidebarWidth(lastOpenWidthRef.current || DEFAULT_WIDTH);
+	const persistState = useCallback((isCollapsed: boolean, width: number) => {
+		startTransition(() => {
+			setRepoSidebarState(isCollapsed, width);
+		});
 	}, []);
+
+	const handleExpand = useCallback(() => {
+		const width = lastOpenWidthRef.current || DEFAULT_WIDTH;
+		setSidebarWidth(width);
+		persistState(false, width);
+	}, [persistState]);
 
 	const handleCollapse = useCallback(() => {
 		if (sidebarWidth > 0) lastOpenWidthRef.current = sidebarWidth;
 		setSidebarWidth(0);
-	}, [sidebarWidth]);
+		persistState(true, lastOpenWidthRef.current);
+	}, [sidebarWidth, persistState]);
 
 	const handleDragStart = useCallback(
 		(e: React.MouseEvent) => {
@@ -67,6 +88,8 @@ export function RepoLayoutWrapper({
 			};
 			const onUp = () => {
 				const didDrag = isDraggingRef.current;
+				const finalWidth = sidebarWidth;
+				const finalCollapsed = finalWidth === 0;
 				dragRef.current = null;
 				isDraggingRef.current = false;
 				setIsDragging(false);
@@ -76,6 +99,13 @@ export function RepoLayoutWrapper({
 				document.body.style.cursor = "";
 				if (!didDrag) {
 					handleCollapse();
+				} else {
+					persistState(
+						finalCollapsed,
+						finalCollapsed
+							? lastOpenWidthRef.current
+							: finalWidth,
+					);
 				}
 			};
 			document.addEventListener("mousemove", onMove);
@@ -83,7 +113,7 @@ export function RepoLayoutWrapper({
 			document.body.style.userSelect = "none";
 			document.body.style.cursor = "col-resize";
 		},
-		[sidebarWidth, handleCollapse],
+		[sidebarWidth, handleCollapse, persistState],
 	);
 
 	return (

@@ -21,6 +21,7 @@ const PR_ACTION_SCOPES: Record<string, PRMutationScope[]> = {
 	updateBase: ["detail", "list"],
 	review: ["detail"],
 	comment: ["detail"],
+	deleteComment: ["detail"],
 	reviewComment: ["detail"],
 	suggestion: ["detail"],
 	fileCommit: ["detail"],
@@ -211,6 +212,28 @@ export async function addPRComment(owner: string, repo: string, pullNumber: numb
 		return { success: true };
 	} catch (e: unknown) {
 		return { error: getErrorMessage(e) || "Failed to add comment" };
+	}
+}
+
+export async function deletePRComment(
+	owner: string,
+	repo: string,
+	pullNumber: number,
+	commentId: number,
+) {
+	const octokit = await getOctokit();
+	if (!octokit) return { error: "Not authenticated" };
+
+	try {
+		await octokit.issues.deleteComment({
+			owner,
+			repo,
+			comment_id: commentId,
+		});
+		await revalidateAfterPRMutation(owner, repo, pullNumber, "deleteComment");
+		return { success: true };
+	} catch (e: unknown) {
+		return { error: getErrorMessage(e) || "Failed to delete comment" };
 	}
 }
 

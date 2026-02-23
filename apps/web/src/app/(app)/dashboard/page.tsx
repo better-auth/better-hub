@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getServerSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import {
@@ -9,6 +10,10 @@ import {
 } from "@/lib/github";
 import { DashboardContent } from "@/components/dashboard/dashboard-content";
 import { all } from "better-all";
+
+export const metadata: Metadata = {
+	title: "Dashboard",
+};
 
 export default async function DashboardPage() {
 	const session = await getServerSession();

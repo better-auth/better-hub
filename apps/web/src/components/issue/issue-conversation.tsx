@@ -7,6 +7,7 @@ import { BotActivityGroup } from "@/components/pr/bot-activity-group";
 import { OlderActivityGroup } from "@/components/issue/older-activity-group";
 import { CollapsibleBody } from "@/components/issue/collapsible-body";
 import { ReactionDisplay, type Reactions } from "@/components/shared/reaction-display";
+import { ChatMessageWrapper } from "@/components/pr/chat-message-wrapper";
 
 interface BaseUser {
 	login: string;
@@ -383,97 +384,162 @@ function ChatMessage({
 		);
 	}
 
-	return (
-		<div className="group">
-			<div
-				className={cn(
-					"border border-border/60 rounded-lg overflow-hidden",
-					isFirst && "border-border/80",
-				)}
-			>
+	// Description entries don't get the actions menu
+	if (entry.type === "description") {
+		return (
+			<div className="group">
 				<div
 					className={cn(
-						"flex items-center gap-2 px-3 py-1.5 border-b border-border/60",
-						isFirst ? "bg-card/80" : "bg-card/50",
+						"border border-border/60 rounded-lg overflow-hidden",
+						isFirst && "border-border/80",
 					)}
 				>
-					{entry.user ? (
-						<Link
-							href={`/users/${entry.user.login}`}
-							className="flex items-center gap-2 hover:text-foreground transition-colors"
-						>
-							<Image
-								src={entry.user.avatar_url}
-								alt={entry.user.login}
-								width={16}
-								height={16}
-								className="rounded-full shrink-0"
-							/>
-							<span className="text-xs font-medium text-foreground/80">
-								{entry.user.login}
-							</span>
-						</Link>
-					) : (
-						<>
-							<div className="w-4 h-4 rounded-full bg-muted-foreground shrink-0" />
-							<span className="text-xs font-medium text-foreground/80">
-								ghost
-							</span>
-						</>
-					)}
-					{entry.type === "description" && (
+					<div
+						className={cn(
+							"flex items-center gap-2 px-3 py-1.5 border-b border-border/60",
+							isFirst ? "bg-card/80" : "bg-card/50",
+						)}
+					>
+						{entry.user ? (
+							<Link
+								href={`/users/${entry.user.login}`}
+								className="flex items-center gap-2 hover:text-foreground transition-colors"
+							>
+								<Image
+									src={entry.user.avatar_url}
+									alt={entry.user.login}
+									width={16}
+									height={16}
+									className="rounded-full shrink-0"
+								/>
+								<span className="text-xs font-medium text-foreground/80">
+									{entry.user.login}
+								</span>
+							</Link>
+						) : (
+							<>
+								<div className="w-4 h-4 rounded-full bg-muted-foreground shrink-0" />
+								<span className="text-xs font-medium text-foreground/80">
+									ghost
+								</span>
+							</>
+						)}
 						<span className="text-[10px] text-muted-foreground/50">
 							opened
 						</span>
+						<span className="text-[10px] text-muted-foreground/40 ml-auto shrink-0">
+							<TimeAgo date={entry.created_at} />
+						</span>
+					</div>
+
+					{hasBody && renderedBody ? (
+						<div className="px-3 py-2.5">
+							{isLong ? (
+								<CollapsibleBody>
+									{renderedBody}
+								</CollapsibleBody>
+							) : (
+								renderedBody
+							)}
+						</div>
+					) : (
+						<div className="px-3 py-3">
+							<p className="text-xs text-muted-foreground/30 italic">
+								No description provided.
+							</p>
+						</div>
 					)}
-					{entry.type === "comment" &&
-						entry.author_association &&
-						entry.author_association !== "NONE" && (
-							<span className="text-[9px] px-1 py-px border border-border/60 text-muted-foreground/50 rounded">
-								{entry.author_association.toLowerCase()}
-							</span>
-						)}
-					<span className="text-[10px] text-muted-foreground/40 ml-auto shrink-0">
-						<TimeAgo date={entry.created_at} />
-					</span>
-				</div>
 
-				{hasBody && renderedBody ? (
-					<div className="px-3 py-2.5">
-						{isLong ? (
-							<CollapsibleBody>
-								{renderedBody}
-							</CollapsibleBody>
-						) : (
-							renderedBody
-						)}
+					<div className="px-3 pb-2">
+						<ReactionDisplay
+							reactions={entry.reactions ?? {}}
+							owner={owner}
+							repo={repo}
+							contentType="issue"
+							contentId={issueNumber}
+						/>
 					</div>
-				) : (
-					<div className="px-3 py-3">
-						<p className="text-xs text-muted-foreground/30 italic">
-							No description provided.
-						</p>
-					</div>
-				)}
-
-				<div className="px-3 pb-2">
-					<ReactionDisplay
-						reactions={entry.reactions ?? {}}
-						owner={owner}
-						repo={repo}
-						contentType={
-							entry.type === "description"
-								? "issue"
-								: "issueComment"
-						}
-						contentId={
-							entry.type === "description"
-								? issueNumber
-								: (entry.id as number)
-						}
-					/>
 				</div>
 			</div>
-		</div>
+		);
+	}
+
+	// Comment entries use the wrapper with actions menu
+	const headerContent = (
+		<>
+			{entry.user ? (
+				<Link
+					href={`/users/${entry.user.login}`}
+					className="flex items-center gap-2 hover:text-foreground transition-colors"
+				>
+					<Image
+						src={entry.user.avatar_url}
+						alt={entry.user.login}
+						width={16}
+						height={16}
+						className="rounded-full shrink-0"
+					/>
+					<span className="text-xs font-medium text-foreground/80">
+						{entry.user.login}
+					</span>
+				</Link>
+			) : (
+				<>
+					<div className="w-4 h-4 rounded-full bg-muted-foreground shrink-0" />
+					<span className="text-xs font-medium text-foreground/80">
+						ghost
+					</span>
+				</>
+			)}
+			{entry.author_association && entry.author_association !== "NONE" && (
+				<span className="text-[9px] px-1 py-px border border-border/60 text-muted-foreground/50 rounded">
+					{entry.author_association.toLowerCase()}
+				</span>
+			)}
+			<span className="text-[10px] text-muted-foreground/40 ml-auto shrink-0">
+				<TimeAgo date={entry.created_at} />
+			</span>
+		</>
+	);
+
+	const bodyContent =
+		hasBody && renderedBody ? (
+			<div className="px-3 py-2.5">
+				{isLong ? (
+					<CollapsibleBody>{renderedBody}</CollapsibleBody>
+				) : (
+					renderedBody
+				)}
+			</div>
+		) : (
+			<div className="px-3 py-3">
+				<p className="text-xs text-muted-foreground/30 italic">
+					No description provided.
+				</p>
+			</div>
+		);
+
+	const reactionsContent = (
+		<ReactionDisplay
+			reactions={entry.reactions ?? {}}
+			owner={owner}
+			repo={repo}
+			contentType="issueComment"
+			contentId={entry.id as number}
+		/>
+	);
+
+	return (
+		<ChatMessageWrapper
+			headerContent={headerContent}
+			bodyContent={bodyContent}
+			reactionsContent={reactionsContent}
+			owner={owner}
+			repo={repo}
+			contentType="issue"
+			issueNumber={issueNumber}
+			commentId={entry.id as number}
+			body={entry.body}
+		/>
 	);
 }

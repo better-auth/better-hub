@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import {
 	getIssue,
 	getIssueComments,
@@ -20,6 +21,24 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { inngest } from "@/lib/inngest";
 import { isItemPinned } from "@/lib/pinned-items-store";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ owner: string; repo: string; number: string }>;
+}): Promise<Metadata> {
+	const { owner, repo, number: numStr } = await params;
+	const issueNumber = parseInt(numStr, 10);
+	const issue = await getIssue(owner, repo, issueNumber);
+
+	if (!issue) {
+		return { title: `Issue #${issueNumber} · ${owner}/${repo}` };
+	}
+
+	return {
+		title: `${issue.title} · Issue #${issueNumber} · ${owner}/${repo}`,
+	};
+}
 
 export default async function IssueDetailPage({
 	params,

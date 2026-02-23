@@ -491,7 +491,7 @@ export function GlobalChatPanel() {
 					</button>
 
 					{/* Panel header */}
-					<div className="group/header shrink-0 flex items-center gap-1.5 px-3 py-1.5 border-b border-border/60">
+					<div className="group/header shrink-0 flex items-center gap-1.5 pl-3 pr-2 py-1.5 border-b border-border/60">
 						<Ghost className="w-3.5 h-3.5 text-foreground/50" />
 						<span className="text-xs font-medium text-foreground/70 truncate">
 							Ghost
@@ -499,7 +499,7 @@ export function GlobalChatPanel() {
 						<button
 							type="button"
 							onClick={closeChat}
-							className="ml-auto p-0.5 rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-accent/60 opacity-0 group-hover/header:opacity-100 transition-all duration-150 cursor-pointer"
+							className="ml-auto p-0.5  rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-accent/60 transition-all duration-150 cursor-pointer"
 						>
 							<X className="w-3 h-3" />
 						</button>

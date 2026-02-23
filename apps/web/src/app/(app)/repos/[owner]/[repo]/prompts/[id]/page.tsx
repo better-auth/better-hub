@@ -1,8 +1,22 @@
+import type { Metadata } from "next";
 import { getPromptRequest, listPromptRequestComments } from "@/lib/prompt-request-store";
 import { PromptDetail } from "@/components/prompt-request/prompt-detail";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ owner: string; repo: string; id: string }>;
+}): Promise<Metadata> {
+	const { owner, repo, id } = await params;
+	const promptRequest = await getPromptRequest(id);
+	if (!promptRequest) {
+		return { title: `Prompt · ${owner}/${repo}` };
+	}
+	return { title: `${promptRequest.title} · ${owner}/${repo}` };
+}
 
 export default async function PromptDetailPage({
 	params,

@@ -1,5 +1,15 @@
+import type { Metadata } from "next";
 import { getRepoWorkflows, getRepoWorkflowRuns } from "@/lib/github";
 import { ActionsList } from "@/components/actions/actions-list";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ owner: string; repo: string }>;
+}): Promise<Metadata> {
+	const { owner, repo } = await params;
+	return { title: `Actions · ${owner}/${repo}` };
+}
 
 export default async function ActionsPage({
 	params,

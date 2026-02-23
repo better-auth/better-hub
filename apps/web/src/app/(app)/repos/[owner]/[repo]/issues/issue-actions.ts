@@ -47,6 +47,30 @@ export async function addIssueComment(
 	}
 }
 
+export async function deleteIssueComment(
+	owner: string,
+	repo: string,
+	issueNumber: number,
+	commentId: number,
+) {
+	const octokit = await getOctokit();
+	if (!octokit) return { error: "Not authenticated" };
+
+	try {
+		await octokit.issues.deleteComment({
+			owner,
+			repo,
+			comment_id: commentId,
+		});
+		await invalidateIssueCache(owner, repo, issueNumber);
+		invalidateRepoCache(owner, repo);
+		revalidatePath(`/repos/${owner}/${repo}/issues/${issueNumber}`);
+		return { success: true };
+	} catch (e: unknown) {
+		return { error: getErrorMessage(e) || "Failed to delete comment" };
+	}
+}
+
 export async function closeIssue(
 	owner: string,
 	repo: string,

@@ -1,6 +1,16 @@
+import type { Metadata } from "next";
 import { getRepo } from "@/lib/github";
 import { RunComparisonPage } from "@/components/actions/run-comparison-page";
 import { redirect } from "next/navigation";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ owner: string; repo: string }>;
+}): Promise<Metadata> {
+	const { owner, repo } = await params;
+	return { title: `Compare Runs · ${owner}/${repo}` };
+}
 
 export default async function CompareRunsPage({
 	params,

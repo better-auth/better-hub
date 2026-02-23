@@ -1,6 +1,16 @@
+import type { Metadata } from "next";
 import { getRepoPullRequestsWithStats } from "@/lib/github";
 import { PRsList } from "@/components/pr/prs-list";
 import { fetchPRsByAuthor, fetchAllCheckStatuses, prefetchPRDetail, fetchPRPage } from "./actions";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ owner: string; repo: string }>;
+}): Promise<Metadata> {
+	const { owner, repo } = await params;
+	return { title: `Pull Requests · ${owner}/${repo}` };
+}
 
 export default async function PullsListPage({
 	params,

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { ShieldAlert } from "lucide-react";
 import { getRepoSecurityTabData, getFileContent } from "@/lib/github";
 import { renderMarkdownToHtml } from "@/components/shared/markdown-renderer";
@@ -15,6 +16,15 @@ async function fetchSecurityPolicy(owner: string, repo: string): Promise<string 
 		});
 	}
 	return null;
+}
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ owner: string; repo: string }>;
+}): Promise<Metadata> {
+	const { owner, repo } = await params;
+	return { title: `Security · ${owner}/${repo}` };
 }
 
 export default async function SecurityPage({

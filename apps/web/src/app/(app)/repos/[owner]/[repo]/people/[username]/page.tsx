@@ -1,5 +1,15 @@
+import type { Metadata } from "next";
 import { getUser, getPersonRepoActivity, getRepoContributorStats } from "@/lib/github";
 import { PersonDetail } from "@/components/people/person-detail";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ owner: string; repo: string; username: string }>;
+}): Promise<Metadata> {
+	const { owner, repo, username } = await params;
+	return { title: `${username} · ${owner}/${repo}` };
+}
 
 export default async function PersonPage({
 	params,

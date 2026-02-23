@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import {
 	getRepo,
 	getCommitActivity,
@@ -7,6 +8,15 @@ import {
 	getRepoContributorStats,
 } from "@/lib/github";
 import { InsightsView } from "@/components/repo/insights-view";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ owner: string; repo: string }>;
+}): Promise<Metadata> {
+	const { owner, repo } = await params;
+	return { title: `Insights · ${owner}/${repo}` };
+}
 
 export default async function InsightsPage({
 	params,

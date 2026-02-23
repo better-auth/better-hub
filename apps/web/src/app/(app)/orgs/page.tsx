@@ -1,5 +1,10 @@
+import type { Metadata } from "next";
 import { getUserOrgs } from "@/lib/github";
 import { OrgsContent, type OrgListItem } from "@/components/orgs/orgs-content";
+
+export const metadata: Metadata = {
+	title: "Organizations",
+};
 
 export default async function OrgsPage() {
 	const orgsResponse = await getUserOrgs(50);

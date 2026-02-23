@@ -1,5 +1,10 @@
+import type { Metadata } from "next";
 import { getNotifications } from "@/lib/github";
 import { NotificationsContent } from "@/components/notifications/notifications-content";
+
+export const metadata: Metadata = {
+	title: "Notifications",
+};
 
 export default async function NotificationsPage() {
 	const notifications = await getNotifications(50);
