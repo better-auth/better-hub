@@ -1,8 +1,7 @@
 "use client";
 
 import { RepoBreadcrumb } from "@/components/repo/repo-breadcrumb";
-import { useState, useCallback, useRef, useEffect, useTransition } from "react";
-import Link from "next/link";
+import { useState, useCallback, useRef, useTransition } from "react";
 import { PanelLeft } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { setRepoSidebarState } from "./repo-sidebar-actions";
