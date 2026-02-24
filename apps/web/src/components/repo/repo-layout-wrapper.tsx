@@ -201,7 +201,7 @@ export function RepoLayoutWrapper({
 				}
 			>
 				<div
-					className={`hidden lg:flex px-2 pt-3 pb-1 ${collapsed ? "visible" : "invisible"}`}
+					className={`hidden lg:flex pl-7 pr-2 pt-3 pb-1 ${collapsed ? "visible" : "invisible"}`}
 				>
 					<RepoBreadcrumb
 						owner={owner}
