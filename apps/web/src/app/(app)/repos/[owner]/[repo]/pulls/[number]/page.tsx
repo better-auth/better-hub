@@ -22,6 +22,7 @@ import {
 	type TimelineEntry,
 	type ReviewCommentEntry,
 	type CommitEntry,
+	type StateChangeEntry,
 } from "@/components/pr/pr-conversation";
 import { PRMergePanel } from "@/components/pr/pr-merge-panel";
 import { PRCommentForm } from "@/components/pr/pr-comment-form";
@@ -105,6 +106,7 @@ export default async function PRDetailPage({
 		reviews,
 		reviewThreads: threads,
 		commits,
+		stateEvents,
 	} = bundle;
 	const comments = { issueComments, reviewComments };
 
@@ -291,6 +293,18 @@ export default async function PRDetailPage({
 				: null,
 			committer_name: c.commit?.author?.name || c.commit?.committer?.name || null,
 			created_at: c.commit?.author?.date || c.commit?.committer?.date || "",
+		};
+		timeline.push(entry);
+	}
+
+	for (const s of stateEvents) {
+		const entry: StateChangeEntry = {
+			type: "state_change",
+			id: s.id,
+			event: s.event,
+			user: s.actor,
+			created_at: s.created_at,
+			merge_ref_name: s.merge_ref_name,
 		};
 		timeline.push(entry);
 	}

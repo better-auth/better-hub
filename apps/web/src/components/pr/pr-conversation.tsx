@@ -1,6 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
-import { GitCommitHorizontal } from "lucide-react";
+import {
+	GitCommitHorizontal,
+	CircleDot,
+	CircleX,
+	CircleDashed,
+	GitMerge,
+	FileCheck,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { parseCoAuthors, getInitials } from "@/lib/commit-utils";
@@ -70,12 +77,27 @@ export interface CommitEntry {
 	created_at: string;
 }
 
-export type TimelineEntry = DescriptionEntry | CommentEntry | ReviewEntry | CommitEntry;
+export interface StateChangeEntry {
+	type: "state_change";
+	id: string;
+	event: "closed" | "reopened" | "merged" | "ready_for_review" | "convert_to_draft";
+	user: BaseUser | null;
+	created_at: string;
+	merge_ref_name?: string;
+}
+
+export type TimelineEntry =
+	| DescriptionEntry
+	| CommentEntry
+	| ReviewEntry
+	| CommitEntry
+	| StateChangeEntry;
 
 function isBot(entry: TimelineEntry): boolean {
 	if (!entry.user) return false;
 	if (entry.type === "description") return false;
 	if (entry.type === "commit") return false;
+	if (entry.type === "state_change") return false;
 	return (
 		entry.user.type === "Bot" ||
 		entry.user.login.endsWith("[bot]") ||
@@ -195,6 +217,19 @@ export async function PRConversation({
 											/>
 										);
 									}
+									if (
+										entry.type ===
+										"state_change"
+									) {
+										return (
+											<StateChangeEvent
+												key={`state-${entry.id}`}
+												entry={
+													entry
+												}
+											/>
+										);
+									}
 									return (
 										<ChatMessage
 											key={
@@ -246,6 +281,14 @@ export async function PRConversation({
 						<CommitGroup
 							key={`commit-${entry.sha}`}
 							commits={[entry]}
+						/>
+					);
+				}
+				if (entry.type === "state_change") {
+					return (
+						<StateChangeEvent
+							key={`state-${entry.id}`}
+							entry={entry}
 						/>
 					);
 				}
@@ -538,5 +581,91 @@ function CommitGroup({ commits }: { commits: CommitEntry[] }) {
 		<CommitActivityGroup count={commits.length} avatars={avatars}>
 			{list}
 		</CommitActivityGroup>
+	);
+}
+
+function StateChangeEvent({ entry }: { entry: StateChangeEntry }) {
+	const eventConfig = {
+		closed: {
+			icon: CircleX,
+			label: "closed this",
+			color: "text-red-500",
+			bgColor: "bg-red-500/10",
+			borderColor: "border-red-500/20",
+		},
+		reopened: {
+			icon: CircleDot,
+			label: "reopened this",
+			color: "text-green-500",
+			bgColor: "bg-green-500/10",
+			borderColor: "border-green-500/20",
+		},
+		merged: {
+			icon: GitMerge,
+			label: entry.merge_ref_name
+				? `merged into ${entry.merge_ref_name}`
+				: "merged this",
+			color: "text-purple-500",
+			bgColor: "bg-purple-500/10",
+			borderColor: "border-purple-500/20",
+		},
+		ready_for_review: {
+			icon: FileCheck,
+			label: "marked this as ready for review",
+			color: "text-green-500",
+			bgColor: "bg-green-500/10",
+			borderColor: "border-green-500/20",
+		},
+		convert_to_draft: {
+			icon: CircleDashed,
+			label: "converted this to draft",
+			color: "text-muted-foreground",
+			bgColor: "bg-muted/50",
+			borderColor: "border-border/60",
+		},
+	};
+
+	const config = eventConfig[entry.event];
+	const Icon = config.icon;
+
+	return (
+		<div
+			className={cn(
+				"flex items-center gap-2.5 px-3 py-2 rounded-lg border",
+				config.bgColor,
+				config.borderColor,
+			)}
+		>
+			<Icon className={cn("w-4 h-4 shrink-0", config.color)} />
+			<div className="flex items-center gap-2 min-w-0 flex-1">
+				{entry.user ? (
+					<Link
+						href={`/users/${entry.user.login}`}
+						className="flex items-center gap-1.5 hover:opacity-80 transition-opacity shrink-0"
+					>
+						<Image
+							src={entry.user.avatar_url}
+							alt={entry.user.login}
+							width={16}
+							height={16}
+							className="rounded-full"
+						/>
+						<span className="text-xs font-medium text-foreground/80">
+							{entry.user.login}
+						</span>
+					</Link>
+				) : (
+					<span className="text-xs font-medium text-foreground/80">
+						Someone
+					</span>
+				)}
+				<span className="text-xs text-muted-foreground">
+					{config.label}
+				</span>
+			</div>
+			<span className="text-[10px] text-muted-foreground/40 shrink-0">
+				<TimeAgo date={entry.created_at} />
+			</span>
+		</div>
 	);
 }
