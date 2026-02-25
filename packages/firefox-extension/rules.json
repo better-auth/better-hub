@@ -1,0 +1,257 @@
+[
+	{
+		"id": 1,
+		"priority": 3,
+		"action": {
+			"type": "redirect",
+			"redirect": {
+				"regexSubstitution": "https://better-hub.com/\\1/\\2/pull/\\3"
+			}
+		},
+		"condition": {
+			"regexFilter": "^https://github\\.com/([^/]+)/([^/]+)/pull/(\\d+)",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 2,
+		"priority": 3,
+		"action": {
+			"type": "redirect",
+			"redirect": {
+				"regexSubstitution": "https://better-hub.com/\\1/\\2/commit/\\3"
+			}
+		},
+		"condition": {
+			"regexFilter": "^https://github\\.com/([^/]+)/([^/]+)/commit/([a-f0-9]+)",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 3,
+		"priority": 3,
+		"action": {
+			"type": "redirect",
+			"redirect": {
+				"regexSubstitution": "https://better-hub.com/\\1/\\2/actions/\\3"
+			}
+		},
+		"condition": {
+			"regexFilter": "^https://github\\.com/([^/]+)/([^/]+)/actions/runs/(\\d+)",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 4,
+		"priority": 1,
+		"action": {
+			"type": "redirect",
+			"redirect": {
+				"regexSubstitution": "https://better-hub.com/\\1/\\2"
+			}
+		},
+		"condition": {
+			"regexFilter": "^https://github\\.com/([^/]+)/([^/]+)/?$",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 5,
+		"priority": 1,
+		"action": {
+			"type": "redirect",
+			"redirect": {
+				"regexSubstitution": "https://better-hub.com/\\1/\\2/\\3"
+			}
+		},
+		"condition": {
+			"regexFilter": "^https://github\\.com/([^/]+)/([^/]+)/(.+)",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 11,
+		"priority": 5,
+		"action": { "type": "allow" },
+		"condition": {
+			"urlFilter": "||github.com/settings",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 25,
+		"priority": 5,
+		"action": { "type": "allow" },
+		"condition": {
+			"regexFilter": "^https://github\\.com/[^/]+/[^/]+/settings",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 12,
+		"priority": 5,
+		"action": { "type": "allow" },
+		"condition": {
+			"urlFilter": "||github.com/marketplace",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 13,
+		"priority": 5,
+		"action": { "type": "allow" },
+		"condition": {
+			"urlFilter": "||github.com/explore",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 14,
+		"priority": 5,
+		"action": { "type": "allow" },
+		"condition": {
+			"urlFilter": "||github.com/sponsors",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 15,
+		"priority": 5,
+		"action": { "type": "allow" },
+		"condition": { "urlFilter": "||github.com/login", "resourceTypes": ["main_frame"] }
+	},
+	{
+		"id": 16,
+		"priority": 5,
+		"action": { "type": "allow" },
+		"condition": { "urlFilter": "||github.com/signup", "resourceTypes": ["main_frame"] }
+	},
+	{
+		"id": 17,
+		"priority": 5,
+		"action": { "type": "allow" },
+		"condition": {
+			"urlFilter": "||github.com/features",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 18,
+		"priority": 5,
+		"action": { "type": "allow" },
+		"condition": {
+			"urlFilter": "||github.com/pricing",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 19,
+		"priority": 5,
+		"action": { "type": "allow" },
+		"condition": {
+			"urlFilter": "||github.com/enterprise",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 20,
+		"priority": 5,
+		"action": { "type": "allow" },
+		"condition": {
+			"urlFilter": "||github.com/codespaces",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 21,
+		"priority": 5,
+		"action": { "type": "allow" },
+		"condition": { "urlFilter": "||github.com/new", "resourceTypes": ["main_frame"] }
+	},
+	{
+		"id": 22,
+		"priority": 5,
+		"action": { "type": "allow" },
+		"condition": {
+			"urlFilter": "||github.com/organizations",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 23,
+		"priority": 5,
+		"action": { "type": "allow" },
+		"condition": { "urlFilter": "||github.com/topics", "resourceTypes": ["main_frame"] }
+	},
+	{
+		"id": 24,
+		"priority": 5,
+		"action": { "type": "allow" },
+		"condition": {
+			"urlFilter": "||github.com/collections",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 30,
+		"priority": 4,
+		"action": {
+			"type": "redirect",
+			"redirect": { "regexSubstitution": "https://better-hub.com/dashboard" }
+		},
+		"condition": {
+			"regexFilter": "^https://github\\.com/?$",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 31,
+		"priority": 4,
+		"action": {
+			"type": "redirect",
+			"redirect": {
+				"regexSubstitution": "https://better-hub.com/notifications"
+			}
+		},
+		"condition": {
+			"regexFilter": "^https://github\\.com/notifications",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 32,
+		"priority": 4,
+		"action": {
+			"type": "redirect",
+			"redirect": { "regexSubstitution": "https://better-hub.com/trending" }
+		},
+		"condition": {
+			"regexFilter": "^https://github\\.com/trending",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 33,
+		"priority": 4,
+		"action": {
+			"type": "redirect",
+			"redirect": { "regexSubstitution": "https://better-hub.com/issues" }
+		},
+		"condition": {
+			"regexFilter": "^https://github\\.com/issues$",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 34,
+		"priority": 4,
+		"action": {
+			"type": "redirect",
+			"redirect": { "regexSubstitution": "https://better-hub.com/prs" }
+		},
+		"condition": {
+			"regexFilter": "^https://github\\.com/pulls$",
+			"resourceTypes": ["main_frame"]
+		}
+	}
+]
