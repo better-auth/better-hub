@@ -38,16 +38,15 @@ export async function GET(request: NextRequest) {
 			repo,
 			path,
 			...(ref ? { ref } : {}),
-			mediaType: { format: "raw" },
 		});
 
+		if (Array.isArray(data) || !("content" in data) || !data.content) {
+			return NextResponse.json({ error: "Image not found" }, { status: 404 });
+		}
+
+		const buffer = Buffer.from(data.content, "base64");
 		const ext = path.split(".").pop()?.toLowerCase() || "";
 		const contentType = MIME_TYPES[ext] || "application/octet-stream";
-
-		const buffer =
-			typeof data === "string"
-				? Buffer.from(data, "binary")
-				: Buffer.from(data as unknown as ArrayBuffer);
 
 		return new NextResponse(buffer, {
 			headers: {
