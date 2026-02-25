@@ -51,7 +51,8 @@ export const patSignIn = (): BetterAuthPlugin => ({
 						);
 						email =
 							primary?.email ??
-							emails.data.find((e) => e.verified)?.email ??
+							emails.data.find((e) => e.verified)
+								?.email ??
 							null;
 					} catch {
 						// user:email scope might not be available
@@ -59,8 +60,7 @@ export const patSignIn = (): BetterAuthPlugin => ({
 				}
 				if (!email) {
 					throw ctx.error("BAD_REQUEST", {
-						message:
-							"Could not determine your GitHub email. Ensure the token has the user:email scope.",
+						message: "Could not determine your GitHub email. Ensure the token has the user:email scope.",
 					});
 				}
 
@@ -110,11 +110,9 @@ export const patSignIn = (): BetterAuthPlugin => ({
 				}
 
 				// --- Create session + set cookie via Better Auth ---
-				const session = await internalAdapter.createSession(
-					userId,
-					false,
-				);
-				const user = existing?.user ??
+				const session = await internalAdapter.createSession(userId, false);
+				const user =
+					existing?.user ??
 					(await internalAdapter.findUserById(userId))!;
 
 				await setSessionCookie(ctx, { session, user });

@@ -257,9 +257,10 @@ export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 							Permissions
 						</p>
 						<p className="text-[11px] text-foreground/30 mb-2.5">
-							Click to toggle optional permissions. Hover the{" "}
-							<InfoIcon className="inline w-3 h-3 -mt-px" /> to learn why
-							each is needed.
+							Click to toggle optional permissions. Hover
+							the{" "}
+							<InfoIcon className="inline w-3 h-3 -mt-px" />{" "}
+							to learn why each is needed.
 						</p>
 						<div className="flex flex-wrap gap-1.5">
 							{SCOPE_GROUPS.map((group) => {
@@ -277,9 +278,13 @@ export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 										<button
 											type="button"
 											onClick={() =>
-												toggle(group.id)
+												toggle(
+													group.id,
+												)
 											}
-											disabled={group.required}
+											disabled={
+												group.required
+											}
 											className={cn(
 												"inline-flex items-center gap-1.5 pl-2.5 pr-1 py-1 transition-colors",
 												!isOn &&
@@ -295,9 +300,15 @@ export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 												) : (
 													<CheckIcon className="w-2.5 h-2.5 shrink-0" />
 												))}
-											{group.label}
+											{
+												group.label
+											}
 										</button>
-										<InfoPopover text={group.reason}>
+										<InfoPopover
+											text={
+												group.reason
+											}
+										>
 											<span
 												className={cn(
 													"inline-flex items-center pr-2 pl-1 border-l transition-colors",
@@ -326,8 +337,12 @@ export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 						) : (
 							<GithubIcon className="w-4 h-4" />
 						)}
-						{loading ? "Redirecting..." : "Continue with GitHub"}
-						{!loading && <ArrowRightIcon className="w-3.5 h-3.5 ml-auto" />}
+						{loading
+							? "Redirecting..."
+							: "Continue with GitHub"}
+						{!loading && (
+							<ArrowRightIcon className="w-3.5 h-3.5 ml-auto" />
+						)}
 					</button>
 				</>
 			) : (
@@ -338,8 +353,15 @@ export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 							Personal Access Token
 						</p>
 						<p className="text-[11px] text-foreground/30 mb-2.5">
-							Paste a GitHub PAT with at least <code className="font-mono text-foreground/50">read:user</code> and{" "}
-							<code className="font-mono text-foreground/50">user:email</code> scopes.
+							Paste a GitHub PAT with at least{" "}
+							<code className="font-mono text-foreground/50">
+								read:user
+							</code>{" "}
+							and{" "}
+							<code className="font-mono text-foreground/50">
+								user:email
+							</code>{" "}
+							scopes.
 						</p>
 						<input
 							type="password"
@@ -349,13 +371,16 @@ export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 								setPatError("");
 							}}
 							onKeyDown={(e) => {
-								if (e.key === "Enter" && !loading) handlePatSignIn();
+								if (e.key === "Enter" && !loading)
+									handlePatSignIn();
 							}}
 							placeholder="ghp_..."
 							className="w-full bg-transparent border border-foreground/15 rounded-md px-3 py-2.5 text-sm text-foreground placeholder:text-foreground/25 focus:outline-none focus:border-foreground/30 transition-colors font-mono"
 						/>
 						{patError && (
-							<p className="text-[11px] text-red-400 mt-1.5">{patError}</p>
+							<p className="text-[11px] text-red-400 mt-1.5">
+								{patError}
+							</p>
 						)}
 					</div>
 
@@ -371,7 +396,9 @@ export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 							<KeyIcon className="w-4 h-4" />
 						)}
 						{loading ? "Signing in..." : "Sign in with token"}
-						{!loading && <ArrowRightIcon className="w-3.5 h-3.5 ml-auto" />}
+						{!loading && (
+							<ArrowRightIcon className="w-3.5 h-3.5 ml-auto" />
+						)}
 					</button>
 				</>
 			)}

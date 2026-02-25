@@ -181,7 +181,7 @@ interface HastElement {
  * `path/to/file.py:L5-L10`, or just `src/foo.ts` (filename only, no line).
  * Captures: [fullMatch, filepath, lineSpec | undefined]
  */
-const FILE_LINE_RE = /(\b(?:[\w.@~-]+\/)+[\w.-]+\.\w+)(?::L?(\d+)(?:[–\-]L?(\d+))?)?/g;
+const FILE_LINE_RE = /(\b(?:[\w.@~-]+\/)+[\w.-]+\.\w+)(?::L?(\d+)(?:[–-]L?(\d+))?)?/g;
 
 type FileNavigateFn = (filename: string, line?: number) => void;
 
