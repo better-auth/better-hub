@@ -140,7 +140,7 @@ export function CreateRepoDialog({ org }: { org?: string } = {}) {
 								setError(null);
 							}}
 							placeholder="my-awesome-project"
-							className="w-full px-3 py-1.5 text-sm bg-background border border-border focus:border-foreground/30 focus:outline-none font-mono placeholder:text-muted-foreground/40"
+							className="w-full px-3 py-1.5 text-sm bg-background border border-border focus:border-foreground/30 focus:outline-none font-mono placeholder:text-muted-foreground"
 							autoFocus
 							required
 						/>
@@ -158,7 +158,7 @@ export function CreateRepoDialog({ org }: { org?: string } = {}) {
 								setDescription(e.target.value)
 							}
 							placeholder="Short description (optional)"
-							className="w-full px-3 py-1.5 text-sm bg-background border border-border focus:border-foreground/30 focus:outline-none font-mono placeholder:text-muted-foreground/40"
+							className="w-full px-3 py-1.5 text-sm bg-background border border-border focus:border-foreground/30 focus:outline-none font-mono placeholder:text-muted-foreground"
 						/>
 					</div>
 

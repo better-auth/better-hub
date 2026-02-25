@@ -66,7 +66,7 @@ function RepoRow({ repo, showOwner = true }: { repo: Repo; showOwner?: boolean }
 						style={{ backgroundColor: langColor }}
 					/>
 				) : (
-					<FolderGit2 className="w-3.5 h-3.5 text-muted-foreground/40" />
+					<FolderGit2 className="w-3.5 h-3.5 text-muted-foreground" />
 				)}
 			</div>
 

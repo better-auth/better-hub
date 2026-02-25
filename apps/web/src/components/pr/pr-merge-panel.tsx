@@ -553,7 +553,7 @@ export function PRMergePanel({
 										generateCommitMessage
 									}
 									disabled={isGenerating}
-									className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground/40 hover:text-foreground/70 transition-colors cursor-pointer disabled:cursor-wait"
+									className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground hover:text-foreground/70 transition-colors cursor-pointer disabled:cursor-wait"
 									title="Generate with AI"
 								>
 									<Sparkles
@@ -569,7 +569,7 @@ export function PRMergePanel({
 						<div>
 							<label className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground block mb-1.5">
 								Description
-								<span className="text-muted-foreground/40 normal-case tracking-normal">
+								<span className="text-muted-foreground normal-case tracking-normal">
 									{" "}
 									(optional)
 								</span>

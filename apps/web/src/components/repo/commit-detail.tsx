@@ -569,7 +569,7 @@ function FileHeader({
 						"p-1 rounded transition-colors cursor-pointer",
 						wordWrap
 							? "text-foreground/60 bg-accent"
-							: "text-muted-foreground/40 hover:text-foreground/60",
+							: "text-muted-foreground hover:text-foreground/60",
 					)}
 				>
 					<WrapText className="w-3.5 h-3.5" />

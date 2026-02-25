@@ -416,10 +416,10 @@ export function GlobalChatPanel() {
 			<div className="flex items-center gap-1.5 px-2.5 pt-2">
 				{contexts.length === 1 ? (
 					<span className="inline-flex items-center gap-1 pl-1.5 pr-0.5 py-0.5 rounded bg-muted text-[10px] font-mono text-muted-foreground/70 max-w-[200px]">
-						<Code2 className="w-2.5 h-2.5 text-muted-foreground/40 shrink-0" />
+						<Code2 className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
 						<span className="truncate">
 							{contexts[0].filename.split("/").pop()}
-							<span className="text-muted-foreground/40">
+							<span className="text-muted-foreground">
 								:{contexts[0].startLine}
 								{contexts[0].endLine !==
 									contexts[0].startLine &&
@@ -436,7 +436,7 @@ export function GlobalChatPanel() {
 					</span>
 				) : (
 					<span className="inline-flex items-center gap-1.5 pl-1.5 pr-0.5 py-0.5 rounded bg-muted text-[10px] font-mono text-muted-foreground/70">
-						<Code2 className="w-2.5 h-2.5 text-muted-foreground/40 shrink-0" />
+						<Code2 className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
 						<span className="size-4 rounded-full bg-foreground/10 flex items-center justify-center text-[9px] font-semibold text-muted-foreground/80 tabular-nums">
 							{contexts.length}
 						</span>
@@ -512,7 +512,7 @@ export function GlobalChatPanel() {
 						<button
 							type="button"
 							onClick={closeChat}
-							className="ml-auto p-0.5  rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-accent/60 transition-all duration-150 cursor-pointer"
+							className="ml-auto p-0.5  rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-150 cursor-pointer"
 						>
 							<X className="w-3 h-3" />
 						</button>
@@ -533,7 +533,7 @@ export function GlobalChatPanel() {
 										tab.id ===
 											activeTabId
 											? "border-foreground/60 text-foreground/70"
-											: "border-transparent text-muted-foreground/40 hover:text-muted-foreground/60",
+											: "border-transparent text-muted-foreground hover:text-muted-foreground/60",
 									)}
 								>
 									<span className="truncate max-w-[120px]">
@@ -603,7 +603,7 @@ export function GlobalChatPanel() {
 									),
 								)
 							}
-							className="shrink-0 p-1 rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-accent/60 transition-all duration-150 cursor-pointer ml-1"
+							className="shrink-0 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-150 cursor-pointer ml-1"
 							title="New tab"
 						>
 							<Plus className="w-3 h-3" />

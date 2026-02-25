@@ -235,7 +235,7 @@ export function CodeToolbar({
 																					branch.name,
 																				)
 																			}
-																			className="shrink-0 p-0.5 rounded text-muted-foreground/40 opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 cursor-pointer transition-all"
+																			className="shrink-0 p-0.5 rounded text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 cursor-pointer transition-all"
 																		>
 																			<Trash2 className="w-3 h-3" />
 																		</button>

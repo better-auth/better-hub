@@ -268,7 +268,7 @@ export function SecurityView({
 											}
 										</span>
 									)}
-									<span className="text-[11px] text-muted-foreground/40">
+									<span className="text-[11px] text-muted-foreground">
 										<TimeAgo
 											date={
 												alert.createdAt
@@ -299,7 +299,7 @@ export function SecurityView({
 										"Unknown secret"}
 								</p>
 								<div className="flex items-center gap-3 mt-1">
-									<span className="text-[11px] text-muted-foreground/40">
+									<span className="text-[11px] text-muted-foreground">
 										<TimeAgo
 											date={
 												alert.createdAt
@@ -357,7 +357,7 @@ function AdvisoriesSection({
 					href={`${baseUrl}/advisories`}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="ml-auto text-muted-foreground/40 hover:text-foreground transition-colors"
+					className="ml-auto text-muted-foreground hover:text-foreground transition-colors"
 				>
 					<ExternalLink className="w-3 h-3" />
 				</a>
@@ -426,7 +426,7 @@ function AdvisoriesSection({
 											{advisory.summary ||
 												advisory.ghsaId}
 										</span>
-										<span className="text-[10px] text-muted-foreground/40 shrink-0">
+										<span className="text-[10px] text-muted-foreground shrink-0">
 											<TimeAgo
 												date={
 													advisory.publishedAt ||
@@ -521,7 +521,7 @@ function AlertListSection<T>({
 					href={href}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="text-muted-foreground/40 hover:text-foreground transition-colors ml-1"
+					className="text-muted-foreground hover:text-foreground transition-colors ml-1"
 				>
 					<ExternalLink className="w-3 h-3" />
 				</a>
@@ -578,7 +578,7 @@ function PolicySection({
 					href={policyUrl}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="ml-auto text-muted-foreground/40 hover:text-foreground transition-colors"
+					className="ml-auto text-muted-foreground hover:text-foreground transition-colors"
 				>
 					<ExternalLink className="w-3 h-3" />
 				</a>

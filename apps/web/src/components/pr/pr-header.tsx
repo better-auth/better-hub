@@ -156,7 +156,7 @@ export function PRHeader({
 					>
 						{headBranch}
 					</Link>
-					<ArrowRight className="w-2.5 h-2.5 text-muted-foreground/40" />
+					<ArrowRight className="w-2.5 h-2.5 text-muted-foreground" />
 					<EditableBaseBranch
 						owner={owner}
 						repo={repo}

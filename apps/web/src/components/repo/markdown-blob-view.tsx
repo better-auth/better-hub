@@ -109,7 +109,7 @@ export function MarkdownBlobView({
 							"text-[11px] font-mono transition-colors cursor-pointer",
 							mode === "raw"
 								? "text-muted-foreground underline underline-offset-4"
-								: "text-muted-foreground/40 hover:text-muted-foreground",
+								: "text-muted-foreground hover:text-muted-foreground",
 						)}
 					>
 						Raw
@@ -125,7 +125,7 @@ export function MarkdownBlobView({
 							"text-[11px] font-mono transition-colors cursor-pointer",
 							mode === "preview"
 								? "text-muted-foreground underline underline-offset-4"
-								: "text-muted-foreground/40 hover:text-muted-foreground",
+								: "text-muted-foreground hover:text-muted-foreground",
 						)}
 					>
 						Preview

@@ -129,7 +129,7 @@ export function RunComparisonTimeline({
 					{allJobNames.length !== 1 ? "s" : ""}
 				</span>
 				{minTotal !== maxTotal && (
-					<div className="inline-flex items-center gap-2 px-3 py-1.5 text-[11px] font-mono border border-border/20 text-muted-foreground/40">
+					<div className="inline-flex items-center gap-2 px-3 py-1.5 text-[11px] font-mono border border-border/20 text-muted-foreground">
 						Duration range:{" "}
 						{formatDurationFromSeconds(minTotal)} —{" "}
 						{formatDurationFromSeconds(maxTotal)}
@@ -245,7 +245,7 @@ export function RunComparisonTimeline({
 					{/* Total footer */}
 					<tfoot>
 						<tr className="border-t border-border/30 bg-muted/[0.04]">
-							<td className="px-4 py-2.5 text-[11px] font-mono font-medium text-muted-foreground/40 sticky left-0 bg-muted/[0.04] z-10">
+							<td className="px-4 py-2.5 text-[11px] font-mono font-medium text-muted-foreground sticky left-0 bg-muted/[0.04] z-10">
 								Total
 							</td>
 							{runs.map((r, i) => {

@@ -61,7 +61,7 @@ export function RunComparisonPage({
 					{/* Back link */}
 					<Link
 						href={`/${owner}/${repo}/actions`}
-						className="inline-flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground/40 hover:text-muted-foreground transition-colors mb-4"
+						className="inline-flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground hover:text-muted-foreground transition-colors mb-4"
 					>
 						<ArrowLeft className="w-3 h-3" />
 						Back to runs
@@ -120,7 +120,7 @@ export function RunComparisonPage({
 									"flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-mono border transition-all cursor-pointer",
 									copied
 										? "border-success/30 text-success bg-success/5"
-										: "border-border/40 text-muted-foreground/40 hover:text-muted-foreground hover:border-border",
+										: "border-border/40 text-muted-foreground hover:text-muted-foreground hover:border-border",
 								)}
 							>
 								{copied ? (
