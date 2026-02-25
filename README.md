@@ -44,15 +44,15 @@ It's not a GitHub replacement (maybe in the future 👀). It's a layer on top th
 git clone https://github.com/better-auth/better-hub.git
 cd better-hub
 
-# Install dependencies
-pnpm install
-
 # Start PostgreSQL and Redis
 docker compose up -d
 
 # Set up environment
 cp apps/web/.env.example apps/web/.env
-# Edit apps/web/.env with your values
+# └─ Edit apps/web/.env with your values
+
+# Install dependencies
+pnpm install
 
 # Run database migrations
 cd apps/web && npx prisma migrate dev && cd ../..
