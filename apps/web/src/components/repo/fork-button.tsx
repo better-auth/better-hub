@@ -10,14 +10,16 @@ interface ForkButtonProps {
 	owner: string;
 	repo: string;
 	forkCount: number;
+	disabled?: boolean;
 }
 
-export function ForkButton({ owner, repo, forkCount }: ForkButtonProps) {
+export function ForkButton({ owner, repo, forkCount, disabled = false }: ForkButtonProps) {
 	const router = useRouter();
 	const [isPending, startTransition] = useTransition();
 	const [error, setError] = useState<string | null>(null);
 
 	const handleFork = () => {
+		if (disabled || isPending) return;
 		setError(null);
 		startTransition(async () => {
 			const res = await forkRepo(owner, repo);
@@ -35,10 +37,13 @@ export function ForkButton({ owner, repo, forkCount }: ForkButtonProps) {
 		<div className="flex flex-col items-center">
 			<button
 				onClick={handleFork}
-				disabled={isPending}
+				disabled={isPending || disabled}
 				className={cn(
-					"flex items-center justify-center gap-1.5 text-[11px] font-mono py-1.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer w-full",
-					isPending && "opacity-60 pointer-events-none",
+					"flex items-center justify-center gap-1.5 text-[11px] font-mono py-1.5 text-muted-foreground transition-colors w-full",
+					!(isPending || disabled) &&
+						"cursor-pointer hover:text-foreground",
+					(isPending || disabled) &&
+						"text-muted-foreground/60 pointer-events-none cursor-not-allowed",
 				)}
 			>
 				{isPending ? (
