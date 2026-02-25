@@ -164,6 +164,11 @@ export function DashboardContent({
 									(n) => n.unread,
 								).length
 							}
+							accent={
+								notifications.filter(
+									(n) => n.unread,
+								).length > 0
+							}
 							active={activeTab === "notifs"}
 							onClick={() => handleStatClick("notifs")}
 						/>
