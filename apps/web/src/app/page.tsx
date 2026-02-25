@@ -114,8 +114,8 @@ export default async function HomePage({
 							className="hero-in text-foreground/50 text-sm leading-relaxed mt-4 max-w-sm"
 							style={{ animationDelay: "0.6s" }}
 						>
-							A better place to collaborate on code — for humans
-							and agents
+							A better place to collaborate on code — for
+							humans and agents
 						</p>
 
 						{/* Divider */}
@@ -128,7 +128,10 @@ export default async function HomePage({
 						/>
 
 						{/* Login */}
-						<div className="hero-in" style={{ animationDelay: "1.0s" }}>
+						<div
+							className="hero-in"
+							style={{ animationDelay: "1.0s" }}
+						>
 							<LoginButton redirectTo={redirectTo} />
 						</div>
 
@@ -136,8 +139,9 @@ export default async function HomePage({
 							className="hero-in text-[11px] text-foreground/40 mt-3"
 							style={{ animationDelay: "1.2s" }}
 						>
-							Your access token is encrypted and stored securely.
-							Only the permissions you grant will be used.
+							Your access token is encrypted and stored
+							securely. Only the permissions you grant
+							will be used.
 						</p>
 					</div>
 
@@ -155,7 +159,10 @@ export default async function HomePage({
 								muted
 								playsInline
 							>
-								<source src="/demo.mp4" type="video/mp4" />
+								<source
+									src="/demo.mp4"
+									type="video/mp4"
+								/>
 							</video>
 						</div>
 					</div>
