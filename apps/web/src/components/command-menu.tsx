@@ -1585,12 +1585,12 @@ export function CommandMenu() {
 																	? "Search models..."
 																	: "Type a command..."
 									}
-									className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground/40 py-3 text-sm outline-none"
+									className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground py-3 text-sm outline-none"
 								/>
 								<div className="flex items-center gap-1">
 									{(githubLoading ||
 										fileTreeLoading) && (
-										<Loader2 className="size-3.5 text-muted-foreground/40 animate-spin shrink-0" />
+										<Loader2 className="size-3.5 text-muted-foreground animate-spin shrink-0" />
 									)}
 									{mode === "commands" && (
 										<button
@@ -1660,7 +1660,7 @@ export function CommandMenu() {
 																		item.name
 																	}
 																</span>
-																<span className="text-[11px] text-muted-foreground/40 hidden sm:block">
+																<span className="text-[11px] text-muted-foreground hidden sm:block">
 																	{
 																		item.description
 																	}
@@ -1715,7 +1715,7 @@ export function CommandMenu() {
 																		tool.name
 																	}
 																</span>
-																<span className="text-[11px] text-muted-foreground/40 hidden sm:block">
+																<span className="text-[11px] text-muted-foreground hidden sm:block">
 																	{
 																		tool.description
 																	}
@@ -1859,7 +1859,7 @@ export function CommandMenu() {
 																		</span>
 																	)}
 																</span>
-																<span className="text-[11px] text-muted-foreground/40 hidden sm:block truncate max-w-[160px]">
+																<span className="text-[11px] text-muted-foreground hidden sm:block truncate max-w-[160px]">
 																	{
 																		item.subtitle
 																	}
@@ -2103,7 +2103,7 @@ export function CommandMenu() {
 										{!hasQuery &&
 											topUserRepos.length ===
 												0 && (
-												<div className="py-8 text-center text-sm text-muted-foreground/40">
+												<div className="py-8 text-center text-sm text-muted-foreground">
 													Start
 													typing
 													to
@@ -2166,7 +2166,7 @@ export function CommandMenu() {
 																		theme.name
 																	}
 																</span>
-																<span className="text-[11px] text-muted-foreground/40 hidden sm:block">
+																<span className="text-[11px] text-muted-foreground hidden sm:block">
 																	{
 																		theme.description
 																	}
@@ -2231,7 +2231,7 @@ export function CommandMenu() {
 																		theme.name
 																	}
 																</span>
-																<span className="text-[11px] text-muted-foreground/40 hidden sm:block">
+																<span className="text-[11px] text-muted-foreground hidden sm:block">
 																	{
 																		theme.description
 																	}
@@ -2333,7 +2333,7 @@ export function CommandMenu() {
 																					theme.name
 																				}
 																			</span>
-																			<Moon className="size-2.5 text-muted-foreground/40 shrink-0" />
+																			<Moon className="size-2.5 text-muted-foreground shrink-0" />
 																			{isActive && (
 																				<Check className="size-3.5 text-success shrink-0" />
 																			)}
@@ -2394,7 +2394,7 @@ export function CommandMenu() {
 																					theme.name
 																				}
 																			</span>
-																			<Sun className="size-2.5 text-muted-foreground/40 shrink-0" />
+																			<Sun className="size-2.5 text-muted-foreground shrink-0" />
 																			{isActive && (
 																				<Check className="size-3.5 text-success shrink-0" />
 																			)}
@@ -2429,7 +2429,7 @@ export function CommandMenu() {
 										{accountsLoading &&
 										!accountsData ? (
 											<div className="flex items-center justify-center py-8">
-												<Loader2 className="size-4 text-muted-foreground/40 animate-spin" />
+												<Loader2 className="size-4 text-muted-foreground animate-spin" />
 											</div>
 										) : accountsData ? (
 											<>
@@ -2458,7 +2458,7 @@ export function CommandMenu() {
 																	<span className="text-[13px] text-foreground flex-1">
 																		Configuration
 																	</span>
-																	<span className="text-[11px] text-muted-foreground/40 hidden sm:block">
+																	<span className="text-[11px] text-muted-foreground hidden sm:block">
 																		Theme,
 																		model
 																		&
@@ -2543,7 +2543,7 @@ export function CommandMenu() {
 																		GitHub
 																		Profile
 																	</span>
-																	<span className="text-[11px] text-muted-foreground/40 hidden sm:block">
+																	<span className="text-[11px] text-muted-foreground hidden sm:block">
 																		{
 																			activeLogin
 																		}
@@ -2580,7 +2580,7 @@ export function CommandMenu() {
 																		Set
 																		PAT
 																	</span>
-																	<span className="text-[11px] text-muted-foreground/40 hidden sm:block">
+																	<span className="text-[11px] text-muted-foreground hidden sm:block">
 																		Rate
 																		limit
 																		fallback
@@ -2640,7 +2640,7 @@ export function CommandMenu() {
 																		accountsData.oauthLogin
 																	}
 																</span>
-																<span className="text-[10px] font-mono text-muted-foreground/40 bg-muted/50 dark:bg-white/[0.04] px-1.5 py-0.5 rounded-sm">
+																<span className="text-[10px] font-mono text-muted-foreground bg-muted/50 dark:bg-white/[0.04] px-1.5 py-0.5 rounded-sm">
 																	OAuth
 																</span>
 																{accountsData.oauthActive && (
@@ -2707,14 +2707,14 @@ export function CommandMenu() {
 																			}
 																			{acc.label !==
 																				acc.login && (
-																				<span className="text-muted-foreground/40 ml-1.5 text-[11px]">
+																				<span className="text-muted-foreground ml-1.5 text-[11px]">
 																					{
 																						acc.label
 																					}
 																				</span>
 																			)}
 																		</span>
-																		<span className="text-[10px] font-mono text-muted-foreground/40 bg-muted/50 dark:bg-white/[0.04] px-1.5 py-0.5 rounded-sm">
+																		<span className="text-[10px] font-mono text-muted-foreground bg-muted/50 dark:bg-white/[0.04] px-1.5 py-0.5 rounded-sm">
 																			PAT
 																		</span>
 																		{acc.active && (
@@ -2729,7 +2729,7 @@ export function CommandMenu() {
 																					acc.id,
 																				);
 																			}}
-																			className="opacity-0 group-hover/account:opacity-100 ml-1 p-0.5 text-muted-foreground/40 hover:text-destructive transition-all cursor-pointer"
+																			className="opacity-0 group-hover/account:opacity-100 ml-1 p-0.5 text-muted-foreground hover:text-destructive transition-all cursor-pointer"
 																			title="Remove account"
 																		>
 																			<X className="size-3" />
@@ -2808,7 +2808,7 @@ export function CommandMenu() {
 																			false,
 																		)
 																	}
-																	className="p-1.5 text-muted-foreground/40 hover:text-foreground transition-colors cursor-pointer"
+																	className="p-1.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
 																>
 																	<X className="size-3.5" />
 																</button>
@@ -2820,7 +2820,7 @@ export function CommandMenu() {
 																	}
 																</p>
 															)}
-															<p className="mt-1.5 text-[10px] font-mono text-muted-foreground/40">
+															<p className="mt-1.5 text-[10px] font-mono text-muted-foreground">
 																Paste
 																a
 																GitHub
@@ -2861,7 +2861,7 @@ export function CommandMenu() {
 																		Add
 																		Account
 																	</span>
-																	<span className="text-[11px] text-muted-foreground/40 hidden sm:block">
+																	<span className="text-[11px] text-muted-foreground hidden sm:block">
 																		via
 																		Personal
 																		Access
@@ -2909,7 +2909,7 @@ export function CommandMenu() {
 														<span className="text-[13px] text-foreground flex-1">
 															Theme
 														</span>
-														<span className="text-[11px] text-muted-foreground/40 hidden sm:block">
+														<span className="text-[11px] text-muted-foreground hidden sm:block">
 															{colorThemes.find(
 																(
 																	t,
@@ -2956,7 +2956,7 @@ export function CommandMenu() {
 															Code
 															Theme
 														</span>
-														<span className="text-[11px] text-muted-foreground/40 hidden sm:block">
+														<span className="text-[11px] text-muted-foreground hidden sm:block">
 															{activeDarkTheme?.name ??
 																codeThemeDark}
 														</span>
@@ -3006,7 +3006,7 @@ export function CommandMenu() {
 															Ghost
 															Model
 														</span>
-														<span className="text-[11px] text-muted-foreground/40 hidden sm:block">
+														<span className="text-[11px] text-muted-foreground hidden sm:block">
 															{settingsLoading
 																? "…"
 																: modelLabel}
@@ -3039,7 +3039,7 @@ export function CommandMenu() {
 															Account
 															Settings
 														</span>
-														<span className="text-[11px] text-muted-foreground/40 hidden sm:block">
+														<span className="text-[11px] text-muted-foreground hidden sm:block">
 															Profile,
 															accounts
 															&
@@ -3057,8 +3057,8 @@ export function CommandMenu() {
 									<>
 										{fileTreeLoading ? (
 											<div className="flex items-center justify-center py-8 gap-2">
-												<Loader2 className="size-4 text-muted-foreground/40 animate-spin" />
-												<span className="text-xs text-muted-foreground/40">
+												<Loader2 className="size-4 text-muted-foreground animate-spin" />
+												<span className="text-xs text-muted-foreground">
 													Loading
 													file
 													tree...
@@ -3119,7 +3119,7 @@ export function CommandMenu() {
 												&quot;
 											</div>
 										) : !fileTree ? (
-											<div className="py-8 text-center text-sm text-muted-foreground/40">
+											<div className="py-8 text-center text-sm text-muted-foreground">
 												Could
 												not
 												load
@@ -3127,7 +3127,7 @@ export function CommandMenu() {
 												tree
 											</div>
 										) : (
-											<div className="py-8 text-center text-sm text-muted-foreground/40">
+											<div className="py-8 text-center text-sm text-muted-foreground">
 												Start
 												typing
 												to
@@ -3175,7 +3175,7 @@ export function CommandMenu() {
 																	model.label
 																}
 															</span>
-															<span className="text-[11px] text-muted-foreground/40 hidden sm:block">
+															<span className="text-[11px] text-muted-foreground hidden sm:block">
 																{
 																	model.desc
 																}
@@ -3254,7 +3254,7 @@ export function CommandMenu() {
 										<span>close</span>
 									</div>
 								</div>
-								<div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/40">
+								<div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
 									<kbd className="inline-flex h-[18px] items-center justify-center rounded-[4px] bg-muted/60 dark:bg-white/[0.06] px-1.5 font-mono text-[9px] text-muted-foreground/60 shadow-[0_1px_0_0] shadow-border/80 dark:shadow-white/[0.06]">
 										Tab
 									</kbd>
@@ -3371,9 +3371,9 @@ function FileItem({
 				selected && "bg-accent dark:bg-white/3",
 			)}
 		>
-			<FileText className="size-3.5 text-muted-foreground/40 shrink-0" />
+			<FileText className="size-3.5 text-muted-foreground shrink-0" />
 			<div className="flex-1 min-w-0 truncate font-mono text-sm">
-				{dir && <span className="text-muted-foreground/40">{dir}/</span>}
+				{dir && <span className="text-muted-foreground">{dir}/</span>}
 				<span className="text-foreground">{filename}</span>
 			</div>
 		</button>

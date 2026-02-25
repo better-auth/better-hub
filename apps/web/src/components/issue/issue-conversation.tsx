@@ -246,7 +246,7 @@ export function IssueConversation({
 
 				{entries.length === 0 && (
 					<div className="py-8 text-center">
-						<p className="text-sm text-muted-foreground/40">
+						<p className="text-sm text-muted-foreground">
 							No conversation yet
 						</p>
 					</div>

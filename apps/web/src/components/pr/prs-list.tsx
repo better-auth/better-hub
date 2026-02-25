@@ -1167,7 +1167,7 @@ export function PRsList({
 									)}
 									{pr.base?.ref &&
 										pr.head?.ref && (
-											<span className="hidden sm:flex items-center gap-1 font-mono text-muted-foreground/40 text-[10px]">
+											<span className="hidden sm:flex items-center gap-1 font-mono text-muted-foreground text-[10px]">
 												<GitBranch className="w-2.5 h-2.5" />
 												{
 													pr
@@ -1226,7 +1226,7 @@ export function PRsList({
 									<span className="hidden sm:inline font-mono text-destructive text-[10px]">
 										-{pr.deletions ?? 0}
 									</span>
-									<span className="hidden sm:flex items-center gap-1 font-mono text-muted-foreground/40 text-[10px]">
+									<span className="hidden sm:flex items-center gap-1 font-mono text-muted-foreground text-[10px]">
 										<FileCode2 className="w-2.5 h-2.5" />
 										{pr.changed_files ??
 											0}{" "}
@@ -1290,7 +1290,7 @@ export function PRsList({
 								: "py-16",
 						)}
 					>
-						<Loader2 className="w-4 h-4 text-muted-foreground/40 mx-auto mb-2 animate-spin" />
+						<Loader2 className="w-4 h-4 text-muted-foreground mx-auto mb-2 animate-spin" />
 						<p className="text-xs text-muted-foreground/50 font-mono">
 							Loading more pull requests…
 						</p>

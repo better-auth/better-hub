@@ -33,11 +33,7 @@ export function CheckIcon({ state, className }: { state: CheckRun["state"]; clas
 				/>
 			);
 		case "skipped":
-			return (
-				<SkipForward
-					className={cn("text-muted-foreground/40", className)}
-				/>
-			);
+			return <SkipForward className={cn("text-muted-foreground", className)} />;
 	}
 }
 

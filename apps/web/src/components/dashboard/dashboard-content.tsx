@@ -225,7 +225,7 @@ function ExtensionBanner() {
 					localStorage.setItem(EXTENSION_DISMISSED_KEY, "true");
 					setVisible(false);
 				}}
-				className="shrink-0 p-0.5 text-muted-foreground/40 hover:text-foreground transition-colors cursor-pointer"
+				className="shrink-0 p-0.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
 			>
 				<X className="w-3.5 h-3.5" />
 			</button>
@@ -257,7 +257,7 @@ function WorkTabs({
 	if (!hasWork && activeTab !== "notifs") {
 		return (
 			<div className="flex-1 min-h-0 border border-border py-12 text-center">
-				<CheckCircle2 className="w-5 h-5 text-muted-foreground/40 mx-auto mb-2" />
+				<CheckCircle2 className="w-5 h-5 text-muted-foreground mx-auto mb-2" />
 				<p className="text-xs text-muted-foreground font-mono">
 					Nothing needs your attention
 				</p>
@@ -591,7 +591,7 @@ function Stat({
 						className={cn(
 							accent
 								? "text-foreground/60"
-								: "text-muted-foreground/40",
+								: "text-muted-foreground",
 						)}
 					>
 						{icon}
@@ -739,14 +739,14 @@ function RepoRow({
 					className="rounded-sm shrink-0 w-[18px] h-[18px] object-cover"
 				/>
 				<span className="text-xs font-mono truncate group-hover:text-foreground transition-colors min-w-0">
-					<span className="text-muted-foreground/40">
+					<span className="text-muted-foreground">
 						{repo.owner.login}
 					</span>
 					<span className="text-muted-foreground/25 mx-0.5">/</span>
 					<span className="font-medium">{repo.name}</span>
 				</span>
 				{repo.private && (
-					<Lock className="w-2.5 h-2.5 text-muted-foreground/40 shrink-0" />
+					<Lock className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
 				)}
 				<div className="flex items-center gap-2.5 ml-auto shrink-0 text-[10px] text-muted-foreground/45">
 					{repo.language && (
@@ -819,14 +819,14 @@ function PinnedRepoRow({
 					className="rounded-sm shrink-0 w-[18px] h-[18px] object-cover"
 				/>
 				<span className="text-xs font-mono truncate group-hover:text-foreground transition-colors min-w-0">
-					<span className="text-muted-foreground/40">
+					<span className="text-muted-foreground">
 						{repo.owner.login}
 					</span>
 					<span className="text-muted-foreground/25 mx-0.5">/</span>
 					<span className="font-medium">{repo.name}</span>
 				</span>
 				{repo.private && (
-					<Lock className="w-2.5 h-2.5 text-muted-foreground/40 shrink-0" />
+					<Lock className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
 				)}
 				<div className="flex items-center gap-2.5 ml-auto shrink-0 text-[10px] text-muted-foreground/45">
 					{repo.language && (
@@ -883,7 +883,7 @@ function TrendingRow({ repo }: { repo: TrendingRepoItem }) {
 			<div className="flex-1 min-w-0">
 				<div className="flex items-center gap-2">
 					<span className="text-xs font-mono truncate group-hover:text-foreground transition-colors">
-						<span className="text-muted-foreground/40">
+						<span className="text-muted-foreground">
 							{repo.owner?.login}
 						</span>
 						<span className="text-muted-foreground/25 mx-0.5">
@@ -919,7 +919,7 @@ function TrendingRow({ repo }: { repo: TrendingRepoItem }) {
 					</div>
 				</div>
 				{repo.description && (
-					<p className="text-[10px] text-muted-foreground/40 truncate mt-0.5">
+					<p className="text-[10px] text-muted-foreground truncate mt-0.5">
 						{repo.description}
 					</p>
 				)}

@@ -288,7 +288,7 @@ export function RepoActivityView({ owner, repo, events, commitActivity }: RepoAc
 						{f.label}
 					</button>
 				))}
-				<span className="text-muted-foreground/40 ml-2">
+				<span className="text-muted-foreground ml-2">
 					{filtered.length} events
 				</span>
 			</div>
@@ -354,7 +354,7 @@ export function RepoActivityView({ owner, repo, events, commitActivity }: RepoAc
 											?.login && (
 											<>
 												{" "}
-												<span className="text-muted-foreground/40">
+												<span className="text-muted-foreground">
 													@
 												</span>
 												<Link
@@ -384,7 +384,7 @@ export function RepoActivityView({ owner, repo, events, commitActivity }: RepoAc
 										</p>
 									)}
 								</div>
-								<span className="text-[10px] font-mono text-muted-foreground/40 shrink-0 mt-1">
+								<span className="text-[10px] font-mono text-muted-foreground shrink-0 mt-1">
 									{timeAgo(event.created_at)}
 								</span>
 							</div>

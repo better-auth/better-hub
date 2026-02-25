@@ -157,7 +157,7 @@ function SectionHeader({
 						{title}
 					</h3>
 					{description && (
-						<p className="text-[10px] text-muted-foreground/40 mt-0.5">
+						<p className="text-[10px] text-muted-foreground mt-0.5">
 							{description}
 						</p>
 					)}
@@ -255,7 +255,7 @@ function ToggleRow({
 					{label}
 				</span>
 				{description && (
-					<p className="text-[10px] text-muted-foreground/40 mt-0.5 leading-relaxed">
+					<p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">
 						{description}
 					</p>
 				)}
@@ -488,7 +488,7 @@ export function RepoSettings({ owner, repo, repoData, branches }: RepoSettingsPr
 				/>
 				<div className="space-y-3.5">
 					<div>
-						<label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/40 mb-1.5 block">
+						<label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5 block">
 							Repository name
 						</label>
 						<input
@@ -500,7 +500,7 @@ export function RepoSettings({ owner, repo, repoData, branches }: RepoSettingsPr
 						/>
 					</div>
 					<div>
-						<label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/40 mb-1.5 block">
+						<label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5 block">
 							Description
 						</label>
 						<textarea
@@ -514,7 +514,7 @@ export function RepoSettings({ owner, repo, repoData, branches }: RepoSettingsPr
 						/>
 					</div>
 					<div>
-						<label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/40 mb-1.5 block">
+						<label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5 block">
 							Homepage URL
 						</label>
 						<div className="relative max-w-sm">
@@ -534,7 +534,7 @@ export function RepoSettings({ owner, repo, repoData, branches }: RepoSettingsPr
 
 					{/* Visibility */}
 					<div>
-						<label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/40 mb-1.5 block">
+						<label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5 block">
 							Visibility
 						</label>
 						<div className="flex items-center gap-1.5">
@@ -616,7 +616,7 @@ export function RepoSettings({ owner, repo, repoData, branches }: RepoSettingsPr
 							<p className="text-xs font-medium text-foreground/85">
 								Social Preview
 							</p>
-							<p className="text-[10px] text-muted-foreground/40 mt-0.5">
+							<p className="text-[10px] text-muted-foreground mt-0.5">
 								Customize the image shown when
 								shared on social media
 							</p>
@@ -947,7 +947,7 @@ export function RepoSettings({ owner, repo, repoData, branches }: RepoSettingsPr
 										? "Repository archived"
 										: "Archive this repository"}
 								</p>
-								<p className="text-[10px] text-muted-foreground/40 mt-0.5 leading-relaxed">
+								<p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">
 									{isArchived
 										? "This repository is archived and read-only."
 										: "Mark as archived and read-only. Can be reversed by GitHub support."}
@@ -999,7 +999,7 @@ export function RepoSettings({ owner, repo, repoData, branches }: RepoSettingsPr
 						<p className="text-xs font-medium text-foreground/85">
 							Delete this repository
 						</p>
-						<p className="text-[10px] text-muted-foreground/40 mt-0.5 leading-relaxed">
+						<p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">
 							Once deleted, there is no going back. This
 							action is permanent.
 						</p>

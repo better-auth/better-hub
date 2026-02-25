@@ -348,7 +348,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
 									compact ? "p-0.5" : "p-1",
 									editor?.isActive(active)
 										? "text-foreground bg-muted/80 dark:bg-white/[0.06]"
-										: "text-muted-foreground/40 hover:text-foreground",
+										: "text-muted-foreground hover:text-foreground",
 								)}
 								title={t}
 								type="button"

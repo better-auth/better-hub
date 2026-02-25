@@ -245,7 +245,7 @@ export function UserProfileContent({
 								href={user.html_url}
 								target="_blank"
 								rel="noreferrer"
-								className="text-muted-foreground/40 hover:text-foreground transition-colors shrink-0"
+								className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
 							>
 								<ExternalLink className="w-3 h-3" />
 							</a>
@@ -357,7 +357,7 @@ export function UserProfileContent({
 				{/* Organizations */}
 				{orgs.length > 0 && (
 					<div className="mt-5 pt-5 border-t border-border">
-						<h2 className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest mb-3">
+						<h2 className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3">
 							Organizations
 						</h2>
 						<div className="flex flex-col gap-1.5">
@@ -386,7 +386,7 @@ export function UserProfileContent({
 				{/* Language distribution */}
 				{languageDistribution.length > 0 && (
 					<div className="my-5 pt-5 border-t border-border">
-						<h2 className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest mb-3">
+						<h2 className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3">
 							Languages
 						</h2>
 						{/* Bar */}
@@ -457,7 +457,7 @@ export function UserProfileContent({
 								onChange={(e) =>
 									setSearch(e.target.value)
 								}
-								className="w-full bg-transparent border border-border pl-9 pr-4 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-foreground/20 focus:ring-[3px] focus:ring-ring/50 transition-colors rounded-md font-mono"
+								className="w-full bg-transparent border border-border pl-9 pr-4 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground/20 focus:ring-[3px] focus:ring-ring/50 transition-colors rounded-md font-mono"
 							/>
 						</div>
 
@@ -566,7 +566,7 @@ export function UserProfileContent({
 							href={`/${repo.full_name}`}
 							className="group flex items-center gap-4 px-4 py-3 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors"
 						>
-							<FolderGit2 className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
+							<FolderGit2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
 							<div className="flex-1 min-w-0">
 								<div className="flex items-center gap-2">
 									<span className="text-sm text-foreground group-hover:text-foreground transition-colors font-mono">
@@ -634,7 +634,7 @@ export function UserProfileContent({
 									</span>
 								)}
 								{repo.updated_at && (
-									<span className="text-[11px] text-muted-foreground/40 font-mono w-14 text-right">
+									<span className="text-[11px] text-muted-foreground font-mono w-14 text-right">
 										<TimeAgo
 											date={
 												repo.updated_at

@@ -325,7 +325,7 @@ export async function PRConversation({
 
 			{entries.length === 0 && (
 				<div className="py-8 text-center">
-					<p className="text-sm text-muted-foreground/40">
+					<p className="text-sm text-muted-foreground">
 						No conversation yet
 					</p>
 				</div>
@@ -415,7 +415,7 @@ async function ChatMessage({
 						{entry.author_association.toLowerCase()}
 					</span>
 				)}
-			<span className="text-[10px] text-muted-foreground/40 ml-auto shrink-0">
+			<span className="text-[10px] text-muted-foreground ml-auto shrink-0">
 				<TimeAgo date={entry.created_at} />
 			</span>
 		</>
@@ -564,10 +564,10 @@ function CommitGroup({ commits }: { commits: CommitEntry[] }) {
 						<span className="text-xs text-foreground/80 truncate flex-1 min-w-0">
 							{firstLine}
 						</span>
-						<code className="text-[10px] font-mono text-muted-foreground/40 shrink-0">
+						<code className="text-[10px] font-mono text-muted-foreground shrink-0">
 							{commit.sha.slice(0, 7)}
 						</code>
-						<span className="text-[10px] text-muted-foreground/40 shrink-0">
+						<span className="text-[10px] text-muted-foreground shrink-0">
 							<TimeAgo date={commit.created_at} />
 						</span>
 					</div>
@@ -664,7 +664,7 @@ function StateChangeEvent({ entry }: { entry: StateChangeEntry }) {
 					{config.label}
 				</span>
 			</div>
-			<span className="text-[10px] text-muted-foreground/40 shrink-0">
+			<span className="text-[10px] text-muted-foreground shrink-0">
 				<TimeAgo date={entry.created_at} />
 			</span>
 		</div>

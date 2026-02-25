@@ -165,7 +165,7 @@ export function CodeContentWrapper({
 							<button
 								type="button"
 								onClick={handleExpand}
-								className="p-1.5 rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+								className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
 								title="Show file explorer"
 							>
 								<PanelLeft className="w-4 h-4" />

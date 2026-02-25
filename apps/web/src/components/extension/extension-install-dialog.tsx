@@ -110,7 +110,7 @@ export function ExtensionInstallDialog({ open, onOpenChange }: ExtensionInstallD
 
 				{/* Quick steps */}
 				<div className="border-t border-border bg-card/30 px-5 py-4">
-					<h3 className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest mb-3">
+					<h3 className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3">
 						Quick Setup
 					</h3>
 					<ol className="flex flex-col gap-2.5">
@@ -128,7 +128,7 @@ export function ExtensionInstallDialog({ open, onOpenChange }: ExtensionInstallD
 									<span className="text-xs font-medium">
 										{step.label}
 									</span>
-									<span className="text-[11px] text-muted-foreground/40 ml-2">
+									<span className="text-[11px] text-muted-foreground ml-2">
 										{step.detail}
 									</span>
 								</div>

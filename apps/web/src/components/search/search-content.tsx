@@ -366,7 +366,7 @@ function IssueResultItem({ item }: { item: IssueSearchItem }) {
 							{label.name}
 						</span>
 					))}
-					<span className="text-[10px] font-mono text-muted-foreground/40 ml-auto">
+					<span className="text-[10px] font-mono text-muted-foreground ml-auto">
 						{new Date(item.updated_at).toLocaleDateString()}
 					</span>
 				</div>
@@ -436,7 +436,7 @@ function PRResultItem({ item }: { item: IssueSearchItem }) {
 							{label.name}
 						</span>
 					))}
-					<span className="text-[10px] font-mono text-muted-foreground/40 ml-auto">
+					<span className="text-[10px] font-mono text-muted-foreground ml-auto">
 						{new Date(item.updated_at).toLocaleDateString()}
 					</span>
 				</div>
@@ -472,7 +472,7 @@ function UserResultItem({ item }: { item: UserSearchItem }) {
 				)}
 			</div>
 			{item.followers != null && (
-				<div className="text-xs font-mono text-muted-foreground/40 shrink-0 flex items-center gap-1">
+				<div className="text-xs font-mono text-muted-foreground shrink-0 flex items-center gap-1">
 					<Users className="w-3 h-3" />
 					{item.followers.toLocaleString()}
 				</div>
@@ -672,10 +672,10 @@ export function SearchContent({
 						placeholder="Search across GitHub..."
 						value={query}
 						onChange={(e) => setQuery(e.target.value)}
-						className="w-full bg-transparent border border-border pl-10 pr-10 py-2.5 text-sm font-mono placeholder:text-muted-foreground/40 focus:outline-none focus:border-foreground/20 focus:ring-[3px] focus:ring-ring/50 transition-colors rounded-md"
+						className="w-full bg-transparent border border-border pl-10 pr-10 py-2.5 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:border-foreground/20 focus:ring-[3px] focus:ring-ring/50 transition-colors rounded-md"
 					/>
 					{loading && (
-						<Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 animate-spin" />
+						<Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />
 					)}
 				</div>
 
