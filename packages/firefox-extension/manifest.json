@@ -9,14 +9,8 @@
 			"strict_min_version": "109.0"
 		}
 	},
-	"permissions": [
-		"storage",
-		"declarativeNetRequestWithHostAccess",
-		"activeTab"
-	],
-	"host_permissions": [
-		"*://github.com/*"
-	],
+	"permissions": ["storage", "declarativeNetRequestWithHostAccess", "activeTab"],
+	"host_permissions": ["*://github.com/*"],
 	"icons": {
 		"16": "icons/icon-16.png",
 		"48": "icons/icon-48.png",
