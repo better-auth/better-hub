@@ -155,10 +155,7 @@ export interface UsedByData {
 	package_name: string | null;
 }
 
-export async function fetchUsedBy(
-	owner: string,
-	repo: string,
-): Promise<UsedByData | null> {
+export async function fetchUsedBy(owner: string, repo: string): Promise<UsedByData | null> {
 	const token = await getGitHubToken();
 	if (!token) return null;
 
@@ -175,7 +172,9 @@ export async function fetchUsedBy(
 				path: "package.json",
 			});
 			if ("content" in data) {
-				const content = Buffer.from(data.content, "base64").toString("utf-8");
+				const content = Buffer.from(data.content, "base64").toString(
+					"utf-8",
+				);
 				const pkg = JSON.parse(content);
 				packageName = pkg.name || null;
 			}

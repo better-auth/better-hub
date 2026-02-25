@@ -181,8 +181,7 @@ interface HastElement {
  * `path/to/file.py:L5-L10`, or just `src/foo.ts` (filename only, no line).
  * Captures: [fullMatch, filepath, lineSpec | undefined]
  */
-const FILE_LINE_RE =
-	/(\b(?:[\w.@~-]+\/)+[\w.-]+\.\w+)(?::L?(\d+)(?:[–\-]L?(\d+))?)?/g;
+const FILE_LINE_RE = /(\b(?:[\w.@~-]+\/)+[\w.-]+\.\w+)(?::L?(\d+)(?:[–\-]L?(\d+))?)?/g;
 
 type FileNavigateFn = (filename: string, line?: number) => void;
 
@@ -273,7 +272,9 @@ function createGhostMarkdownComponents(
 					codeText = codeChildren;
 				} else if (Array.isArray(codeChildren)) {
 					codeText = codeChildren
-						.map((c: unknown) => (typeof c === "string" ? c : ""))
+						.map((c: unknown) =>
+							typeof c === "string" ? c : "",
+						)
 						.join("");
 				}
 			}
@@ -320,7 +321,9 @@ function createGhostMarkdownComponents(
 					{text && (
 						<button
 							type="button"
-							onClick={() => navigator.clipboard.writeText(text)}
+							onClick={() =>
+								navigator.clipboard.writeText(text)
+							}
 							className="opacity-0 group-hover/code:opacity-100 ml-0.5 p-0.5 rounded text-muted-foreground/40 hover:text-foreground transition-all duration-150 cursor-pointer self-center"
 							title="Copy"
 						>
@@ -334,7 +337,13 @@ function createGhostMarkdownComponents(
 		p: ({ children, ...props }: React.HTMLAttributes<HTMLParagraphElement>) => {
 			const processed = Array.isArray(children)
 				? children.map((child, i) =>
-						typeof child === "string" ? <span key={i}>{linkifyFileRefs(child)}</span> : child,
+						typeof child === "string" ? (
+							<span key={i}>
+								{linkifyFileRefs(child)}
+							</span>
+						) : (
+							child
+						),
 					)
 				: typeof children === "string"
 					? linkifyFileRefs(children)
@@ -344,7 +353,13 @@ function createGhostMarkdownComponents(
 		li: ({ children, ...props }: React.HTMLAttributes<HTMLLIElement>) => {
 			const processed = Array.isArray(children)
 				? children.map((child, i) =>
-						typeof child === "string" ? <span key={i}>{linkifyFileRefs(child)}</span> : child,
+						typeof child === "string" ? (
+							<span key={i}>
+								{linkifyFileRefs(child)}
+							</span>
+						) : (
+							child
+						),
 					)
 				: typeof children === "string"
 					? linkifyFileRefs(children)
@@ -371,7 +386,11 @@ function createGhostMarkdownComponents(
 				{children}
 			</td>
 		),
-		a: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => {
+		a: ({
+			href,
+			children,
+			...props
+		}: React.AnchorHTMLAttributes<HTMLAnchorElement>) => {
 			if (href && parseGitHubUrl(href)) {
 				const internalPath = toInternalUrl(href);
 				return (
@@ -1564,20 +1583,50 @@ export function AIChat({
 							{error && historyLoaded && (
 								<div className="flex flex-col items-center gap-2 py-4">
 									<Ghost className="w-5 h-5 text-muted-foreground/20" />
-									{error.message?.includes("MESSAGE_LIMIT_REACHED") ? (
+									{error.message?.includes(
+										"MESSAGE_LIMIT_REACHED",
+									) ? (
 										<>
 											<span className="text-[11px] text-muted-foreground/50 text-center max-w-[260px]">
-												You&apos;ve used all 20 free AI messages. Billing is coming soon.
+												You&apos;ve
+												used
+												all
+												20
+												free
+												AI
+												messages.
+												Billing
+												is
+												coming
+												soon.
 											</span>
 											<span className="text-[10px] text-muted-foreground/35 text-center max-w-[240px]">
-												You can add your own OpenRouter API key in Settings to continue using AI features.
+												You
+												can
+												add
+												your
+												own
+												OpenRouter
+												API
+												key
+												in
+												Settings
+												to
+												continue
+												using
+												AI
+												features.
 											</span>
 										</>
 									) : (
 										<>
 											<span className="text-[11px] text-muted-foreground/50">
-												Ghost got lost in
-												the void
+												Ghost
+												got
+												lost
+												in
+												the
+												void
 											</span>
 											<button
 												type="button"
@@ -1588,7 +1637,8 @@ export function AIChat({
 												className="mt-1 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-medium bg-foreground text-background hover:bg-foreground/85 transition-colors cursor-pointer"
 											>
 												<RotateCcw className="w-3 h-3" />
-												Summon again
+												Summon
+												again
 											</button>
 										</>
 									)}
@@ -1935,7 +1985,11 @@ export function AIChat({
 									)
 								}
 								onKeyDown={onKeyDown}
-								placeholder={isLimitReached ? "Message limit reached" : placeholder}
+								placeholder={
+									isLimitReached
+										? "Message limit reached"
+										: placeholder
+								}
 								disabled={isLimitReached}
 								suppressHydrationWarning
 								rows={1}
@@ -1965,11 +2019,13 @@ export function AIChat({
 											handleSend()
 										}
 										disabled={
-											!input.trim() || isLimitReached
+											!input.trim() ||
+											isLimitReached
 										}
 										className={cn(
 											"inline-flex h-7 w-7 items-center justify-center rounded-full transition-all duration-150",
-											input.trim() && !isLimitReached
+											input.trim() &&
+												!isLimitReached
 												? "bg-foreground text-background hover:bg-foreground/90 cursor-pointer"
 												: "bg-muted/50 dark:bg-white/5 text-muted-foreground/25 cursor-default",
 										)}

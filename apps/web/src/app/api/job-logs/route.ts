@@ -108,7 +108,10 @@ export async function GET(request: NextRequest) {
 			return NextResponse.json({ error: "Job not found" }, { status: 404 });
 		}
 		if (!res.ok) {
-			return NextResponse.json({ error: "Failed to fetch logs" }, { status: res.status });
+			return NextResponse.json(
+				{ error: "Failed to fetch logs" },
+				{ status: res.status },
+			);
 		}
 
 		const raw = await res.text();

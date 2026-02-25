@@ -34,10 +34,7 @@ import {
 	DropdownMenuGroup,
 	DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import {
-	Sheet,
-	SheetContent,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { markNotificationDone, markAllNotificationsRead } from "@/app/(app)/repos/actions";
@@ -157,8 +154,15 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 									}
 								>
 									<img
-										src={session.user.image}
-										alt={session.user.name || "User avatar"}
+										src={
+											session.user
+												.image
+										}
+										alt={
+											session.user
+												.name ||
+											"User avatar"
+										}
 										className="w-6 h-6 rounded-full border border-border/60 dark:border-white/8 group-hover:border-foreground/20 transition-colors"
 									/>
 								</button>
@@ -171,22 +175,34 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 								<div className="px-3 py-3 bg-muted/30 dark:bg-white/[0.02]">
 									<div className="flex items-start gap-3">
 										<img
-											src={session.user.image}
+											src={
+												session
+													.user
+													.image
+											}
 											alt=""
 											className="w-9 h-9 rounded-full shrink-0 border border-border/40"
 										/>
 										<div className="flex flex-col min-w-0 gap-0.5">
 											<span className="text-[12px] font-medium truncate leading-tight">
-												{session.user.name}
+												{
+													session
+														.user
+														.name
+												}
 											</span>
 											{gh?.login && (
 												<span className="text-[11px] font-mono text-muted-foreground truncate leading-tight">
-													{gh.login}
+													{
+														gh.login
+													}
 												</span>
 											)}
 											{gh?.email && (
 												<span className="text-[10px] text-muted-foreground/50 truncate leading-tight">
-													{gh.email}
+													{
+														gh.email
+													}
 												</span>
 											)}
 										</div>
@@ -194,13 +210,25 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 									{gh && (
 										<div className="flex items-center gap-3 mt-2.5 pt-2 border-t border-border/40">
 											<span className="text-[10px] text-muted-foreground font-mono">
-												<span className="text-foreground/80 font-medium">{gh.followers ?? 0}</span> followers
+												<span className="text-foreground/80 font-medium">
+													{gh.followers ??
+														0}
+												</span>{" "}
+												followers
 											</span>
 											<span className="text-[10px] text-muted-foreground font-mono">
-												<span className="text-foreground/80 font-medium">{gh.following ?? 0}</span> following
+												<span className="text-foreground/80 font-medium">
+													{gh.following ??
+														0}
+												</span>{" "}
+												following
 											</span>
 											<span className="text-[10px] text-muted-foreground font-mono">
-												<span className="text-foreground/80 font-medium">{gh.public_repos ?? 0}</span> repos
+												<span className="text-foreground/80 font-medium">
+													{gh.public_repos ??
+														0}
+												</span>{" "}
+												repos
 											</span>
 										</div>
 									)}
@@ -214,19 +242,28 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 										Navigation
 									</DropdownMenuLabel>
 									{gh?.login && (
-										<DropdownMenuItem asChild className="text-[11px] gap-2 h-7">
-											<Link href={`/${gh.login}`}>
+										<DropdownMenuItem
+											asChild
+											className="text-[11px] gap-2 h-7"
+										>
+											<Link
+												href={`/${gh.login}`}
+											>
 												<User className="w-3.5 h-3.5" />
-												Your profile
+												Your
+												profile
 											</Link>
 										</DropdownMenuItem>
 									)}
 									<DropdownMenuItem
 										onClick={() =>
 											window.dispatchEvent(
-												new CustomEvent("open-cmdk-mode", {
-													detail: "search",
-												}),
+												new CustomEvent(
+													"open-cmdk-mode",
+													{
+														detail: "search",
+													},
+												),
 											)
 										}
 										className="text-[11px] gap-2 h-7"
@@ -234,7 +271,8 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 										<Search className="w-3.5 h-3.5" />
 										Search repos
 										<DropdownMenuShortcut className="flex items-center gap-0.5 text-[10px] font-mono">
-											<Command className="w-2 h-2" />/
+											<Command className="w-2 h-2" />
+											/
 										</DropdownMenuShortcut>
 									</DropdownMenuItem>
 								</DropdownMenuGroup>
@@ -247,14 +285,22 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 										Preferences
 									</DropdownMenuLabel>
 									<DropdownMenuItem
-										onClick={() => setSettingsOpen(true)}
+										onClick={() =>
+											setSettingsOpen(
+												true,
+											)
+										}
 										className="text-[11px] gap-2 h-7"
 									>
 										<Settings className="w-3.5 h-3.5" />
 										Settings
 									</DropdownMenuItem>
 									<DropdownMenuItem
-										onClick={(e) => toggleMode(e)}
+										onClick={(e) =>
+											toggleMode(
+												e,
+											)
+										}
 										className="text-[11px] gap-2 h-7"
 									>
 										{mode === "dark" ? (
@@ -262,7 +308,9 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 										) : (
 											<Moon className="w-3.5 h-3.5" />
 										)}
-										{mode === "dark" ? "Light mode" : "Dark mode"}
+										{mode === "dark"
+											? "Light mode"
+											: "Dark mode"}
 									</DropdownMenuItem>
 									{gh?.login && (
 										<DropdownMenuItem
@@ -275,7 +323,8 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 											className="text-[11px] gap-2 h-7"
 										>
 											<ExternalLink className="w-3.5 h-3.5" />
-											GitHub profile
+											GitHub
+											profile
 										</DropdownMenuItem>
 									)}
 								</DropdownMenuGroup>
@@ -287,11 +336,13 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 									<DropdownMenuItem
 										onClick={() =>
 											signOut({
-												fetchOptions: {
-													onSuccess: () => {
-														window.location.href = "/";
+												fetchOptions:
+													{
+														onSuccess: () => {
+															window.location.href =
+																"/";
+														},
 													},
-												},
 											})
 										}
 										className="text-[11px] gap-2 h-7 text-destructive focus:text-destructive"
@@ -318,7 +369,9 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 					<div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-border">
 						<div className="flex items-center gap-2">
 							<Bell className="w-3.5 h-3.5 text-muted-foreground" />
-							<span className="text-[12px] font-medium">Notifications</span>
+							<span className="text-[12px] font-medium">
+								Notifications
+							</span>
 							{unreadCount > 0 && (
 								<span className="text-[9px] font-mono px-1.5 py-0.5 bg-foreground text-background rounded-full tabular-nums">
 									{unreadCount}
@@ -330,12 +383,26 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 								<button
 									disabled={markingAll}
 									onClick={() => {
-										startMarkAll(async () => {
-											const res = await markAllNotificationsRead();
-											if (res.success) {
-												setDoneIds(new Set(notifications.map((n) => n.id)));
-											}
-										});
+										startMarkAll(
+											async () => {
+												const res =
+													await markAllNotificationsRead();
+												if (
+													res.success
+												) {
+													setDoneIds(
+														new Set(
+															notifications.map(
+																(
+																	n,
+																) =>
+																	n.id,
+															),
+														),
+													);
+												}
+											},
+										);
 									}}
 									className="flex items-center gap-1 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
 								>
@@ -362,11 +429,14 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 						{visibleNotifs.length > 0 ? (
 							visibleNotifs.map((notif) => {
 								const href = getNotifHref(notif);
-								const isMarking = markingId === notif.id;
+								const isMarking =
+									markingId === notif.id;
 								const icon =
-									notif.subject.type === "PullRequest" ? (
+									notif.subject.type ===
+									"PullRequest" ? (
 										<GitPullRequest className="w-3.5 h-3.5" />
-									) : notif.subject.type === "Issue" ? (
+									) : notif.subject.type ===
+									  "Issue" ? (
 										<CircleDot className="w-3.5 h-3.5" />
 									) : (
 										<Bell className="w-3.5 h-3.5" />
@@ -382,7 +452,11 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 										</span>
 										<Link
 											href={href}
-											onClick={() => setNotifOpen(false)}
+											onClick={() =>
+												setNotifOpen(
+													false,
+												)
+											}
 											className="flex-1 min-w-0"
 										>
 											<div className="flex items-center gap-1.5">
@@ -390,34 +464,60 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 													<span className="w-1.5 h-1.5 rounded-full bg-foreground shrink-0" />
 												)}
 												<span className="text-[12px] text-foreground/90 truncate leading-tight">
-													{notif.subject.title}
+													{
+														notif
+															.subject
+															.title
+													}
 												</span>
 											</div>
 											<div className="flex items-center gap-2 mt-1">
 												<span className="text-[10px] font-mono text-muted-foreground/50 truncate">
-													{notif.repository.full_name}
+													{
+														notif
+															.repository
+															.full_name
+													}
 												</span>
 												<span
 													className={cn(
 														"text-[9px] font-mono px-1 py-px border shrink-0",
-														notif.reason === "review_requested"
+														notif.reason ===
+															"review_requested"
 															? "border-warning/30 text-warning"
-															: notif.reason === "mention" || notif.reason === "team_mention"
+															: notif.reason ===
+																		"mention" ||
+																  notif.reason ===
+																		"team_mention"
 																? "border-foreground/20 text-foreground/60"
 																: "border-border text-muted-foreground/60",
 													)}
 												>
-													{reasonLabels[notif.reason] || notif.reason}
+													{reasonLabels[
+														notif
+															.reason
+													] ||
+														notif.reason}
 												</span>
 												<span className="flex items-center gap-0.5 text-[10px] text-muted-foreground/40 shrink-0">
 													<Clock className="w-2.5 h-2.5" />
-													<TimeAgo date={notif.updated_at} />
+													<TimeAgo
+														date={
+															notif.updated_at
+														}
+													/>
 												</span>
 											</div>
 										</Link>
 										<button
-											disabled={isMarking}
-											onClick={() => handleMarkDone(notif.id)}
+											disabled={
+												isMarking
+											}
+											onClick={() =>
+												handleMarkDone(
+													notif.id,
+												)
+											}
 											className="shrink-0 mt-0.5 p-0.5 text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:text-foreground/70 transition-all cursor-pointer disabled:opacity-100"
 											title="Dismiss"
 										>

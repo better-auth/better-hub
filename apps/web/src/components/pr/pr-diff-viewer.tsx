@@ -204,7 +204,9 @@ export function PRDiffViewer({
 	// Listen for Ghost chat file navigation events
 	useEffect(() => {
 		const handler = (e: Event) => {
-			const { filename, line } = (e as CustomEvent<{ filename: string; line?: number }>).detail;
+			const { filename, line } = (
+				e as CustomEvent<{ filename: string; line?: number }>
+			).detail;
 			const idx = files.findIndex((f) => f.filename === filename);
 			if (idx >= 0) {
 				setActiveIndex(idx);

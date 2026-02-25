@@ -1,11 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-	Dialog,
-	DialogContent,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { SettingsContent } from "./settings-content";
 import type { UserSettings } from "@/lib/user-settings-store";
@@ -52,7 +48,13 @@ export function SettingsDialog({ open, onOpenChange, user, githubProfile }: Sett
 					<DialogTitle>Settings</DialogTitle>
 				</VisuallyHidden.Root>
 				<div className="flex flex-col max-h-[85vh]">
-					{settings && <SettingsContent initialSettings={settings} user={user} githubProfile={githubProfile} />}
+					{settings && (
+						<SettingsContent
+							initialSettings={settings}
+							user={user}
+							githubProfile={githubProfile}
+						/>
+					)}
 				</div>
 			</DialogContent>
 		</Dialog>

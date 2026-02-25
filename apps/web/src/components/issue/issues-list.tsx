@@ -90,7 +90,8 @@ export function IssuesList({
 }) {
 	const searchParams = useSearchParams();
 	const tabParam = searchParams.get("tab");
-	const initialTab: TabState = tabParam === "closed" || tabParam === "not_planned" ? tabParam : "open";
+	const initialTab: TabState =
+		tabParam === "closed" || tabParam === "not_planned" ? tabParam : "open";
 	const [state, setState] = useState<TabState>(initialTab);
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SortType>("updated");
@@ -811,9 +812,11 @@ export function IssuesList({
 									chatType: "general",
 									contextKey: `${owner}/${repo}`,
 									contextBody: {},
-									placeholder: "Describe the change you want Ghost to implement...",
+									placeholder:
+										"Describe the change you want Ghost to implement...",
 									emptyTitle: "Run with Ghost",
-									emptyDescription: "Ghost will analyze the repo, make changes, and open a PR with the full conversation.",
+									emptyDescription:
+										"Ghost will analyze the repo, make changes, and open a PR with the full conversation.",
 								});
 							}}
 							className="flex items-center gap-1.5 h-8 px-3 rounded-lg border text-xs font-medium transition-colors cursor-pointer border-border text-muted-foreground/70 hover:text-foreground hover:bg-muted/40 dark:hover:bg-white/3"
@@ -854,15 +857,26 @@ export function IssuesList({
 						<button
 							key={tab.key}
 							onClick={() => {
-									setState(tab.key);
-									const url = new URL(window.location.href);
-									if (tab.key === "open") {
-										url.searchParams.delete("tab");
-									} else {
-										url.searchParams.set("tab", tab.key);
-									}
-									window.history.replaceState(null, "", url.toString());
-								}}
+								setState(tab.key);
+								const url = new URL(
+									window.location.href,
+								);
+								if (tab.key === "open") {
+									url.searchParams.delete(
+										"tab",
+									);
+								} else {
+									url.searchParams.set(
+										"tab",
+										tab.key,
+									);
+								}
+								window.history.replaceState(
+									null,
+									"",
+									url.toString(),
+								);
+							}}
 							className={cn(
 								"relative flex items-center gap-1.5 px-3 pb-2.5 pt-1 text-[12px] transition-colors cursor-pointer",
 								state === tab.key

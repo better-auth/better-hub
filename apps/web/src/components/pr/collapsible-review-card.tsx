@@ -105,8 +105,8 @@ const DiffHunkSnippet = memo(function DiffHunkSnippet({
 	filename: string;
 }) {
 	const parsed = useMemo(() => parseDiffHunkLines(diffHunk), [diffHunk]);
-	const [tokensByLine, setTokensByLine] = useState<(SyntaxToken[] | null)[]>(
-		() => parsed.map(() => null),
+	const [tokensByLine, setTokensByLine] = useState<(SyntaxToken[] | null)[]>(() =>
+		parsed.map(() => null),
 	);
 
 	useEffect(() => {
@@ -119,12 +119,16 @@ const DiffHunkSnippet = memo(function DiffHunkSnippet({
 				let effectiveLang = lang;
 				if (!loaded.includes(lang)) {
 					try {
-						await highlighter.loadLanguage(lang as BundledLanguage);
+						await highlighter.loadLanguage(
+							lang as BundledLanguage,
+						);
 					} catch {
 						effectiveLang = "text";
 						if (!loaded.includes("text")) {
 							try {
-								await highlighter.loadLanguage("text" as BundledLanguage);
+								await highlighter.loadLanguage(
+									"text" as BundledLanguage,
+								);
 							} catch {}
 						}
 					}
@@ -153,7 +157,8 @@ const DiffHunkSnippet = memo(function DiffHunkSnippet({
 						result[i] = lineTokens.map((t) => ({
 							text: t.content,
 							lightColor: t.htmlStyle?.color || "",
-							darkColor: t.htmlStyle?.["--shiki-dark"] || "",
+							darkColor:
+								t.htmlStyle?.["--shiki-dark"] || "",
 						}));
 					}
 					codeIdx++;
@@ -177,9 +182,11 @@ const DiffHunkSnippet = memo(function DiffHunkSnippet({
 						key={i}
 						className={cn(
 							"px-2 py-px whitespace-pre overflow-x-auto flex",
-							line.type === "header" && "text-info/60 bg-info/5",
+							line.type === "header" &&
+								"text-info/60 bg-info/5",
 							line.type === "add" && "bg-success/5",
-							line.type === "remove" && "bg-destructive/5",
+							line.type === "remove" &&
+								"bg-destructive/5",
 							line.type === "context" && "bg-transparent",
 						)}
 					>
@@ -190,34 +197,59 @@ const DiffHunkSnippet = memo(function DiffHunkSnippet({
 								<span
 									className={cn(
 										"inline-block w-3 shrink-0 select-none text-center",
-										line.type === "add" && "text-success/50",
-										line.type === "remove" && "text-destructive/50",
-										line.type === "context" && "text-transparent",
+										line.type ===
+											"add" &&
+											"text-success/50",
+										line.type ===
+											"remove" &&
+											"text-destructive/50",
+										line.type ===
+											"context" &&
+											"text-transparent",
 									)}
 								>
-									{line.type === "add" ? "+" : line.type === "remove" ? "-" : " "}
+									{line.type === "add"
+										? "+"
+										: line.type ===
+											  "remove"
+											? "-"
+											: " "}
 								</span>
 								<span className="pl-0.5">
 									{tokens ? (
-										tokens.map((t, ti) => (
-											<span
-												key={ti}
-												style={{
-													color: `light-dark(${t.lightColor}, ${t.darkColor})`,
-												}}
-											>
-												{t.text}
-											</span>
-										))
+										tokens.map(
+											(t, ti) => (
+												<span
+													key={
+														ti
+													}
+													style={{
+														color: `light-dark(${t.lightColor}, ${t.darkColor})`,
+													}}
+												>
+													{
+														t.text
+													}
+												</span>
+											),
+										)
 									) : (
 										<span
 											className={cn(
-												line.type === "add" && "text-success/80",
-												line.type === "remove" && "text-destructive/80",
-												line.type === "context" && "text-muted-foreground/60",
+												line.type ===
+													"add" &&
+													"text-success/80",
+												line.type ===
+													"remove" &&
+													"text-destructive/80",
+												line.type ===
+													"context" &&
+													"text-muted-foreground/60",
 											)}
 										>
-											{line.content}
+											{
+												line.content
+											}
 										</span>
 									)}
 								</span>
@@ -340,33 +372,55 @@ export function CollapsibleReviewCard({
 								>
 									<div className="flex items-center gap-1.5 mb-1">
 										<button
-											onClick={() => navigateToFile(comment.path, comment.line)}
+											onClick={() =>
+												navigateToFile(
+													comment.path,
+													comment.line,
+												)
+											}
 											className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/50 hover:text-info transition-colors truncate font-mono cursor-pointer"
 											title={`Go to ${comment.path}${comment.line !== null ? `:${comment.line}` : ""} in diff`}
 										>
 											<FileCode2 className="w-3 h-3 shrink-0" />
-											{comment.path}
-											{comment.line !== null && `:${comment.line}`}
+											{
+												comment.path
+											}
+											{comment.line !==
+												null &&
+												`:${comment.line}`}
 										</button>
 									</div>
 									{comment.diff_hunk && (
 										<DiffHunkSnippet
-											diffHunk={comment.diff_hunk}
-											filename={comment.path}
+											diffHunk={
+												comment.diff_hunk
+											}
+											filename={
+												comment.path
+											}
 										/>
 									)}
 									<div className="text-xs text-foreground/70">
 										<ClientMarkdown
-											content={comment.body}
+											content={
+												comment.body
+											}
 										/>
 									</div>
 									<div className="mt-1">
 										<ReactionDisplay
-											reactions={comment.reactions ?? {}}
-											owner={owner}
+											reactions={
+												comment.reactions ??
+												{}
+											}
+											owner={
+												owner
+											}
 											repo={repo}
 											contentType="pullRequestReviewComment"
-											contentId={comment.id}
+											contentId={
+												comment.id
+											}
 										/>
 									</div>
 								</div>

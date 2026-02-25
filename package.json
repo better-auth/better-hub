@@ -1,25 +1,25 @@
 {
 	"name": "@better-hub/monorepo",
-	"description": "A better place to collaborate on code — for humans and agents",
 	"private": true,
-	"type": "module",
+	"description": "A better place to collaborate on code — for humans and agents",
+	"keywords": [
+		"ai-assistant",
+		"better-auth",
+		"code-review",
+		"developer-tools",
+		"github",
+		"pull-requests"
+	],
+	"homepage": "https://better-hub.com",
+	"bugs": {
+		"url": "https://github.com/better-auth/better-hub/issues"
+	},
 	"license": "MIT",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/better-auth/better-hub.git"
 	},
-	"homepage": "https://better-hub.com",
-	"bugs": {
-		"url": "https://github.com/better-auth/better-hub/issues"
-	},
-	"keywords": [
-		"github",
-		"code-review",
-		"pull-requests",
-		"ai-assistant",
-		"developer-tools",
-		"better-auth"
-	],
+	"type": "module",
 	"scripts": {
 		"go": "pnpm run",
 		"build": "pnpm -r run build",
@@ -32,11 +32,11 @@
 		"check": "pnpm lint && pnpm fmt:check && pnpm typecheck",
 		"fix": "pnpm lint:fix && pnpm fmt"
 	},
-	"packageManager": "pnpm@10.10.0",
 	"devDependencies": {
 		"@types/node": "^25.3.0",
 		"oxfmt": "^0.34.0",
 		"oxlint": "^1.43.0",
 		"typescript": "^5.7.0"
-	}
+	},
+	"packageManager": "pnpm@10.10.0"
 }

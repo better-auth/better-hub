@@ -39,11 +39,17 @@ function ThemeGrid({
 						<div className="flex items-center gap-1 shrink-0">
 							<span
 								className="w-4 h-4 rounded-full border border-border/60"
-								style={{ backgroundColor: theme.bgPreview }}
+								style={{
+									backgroundColor:
+										theme.bgPreview,
+								}}
 							/>
 							<span
 								className="w-4 h-4 rounded-full border border-border/60"
-								style={{ backgroundColor: theme.accentPreview }}
+								style={{
+									backgroundColor:
+										theme.accentPreview,
+								}}
 							/>
 						</div>
 
@@ -60,7 +66,9 @@ function ThemeGrid({
 						</div>
 
 						{/* Check */}
-						{isActive && <Check className="size-3.5 text-success shrink-0" />}
+						{isActive && (
+							<Check className="size-3.5 text-success shrink-0" />
+						)}
 					</button>
 				);
 			})}
@@ -69,7 +77,8 @@ function ThemeGrid({
 }
 
 export function GeneralTab({ settings: _settings, onUpdate: _onUpdate }: GeneralTabProps) {
-	const { setColorTheme, darkThemes, lightThemes, darkThemeId, lightThemeId } = useColorTheme();
+	const { setColorTheme, darkThemes, lightThemes, darkThemeId, lightThemeId } =
+		useColorTheme();
 
 	return (
 		<div className="divide-y divide-border">

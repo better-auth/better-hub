@@ -20,7 +20,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 	if (!session) {
 		const headersList = await headers();
 		const pathname = headersList.get("x-pathname") || "";
-		const redirectTo = pathname && pathname !== "/" ? `/?redirect=${encodeURIComponent(pathname)}` : "/";
+		const redirectTo =
+			pathname && pathname !== "/"
+				? `/?redirect=${encodeURIComponent(pathname)}`
+				: "/";
 		return redirect(redirectTo);
 	}
 
@@ -49,7 +52,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 						<GitHubLinkInterceptor>
 							<NavigationProgress />
 							<div className="flex flex-col h-dvh overflow-y-auto lg:overflow-hidden">
-								<AppNavbar session={session} notifications={notifications} />
+								<AppNavbar
+									session={session}
+									notifications={
+										notifications
+									}
+								/>
 								<div className="mt-10 lg:h-[calc(100dvh-var(--spacing)*10)] flex flex-col px-2 sm:px-4 pt-2 lg:overflow-auto">
 									{children}
 								</div>
@@ -90,8 +98,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 										?.created_at || ""
 								}
 								onboardingDone={onboardingDone}
-								initialStarredAuth={initialStarredAuth}
-								initialStarredHub={initialStarredHub}
+								initialStarredAuth={
+									initialStarredAuth
+								}
+								initialStarredHub={
+									initialStarredHub
+								}
 							/>
 						</GitHubLinkInterceptor>
 					</CodeThemeProvider>

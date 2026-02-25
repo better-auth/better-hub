@@ -39,11 +39,15 @@ export function MarkdownCopyHandler({ children }: { children: ReactNode }) {
 			const target = e.target as HTMLElement;
 
 			// Package-manager install copy
-			const pkgBtn = target.closest<HTMLButtonElement>(".ghmd-pkg-copy[data-copy]");
+			const pkgBtn = target.closest<HTMLButtonElement>(
+				".ghmd-pkg-copy[data-copy]",
+			);
 			if (pkgBtn) {
 				const text = pkgBtn.dataset.copy;
 				if (text) {
-					navigator.clipboard.writeText(text).then(() => flashCheck(pkgBtn));
+					navigator.clipboard
+						.writeText(text)
+						.then(() => flashCheck(pkgBtn));
 				}
 				return;
 			}
@@ -51,7 +55,9 @@ export function MarkdownCopyHandler({ children }: { children: ReactNode }) {
 			// Code block copy
 			const codeBtn = target.closest<HTMLButtonElement>(".ghmd-code-copy");
 			if (codeBtn) {
-				const pre = codeBtn.closest(".ghmd-code-block")?.querySelector("pre");
+				const pre = codeBtn
+					.closest(".ghmd-code-block")
+					?.querySelector("pre");
 				if (pre) {
 					navigator.clipboard
 						.writeText(pre.textContent || "")
@@ -66,7 +72,8 @@ export function MarkdownCopyHandler({ children }: { children: ReactNode }) {
 			if (input.type !== "radio" || !input.closest(".ghmd-pkg-tabs")) return;
 
 			const group = input.closest(".ghmd-pkg-tabs")!;
-			const radios = group.querySelectorAll<HTMLInputElement>('input[type="radio"]');
+			const radios =
+				group.querySelectorAll<HTMLInputElement>('input[type="radio"]');
 			let tabIndex = 0;
 			radios.forEach((r, i) => {
 				if (r === input) tabIndex = i;

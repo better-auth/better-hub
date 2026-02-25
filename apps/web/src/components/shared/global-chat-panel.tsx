@@ -332,20 +332,17 @@ export function GlobalChatPanel() {
 	}, []);
 
 	// Navigate to a file (and line) in the PR diff viewer
-	const handleNavigateToFile = useCallback(
-		(filename: string, line?: number) => {
-			const url = new URL(window.location.href);
-			url.searchParams.set("file", filename);
-			window.history.replaceState(null, "", url.toString());
-			// Dispatch a custom event so the diff viewer picks up the change
-			window.dispatchEvent(
-				new CustomEvent("ghost:navigate-to-file", {
-					detail: { filename, line },
-				}),
-			);
-		},
-		[],
-	);
+	const handleNavigateToFile = useCallback((filename: string, line?: number) => {
+		const url = new URL(window.location.href);
+		url.searchParams.set("file", filename);
+		window.history.replaceState(null, "", url.toString());
+		// Dispatch a custom event so the diff viewer picks up the change
+		window.dispatchEvent(
+			new CustomEvent("ghost:navigate-to-file", {
+				detail: { filename, line },
+			}),
+		);
+	}, []);
 
 	// Register the context handler for "Ask AI" from diff viewer
 	const handleAddContext = useCallback((context: InlineContext) => {

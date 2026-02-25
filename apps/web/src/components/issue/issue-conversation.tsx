@@ -88,8 +88,7 @@ function groupEntries(entries: IssueTimelineEntry[]): GroupedItem[] {
 		const middleEntries: IssueTimelineEntry[] = [];
 		for (const g of middle) {
 			if (g.kind === "entry") middleEntries.push(g.entry);
-			else if (g.kind === "bot-group")
-				middleEntries.push(...g.entries);
+			else if (g.kind === "bot-group") middleEntries.push(...g.entries);
 		}
 
 		const result: GroupedItem[] = [...head];
@@ -127,30 +126,49 @@ export function IssueConversation({
 				{grouped.map((item, gi) => {
 					if (item.kind === "bot-group") {
 						const botNames = [
-							...new Set(item.entries.map((e) => e.user!.login)),
+							...new Set(
+								item.entries.map(
+									(e) => e.user!.login,
+								),
+							),
 						];
 						const avatars = [
 							...new Set(
-								item.entries.map((e) => e.user!.avatar_url),
+								item.entries.map(
+									(e) => e.user!.avatar_url,
+								),
 							),
 						];
 						return (
-							<div key={`bot-group-${gi}`} className="relative pl-12">
+							<div
+								key={`bot-group-${gi}`}
+								className="relative pl-12"
+							>
 								<BotActivityGroup
 									count={item.entries.length}
 									botNames={botNames}
 									avatars={avatars}
 								>
 									<div className="space-y-3">
-										{item.entries.map((entry) => (
-											<ThreadComment
-												key={`comment-${entry.id}`}
-												entry={entry}
-												owner={owner}
-												repo={repo}
-												issueNumber={issueNumber}
-											/>
-										))}
+										{item.entries.map(
+											(entry) => (
+												<ThreadComment
+													key={`comment-${entry.id}`}
+													entry={
+														entry
+													}
+													owner={
+														owner
+													}
+													repo={
+														repo
+													}
+													issueNumber={
+														issueNumber
+													}
+												/>
+											),
+										)}
 									</div>
 								</BotActivityGroup>
 							</div>
@@ -162,28 +180,46 @@ export function IssueConversation({
 							...new Set(
 								item.entries
 									.filter((e) => e.user)
-									.map((e) => e.user!.avatar_url),
+									.map(
+										(e) =>
+											e.user!
+												.avatar_url,
+									),
 							),
 						];
 						return (
-							<div key={`older-${gi}`} className="relative pl-12">
+							<div
+								key={`older-${gi}`}
+								className="relative pl-12"
+							>
 								<OlderActivityGroup
 									count={item.entries.length}
 									participantAvatars={avatars}
 								>
-									{item.entries.map((entry) => (
-										<ThreadComment
-											key={
-												entry.type === "description"
-													? entry.id
-													: `comment-${entry.id}`
-											}
-											entry={entry}
-											owner={owner}
-											repo={repo}
-											issueNumber={issueNumber}
-										/>
-									))}
+									{item.entries.map(
+										(entry) => (
+											<ThreadComment
+												key={
+													entry.type ===
+													"description"
+														? entry.id
+														: `comment-${entry.id}`
+												}
+												entry={
+													entry
+												}
+												owner={
+													owner
+												}
+												repo={
+													repo
+												}
+												issueNumber={
+													issueNumber
+												}
+											/>
+										),
+									)}
 								</OlderActivityGroup>
 							</div>
 						);
@@ -326,8 +362,7 @@ function DescriptionBlock({
 					</Link>
 				)}
 				<span className="text-[11px] text-muted-foreground/50">
-					commented{" "}
-					<TimeAgo date={entry.created_at} />
+					commented <TimeAgo date={entry.created_at} />
 				</span>
 			</div>
 
@@ -397,27 +432,27 @@ function CommentBlock({
 				</span>
 			)}
 			<span className="text-[11px] text-muted-foreground/50">
-				commented{" "}
-				<TimeAgo date={entry.created_at} />
+				commented <TimeAgo date={entry.created_at} />
 			</span>
 		</>
 	);
 
-	const bodyContent = hasBody && renderedBody ? (
-		<div className="px-3.5 py-3">
-			{isLong ? (
-				<CollapsibleBody>{renderedBody}</CollapsibleBody>
-			) : (
-				renderedBody
-			)}
-		</div>
-	) : (
-		<div className="px-3.5 py-4">
-			<p className="text-sm text-muted-foreground/30 italic">
-				No description provided.
-			</p>
-		</div>
-	);
+	const bodyContent =
+		hasBody && renderedBody ? (
+			<div className="px-3.5 py-3">
+				{isLong ? (
+					<CollapsibleBody>{renderedBody}</CollapsibleBody>
+				) : (
+					renderedBody
+				)}
+			</div>
+		) : (
+			<div className="px-3.5 py-4">
+				<p className="text-sm text-muted-foreground/30 italic">
+					No description provided.
+				</p>
+			</div>
+		);
 
 	const reactionsContent = (
 		<ReactionDisplay

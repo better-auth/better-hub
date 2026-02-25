@@ -402,7 +402,10 @@ function ContributorsSection({ contributors }: { contributors: ContributorStats[
 						>
 							{/* eslint-disable-next-line @next/next/no-img-element */}
 							<img
-								src={c.avatar_url || `https://github.com/${c.login}.png?size=32`}
+								src={
+									c.avatar_url ||
+									`https://github.com/${c.login}.png?size=32`
+								}
 								alt={c.login}
 								width={20}
 								height={20}
@@ -509,7 +512,13 @@ function LanguagesSection({ languages }: { languages: Record<string, number> }) 
 }
 
 // --- Participation Section ---
-function ParticipationSection({ participation, isOrg }: { participation: WeeklyParticipation | null; isOrg: boolean }) {
+function ParticipationSection({
+	participation,
+	isOrg,
+}: {
+	participation: WeeklyParticipation | null;
+	isOrg: boolean;
+}) {
 	const [hovered, setHovered] = useState<number | null>(null);
 
 	if (!participation) return <EmptyState message="No participation data available" />;
@@ -582,7 +591,8 @@ function ParticipationSection({ participation, isOrg }: { participation: WeeklyP
 			</div>
 			<div className="flex items-center gap-4 mt-3 text-[10px] font-mono text-muted-foreground/60">
 				<span className="flex items-center gap-1.5">
-					<span className="w-2 h-2 rounded-sm bg-success/70" /> {ownerLabel}
+					<span className="w-2 h-2 rounded-sm bg-success/70" />{" "}
+					{ownerLabel}
 				</span>
 				<span className="flex items-center gap-1.5">
 					<span className="w-2 h-2 rounded-sm bg-success/30" />{" "}

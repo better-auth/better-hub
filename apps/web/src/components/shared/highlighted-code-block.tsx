@@ -42,12 +42,16 @@ export const HighlightedCodeBlock = memo(function HighlightedCodeBlock({
 				let effectiveLang = lang;
 				if (!loaded.includes(lang)) {
 					try {
-						await highlighter.loadLanguage(lang as BundledLanguage);
+						await highlighter.loadLanguage(
+							lang as BundledLanguage,
+						);
 					} catch {
 						effectiveLang = "text";
 						if (!loaded.includes("text")) {
 							try {
-								await highlighter.loadLanguage("text" as BundledLanguage);
+								await highlighter.loadLanguage(
+									"text" as BundledLanguage,
+								);
 							} catch {}
 						}
 					}

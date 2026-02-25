@@ -100,7 +100,9 @@ export function PRMergePanel({
 	const [commitTitle, setCommitTitle] = useState("");
 	const [commitMessage, setCommitMessage] = useState("");
 	const [isPending, startTransition] = useTransition();
-	const [pendingAction, setPendingAction] = useState<"merge" | "close" | "reopen" | null>(null);
+	const [pendingAction, setPendingAction] = useState<"merge" | "close" | "reopen" | null>(
+		null,
+	);
 	const [result, setResult] = useState<{ type: "success" | "error"; message: string } | null>(
 		null,
 	);
@@ -337,7 +339,8 @@ export function PRMergePanel({
 										: undefined
 								}
 							>
-								{isPending && pendingAction === "merge" ? (
+								{isPending &&
+								pendingAction === "merge" ? (
 									<Loader2 className="w-3 h-3 animate-spin" />
 								) : mergeable === false ? (
 									<>
@@ -504,10 +507,13 @@ export function PRMergePanel({
 							<GitMerge className="w-3.5 h-3.5 text-amber-500 shrink-0" />
 							<div className="flex-1 min-w-0">
 								<p className="text-xs font-medium text-amber-600 dark:text-amber-400">
-									This branch has merge conflicts
+									This branch has merge
+									conflicts
 								</p>
 								<p className="text-[11px] text-muted-foreground mt-0.5">
-									Resolve conflicts before merging, or let Ghost fix them.
+									Resolve conflicts before
+									merging, or let Ghost fix
+									them.
 								</p>
 							</div>
 							<button
@@ -590,7 +596,11 @@ export function PRMergePanel({
 						</button>
 						<button
 							onClick={handleSquashConfirm}
-							disabled={isPending || !commitTitle.trim() || mergeable === false}
+							disabled={
+								isPending ||
+								!commitTitle.trim() ||
+								mergeable === false
+							}
 							className={cn(
 								"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
 								mergeable === false

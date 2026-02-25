@@ -145,11 +145,7 @@ function InfoPopover({ text, children }: { text: string; children: React.ReactNo
 	useEffect(() => () => clearTimeout(timeout.current), []);
 
 	return (
-		<div
-			className="relative inline-flex"
-			onMouseEnter={show}
-			onMouseLeave={hide}
-		>
+		<div className="relative inline-flex" onMouseEnter={show} onMouseLeave={hide}>
 			{children}
 			<div
 				className={cn(
@@ -229,11 +225,14 @@ export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 							>
 								<button
 									type="button"
-									onClick={() => toggle(group.id)}
+									onClick={() =>
+										toggle(group.id)
+									}
 									disabled={group.required}
 									className={cn(
 										"inline-flex items-center gap-1.5 pl-2.5 pr-1 py-1 transition-colors",
-										!isOn && "line-through decoration-foreground/20",
+										!isOn &&
+											"line-through decoration-foreground/20",
 										group.required
 											? "cursor-default"
 											: "cursor-pointer hover:text-foreground/70",

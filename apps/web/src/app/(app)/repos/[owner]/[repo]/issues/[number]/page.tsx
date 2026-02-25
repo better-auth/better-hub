@@ -243,23 +243,85 @@ export default async function IssueDetailPage({
 							milestone={
 								issue.milestone
 									? {
-											title: (issue.milestone as { title: string }).title,
-											description: (issue.milestone as { description?: string | null }).description ?? null,
-											open_issues: (issue.milestone as { open_issues?: number }).open_issues,
-											closed_issues: (issue.milestone as { closed_issues?: number }).closed_issues,
+											title: (
+												issue.milestone as {
+													title: string;
+												}
+											).title,
+											description:
+												(
+													issue.milestone as {
+														description?:
+															| string
+															| null;
+													}
+												)
+													.description ??
+												null,
+											open_issues:
+												(
+													issue.milestone as {
+														open_issues?: number;
+													}
+												)
+													.open_issues,
+											closed_issues:
+												(
+													issue.milestone as {
+														closed_issues?: number;
+													}
+												)
+													.closed_issues,
 										}
 									: null
 							}
 							state={issue.state}
-							stateReason={(issue as { state_reason?: string | null }).state_reason ?? null}
-							createdAt={issue.created_at}
-							updatedAt={(issue as { updated_at?: string }).updated_at}
-							closedAt={(issue as { closed_at?: string | null }).closed_at ?? null}
-							closedBy={
-								(issue as { closed_by?: { login: string; avatar_url: string } | null }).closed_by ?? null
+							stateReason={
+								(
+									issue as {
+										state_reason?:
+											| string
+											| null;
+									}
+								).state_reason ?? null
 							}
-							locked={(issue as { locked?: boolean }).locked ?? false}
-							activeLockReason={(issue as { active_lock_reason?: string | null }).active_lock_reason ?? null}
+							createdAt={issue.created_at}
+							updatedAt={
+								(issue as { updated_at?: string })
+									.updated_at
+							}
+							closedAt={
+								(
+									issue as {
+										closed_at?:
+											| string
+											| null;
+									}
+								).closed_at ?? null
+							}
+							closedBy={
+								(
+									issue as {
+										closed_by?: {
+											login: string;
+											avatar_url: string;
+										} | null;
+									}
+								).closed_by ?? null
+							}
+							locked={
+								(issue as { locked?: boolean })
+									.locked ?? false
+							}
+							activeLockReason={
+								(
+									issue as {
+										active_lock_reason?:
+											| string
+											| null;
+									}
+								).active_lock_reason ?? null
+							}
 							crossRefs={crossRefs}
 							owner={owner}
 							repo={repo}

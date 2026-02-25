@@ -183,7 +183,8 @@ export function PRsList({
 	type TabState = "open" | "merged" | "closed";
 	const searchParams = useSearchParams();
 	const tabParam = searchParams.get("tab");
-	const initialTab: TabState = tabParam === "merged" || tabParam === "closed" ? tabParam : "open";
+	const initialTab: TabState =
+		tabParam === "merged" || tabParam === "closed" ? tabParam : "open";
 	const [state, setState] = useState<TabState>(initialTab);
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SortType>("updated");
@@ -301,7 +302,7 @@ export function PRsList({
 		if (initialTab !== "open" && !closedQuery.data && !closedQuery.isFetching) {
 			closedQuery.refetch();
 		}
-	// eslint-disable-next-line react-hooks/exhaustive-deps
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const handleTabChange = useCallback(

@@ -1109,7 +1109,9 @@ Only GET requests are allowed. For mutations use the dedicated tools.`,
 				});
 				return {
 					success: true,
-					assignees: (data.assignees || []).map((a: { login: string }) => a.login),
+					assignees: (data.assignees || []).map(
+						(a: { login: string }) => a.login,
+					),
 				};
 			},
 		}),
@@ -1139,7 +1141,6 @@ Only GET requests are allowed. For mutations use the dedicated tools.`,
 				};
 			},
 		}),
-
 	};
 }
 
@@ -2362,72 +2363,106 @@ function getMergeConflictTools(octokit: Octokit, commitAuthor?: CommitAuthor) {
 
 					// 2. For modified files, read both versions
 					const conflictFiles = await Promise.all(
-						files.slice(0, 20).map(async (f: { filename: string; status: string }) => {
-							const result: { path: string; status: string; baseContent?: string | null; headContent?: string | null } = {
-								path: f.filename,
-								status: f.status,
-							};
+						files
+							.slice(0, 20)
+							.map(
+								async (f: {
+									filename: string;
+									status: string;
+								}) => {
+									const result: {
+										path: string;
+										status: string;
+										baseContent?:
+											| string
+											| null;
+										headContent?:
+											| string
+											| null;
+									} = {
+										path: f.filename,
+										status: f.status,
+									};
 
-							// Read base version
-							try {
-								const { data: baseData } =
-									await octokit.repos.getContent(
-										{
-											owner,
-											repo,
-											path: f.filename,
-											ref: baseBranch,
-										},
-									);
-								if (
-									!Array.isArray(baseData) &&
-									baseData.type === "file"
-								) {
-									result.baseContent =
-										Buffer.from(
-											(
-												baseData as {
-													content: string;
-												}
-											).content,
-											"base64",
-										).toString("utf-8");
-								}
-							} catch {
-								result.baseContent = null; // File doesn't exist on base
-							}
+									// Read base version
+									try {
+										const {
+											data: baseData,
+										} =
+											await octokit.repos.getContent(
+												{
+													owner,
+													repo,
+													path: f.filename,
+													ref: baseBranch,
+												},
+											);
+										if (
+											!Array.isArray(
+												baseData,
+											) &&
+											baseData.type ===
+												"file"
+										) {
+											result.baseContent =
+												Buffer.from(
+													(
+														baseData as {
+															content: string;
+														}
+													)
+														.content,
+													"base64",
+												).toString(
+													"utf-8",
+												);
+										}
+									} catch {
+										result.baseContent =
+											null; // File doesn't exist on base
+									}
 
-							// Read head version
-							try {
-								const { data: headData } =
-									await octokit.repos.getContent(
-										{
-											owner,
-											repo,
-											path: f.filename,
-											ref: headBranch,
-										},
-									);
-								if (
-									!Array.isArray(headData) &&
-									headData.type === "file"
-								) {
-									result.headContent =
-										Buffer.from(
-											(
-												headData as {
-													content: string;
-												}
-											).content,
-											"base64",
-										).toString("utf-8");
-								}
-							} catch {
-								result.headContent = null; // File doesn't exist on head
-							}
+									// Read head version
+									try {
+										const {
+											data: headData,
+										} =
+											await octokit.repos.getContent(
+												{
+													owner,
+													repo,
+													path: f.filename,
+													ref: headBranch,
+												},
+											);
+										if (
+											!Array.isArray(
+												headData,
+											) &&
+											headData.type ===
+												"file"
+										) {
+											result.headContent =
+												Buffer.from(
+													(
+														headData as {
+															content: string;
+														}
+													)
+														.content,
+													"base64",
+												).toString(
+													"utf-8",
+												);
+										}
+									} catch {
+										result.headContent =
+											null; // File doesn't exist on head
+									}
 
-							return result;
-						}),
+									return result;
+								},
+							),
 					);
 
 					return {

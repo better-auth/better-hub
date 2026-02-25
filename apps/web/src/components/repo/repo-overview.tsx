@@ -31,7 +31,10 @@ import { isRepoEvent, type MutationEvent } from "@/lib/mutation-events";
 import { useReadme } from "@/hooks/use-readme";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";
 import { ReadmeToolbar } from "@/components/repo/readme-toolbar";
-import { fetchReadmeMarkdown, revalidateReadme } from "@/app/(app)/repos/[owner]/[repo]/readme-actions";
+import {
+	fetchReadmeMarkdown,
+	revalidateReadme,
+} from "@/app/(app)/repos/[owner]/[repo]/readme-actions";
 import {
 	fetchOverviewPRs,
 	fetchOverviewIssues,
@@ -57,7 +60,12 @@ function Section({
 	className?: string;
 }) {
 	return (
-		<div className={cn("p-4 flex flex-col lg:min-h-0 border border-border/40 rounded-md", className)}>
+		<div
+			className={cn(
+				"p-4 flex flex-col lg:min-h-0 border border-border/40 rounded-md",
+				className,
+			)}
+		>
 			<div className="flex items-baseline gap-2 mb-4 shrink-0">
 				<h3 className="text-sm font-medium text-foreground">{title}</h3>
 				{subtitle && (
@@ -1017,7 +1025,12 @@ export function RepoOverview({
 	const hotItems = isMaintainer ? computeHotItems(openPRs, openIssues, base) : [];
 
 	// README data — always fetch for maintainers so the toggle is instant
-	const { data: readmeHtml, setReadmeHtml } = useReadme(owner, repo, branch, initialReadmeHtml ?? null);
+	const { data: readmeHtml, setReadmeHtml } = useReadme(
+		owner,
+		repo,
+		branch,
+		initialReadmeHtml ?? null,
+	);
 
 	const handleRevalidateReadme = useCallback(async () => {
 		const html = await revalidateReadme(owner, repo, branch);
@@ -1045,7 +1058,9 @@ export function RepoOverview({
 								repo={repo}
 								branch={branch}
 								fetchMarkdown={fetchReadmeMarkdown}
-								onRevalidate={handleRevalidateReadme}
+								onRevalidate={
+									handleRevalidateReadme
+								}
 							/>
 						</div>
 						<div className="px-6 py-5">
@@ -1116,7 +1131,8 @@ export function RepoOverview({
 							<SortableList
 								title="Open Issues"
 								totalCount={
-									openIssueCount ?? openIssues.length
+									openIssueCount ??
+									openIssues.length
 								}
 								items={openIssues}
 								type="issue"
@@ -1134,9 +1150,17 @@ export function RepoOverview({
 							>
 								<div className="h-3 w-24 rounded bg-muted/40 animate-pulse" />
 								{[0, 1, 2].map((j) => (
-									<div key={j} className="flex items-center gap-2">
+									<div
+										key={j}
+										className="flex items-center gap-2"
+									>
 										<div className="h-2.5 w-2.5 rounded-full bg-muted/30 animate-pulse" />
-										<div className="h-2.5 rounded bg-muted/30 animate-pulse" style={{ width: `${55 + j * 15}%` }} />
+										<div
+											className="h-2.5 rounded bg-muted/30 animate-pulse"
+											style={{
+												width: `${55 + j * 15}%`,
+											}}
+										/>
 									</div>
 								))}
 							</div>

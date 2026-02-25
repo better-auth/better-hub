@@ -54,10 +54,7 @@ export function IssueCommentsClient({
 		gcTime: 10 * 60 * 1000,
 	});
 
-	const entries: IssueTimelineEntry[] = [
-		descriptionEntry,
-		...toEntries(comments),
-	];
+	const entries: IssueTimelineEntry[] = [descriptionEntry, ...toEntries(comments)];
 
 	return (
 		<IssueConversation

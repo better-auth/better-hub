@@ -8,8 +8,6 @@ Re-imagining code collaboration — a better place to collaborate on code, for h
 
 At Better Auth, we spend a lot of our time on GitHub. So we decided to build the experience we actually wanted. Better Hub improves everything from the home page to repo overview, PR reviews, and AI integration — faster and more pleasant overall.
 
-It's not a GitHub replacement (maybe in the future 👀). It's a layer on top that makes the things you do every day feel better: reviewing PRs, triaging issues, navigating code, and collaborating with your team. With keyboard-first navigation, a built-in AI assistant (Ghost), and more agnetic features.
-
 ## Features
 
 - **Repo overview** — cleaner layout with README rendering, file tree, activity feed

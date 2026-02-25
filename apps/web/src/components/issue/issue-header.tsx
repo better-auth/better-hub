@@ -117,7 +117,9 @@ export function IssueHeader({
 			{(linkedPRs.length > 0 || linkedIssues.length > 0) &&
 				(() => {
 					const renderRef = (ref: CrossReference) => {
-						const isLocal = ref.repoOwner === owner && ref.repoName === repo;
+						const isLocal =
+							ref.repoOwner === owner &&
+							ref.repoName === repo;
 						const href = isLocal
 							? `/${owner}/${repo}/${ref.isPullRequest ? "pulls" : "issues"}/${ref.number}`
 							: `/${ref.repoOwner}/${ref.repoName}/${ref.isPullRequest ? "pulls" : "issues"}/${ref.number}`;
@@ -128,13 +130,22 @@ export function IssueHeader({
 								className={cn(
 									"inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-mono rounded-sm transition-colors hover:bg-muted/50",
 									ref.merged
-										? isLocal ? "text-purple-400" : "text-purple-400/70"
-										: ref.state === "open"
-											? isLocal ? "text-success" : "text-success/70"
-											: isLocal ? "text-alert-important" : "text-alert-important/70",
+										? isLocal
+											? "text-purple-400"
+											: "text-purple-400/70"
+										: ref.state ===
+											  "open"
+											? isLocal
+												? "text-success"
+												: "text-success/70"
+											: isLocal
+												? "text-alert-important"
+												: "text-alert-important/70",
 								)}
 							>
-								{!isLocal && <ExternalLink className="w-3 h-3 shrink-0" />}
+								{!isLocal && (
+									<ExternalLink className="w-3 h-3 shrink-0" />
+								)}
 								{ref.isPullRequest ? (
 									<GitPullRequest className="w-3 h-3" />
 								) : (
@@ -142,11 +153,19 @@ export function IssueHeader({
 								)}
 								{!isLocal && (
 									<span className="text-muted-foreground/50">
-										{ref.repoOwner}/{ref.repoName}
+										{ref.repoOwner}/
+										{ref.repoName}
 									</span>
 								)}
 								<span>#{ref.number}</span>
-								<span className={cn("max-w-[200px] truncate", isLocal ? "text-muted-foreground/70" : "text-muted-foreground/50")}>
+								<span
+									className={cn(
+										"max-w-[200px] truncate",
+										isLocal
+											? "text-muted-foreground/70"
+											: "text-muted-foreground/50",
+									)}
+								>
 									{ref.title}
 								</span>
 								<span
@@ -154,13 +173,17 @@ export function IssueHeader({
 										"text-[9px] px-1 py-px rounded-sm",
 										ref.merged
 											? "bg-purple-400/10 text-purple-400"
-											: ref.state === "open"
+											: ref.state ===
+												  "open"
 												? "bg-success/10 text-success"
 												: "bg-alert-important/10 text-alert-important",
-										!isLocal && "opacity-70",
+										!isLocal &&
+											"opacity-70",
 									)}
 								>
-									{ref.merged ? "merged" : ref.state}
+									{ref.merged
+										? "merged"
+										: ref.state}
 								</span>
 							</Link>
 						);
@@ -168,7 +191,10 @@ export function IssueHeader({
 					return (
 						<div className="flex flex-col gap-1.5 mt-2">
 							<div className="flex items-center gap-2 flex-wrap">
-								{[...linkedPRs, ...linkedIssues].map(renderRef)}
+								{[
+									...linkedPRs,
+									...linkedIssues,
+								].map(renderRef)}
 							</div>
 						</div>
 					);

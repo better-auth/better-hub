@@ -24,7 +24,12 @@ function isAbsoluteUrl(url: string): boolean {
  * Resolve relative URLs in the rendered HTML to point to raw.githubusercontent.com
  * for images and to our internal routes for links.
  */
-function buildImageProxyUrl(owner: string, repo: string, branch: string, imagePath: string): string {
+function buildImageProxyUrl(
+	owner: string,
+	repo: string,
+	branch: string,
+	imagePath: string,
+): string {
 	return `/api/github-image?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(imagePath)}&ref=${encodeURIComponent(branch)}`;
 }
 
@@ -61,7 +66,12 @@ function resolveUrls(html: string, ctx: RepoContext): string {
 			const mediaPath = src.startsWith("/")
 				? src.slice(1)
 				: `${dir ? dir + "/" : ""}${src.replace(/^\.\//, "")}`;
-			const resolved = buildImageProxyUrl(ctx.owner, ctx.repo, ctx.branch, mediaPath);
+			const resolved = buildImageProxyUrl(
+				ctx.owner,
+				ctx.repo,
+				ctx.branch,
+				mediaPath,
+			);
 			return `${before}${resolved}${after}`;
 		},
 	);
@@ -74,7 +84,12 @@ function resolveUrls(html: string, ctx: RepoContext): string {
 			const mediaPath = src.startsWith("/")
 				? src.slice(1)
 				: `${dir ? dir + "/" : ""}${src.replace(/^\.\//, "")}`;
-			const resolved = buildImageProxyUrl(ctx.owner, ctx.repo, ctx.branch, mediaPath);
+			const resolved = buildImageProxyUrl(
+				ctx.owner,
+				ctx.repo,
+				ctx.branch,
+				mediaPath,
+			);
 			return `${before}${resolved}${after}`;
 		},
 	);

@@ -105,9 +105,7 @@ function SectionCard({
 			className={cn(
 				"relative rounded-md p-4 overflow-hidden",
 				dashed ? "border border-dashed" : "border",
-				variant === "danger"
-					? "border-destructive/15"
-					: "border-border/30",
+				variant === "danger" ? "border-destructive/15" : "border-border/30",
 				className,
 			)}
 		>
@@ -196,8 +194,21 @@ function SaveFooter({
 			>
 				{pending ? (
 					<>
-						<svg className="w-3 h-3 animate-spin" viewBox="0 0 16 16" fill="none">
-							<circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="2" strokeDasharray="28" strokeDashoffset="8" strokeLinecap="round" />
+						<svg
+							className="w-3 h-3 animate-spin"
+							viewBox="0 0 16 16"
+							fill="none"
+						>
+							<circle
+								cx="8"
+								cy="8"
+								r="6"
+								stroke="currentColor"
+								strokeWidth="2"
+								strokeDasharray="28"
+								strokeDashoffset="8"
+								strokeLinecap="round"
+							/>
 						</svg>
 						Saving...
 					</>
@@ -205,9 +216,7 @@ function SaveFooter({
 					"Save changes"
 				)}
 			</button>
-			{error && (
-				<span className="text-[10px] text-destructive/80">{error}</span>
-			)}
+			{error && <span className="text-[10px] text-destructive/80">{error}</span>}
 			{success && (
 				<span className="inline-flex items-center gap-1 text-[10px] text-emerald-500/80">
 					<Check className="w-3 h-3" />
@@ -242,7 +251,9 @@ function ToggleRow({
 			)}
 		>
 			<div className="min-w-0">
-				<span className="text-xs font-medium text-foreground/85">{label}</span>
+				<span className="text-xs font-medium text-foreground/85">
+					{label}
+				</span>
 				{description && (
 					<p className="text-[10px] text-muted-foreground/40 mt-0.5 leading-relaxed">
 						{description}
@@ -256,12 +267,7 @@ function ToggleRow({
 
 /* ─── Main Component ─────────────────────────────────────────── */
 
-export function RepoSettings({
-	owner,
-	repo,
-	repoData,
-	branches,
-}: RepoSettingsProps) {
+export function RepoSettings({ owner, repo, repoData, branches }: RepoSettingsProps) {
 	const router = useRouter();
 
 	// General
@@ -365,7 +371,10 @@ export function RepoSettings({
 	}
 
 	function addTopic(value: string) {
-		const tag = value.toLowerCase().trim().replace(/[^a-z0-9-]/g, "-");
+		const tag = value
+			.toLowerCase()
+			.trim()
+			.replace(/[^a-z0-9-]/g, "-");
 		if (tag && !topics.includes(tag)) {
 			setTopics([...topics, tag]);
 		}
@@ -452,8 +461,7 @@ export function RepoSettings({
 		homepage !== (repoData.homepage ?? "") ||
 		(visibility === "private") !== repoData.private;
 
-	const topicsHasChanges =
-		JSON.stringify(topics) !== JSON.stringify(repoData.topics);
+	const topicsHasChanges = JSON.stringify(topics) !== JSON.stringify(repoData.topics);
 
 	const branchHasChanges = defaultBranch !== repoData.default_branch;
 
@@ -497,7 +505,9 @@ export function RepoSettings({
 						</label>
 						<textarea
 							value={description}
-							onChange={(e) => setDescription(e.target.value)}
+							onChange={(e) =>
+								setDescription(e.target.value)
+							}
 							disabled={isArchived}
 							rows={2}
 							className="w-full bg-transparent border border-border/40 rounded-md px-3 py-2 text-sm focus:border-foreground/20 focus:outline-none transition-colors resize-none disabled:opacity-50"
@@ -512,7 +522,9 @@ export function RepoSettings({
 							<input
 								type="url"
 								value={homepage}
-								onChange={(e) => setHomepage(e.target.value)}
+								onChange={(e) =>
+									setHomepage(e.target.value)
+								}
 								disabled={isArchived}
 								placeholder="https://example.com"
 								className="w-full bg-transparent border border-border/40 rounded-md pl-8 pr-3 py-2 text-sm focus:border-foreground/20 focus:outline-none transition-colors placeholder:text-muted-foreground/20 disabled:opacity-50"
@@ -538,7 +550,8 @@ export function RepoSettings({
 									visibility === "public"
 										? "border-foreground/15 bg-foreground/[0.06] text-foreground font-medium"
 										: "border-border/30 text-muted-foreground/50 hover:border-border/50 hover:text-muted-foreground/70",
-									isArchived && "opacity-50 cursor-not-allowed",
+									isArchived &&
+										"opacity-50 cursor-not-allowed",
 								)}
 							>
 								<Eye className="w-3 h-3" />
@@ -557,7 +570,8 @@ export function RepoSettings({
 									visibility === "private"
 										? "border-foreground/15 bg-foreground/[0.06] text-foreground font-medium"
 										: "border-border/30 text-muted-foreground/50 hover:border-border/50 hover:text-muted-foreground/70",
-									isArchived && "opacity-50 cursor-not-allowed",
+									isArchived &&
+										"opacity-50 cursor-not-allowed",
 								)}
 							>
 								<EyeOff className="w-3 h-3" />
@@ -568,7 +582,10 @@ export function RepoSettings({
 							<div className="mt-2.5 flex items-start gap-2 rounded-md bg-amber-500/[0.07] border border-dashed border-amber-500/20 px-3 py-2.5">
 								<AlertTriangle className="w-3.5 h-3.5 text-amber-500/70 shrink-0 mt-0.5" />
 								<p className="text-[11px] text-amber-600/80 dark:text-amber-400/70 leading-relaxed">
-									Changing visibility will affect who can access this repository. Click save again to confirm.
+									Changing visibility will
+									affect who can access this
+									repository. Click save again
+									to confirm.
 								</p>
 							</div>
 						)}
@@ -596,9 +613,12 @@ export function RepoSettings({
 							/>
 						</div>
 						<div className="min-w-0 flex-1">
-							<p className="text-xs font-medium text-foreground/85">Social Preview</p>
+							<p className="text-xs font-medium text-foreground/85">
+								Social Preview
+							</p>
 							<p className="text-[10px] text-muted-foreground/40 mt-0.5">
-								Customize the image shown when shared on social media
+								Customize the image shown when
+								shared on social media
 							</p>
 							<a
 								href={`https://github.com/${owner}/${repo}/settings`}
@@ -624,7 +644,8 @@ export function RepoSettings({
 				<div
 					className={cn(
 						"flex flex-wrap items-center gap-1.5 min-h-[38px] rounded-md border border-border/30 bg-muted/20 dark:bg-white/[0.015] px-2.5 py-2 transition-colors",
-						!isArchived && "focus-within:border-foreground/20 focus-within:bg-transparent",
+						!isArchived &&
+							"focus-within:border-foreground/20 focus-within:bg-transparent",
 					)}
 					onClick={() => topicInputRef.current?.focus()}
 				>
@@ -653,17 +674,36 @@ export function RepoSettings({
 							ref={topicInputRef}
 							type="text"
 							value={topicInput}
-							onChange={(e) => setTopicInput(e.target.value)}
+							onChange={(e) =>
+								setTopicInput(e.target.value)
+							}
 							onKeyDown={(e) => {
-								if (e.key === "Enter" || e.key === "," || e.key === " ") {
+								if (
+									e.key === "Enter" ||
+									e.key === "," ||
+									e.key === " "
+								) {
 									e.preventDefault();
 									addTopic(topicInput);
 								}
-								if (e.key === "Backspace" && !topicInput && topics.length > 0) {
-									removeTopic(topics[topics.length - 1]);
+								if (
+									e.key === "Backspace" &&
+									!topicInput &&
+									topics.length > 0
+								) {
+									removeTopic(
+										topics[
+											topics.length -
+												1
+										],
+									);
 								}
 							}}
-							placeholder={topics.length === 0 ? "Add topics..." : ""}
+							placeholder={
+								topics.length === 0
+									? "Add topics..."
+									: ""
+							}
 							className="bg-transparent border-none text-xs focus:outline-none placeholder:text-muted-foreground/25 min-w-[60px] flex-1"
 						/>
 					)}
@@ -688,15 +728,21 @@ export function RepoSettings({
 					<button
 						type="button"
 						disabled={isArchived}
-						onClick={() => setBranchDropdownOpen(!branchDropdownOpen)}
+						onClick={() =>
+							setBranchDropdownOpen(!branchDropdownOpen)
+						}
 						className={cn(
 							"w-full flex items-center gap-2 rounded-md border border-border/40 px-3 py-2 text-sm transition-all cursor-pointer",
-							branchDropdownOpen && "border-foreground/20 shadow-sm",
-							isArchived && "opacity-50 cursor-not-allowed",
+							branchDropdownOpen &&
+								"border-foreground/20 shadow-sm",
+							isArchived &&
+								"opacity-50 cursor-not-allowed",
 						)}
 					>
 						<GitBranch className="w-3.5 h-3.5 text-muted-foreground/30 shrink-0" />
-						<span className="font-mono text-xs flex-1 text-left text-foreground/80">{defaultBranch}</span>
+						<span className="font-mono text-xs flex-1 text-left text-foreground/80">
+							{defaultBranch}
+						</span>
 						<ChevronDown
 							className={cn(
 								"w-3.5 h-3.5 text-muted-foreground/30 transition-transform duration-200",
@@ -712,17 +758,32 @@ export function RepoSettings({
 									type="button"
 									onClick={() => {
 										setDefaultBranch(b);
-										setBranchDropdownOpen(false);
+										setBranchDropdownOpen(
+											false,
+										);
 									}}
 									className={cn(
 										"w-full flex items-center gap-2 text-left px-3 py-2 text-xs transition-colors cursor-pointer",
 										"hover:bg-muted/40 dark:hover:bg-white/[0.03]",
-										b === defaultBranch && "bg-foreground/[0.04]",
-										i !== branches.length - 1 && "border-b border-border/15",
+										b ===
+											defaultBranch &&
+											"bg-foreground/[0.04]",
+										i !==
+											branches.length -
+												1 &&
+											"border-b border-border/15",
 									)}
 								>
 									<GitBranch className="w-3 h-3 text-muted-foreground/25 shrink-0" />
-									<span className={cn("font-mono", b === defaultBranch ? "text-foreground/90 font-medium" : "text-foreground/60")}>
+									<span
+										className={cn(
+											"font-mono",
+											b ===
+												defaultBranch
+												? "text-foreground/90 font-medium"
+												: "text-foreground/60",
+										)}
+									>
 										{b}
 									</span>
 									{b === defaultBranch && (
@@ -754,10 +815,26 @@ export function RepoSettings({
 					<div className="rounded-md border border-border/25 overflow-hidden">
 						{(
 							[
-								["has_wiki", "Wikis", "Collaborative documentation pages"],
-								["has_issues", "Issues", "Track bugs and feature requests"],
-								["has_projects", "Projects", "Organize work with boards"],
-								["has_discussions", "Discussions", "Community conversations and Q&A"],
+								[
+									"has_wiki",
+									"Wikis",
+									"Collaborative documentation pages",
+								],
+								[
+									"has_issues",
+									"Issues",
+									"Track bugs and feature requests",
+								],
+								[
+									"has_projects",
+									"Projects",
+									"Organize work with boards",
+								],
+								[
+									"has_discussions",
+									"Discussions",
+									"Community conversations and Q&A",
+								],
 							] as const
 						).map(([key, label, desc], i, arr) => (
 							<ToggleRow
@@ -766,7 +843,12 @@ export function RepoSettings({
 								description={desc}
 								checked={features[key]}
 								disabled={isArchived}
-								onChange={(v) => setFeatures({ ...features, [key]: v })}
+								onChange={(v) =>
+									setFeatures({
+										...features,
+										[key]: v,
+									})
+								}
 								last={i === arr.length - 1}
 							/>
 						))}
@@ -790,10 +872,26 @@ export function RepoSettings({
 					<div className="rounded-md border border-border/25 overflow-hidden">
 						{(
 							[
-								["allow_merge_commit", "Merge commits", "Combine all commits into one"],
-								["allow_squash_merge", "Squash merging", "Squash into a single commit"],
-								["allow_rebase_merge", "Rebase merging", "Rebase onto the base branch"],
-								["delete_branch_on_merge", "Auto-delete branches", "Delete branches after merge"],
+								[
+									"allow_merge_commit",
+									"Merge commits",
+									"Combine all commits into one",
+								],
+								[
+									"allow_squash_merge",
+									"Squash merging",
+									"Squash into a single commit",
+								],
+								[
+									"allow_rebase_merge",
+									"Rebase merging",
+									"Rebase onto the base branch",
+								],
+								[
+									"delete_branch_on_merge",
+									"Auto-delete branches",
+									"Delete branches after merge",
+								],
 							] as const
 						).map(([key, label, desc], i, arr) => (
 							<ToggleRow
@@ -802,7 +900,12 @@ export function RepoSettings({
 								description={desc}
 								checked={mergeSettings[key]}
 								disabled={isArchived}
-								onChange={(v) => setMergeSettings({ ...mergeSettings, [key]: v })}
+								onChange={(v) =>
+									setMergeSettings({
+										...mergeSettings,
+										[key]: v,
+									})
+								}
 								last={i === arr.length - 1}
 							/>
 						))}
@@ -823,7 +926,8 @@ export function RepoSettings({
 				<div
 					className="absolute inset-0 pointer-events-none opacity-[0.035]"
 					style={{
-						backgroundImage: "radial-gradient(circle, currentColor 0.5px, transparent 0.5px)",
+						backgroundImage:
+							"radial-gradient(circle, currentColor 0.5px, transparent 0.5px)",
 						backgroundSize: "16px 16px",
 					}}
 				/>
@@ -839,7 +943,9 @@ export function RepoSettings({
 						<div className="flex items-start justify-between gap-4">
 							<div>
 								<p className="text-xs font-medium text-foreground/85">
-									{isArchived ? "Repository archived" : "Archive this repository"}
+									{isArchived
+										? "Repository archived"
+										: "Archive this repository"}
 								</p>
 								<p className="text-[10px] text-muted-foreground/40 mt-0.5 leading-relaxed">
 									{isArchived
@@ -851,15 +957,23 @@ export function RepoSettings({
 								<div className="flex items-center gap-2 shrink-0">
 									{confirmArchive && (
 										<button
-											onClick={() => setConfirmArchive(false)}
+											onClick={() =>
+												setConfirmArchive(
+													false,
+												)
+											}
 											className="text-[10px] text-muted-foreground/50 hover:text-foreground/70 transition-colors cursor-pointer"
 										>
 											Cancel
 										</button>
 									)}
 									<button
-										onClick={handleArchive}
-										disabled={dangerPending}
+										onClick={
+											handleArchive
+										}
+										disabled={
+											dangerPending
+										}
 										className={cn(
 											"inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
 											confirmArchive
@@ -868,7 +982,9 @@ export function RepoSettings({
 										)}
 									>
 										<Archive className="w-3 h-3" />
-										{confirmArchive ? "Confirm" : "Archive"}
+										{confirmArchive
+											? "Confirm"
+											: "Archive"}
 									</button>
 								</div>
 							)}
@@ -884,7 +1000,8 @@ export function RepoSettings({
 							Delete this repository
 						</p>
 						<p className="text-[10px] text-muted-foreground/40 mt-0.5 leading-relaxed">
-							Once deleted, there is no going back. This action is permanent.
+							Once deleted, there is no going back. This
+							action is permanent.
 						</p>
 						<div className="mt-3 space-y-2.5">
 							<label className="text-[10px] text-muted-foreground/50 block">
@@ -898,16 +1015,26 @@ export function RepoSettings({
 								<input
 									type="text"
 									value={deleteConfirmName}
-									onChange={(e) => setDeleteConfirmName(e.target.value)}
+									onChange={(e) =>
+										setDeleteConfirmName(
+											e.target
+												.value,
+										)
+									}
 									placeholder={`${owner}/${repo}`}
 									className="flex-1 min-w-0 bg-transparent border border-border/30 rounded-md px-3 py-1.5 text-xs font-mono focus:border-destructive/30 focus:outline-none transition-colors placeholder:text-muted-foreground/15"
 								/>
 								<button
 									onClick={handleDelete}
-									disabled={deleteConfirmName !== `${owner}/${repo}` || dangerPending}
+									disabled={
+										deleteConfirmName !==
+											`${owner}/${repo}` ||
+										dangerPending
+									}
 									className={cn(
 										"inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-all cursor-pointer whitespace-nowrap shrink-0",
-										deleteConfirmName === `${owner}/${repo}`
+										deleteConfirmName ===
+											`${owner}/${repo}`
 											? "border-destructive bg-destructive text-white hover:bg-destructive/90 active:scale-[0.98]"
 											: "bg-muted/30 border-border/30 text-muted-foreground/20 cursor-not-allowed",
 									)}
@@ -922,7 +1049,9 @@ export function RepoSettings({
 					{dangerError && (
 						<div className="mt-3 flex items-center gap-2 rounded-md bg-destructive/[0.07] border border-dashed border-destructive/20 px-3 py-2.5">
 							<AlertTriangle className="w-3.5 h-3.5 text-destructive/70 shrink-0" />
-							<span className="text-[11px] text-destructive/80">{dangerError}</span>
+							<span className="text-[11px] text-destructive/80">
+								{dangerError}
+							</span>
 						</div>
 					)}
 				</div>

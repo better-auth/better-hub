@@ -90,7 +90,8 @@ function StepLogViewer({ stepLog }: { stepLog: StepLog | undefined }) {
 	}
 
 	const isLong = stepLog.lines.length > COLLAPSED_LINE_LIMIT;
-	const visibleLines = !isLong || expanded ? stepLog.lines : stepLog.lines.slice(0, COLLAPSED_LINE_LIMIT);
+	const visibleLines =
+		!isLong || expanded ? stepLog.lines : stepLog.lines.slice(0, COLLAPSED_LINE_LIMIT);
 
 	return (
 		<div className="bg-black/20">
@@ -138,7 +139,8 @@ function StepLogViewer({ stepLog }: { stepLog: StepLog | undefined }) {
 					onClick={() => setExpanded(true)}
 					className="w-full px-4 py-2 text-[11px] font-mono text-muted-foreground/50 hover:text-foreground/70 bg-black/10 hover:bg-black/20 transition-colors cursor-pointer border-t border-border/20"
 				>
-					Show all {stepLog.lines.length} lines ({stepLog.lines.length - COLLAPSED_LINE_LIMIT} more)
+					Show all {stepLog.lines.length} lines (
+					{stepLog.lines.length - COLLAPSED_LINE_LIMIT} more)
 				</button>
 			)}
 		</div>

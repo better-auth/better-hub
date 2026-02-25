@@ -668,7 +668,8 @@ export function CommandMenu() {
 				? [
 						{
 							name: "Preview Public View",
-							description: "See what visitors see (README only)",
+							description:
+								"See what visitors see (README only)",
 							keywords: [
 								"public",
 								"visitor",
@@ -678,7 +679,9 @@ export function CommandMenu() {
 							],
 							action: () =>
 								window.dispatchEvent(
-									new CustomEvent("toggle-public-view"),
+									new CustomEvent(
+										"toggle-public-view",
+									),
 								),
 							icon: Eye,
 						},
@@ -2110,34 +2113,61 @@ export function CommandMenu() {
 								) : mode === "theme" ? (
 									/* Theme mode */
 									<>
-										{filteredDarkThemes.length > 0 && (
+										{filteredDarkThemes.length >
+											0 && (
 											<CommandGroup title="Dark Themes">
 												{filteredDarkThemes.map(
-													(theme) => {
-														const idx = getNextIndex();
-														const isActive = darkThemeId === theme.id;
+													(
+														theme,
+													) => {
+														const idx =
+															getNextIndex();
+														const isActive =
+															darkThemeId ===
+															theme.id;
 														return (
 															<CommandItemButton
-																key={theme.id}
-																index={idx}
-																selected={selectedIndex === idx}
-																onClick={() => setColorTheme(theme.id)}
+																key={
+																	theme.id
+																}
+																index={
+																	idx
+																}
+																selected={
+																	selectedIndex ===
+																	idx
+																}
+																onClick={() =>
+																	setColorTheme(
+																		theme.id,
+																	)
+																}
 															>
 																<span className="flex items-center gap-1 shrink-0">
 																	<span
 																		className="w-3 h-3 rounded-full border border-border/40"
-																		style={{ backgroundColor: theme.bgPreview }}
+																		style={{
+																			backgroundColor:
+																				theme.bgPreview,
+																		}}
 																	/>
 																	<span
 																		className="w-3 h-3 rounded-full border border-border/40"
-																		style={{ backgroundColor: theme.accentPreview }}
+																		style={{
+																			backgroundColor:
+																				theme.accentPreview,
+																		}}
 																	/>
 																</span>
 																<span className="text-[13px] text-foreground flex-1">
-																	{theme.name}
+																	{
+																		theme.name
+																	}
 																</span>
 																<span className="text-[11px] text-muted-foreground/40 hidden sm:block">
-																	{theme.description}
+																	{
+																		theme.description
+																	}
 																</span>
 																{isActive && (
 																	<Check className="size-3.5 text-success shrink-0" />
@@ -2148,34 +2178,61 @@ export function CommandMenu() {
 												)}
 											</CommandGroup>
 										)}
-										{filteredLightThemes.length > 0 && (
+										{filteredLightThemes.length >
+											0 && (
 											<CommandGroup title="Light Themes">
 												{filteredLightThemes.map(
-													(theme) => {
-														const idx = getNextIndex();
-														const isActive = lightThemeId === theme.id;
+													(
+														theme,
+													) => {
+														const idx =
+															getNextIndex();
+														const isActive =
+															lightThemeId ===
+															theme.id;
 														return (
 															<CommandItemButton
-																key={theme.id}
-																index={idx}
-																selected={selectedIndex === idx}
-																onClick={() => setColorTheme(theme.id)}
+																key={
+																	theme.id
+																}
+																index={
+																	idx
+																}
+																selected={
+																	selectedIndex ===
+																	idx
+																}
+																onClick={() =>
+																	setColorTheme(
+																		theme.id,
+																	)
+																}
 															>
 																<span className="flex items-center gap-1 shrink-0">
 																	<span
 																		className="w-3 h-3 rounded-full border border-border/40"
-																		style={{ backgroundColor: theme.bgPreview }}
+																		style={{
+																			backgroundColor:
+																				theme.bgPreview,
+																		}}
 																	/>
 																	<span
 																		className="w-3 h-3 rounded-full border border-border/40"
-																		style={{ backgroundColor: theme.accentPreview }}
+																		style={{
+																			backgroundColor:
+																				theme.accentPreview,
+																		}}
 																	/>
 																</span>
 																<span className="text-[13px] text-foreground flex-1">
-																	{theme.name}
+																	{
+																		theme.name
+																	}
 																</span>
 																<span className="text-[11px] text-muted-foreground/40 hidden sm:block">
-																	{theme.description}
+																	{
+																		theme.description
+																	}
 																</span>
 																{isActive && (
 																	<Check className="size-3.5 text-success shrink-0" />

@@ -1,10 +1,10 @@
 packages:
-  - apps/*
-  - packages/*
+        - apps/*
+        - packages/*
 onlyBuiltDependencies:
-  - '@prisma/client'
-  - '@prisma/engines'
-  - esbuild
-  - prisma
-  - protobufjs
-  - sharp
+        - "@prisma/client"
+        - "@prisma/engines"
+        - esbuild
+        - prisma
+        - protobufjs
+        - sharp

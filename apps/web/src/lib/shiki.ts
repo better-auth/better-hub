@@ -1,4 +1,9 @@
-import { createHighlighter, type Highlighter, type BundledLanguage, type BundledTheme } from "shiki";
+import {
+	createHighlighter,
+	type Highlighter,
+	type BundledLanguage,
+	type BundledTheme,
+} from "shiki";
 import { parseDiffPatch, getLanguageFromFilename } from "./github-utils";
 import { getBuiltInTheme } from "./code-themes/built-in";
 import { DEFAULT_CODE_THEME_LIGHT, DEFAULT_CODE_THEME_DARK } from "./code-themes/types";

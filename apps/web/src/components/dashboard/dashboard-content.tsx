@@ -84,7 +84,9 @@ export function DashboardContent({
 	const searchParams = useSearchParams();
 	const tabParam = searchParams.get("tab");
 	const validTabs: TabKey[] = ["reviews", "prs", "issues", "notifs"];
-	const initialTab: TabKey = validTabs.includes(tabParam as TabKey) ? (tabParam as TabKey) : "reviews";
+	const initialTab: TabKey = validTabs.includes(tabParam as TabKey)
+		? (tabParam as TabKey)
+		: "reviews";
 	const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
 
 	const handleStatClick = useCallback((tab: TabKey) => {
@@ -299,7 +301,15 @@ function WorkTabs({
 						<NotificationRow
 							key={notif.id}
 							notif={notif}
-							onDone={(id) => setDoneIds((prev) => new Set([...prev, id]))}
+							onDone={(id) =>
+								setDoneIds(
+									(prev) =>
+										new Set([
+											...prev,
+											id,
+										]),
+								)
+							}
 						/>
 					))
 				) : (
@@ -343,7 +353,13 @@ function getNotificationHref(notif: NotificationItem): string {
 	return `/${repo}`;
 }
 
-function NotificationRow({ notif, onDone }: { notif: NotificationItem; onDone: (id: string) => void }) {
+function NotificationRow({
+	notif,
+	onDone,
+}: {
+	notif: NotificationItem;
+	onDone: (id: string) => void;
+}) {
 	const href = getNotificationHref(notif);
 	const repo = notif.repository.full_name;
 	const [marking, startMarking] = useTransition();
@@ -652,12 +668,8 @@ function RepoRow({ repo }: { repo: RepoItem }) {
 				className="rounded-sm shrink-0 w-[18px] h-[18px] object-cover"
 			/>
 			<span className="text-xs font-mono truncate group-hover:text-foreground transition-colors min-w-0">
-				<span className="text-muted-foreground/40">
-					{repo.owner.login}
-				</span>
-				<span className="text-muted-foreground/25 mx-0.5">
-					/
-				</span>
+				<span className="text-muted-foreground/40">{repo.owner.login}</span>
+				<span className="text-muted-foreground/25 mx-0.5">/</span>
 				<span className="font-medium">{repo.name}</span>
 			</span>
 			{repo.private && (
@@ -669,8 +681,9 @@ function RepoRow({ repo }: { repo: RepoItem }) {
 						<span
 							className="w-1.5 h-1.5 rounded-full shrink-0"
 							style={{
-								backgroundColor:
-									getLanguageColor(repo.language),
+								backgroundColor: getLanguageColor(
+									repo.language,
+								),
 							}}
 						/>
 						{repo.language}
@@ -725,7 +738,9 @@ function TrendingRow({ repo }: { repo: TrendingRepoItem }) {
 									className="w-1.5 h-1.5 rounded-full shrink-0"
 									style={{
 										backgroundColor:
-											getLanguageColor(repo.language),
+											getLanguageColor(
+												repo.language,
+											),
 									}}
 								/>
 								{repo.language}

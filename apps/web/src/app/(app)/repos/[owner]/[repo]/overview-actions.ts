@@ -91,7 +91,9 @@ export async function fetchOverviewIssues(
 				? { total_count: issue.reactions.total_count ?? 0 }
 				: undefined,
 			labels: issue.labels?.map((l) =>
-				typeof l === "string" ? { name: l } : { name: l.name, color: l.color ?? undefined },
+				typeof l === "string"
+					? { name: l }
+					: { name: l.name, color: l.color ?? undefined },
 			),
 		}));
 	await setCachedOverviewIssues(owner, repo, result);

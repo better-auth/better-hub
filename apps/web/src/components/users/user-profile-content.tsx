@@ -185,8 +185,12 @@ export function UserProfileContent({
 	const totalForks = useMemo(() => repos.reduce((sum, r) => sum + r.forks_count, 0), [repos]);
 
 	const profileScore = useMemo(() => {
-		const personalTopStars = repos.length > 0 ? Math.max(...repos.map((r) => r.stargazers_count)) : 0;
-		const orgTopStars = orgTopRepos.length > 0 ? Math.max(...orgTopRepos.map((r) => r.stargazers_count)) : 0;
+		const personalTopStars =
+			repos.length > 0 ? Math.max(...repos.map((r) => r.stargazers_count)) : 0;
+		const orgTopStars =
+			orgTopRepos.length > 0
+				? Math.max(...orgTopRepos.map((r) => r.stargazers_count))
+				: 0;
 		const topRepoStars = Math.max(personalTopStars, orgTopStars);
 
 		// Include org repo stars/forks in totals

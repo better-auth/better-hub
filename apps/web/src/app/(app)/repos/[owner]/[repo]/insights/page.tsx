@@ -78,8 +78,10 @@ export default async function InsightsPage({
 
 	if (!repoData) return null;
 
-	const isOrg = (repoData as Record<string, unknown>).owner &&
-		((repoData as Record<string, unknown>).owner as Record<string, unknown>)?.type === "Organization";
+	const isOrg =
+		(repoData as Record<string, unknown>).owner &&
+		((repoData as Record<string, unknown>).owner as Record<string, unknown>)?.type ===
+			"Organization";
 
 	// For org repos with zero owner participation, compute from contributor stats + org members
 	let enrichedParticipation = participation;
@@ -88,7 +90,9 @@ export default async function InsightsPage({
 		if (ownerTotal === 0 && contributors.length > 0) {
 			const members = await getOrgMembers(owner);
 			const memberLogins = new Set(
-				(members ?? []).map((m: { login: string }) => m.login.toLowerCase()),
+				(members ?? []).map((m: { login: string }) =>
+					m.login.toLowerCase(),
+				),
 			);
 			if (memberLogins.size > 0) {
 				enrichedParticipation = computeOrgParticipation(

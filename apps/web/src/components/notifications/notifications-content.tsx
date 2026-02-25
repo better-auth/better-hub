@@ -121,9 +121,19 @@ export function NotificationsContent({ notifications }: { notifications: Notific
 						disabled={markingAll}
 						onClick={() => {
 							startMarkAll(async () => {
-								const res = await markAllNotificationsRead();
+								const res =
+									await markAllNotificationsRead();
 								if (res.success) {
-									setDoneIds(new Set(notifications.map((n) => n.id)));
+									setDoneIds(
+										new Set(
+											notifications.map(
+												(
+													n,
+												) =>
+													n.id,
+											),
+										),
+									);
 								}
 							});
 						}}
@@ -184,20 +194,29 @@ export function NotificationsContent({ notifications }: { notifications: Notific
 						</div>
 						<div className="border border-border divide-y divide-border">
 							{notifs.map((notif) => {
-								const href = getNotificationHref(notif);
-								const isMarking = markingId === notif.id;
+								const href =
+									getNotificationHref(notif);
+								const isMarking =
+									markingId === notif.id;
 								return (
 									<div
 										key={notif.id}
 										className="group flex items-start gap-3 px-4 py-3 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors"
 									>
 										<div className="mt-0.5 text-muted-foreground/70">
-											{typeIcons[notif.subject.type] || (
+											{typeIcons[
+												notif
+													.subject
+													.type
+											] || (
 												<Bell className="w-3.5 h-3.5" />
 											)}
 										</div>
 										<Link
-											href={href || "#"}
+											href={
+												href ||
+												"#"
+											}
 											className="flex-1 min-w-0"
 										>
 											<div className="flex items-center gap-2">
@@ -205,7 +224,11 @@ export function NotificationsContent({ notifications }: { notifications: Notific
 													<span className="w-1.5 h-1.5 rounded-full bg-foreground shrink-0" />
 												)}
 												<span className="text-sm text-foreground/90 truncate">
-													{notif.subject.title}
+													{
+														notif
+															.subject
+															.title
+													}
 												</span>
 											</div>
 											<div className="flex items-center gap-2 mt-1">
@@ -223,17 +246,34 @@ export function NotificationsContent({ notifications }: { notifications: Notific
 																: "border-border text-muted-foreground",
 													)}
 												>
-													{reasonLabels[notif.reason] || notif.reason}
+													{reasonLabels[
+														notif
+															.reason
+													] ||
+														notif.reason}
 												</span>
 												<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
 													<Clock className="w-3 h-3" />
-													<TimeAgo date={notif.updated_at} />
+													<TimeAgo
+														date={
+															notif.updated_at
+														}
+													/>
 												</span>
 											</div>
 										</Link>
 										<button
-											disabled={isMarking}
-											onClick={(e) => handleMarkDone(e, notif.id)}
+											disabled={
+												isMarking
+											}
+											onClick={(
+												e,
+											) =>
+												handleMarkDone(
+													e,
+													notif.id,
+												)
+											}
 											className="shrink-0 mt-0.5 p-1 text-muted-foreground/50 opacity-0 group-hover:opacity-100 hover:text-foreground/70 transition-all cursor-pointer disabled:opacity-100"
 											title="Mark as done"
 										>

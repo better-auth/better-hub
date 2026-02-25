@@ -546,7 +546,10 @@ tr.diff-search-match-active > td {
 	color: var(--muted-foreground);
 	cursor: pointer;
 	opacity: 0;
-	transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+	transition:
+		opacity 0.15s,
+		color 0.15s,
+		border-color 0.15s;
 }
 .ghmd .ghmd-code-copy svg {
 	width: 14px;

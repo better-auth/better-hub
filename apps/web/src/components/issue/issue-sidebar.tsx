@@ -26,7 +26,12 @@ interface Label {
 
 interface IssueSidebarProps {
 	assignees?: Assignee[];
-	milestone?: { title: string; description?: string | null; open_issues?: number; closed_issues?: number } | null;
+	milestone?: {
+		title: string;
+		description?: string | null;
+		open_issues?: number;
+		closed_issues?: number;
+	} | null;
 	labels?: Label[];
 	state?: string;
 	stateReason?: string | null;
@@ -101,9 +106,7 @@ export function IssueSidebar({
 			{/* Assignees */}
 			{assignees && assignees.length > 0 && (
 				<div>
-					<SectionHeading>
-						Assignees
-					</SectionHeading>
+					<SectionHeading>Assignees</SectionHeading>
 					<div className="space-y-1.5">
 						{assignees.map((a) => (
 							<Link
@@ -138,7 +141,9 @@ export function IssueSidebar({
 					</SectionHeading>
 					<div className="space-y-1.5">
 						{crossRefs.map((ref) => {
-							const isLocal = ref.repoOwner === owner && ref.repoName === repo;
+							const isLocal =
+								ref.repoOwner === owner &&
+								ref.repoName === repo;
 							const href = isLocal
 								? `/${owner}/${repo}/${ref.isPullRequest ? "pulls" : "issues"}/${ref.number}`
 								: `/${ref.repoOwner}/${ref.repoName}/${ref.isPullRequest ? "pulls" : "issues"}/${ref.number}`;
@@ -150,7 +155,8 @@ export function IssueSidebar({
 										"flex items-center gap-1.5 text-xs transition-colors hover:bg-muted/40 rounded-sm px-1 py-0.5 -mx-1",
 										ref.merged
 											? "text-purple-400"
-											: ref.state === "open"
+											: ref.state ===
+												  "open"
 												? "text-success"
 												: "text-alert-important",
 									)}
@@ -162,10 +168,18 @@ export function IssueSidebar({
 									)}
 									{!isLocal && (
 										<span className="text-muted-foreground/40 text-[10px] truncate max-w-[80px]">
-											{ref.repoOwner}/{ref.repoName}
+											{
+												ref.repoOwner
+											}
+											/
+											{
+												ref.repoName
+											}
 										</span>
 									)}
-									<span className="font-mono">#{ref.number}</span>
+									<span className="font-mono">
+										#{ref.number}
+									</span>
 									<span className="text-muted-foreground/70 truncate text-[11px]">
 										{ref.title}
 									</span>
@@ -197,23 +211,40 @@ export function IssueSidebar({
 								{milestone.description}
 							</p>
 						)}
-						{(milestone.open_issues !== undefined || milestone.closed_issues !== undefined) && (
+						{(milestone.open_issues !== undefined ||
+							milestone.closed_issues !== undefined) && (
 							<div className="flex items-center gap-2 mt-1">
 								{(() => {
-									const open = milestone.open_issues ?? 0;
-									const closed = milestone.closed_issues ?? 0;
+									const open =
+										milestone.open_issues ??
+										0;
+									const closed =
+										milestone.closed_issues ??
+										0;
 									const total = open + closed;
-									const pct = total > 0 ? Math.round((closed / total) * 100) : 0;
+									const pct =
+										total > 0
+											? Math.round(
+													(closed /
+														total) *
+														100,
+												)
+											: 0;
 									return (
 										<>
 											<div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
 												<div
 													className="h-full bg-success rounded-full transition-all"
-													style={{ width: `${pct}%` }}
+													style={{
+														width: `${pct}%`,
+													}}
 												/>
 											</div>
 											<span className="text-[9px] font-mono text-muted-foreground/50 tabular-nums shrink-0">
-												{pct}%
+												{
+													pct
+												}
+												%
 											</span>
 										</>
 									);
@@ -235,14 +266,18 @@ export function IssueSidebar({
 					</SectionHeading>
 					<div className="space-y-1.5">
 						<div className="flex items-center justify-between text-xs">
-							<span className="text-muted-foreground/50">Created</span>
+							<span className="text-muted-foreground/50">
+								Created
+							</span>
 							<span className="font-mono text-foreground/60 text-[11px]">
 								<TimeAgo date={createdAt} />
 							</span>
 						</div>
 						{updatedAt && updatedAt !== createdAt && (
 							<div className="flex items-center justify-between text-xs">
-								<span className="text-muted-foreground/50">Updated</span>
+								<span className="text-muted-foreground/50">
+									Updated
+								</span>
 								<span className="font-mono text-foreground/60 text-[11px]">
 									<TimeAgo date={updatedAt} />
 								</span>
@@ -250,7 +285,9 @@ export function IssueSidebar({
 						)}
 						{closedAt && (
 							<div className="flex items-center justify-between text-xs">
-								<span className="text-muted-foreground/50">Closed</span>
+								<span className="text-muted-foreground/50">
+									Closed
+								</span>
 								<span className="font-mono text-foreground/60 text-[11px]">
 									<TimeAgo date={closedAt} />
 								</span>
@@ -258,19 +295,25 @@ export function IssueSidebar({
 						)}
 						{closedBy && (
 							<div className="flex items-center justify-between text-xs">
-								<span className="text-muted-foreground/50">Closed by</span>
+								<span className="text-muted-foreground/50">
+									Closed by
+								</span>
 								<Link
 									href={`/users/${closedBy.login}`}
 									className="flex items-center gap-1.5 text-foreground/60 hover:text-foreground transition-colors"
 								>
 									<Image
-										src={closedBy.avatar_url}
+										src={
+											closedBy.avatar_url
+										}
 										alt={closedBy.login}
 										width={14}
 										height={14}
 										className="rounded-full"
 									/>
-									<span className="font-mono text-[11px]">{closedBy.login}</span>
+									<span className="font-mono text-[11px]">
+										{closedBy.login}
+									</span>
 								</Link>
 							</div>
 						)}
@@ -295,7 +338,9 @@ export function IssueSidebar({
 						) : (
 							<CircleDot className="w-3 h-3" />
 						)}
-						{stateReason === "completed" ? "Completed" : "Not planned"}
+						{stateReason === "completed"
+							? "Completed"
+							: "Not planned"}
 					</span>
 				</div>
 			)}
@@ -311,7 +356,11 @@ export function IssueSidebar({
 					</SectionHeading>
 					<span className="text-[11px] text-muted-foreground/60 font-mono">
 						{activeLockReason
-							? activeLockReason.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+							? activeLockReason
+									.replace(/_/g, " ")
+									.replace(/\b\w/g, (c) =>
+										c.toUpperCase(),
+									)
 							: "Conversation locked"}
 					</span>
 				</div>

@@ -5,20 +5,11 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Package, Star } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
-import {
-	fetchUsedBy,
-	type UsedByData,
-} from "@/app/(app)/repos/[owner]/[repo]/readme-actions";
+import { fetchUsedBy, type UsedByData } from "@/app/(app)/repos/[owner]/[repo]/readme-actions";
 
 const INITIAL_COUNT = 5;
 
-export function SidebarUsedBy({
-	owner,
-	repo,
-}: {
-	owner: string;
-	repo: string;
-}) {
+export function SidebarUsedBy({ owner, repo }: { owner: string; repo: string }) {
 	const [showAll, setShowAll] = useState(false);
 	const { data, isLoading } = useQuery<UsedByData | null>({
 		queryKey: ["repo-used-by", owner, repo],
@@ -99,7 +90,9 @@ export function SidebarUsedBy({
 					onClick={() => setShowAll(!showAll)}
 					className="text-[10px] font-mono text-muted-foreground/50 hover:text-foreground/70 transition-colors cursor-pointer text-left"
 				>
-					{showAll ? "Show less" : `View all ${dependents.length} repos`}
+					{showAll
+						? "Show less"
+						: `View all ${dependents.length} repos`}
 				</button>
 			)}
 		</div>

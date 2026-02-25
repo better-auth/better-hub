@@ -946,12 +946,14 @@ async function fetchUserPublicReposFromGitHub(octokit: Octokit, username: string
 	const half = Math.ceil(perPage / 2);
 	const [byUpdated, topStarred] = await Promise.all([
 		octokit.repos.listForUser({ username, sort: "updated", per_page: half }),
-		octokit.search.repos({
-			q: `user:${username} fork:true`,
-			sort: "stars",
-			order: "desc",
-			per_page: half,
-		}).catch(() => null),
+		octokit.search
+			.repos({
+				q: `user:${username} fork:true`,
+				sort: "stars",
+				order: "desc",
+				per_page: half,
+			})
+			.catch(() => null),
 	]);
 	if (!topStarred) return byUpdated.data;
 	// Merge and deduplicate — recently-updated first, then top-starred fills gaps
@@ -978,10 +980,21 @@ async function fetchUserPublicOrgsFromGitHub(octokit: Octokit, username: string)
 async function fetchUserOrgTopReposFromGitHub(
 	octokit: Octokit,
 	orgLogins: string[],
-): Promise<{ name: string; full_name: string; stargazers_count: number; forks_count: number; language: string | null }[]> {
+): Promise<
+	{
+		name: string;
+		full_name: string;
+		stargazers_count: number;
+		forks_count: number;
+		language: string | null;
+	}[]
+> {
 	if (orgLogins.length === 0) return [];
 	// Search top-starred repos across all the user's orgs in one call
-	const orgQuery = orgLogins.slice(0, 10).map((o) => `org:${o}`).join(" ");
+	const orgQuery = orgLogins
+		.slice(0, 10)
+		.map((o) => `org:${o}`)
+		.join(" ");
 	try {
 		const { data } = await octokit.search.repos({
 			q: `${orgQuery} fork:true`,
@@ -2785,28 +2798,26 @@ function transformGraphQLPRBundle(node: GQLPRNode): PRBundleData {
 		};
 	});
 
-	const reviewThreads: ReviewThread[] = (node.reviewThreads?.nodes ?? []).map(
-		(thread) => ({
-			id: thread.id,
-			isResolved: thread.isResolved ?? false,
-			isOutdated: thread.isOutdated ?? false,
-			path: thread.path ?? "",
-			line: thread.line ?? null,
-			startLine: thread.startLine ?? null,
-			diffSide: thread.diffSide ?? "RIGHT",
-			resolvedBy: thread.resolvedBy ? { login: thread.resolvedBy.login } : null,
-			comments: (thread.comments?.nodes ?? []).map((c) => ({
-				id: c.id,
-				databaseId: c.databaseId,
-				body: c.body ?? "",
-				createdAt: c.createdAt ?? "",
-				author: c.author
-					? { login: c.author.login, avatarUrl: c.author.avatarUrl }
-					: null,
-				reviewState: c.pullRequestReview?.state ?? null,
-			})),
-		}),
-	);
+	const reviewThreads: ReviewThread[] = (node.reviewThreads?.nodes ?? []).map((thread) => ({
+		id: thread.id,
+		isResolved: thread.isResolved ?? false,
+		isOutdated: thread.isOutdated ?? false,
+		path: thread.path ?? "",
+		line: thread.line ?? null,
+		startLine: thread.startLine ?? null,
+		diffSide: thread.diffSide ?? "RIGHT",
+		resolvedBy: thread.resolvedBy ? { login: thread.resolvedBy.login } : null,
+		comments: (thread.comments?.nodes ?? []).map((c) => ({
+			id: c.id,
+			databaseId: c.databaseId,
+			body: c.body ?? "",
+			createdAt: c.createdAt ?? "",
+			author: c.author
+				? { login: c.author.login, avatarUrl: c.author.avatarUrl }
+				: null,
+			reviewState: c.pullRequestReview?.state ?? null,
+		})),
+	}));
 
 	const commits = (node.commits?.nodes ?? []).map((n) => {
 		const c = n.commit;
@@ -2837,7 +2848,9 @@ function transformGraphQLPRBundle(node: GQLPRNode): PRBundleData {
 		.map((n) => ({
 			id: n.id,
 			event: typenameToEvent[n.__typename],
-			actor: n.actor ? { login: n.actor.login, avatar_url: n.actor.avatarUrl } : null,
+			actor: n.actor
+				? { login: n.actor.login, avatar_url: n.actor.avatarUrl }
+				: null,
 			created_at: n.createdAt,
 			...(n.mergeRefName ? { merge_ref_name: n.mergeRefName } : {}),
 		}));
@@ -4912,7 +4925,9 @@ async function fetchRepoPageDataGraphQL(
 	return {
 		repoData: {
 			description: r.description ?? undefined,
-			topics: (r.repositoryTopics?.nodes ?? []).map((n: { topic: { name: string } }) => n.topic.name),
+			topics: (r.repositoryTopics?.nodes ?? []).map(
+				(n: { topic: { name: string } }) => n.topic.name,
+			),
 			stargazers_count: r.stargazerCount ?? 0,
 			forks_count: r.forkCount ?? 0,
 			subscribers_count: r.watchers?.totalCount ?? 0,
@@ -5229,7 +5244,14 @@ interface GQLDossierUser {
 	following: { totalCount: number };
 	createdAt: string;
 	__typename: string;
-	topRepositories?: { nodes: { name: string; nameWithOwner: string; stargazerCount: number; primaryLanguage?: { name: string } | null }[] };
+	topRepositories?: {
+		nodes: {
+			name: string;
+			nameWithOwner: string;
+			stargazerCount: number;
+			primaryLanguage?: { name: string } | null;
+		}[];
+	};
 	organizations?: { nodes: { login: string; avatarUrl: string }[] };
 }
 

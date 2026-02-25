@@ -50,7 +50,10 @@ export const CustomMention = Mention.extend({
 		return {
 			...this.parent?.(),
 			markdown: {
-				serialize(state: { write: (text: string) => void }, node: { attrs: Record<string, string> }) {
+				serialize(
+					state: { write: (text: string) => void },
+					node: { attrs: Record<string, string> },
+				) {
 					state.write(`@${node.attrs.id || node.attrs.label || ""}`);
 				},
 				parse: {},

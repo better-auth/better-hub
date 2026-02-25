@@ -42,11 +42,7 @@ export async function updateRepoSettings(
 	}
 }
 
-export async function updateRepoTopics(
-	owner: string,
-	repo: string,
-	topics: string[],
-) {
+export async function updateRepoTopics(owner: string, repo: string, topics: string[]) {
 	const octokit = await getOctokit();
 	if (!octokit) return { success: false, error: "Not authenticated" };
 	try {
@@ -60,11 +56,7 @@ export async function updateRepoTopics(
 	}
 }
 
-export async function updateDefaultBranch(
-	owner: string,
-	repo: string,
-	branch: string,
-) {
+export async function updateDefaultBranch(owner: string, repo: string, branch: string) {
 	const octokit = await getOctokit();
 	if (!octokit) return { success: false, error: "Not authenticated" };
 	try {

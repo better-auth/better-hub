@@ -38,7 +38,12 @@ function scoreDescription(total: number): string {
 }
 
 const CATEGORIES = [
-	{ key: "communityPresence" as const, label: "Community", max: 25, color: "bg-emerald-400/70" },
+	{
+		key: "communityPresence" as const,
+		label: "Community",
+		max: 25,
+		color: "bg-emerald-400/70",
+	},
 	{ key: "ossImpact" as const, label: "OSS Impact", max: 25, color: "bg-blue-400/70" },
 	{ key: "activity" as const, label: "Activity", max: 30, color: "bg-green-400/70" },
 	{ key: "ecosystem" as const, label: "Ecosystem", max: 20, color: "bg-amber-400/70" },
@@ -162,7 +167,10 @@ export function UserProfileScoreRing({ score }: { score: ProfileScoreResult }) {
 							{CATEGORIES.map((cat) => (
 								<div
 									key={cat.key}
-									className={cn("rounded-full", cat.color)}
+									className={cn(
+										"rounded-full",
+										cat.color,
+									)}
 									style={{
 										width: `${(score[cat.key] / 100) * 100}%`,
 									}}
@@ -181,7 +189,8 @@ export function UserProfileScoreRing({ score }: { score: ProfileScoreResult }) {
 										{cat.label}
 									</span>
 									<span className="text-muted-foreground">
-										{score[cat.key]}/{cat.max}
+										{score[cat.key]}/
+										{cat.max}
 									</span>
 								</div>
 							))}

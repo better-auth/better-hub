@@ -1,13 +1,6 @@
 "use client";
 
-import {
-	createContext,
-	useContext,
-	useState,
-	useCallback,
-	useEffect,
-	useRef,
-} from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { ClientMarkdown } from "@/components/shared/client-markdown";
@@ -30,8 +23,7 @@ interface PROptimisticCommentsContextValue {
 	removeComment: (id: number) => void;
 }
 
-const PROptimisticCommentsContext =
-	createContext<PROptimisticCommentsContextValue | null>(null);
+const PROptimisticCommentsContext = createContext<PROptimisticCommentsContextValue | null>(null);
 
 export function usePROptimisticComments() {
 	const ctx = useContext(PROptimisticCommentsContext);

@@ -44,7 +44,12 @@ function scoreCommunityPresence(input: ProfileScoreInput): number {
 	s += logScale(input.followers, 200, 12);
 
 	// Follower/following ratio (0-4): influence signal
-	const ratio = input.following > 0 ? input.followers / input.following : input.followers > 0 ? 10 : 0;
+	const ratio =
+		input.following > 0
+			? input.followers / input.following
+			: input.followers > 0
+				? 10
+				: 0;
 	s += ratio < 0.5 ? 0 : ratio < 1 ? 1 : ratio < 3 ? 2 : ratio < 10 ? 3 : 4;
 
 	// Has bio (0-4)

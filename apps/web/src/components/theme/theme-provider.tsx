@@ -63,7 +63,9 @@ function getInitialTheme(): string {
 export function ColorThemeProvider({ children }: { children: React.ReactNode }) {
 	const { setTheme } = useTheme();
 	const [colorTheme, setColorThemeState] = useState(getInitialTheme);
-	const [darkThemeId, setDarkThemeId] = useState(() => getStored(DARK_THEME_KEY, DARK_THEME_ID));
+	const [darkThemeId, setDarkThemeId] = useState(() =>
+		getStored(DARK_THEME_KEY, DARK_THEME_ID),
+	);
 	const [lightThemeId, setLightThemeId] = useState(() =>
 		getStored(LIGHT_THEME_KEY, LIGHT_THEME_ID),
 	);
@@ -111,7 +113,8 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 				// Sync active theme from DB
 				if (settings.colorTheme && getTheme(settings.colorTheme)) {
 					const dbTheme = settings.colorTheme;
-					const local = localStorage.getItem(STORAGE_KEY) ?? DARK_THEME_ID;
+					const local =
+						localStorage.getItem(STORAGE_KEY) ?? DARK_THEME_ID;
 					if (dbTheme !== local) {
 						localStorage.setItem(STORAGE_KEY, dbTheme);
 						setColorThemeState(dbTheme);
@@ -126,8 +129,14 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 		(fn: () => void, coords?: { x: number; y: number }) => {
 			if (typeof document !== "undefined" && "startViewTransition" in document) {
 				if (coords) {
-					document.documentElement.style.setProperty("--theme-tx", `${coords.x}px`);
-					document.documentElement.style.setProperty("--theme-ty", `${coords.y}px`);
+					document.documentElement.style.setProperty(
+						"--theme-tx",
+						`${coords.x}px`,
+					);
+					document.documentElement.style.setProperty(
+						"--theme-ty",
+						`${coords.y}px`,
+					);
 				}
 				(
 					document as unknown as {
@@ -166,7 +175,9 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					colorTheme: id,
-					...(theme.mode === "dark" ? { darkTheme: id } : { lightTheme: id }),
+					...(theme.mode === "dark"
+						? { darkTheme: id }
+						: { lightTheme: id }),
 				}),
 			}).catch(() => {});
 		},
@@ -199,7 +210,9 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					colorTheme: nextId,
-					...(theme.mode === "dark" ? { darkTheme: nextId } : { lightTheme: nextId }),
+					...(theme.mode === "dark"
+						? { darkTheme: nextId }
+						: { lightTheme: nextId }),
 				}),
 			}).catch(() => {});
 		},

@@ -104,7 +104,9 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 				getContributionData(userData.login),
 			]);
 			if (orgsData.length > 0) {
-				orgTopRepos = await getUserOrgTopRepos(orgsData.map((o) => o.login));
+				orgTopRepos = await getUserOrgTopRepos(
+					orgsData.map((o) => o.login),
+				);
 			}
 		} catch {
 			// Show profile with whatever we have
