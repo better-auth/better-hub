@@ -9,6 +9,10 @@ import {
 	getPinnedItems,
 	type PinnedItem,
 } from "@/lib/pinned-items-store";
+import {
+	getActiveSystemPins,
+	type SystemPin,
+} from "@/lib/system-pins-store";
 import { revalidatePath } from "next/cache";
 import { invalidateRepoCache } from "@/lib/repo-data-cache-vc";
 
@@ -48,4 +52,18 @@ export async function getPinnedUrlsForRepo(owner: string, repo: string): Promise
 	const session = await auth.api.getSession({ headers: await headers() });
 	if (!session?.user?.id) return [];
 	return getPinnedItemUrls(session.user.id, owner, repo);
+}
+
+// ── System Pins (repo-global, server-managed) ────────────────
+
+export async function fetchSystemPinsForRepo(
+	owner: string,
+	repo: string,
+	kind?: "pr_conflict",
+): Promise<SystemPin[]> {
+	// System pins are repo-global, no user scoping needed
+	// But still require auth to prevent unauthenticated reads
+	const session = await auth.api.getSession({ headers: await headers() });
+	if (!session?.user?.id) return [];
+	return getActiveSystemPins(owner, repo, kind);
 }

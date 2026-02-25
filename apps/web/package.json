@@ -15,6 +15,7 @@
 		"@better-auth/infra": "^0.1.7",
 		"@better-auth/utils": "^0.3.1",
 		"@mixedbread-ai/sdk": "^2.2.11",
+		"@octokit/auth-app": "^8.2.0",
 		"@octokit/rest": "^22.0.1",
 		"@openrouter/ai-sdk-provider": "^2.2.3",
 		"@prisma/adapter-pg": "^7.4.1",

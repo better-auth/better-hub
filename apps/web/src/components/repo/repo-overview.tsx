@@ -18,13 +18,16 @@ import {
 	X,
 	Eye,
 	LayoutDashboard,
+	AlertTriangle,
 } from "lucide-react";
 import { CheckStatusBadge } from "@/components/pr/check-status-badge";
 import {
 	unpinFromOverview,
 	fetchPinnedItemsForRepo,
+	fetchSystemPinsForRepo,
 } from "@/app/(app)/repos/[owner]/[repo]/pin-actions";
 import type { PinnedItem } from "@/lib/pinned-items-store";
+import type { SystemPin } from "@/lib/system-pins-store";
 import { useMutationSubscription } from "@/hooks/use-mutation-subscription";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { isRepoEvent, type MutationEvent } from "@/lib/mutation-events";
@@ -793,6 +796,51 @@ function PinnedItemsSection({
 	);
 }
 
+// --- Conflict Pins Section (server-managed, repo-global) ---
+function ConflictPinsSection({
+	items,
+	base,
+}: {
+	items: SystemPin[];
+	base: string;
+}) {
+	if (items.length === 0) return null;
+
+	return (
+		<div className="border border-destructive/30 rounded-md overflow-hidden bg-destructive/[0.03]">
+			<div className="flex items-center gap-2 px-4 pt-3 pb-1">
+				<AlertTriangle className="w-3.5 h-3.5 text-destructive/70" />
+				<h3 className="text-sm font-medium text-foreground">
+					Merge Conflicts
+				</h3>
+				<span className="text-[10px] font-mono text-destructive/60 bg-destructive/10 px-1.5 py-0.5 rounded">
+					{items.length}
+				</span>
+			</div>
+			<div className="px-2 pb-2 max-h-[280px] overflow-y-auto">
+				{items.map((pin) => {
+					const prNumber = pin.resourceKey.replace("pr:", "");
+					return (
+						<Link
+							key={pin.id}
+							href={`${base}/pulls/${prNumber}`}
+							className="flex items-center gap-2.5 px-2 py-1.5 group hover:bg-destructive/5 rounded-md transition-colors"
+						>
+							<GitPullRequest className="w-3.5 h-3.5 shrink-0 text-destructive/60" />
+							<span className="text-xs text-foreground/80 truncate flex-1 group-hover:text-foreground transition-colors">
+								<span className="font-mono text-muted-foreground/60 mr-1.5">
+									#{prNumber}
+								</span>
+								{pin.title}
+							</span>
+						</Link>
+					);
+				})}
+			</div>
+		</div>
+	);
+}
+
 function CIStatusCard({
 	ciStatus,
 	owner,
@@ -1008,6 +1056,14 @@ export function RepoOverview({
 		gcTime: 10 * 60 * 1000,
 	});
 
+	const { data: conflictPins = [] } = useQuery({
+		queryKey: ["system-pins", owner, repo, "pr_conflict"],
+		queryFn: () => fetchSystemPinsForRepo(owner, repo, "pr_conflict"),
+		enabled: isMaintainer,
+		staleTime: 2 * 60 * 1000,
+		gcTime: 5 * 60 * 1000,
+	});
+
 	// True when we have initialData OR the queries have finished fetching
 	const hasInitialData = !!(initialPRs || initialIssues || initialEvents);
 	const dataReady = hasInitialData || (prsFetched && issuesFetched && eventsFetched);
@@ -1089,6 +1145,12 @@ export function RepoOverview({
 							owner={owner}
 							repo={repo}
 							defaultBranch={branch}
+						/>
+					)}
+					{conflictPins.length > 0 && (
+						<ConflictPinsSection
+							items={conflictPins}
+							base={base}
 						/>
 					)}
 					{pinnedItems && pinnedItems.length > 0 && (
