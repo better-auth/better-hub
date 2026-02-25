@@ -49,11 +49,7 @@ function InfoPopover({ text, children }: { text: string; children: React.ReactNo
 	useEffect(() => () => clearTimeout(timeout.current), []);
 
 	return (
-		<div
-			className="relative inline-flex"
-			onMouseEnter={show}
-			onMouseLeave={hide}
-		>
+		<div className="relative inline-flex" onMouseEnter={show} onMouseLeave={hide}>
 			{children}
 			{open && (
 				<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 px-3 py-2 rounded-md bg-foreground text-background text-[11px] leading-relaxed shadow-lg z-50 pointer-events-none">
@@ -147,8 +143,14 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 	const meta = [
 		githubProfile.company && { icon: Building2, text: githubProfile.company },
 		githubProfile.location && { icon: MapPin, text: githubProfile.location },
-		githubProfile.blog && { icon: LinkIcon, text: githubProfile.blog.replace(/^https?:\/\//, "") },
-		githubProfile.created_at && { icon: Calendar, text: `Joined ${formatJoinDate(githubProfile.created_at)}` },
+		githubProfile.blog && {
+			icon: LinkIcon,
+			text: githubProfile.blog.replace(/^https?:\/\//, ""),
+		},
+		githubProfile.created_at && {
+			icon: Calendar,
+			text: `Joined ${formatJoinDate(githubProfile.created_at)}`,
+		},
 	].filter(Boolean) as { icon: typeof MapPin; text: string }[];
 
 	return (
@@ -195,9 +197,14 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 						{/* Stats row */}
 						<div className="flex items-center gap-5 mt-3">
 							{stats.map((s) => (
-								<div key={s.label} className="text-center">
+								<div
+									key={s.label}
+									className="text-center"
+								>
 									<div className="text-sm font-semibold font-mono">
-										{formatCount(s.value)}
+										{formatCount(
+											s.value,
+										)}
 									</div>
 									<div className="text-[10px] text-muted-foreground/50">
 										{s.label}
@@ -266,19 +273,54 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 					GitHub Permissions
 				</label>
 				<p className="mt-1 text-[10px] text-muted-foreground/50 font-mono">
-					Manage which GitHub permissions are granted to Better Hub. Toggle scopes and click update to re-authorize.
+					Manage which GitHub permissions are granted to Better Hub.
+					Toggle scopes and click update to re-authorize.
 				</p>
 
 				{scopesLoading ? (
 					<div className="mt-3 flex items-center gap-2 text-muted-foreground text-[10px] font-mono">
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-3.5 h-3.5 animate-spin">
-							<g fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2">
-								<path strokeDasharray="60" strokeDashoffset="60" strokeOpacity=".3" d="M12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3Z">
-									<animate fill="freeze" attributeName="stroke-dashoffset" dur="1.3s" values="60;0" />
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 24 24"
+							className="w-3.5 h-3.5 animate-spin"
+						>
+							<g
+								fill="none"
+								stroke="currentColor"
+								strokeLinecap="round"
+								strokeWidth="2"
+							>
+								<path
+									strokeDasharray="60"
+									strokeDashoffset="60"
+									strokeOpacity=".3"
+									d="M12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3Z"
+								>
+									<animate
+										fill="freeze"
+										attributeName="stroke-dashoffset"
+										dur="1.3s"
+										values="60;0"
+									/>
 								</path>
-								<path strokeDasharray="15" strokeDashoffset="15" d="M12 3C16.9706 3 21 7.02944 21 12">
-									<animate fill="freeze" attributeName="stroke-dashoffset" dur="0.3s" values="15;0" />
-									<animateTransform attributeName="transform" dur="1.5s" repeatCount="indefinite" type="rotate" values="0 12 12;360 12 12" />
+								<path
+									strokeDasharray="15"
+									strokeDashoffset="15"
+									d="M12 3C16.9706 3 21 7.02944 21 12"
+								>
+									<animate
+										fill="freeze"
+										attributeName="stroke-dashoffset"
+										dur="0.3s"
+										values="15;0"
+									/>
+									<animateTransform
+										attributeName="transform"
+										dur="1.5s"
+										repeatCount="indefinite"
+										type="rotate"
+										values="0 12 12;360 12 12"
+									/>
 								</path>
 							</g>
 						</svg>
@@ -288,7 +330,10 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 					<>
 						<div className="flex flex-wrap gap-1.5 mt-3">
 							{SCOPE_GROUPS.map((group) => {
-								const isGranted = grantedGroupIds.has(group.id);
+								const isGranted =
+									grantedGroupIds.has(
+										group.id,
+									);
 								const isOn = selected.has(group.id);
 								return (
 									<span
@@ -302,11 +347,18 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 									>
 										<button
 											type="button"
-											onClick={() => toggle(group.id)}
-											disabled={group.required}
+											onClick={() =>
+												toggle(
+													group.id,
+												)
+											}
+											disabled={
+												group.required
+											}
 											className={cn(
 												"inline-flex items-center gap-1.5 pl-2.5 pr-1 py-1 transition-colors",
-												!isOn && "line-through decoration-foreground/20",
+												!isOn &&
+													"line-through decoration-foreground/20",
 												group.required
 													? "cursor-default"
 													: "cursor-pointer hover:text-foreground/70",
@@ -318,12 +370,19 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 												) : (
 													<Check className="w-2.5 h-2.5 shrink-0" />
 												))}
-											{group.label}
-											{isGranted && isOn && (
-												<span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-											)}
+											{
+												group.label
+											}
+											{isGranted &&
+												isOn && (
+													<span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+												)}
 										</button>
-										<InfoPopover text={group.reason}>
+										<InfoPopover
+											text={
+												group.reason
+											}
+										>
 											<span
 												className={cn(
 													"inline-flex items-center pr-2 pl-1 border-l transition-colors",
@@ -352,11 +411,14 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 								)}
 							>
 								<ExternalLink className="w-3 h-3" />
-								{updating ? "Redirecting..." : "Update permissions"}
+								{updating
+									? "Redirecting..."
+									: "Update permissions"}
 							</button>
 							{hasChanges && (
 								<span className="text-[10px] font-mono text-muted-foreground/50">
-									Redirects to GitHub to re-authorize
+									Redirects to GitHub to
+									re-authorize
 								</span>
 							)}
 						</div>

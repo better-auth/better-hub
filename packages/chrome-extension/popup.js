@@ -7,7 +7,7 @@ const saveBtn = document.getElementById("save");
 chrome.storage.local.get(["enabled", "host"], (data) => {
 	const enabled = data.enabled !== false;
 	toggle.checked = enabled;
-	hostInput.value = data.host || "https://beta.better-hub.com";
+	hostInput.value = data.host || "https://better-hub.com";
 	updateStatus(enabled);
 });
 

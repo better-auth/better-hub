@@ -1,4 +1,4 @@
-const DEFAULT_HOST = "https://beta.better-hub.com";
+const DEFAULT_HOST = "https://better-hub.com";
 
 // On install: just set defaults. Static rules handle the default host out of the box.
 chrome.runtime.onInstalled.addListener(() => {

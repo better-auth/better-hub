@@ -5,7 +5,7 @@
 		"action": {
 			"type": "redirect",
 			"redirect": {
-				"regexSubstitution": "https://beta.better-hub.com/\\1/\\2/pull/\\3"
+				"regexSubstitution": "https://better-hub.com/\\1/\\2/pull/\\3"
 			}
 		},
 		"condition": {
@@ -19,7 +19,7 @@
 		"action": {
 			"type": "redirect",
 			"redirect": {
-				"regexSubstitution": "https://beta.better-hub.com/\\1/\\2/commit/\\3"
+				"regexSubstitution": "https://better-hub.com/\\1/\\2/commit/\\3"
 			}
 		},
 		"condition": {
@@ -33,7 +33,7 @@
 		"action": {
 			"type": "redirect",
 			"redirect": {
-				"regexSubstitution": "https://beta.better-hub.com/\\1/\\2/actions/\\3"
+				"regexSubstitution": "https://better-hub.com/\\1/\\2/actions/\\3"
 			}
 		},
 		"condition": {
@@ -47,7 +47,7 @@
 		"action": {
 			"type": "redirect",
 			"redirect": {
-				"regexSubstitution": "https://beta.better-hub.com/\\1/\\2"
+				"regexSubstitution": "https://better-hub.com/\\1/\\2"
 			}
 		},
 		"condition": {
@@ -61,7 +61,7 @@
 		"action": {
 			"type": "redirect",
 			"redirect": {
-				"regexSubstitution": "https://beta.better-hub.com/\\1/\\2/\\3"
+				"regexSubstitution": "https://better-hub.com/\\1/\\2/\\3"
 			}
 		},
 		"condition": {
@@ -197,7 +197,7 @@
 		"priority": 4,
 		"action": {
 			"type": "redirect",
-			"redirect": { "regexSubstitution": "https://beta.better-hub.com/dashboard" }
+			"redirect": { "regexSubstitution": "https://better-hub.com/dashboard" }
 		},
 		"condition": {
 			"regexFilter": "^https://github\\.com/?$",
@@ -210,7 +210,7 @@
 		"action": {
 			"type": "redirect",
 			"redirect": {
-				"regexSubstitution": "https://beta.better-hub.com/notifications"
+				"regexSubstitution": "https://better-hub.com/notifications"
 			}
 		},
 		"condition": {
@@ -223,7 +223,7 @@
 		"priority": 4,
 		"action": {
 			"type": "redirect",
-			"redirect": { "regexSubstitution": "https://beta.better-hub.com/trending" }
+			"redirect": { "regexSubstitution": "https://better-hub.com/trending" }
 		},
 		"condition": {
 			"regexFilter": "^https://github\\.com/trending",
@@ -235,7 +235,7 @@
 		"priority": 4,
 		"action": {
 			"type": "redirect",
-			"redirect": { "regexSubstitution": "https://beta.better-hub.com/issues" }
+			"redirect": { "regexSubstitution": "https://better-hub.com/issues" }
 		},
 		"condition": {
 			"regexFilter": "^https://github\\.com/issues$",
@@ -247,7 +247,7 @@
 		"priority": 4,
 		"action": {
 			"type": "redirect",
-			"redirect": { "regexSubstitution": "https://beta.better-hub.com/prs" }
+			"redirect": { "regexSubstitution": "https://better-hub.com/prs" }
 		},
 		"condition": {
 			"regexFilter": "^https://github\\.com/pulls$",

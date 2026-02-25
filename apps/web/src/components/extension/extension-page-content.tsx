@@ -260,7 +260,7 @@ export function ExtensionPageContent() {
 							<p className="text-xs text-muted-foreground mt-1 leading-relaxed max-w-lg">
 								The extension defaults to{" "}
 								<code className="text-[11px] font-mono px-1 py-0.5 bg-muted rounded text-foreground/70">
-									https://beta.better-hub.com
+									https://better-hub.com
 								</code>
 								. You can change this anytime by
 								clicking the extension icon in your

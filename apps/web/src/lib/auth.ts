@@ -54,6 +54,8 @@ export const auth = betterAuth({
 		encryptOAuthTokens: true,
 		//cache the account in the cookie
 		storeAccountCookie: true,
+		//to update scopes
+		updateAccountOnSignIn: true,
 	},
 	socialProviders: {
 		github: {
