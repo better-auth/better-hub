@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOctokit } from "@/lib/github";
+import { getGitHubToken } from "@/lib/github";
 
 const MIME_TYPES: Record<string, string> = {
 	png: "image/png",
@@ -18,37 +18,44 @@ export async function GET(request: NextRequest) {
 	const owner = searchParams.get("owner");
 	const repo = searchParams.get("repo");
 	const path = searchParams.get("path");
-	const ref = searchParams.get("ref") || undefined;
+	const ref = searchParams.get("ref");
 
-	if (!owner || !repo || !path) {
+	if (!owner || !repo || !path || !ref) {
 		return NextResponse.json(
-			{ error: "Missing required parameters: owner, repo, path" },
+			{ error: "Missing required parameters: owner, repo, path, ref" },
 			{ status: 400 },
 		);
 	}
 
-	const octokit = await getOctokit();
-	if (!octokit) {
+	const token = await getGitHubToken();
+	if (!token) {
 		return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 	}
 
 	try {
-		const { data } = await octokit.repos.getContent({
-			owner,
-			repo,
-			path,
-			...(ref ? { ref } : {}),
+		/**
+		 * Bypass Octokit:
+		 * base64 content only for ≤1MB, raw format corrupts binary
+		 * @see https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28#get-repository-content
+		 * */
+		const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${ref}/${path}`;
+		const upstream = await fetch(rawUrl, {
+			headers: {
+				Authorization: `Bearer ${token}`,
+			},
 		});
 
-		if (Array.isArray(data) || !("content" in data) || !data.content) {
+		if (!upstream.ok) {
 			return NextResponse.json({ error: "Image not found" }, { status: 404 });
 		}
 
-		const buffer = Buffer.from(data.content, "base64");
 		const ext = path.split(".").pop()?.toLowerCase() || "";
-		const contentType = MIME_TYPES[ext] || "application/octet-stream";
+		const contentType =
+			MIME_TYPES[ext] ||
+			upstream.headers.get("content-type") ||
+			"application/octet-stream";
 
-		return new NextResponse(buffer, {
+		return new NextResponse(upstream.body, {
 			headers: {
 				"Content-Type": contentType,
 				"Cache-Control":
