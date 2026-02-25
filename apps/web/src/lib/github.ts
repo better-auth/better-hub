@@ -4976,8 +4976,15 @@ async function fetchRepoPageDataGraphQL(
 
 export const getRepoPageData = cache(
 	async (owner: string, repo: string): Promise<RepoPageDataResult> => {
+		const authCtx = await getGitHubAuthContext();
+		if (!authCtx) return { success: false, error: "Not authenticated" };
+
 		const { getCachedRepoPageData } = await import("@/lib/repo-data-cache-vc");
-		const cached = await getCachedRepoPageData<RepoPageData>(owner, repo);
+		const cached = await getCachedRepoPageData<RepoPageData>(
+			authCtx.userId,
+			owner,
+			repo,
+		);
 		if (cached) return { success: true, data: cached };
 
 		return fetchAndCacheRepoPageData(owner, repo);
@@ -4999,7 +5006,7 @@ export async function fetchAndCacheRepoPageData(
 		const navCountsKey = buildRepoNavCountsCacheKey(owner, repo);
 		const languagesKey = buildRepoLanguagesCacheKey(owner, repo);
 		await Promise.all([
-			setCachedRepoPageData(owner, repo, result),
+			setCachedRepoPageData(authCtx.userId, owner, repo, result),
 			upsertGithubCacheEntry(
 				authCtx.userId,
 				navCountsKey,

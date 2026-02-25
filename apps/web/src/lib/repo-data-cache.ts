@@ -14,6 +14,10 @@ function repoKey(owner: string, repo: string, suffix: string): string {
 	return `${suffix}:${owner.toLowerCase()}/${repo.toLowerCase()}`;
 }
 
+function userRepoKey(userId: string, owner: string, repo: string, suffix: string): string {
+	return `${suffix}:${userId}:${owner.toLowerCase()}/${repo.toLowerCase()}`;
+}
+
 function languagesKey(owner: string, repo: string): string {
 	return repoKey(owner, repo, "repo_languages");
 }
@@ -99,18 +103,25 @@ export async function setCachedTags(owner: string, repo: string, tags: BranchRef
 	await redis.set(tagsKey(owner, repo), tags, { ex: TTL.medium });
 }
 
-// --- Core page data + file tree (shared across all viewers) ---
+// --- Core page data (per-user, contains viewerPermission etc.) ---
 
-export async function getCachedRepoPageData<T>(owner: string, repo: string): Promise<T | null> {
-	return redis.get<T>(repoKey(owner, repo, "repo_page_data"));
+export async function getCachedRepoPageData<T>(
+	userId: string,
+	owner: string,
+	repo: string,
+): Promise<T | null> {
+	return redis.get<T>(userRepoKey(userId, owner, repo, "repo_page_data"));
 }
 
 export async function setCachedRepoPageData<T>(
+	userId: string,
 	owner: string,
 	repo: string,
 	data: T,
 ): Promise<void> {
-	await redis.set(repoKey(owner, repo, "repo_page_data"), data, { ex: TTL.medium });
+	await redis.set(userRepoKey(userId, owner, repo, "repo_page_data"), data, {
+		ex: TTL.medium,
+	});
 }
 
 export async function getCachedRepoTree<T>(owner: string, repo: string): Promise<T | null> {
