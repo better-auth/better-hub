@@ -234,3 +234,59 @@ model PinnedItem {
   @@index([userId, owner, repo])
   @@map("pinned_items")
 }
+
+model RepoSystemPin {
+  id          String  @id @default(cuid())
+  owner       String
+  repo        String
+  kind        String  // e.g. "pr_conflict"
+  resourceKey String  // e.g. "pr:123"
+  url         String
+  title       String
+  status      String  @default("active") // "active" | "cleared"
+  payloadJson String?
+  createdAt   String
+  updatedAt   String
+  clearedAt   String?
+
+  @@unique([owner, repo, kind, resourceKey])
+  @@index([owner, repo, status])
+  @@map("repo_system_pins")
+}
+
+model GitHubAppInstallation {
+  id               String  @id @default(cuid())
+  installationId   Int     @unique        // GitHub's installation ID
+  accountLogin     String                 // GitHub org or user login
+  accountType      String                 // "Organization" | "User"
+  appSlug          String
+  status           String  @default("active") // "active" | "suspended" | "removed"
+  permissions      String?                // JSON of granted permissions
+  events           String?                // JSON of subscribed events
+  createdAt        String
+  updatedAt        String
+
+  repos GitHubAppInstallationRepo[]
+
+  @@index([accountLogin, status])
+  @@map("github_app_installations")
+}
+
+model GitHubAppInstallationRepo {
+  id               String  @id @default(cuid())
+  installationId   Int                     // FK to GitHubAppInstallation.installationId
+  owner            String
+  repo             String
+  status           String  @default("active") // "active" | "removed"
+  lastWebhookAt    String?
+  lastPolledAt     String?
+  createdAt        String
+  updatedAt        String
+
+  installation GitHubAppInstallation @relation(fields: [installationId], references: [installationId], onDelete: Cascade)
+
+  @@unique([installationId, owner, repo])
+  @@index([owner, repo])
+  @@index([status])
+  @@map("github_app_installation_repos")
+}
