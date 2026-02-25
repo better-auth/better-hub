@@ -45,13 +45,16 @@ interface SearchMatch {
 
 function clearTextHighlights(container: Element) {
 	const marks = container.querySelectorAll("mark.search-text-match");
+	if (marks.length === 0) return;
+	const parents = new Set<Node>();
 	marks.forEach((mark) => {
 		const parent = mark.parentNode;
 		if (parent) {
+			parents.add(parent);
 			parent.replaceChild(document.createTextNode(mark.textContent || ""), mark);
-			parent.normalize();
 		}
 	});
+	parents.forEach((parent) => (parent as Element).normalize());
 }
 
 function highlightTextInLine(lineEl: Element, query: string, caseSensitive: boolean) {
