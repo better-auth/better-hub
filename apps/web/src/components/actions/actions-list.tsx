@@ -15,8 +15,9 @@ import {
 	ChevronRight,
 	ArrowLeftRight,
 } from "lucide-react";
-import { cn, formatDuration } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
+import { LiveDuration } from "@/components/ui/live-duration";
 import { StatusIcon } from "./status-icon";
 import { RunComparisonInline } from "./run-comparison-inline";
 
@@ -735,15 +736,6 @@ export function ActionsList({
 										w.id ===
 										run.workflow_id,
 								)?.name ?? run.name;
-							const duration = run.run_started_at
-								? formatDuration(
-										run.run_started_at,
-										run.status ===
-											"completed"
-											? run.updated_at
-											: null,
-									)
-								: null;
 							const isSelected = selectedRuns.has(run.id);
 
 							return (
@@ -865,15 +857,17 @@ export function ActionsList({
 													}
 												/>
 											</div>
-											{duration && (
-												<div
-													className="flex items-center gap-1 text-[11px] text-muted-foreground/30 justify-end mt-0.5"
-													suppressHydrationWarning
-												>
+											{run.run_started_at?.trim() && (
+												<div className="flex items-center gap-1 text-[11px] text-muted-foreground/30 justify-end mt-0.5">
 													<Clock className="w-3 h-3" />
-													{
-														duration
-													}
+													<LiveDuration
+														startedAt={run.run_started_at}
+														completedAt={
+															run.status === "completed"
+																? run.updated_at
+																: null
+														}
+													/>
 												</div>
 											)}
 										</div>
