@@ -35,10 +35,10 @@ export const auth = betterAuth({
 			},
 		}),
 		admin(),
-		oAuthProxy({
-			productionURL: "https://www.better-hub.com",
-		}),
 		patSignIn(),
+		...(process.env.VERCEL
+			? [oAuthProxy({ productionURL: "https://www.better-hub.com" })]
+			: []),
 	],
 	user: {
 		additionalFields: {
