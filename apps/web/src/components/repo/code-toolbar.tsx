@@ -40,8 +40,13 @@ export function CodeToolbar({
 	const [deletingBranch, setDeletingBranch] = useState<string | null>(null);
 	const [localBranches, setLocalBranches] = useState(branches);
 	const [isPending, startTransition] = useTransition();
+	const [cloneProtocol, setCloneProtocol] = useState<"https" | "ssh">("https");
 
-	const cloneUrl = `https://github.com/${owner}/${repo}.git`;
+	const cloneUrl =
+		cloneProtocol === "https"
+			? `https://github.com/${owner}/${repo}.git`
+			: `git@github.com:${owner}/${repo}.git`;
+
 	const zipUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/${currentRef}.zip`;
 
 	const filteredBranches = localBranches.filter((b) =>
@@ -52,6 +57,10 @@ export function CodeToolbar({
 		navigator.clipboard.writeText(cloneUrl);
 		setCopied(true);
 		setTimeout(() => setCopied(false), 2000);
+	}
+
+	function handleProtocolChange(protocol: "https" | "ssh") {
+		setCloneProtocol(protocol);
 	}
 
 	function handleDeleteBranch(branch: string) {
@@ -285,8 +294,42 @@ export function CodeToolbar({
 					/>
 					<div className="relative z-50">
 						<div className="absolute right-0 top-2 w-80 rounded-lg border border-border bg-card/95 backdrop-blur-sm shadow-xl p-3.5 animate-in fade-in slide-in-from-top-1 duration-150">
+							{/* Protocol toggle */}
+							<div className="flex items-center gap-1 mb-3">
+								<button
+									onClick={() =>
+										handleProtocolChange(
+											"https",
+										)
+									}
+									className={`flex-1 py-1.5 text-[10px] font-mono rounded-md border transition-colors cursor-pointer ${
+										cloneProtocol ===
+										"https"
+											? "bg-muted/60 dark:bg-white/10 border-border text-foreground"
+											: "border-transparent text-muted-foreground/60 hover:text-muted-foreground"
+									}`}
+								>
+									HTTPS
+								</button>
+								<button
+									onClick={() =>
+										handleProtocolChange(
+											"ssh",
+										)
+									}
+									className={`flex-1 py-1.5 text-[10px] font-mono rounded-md border transition-colors cursor-pointer ${
+										cloneProtocol ===
+										"ssh"
+											? "bg-muted/60 dark:bg-white/10 border-border text-foreground"
+											: "border-transparent text-muted-foreground/60 hover:text-muted-foreground"
+									}`}
+								>
+									SSH
+								</button>
+							</div>
 							<p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/70 mb-2.5">
-								Clone with HTTPS
+								Clone with{" "}
+								{cloneProtocol.toUpperCase()}
 							</p>
 							<div className="flex items-center gap-1.5">
 								<input
