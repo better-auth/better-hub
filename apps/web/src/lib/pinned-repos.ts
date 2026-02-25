@@ -61,3 +61,19 @@ export function togglePinRepo(repo: Omit<PinnedRepo, "pinnedAt">): PinnedRepo[] 
 	}
 	return pinRepo(repo);
 }
+
+export function reorderPinnedRepos(fromIndex: number, toIndex: number): PinnedRepo[] {
+	if (typeof window === "undefined") return [];
+	try {
+		const pinned = getPinnedRepos();
+		if (fromIndex < 0 || fromIndex >= pinned.length || toIndex < 0 || toIndex >= pinned.length) {
+			return pinned;
+		}
+		const [moved] = pinned.splice(fromIndex, 1);
+		pinned.splice(toIndex, 0, moved);
+		localStorage.setItem(STORAGE_KEY, JSON.stringify(pinned));
+		return pinned;
+	} catch {
+		return getPinnedRepos();
+	}
+}
