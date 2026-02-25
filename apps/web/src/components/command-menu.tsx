@@ -784,6 +784,8 @@ export function CommandMenu() {
 					"colors",
 					"night",
 					"midnight",
+					"nord",
+					"wave",
 					"contrast",
 					"style",
 				],
