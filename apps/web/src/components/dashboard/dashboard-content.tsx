@@ -34,7 +34,7 @@ import { toInternalUrl, getLanguageColor } from "@/lib/github-utils";
 import { RecentlyViewed } from "./recently-viewed";
 import { CreateRepoDialog } from "@/components/repo/create-repo-dialog";
 import { markNotificationDone } from "@/app/(app)/repos/actions";
-import { getPinnedRepos, togglePinRepo, unpinRepo, type PinnedRepo } from "@/lib/pinned-repos";
+import { getPinnedRepos, togglePinRepo, unpinRepo, reorderPinnedRepos, type PinnedRepo } from "@/lib/pinned-repos";
 import type {
 	IssueItem,
 	RepoItem,
@@ -445,6 +445,8 @@ function ReposTabs({
 }) {
 	const [tab, setTab] = useState<"pinned" | "repos" | "trending">("repos");
 	const [pinnedRepos, setPinnedRepos] = useState<PinnedRepo[]>([]);
+	const [dragIndex, setDragIndex] = useState<number | null>(null);
+	const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
 	useEffect(() => {
 		const pinned = getPinnedRepos();
@@ -476,6 +478,24 @@ function ReposTabs({
 		const updated = unpinRepo(fullName);
 		setPinnedRepos(updated);
 	}, []);
+
+	const handleDragStart = useCallback((index: number) => {
+		setDragIndex(index);
+	}, []);
+
+	const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
+		e.preventDefault();
+		setDragOverIndex(index);
+	}, []);
+
+	const handleDragEnd = useCallback(() => {
+		if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
+			const updated = reorderPinnedRepos(dragIndex, dragOverIndex);
+			setPinnedRepos(updated);
+		}
+		setDragIndex(null);
+		setDragOverIndex(null);
+	}, [dragIndex, dragOverIndex]);
 
 	return (
 		<section className="flex-1 border border-border flex flex-col min-h-0">
@@ -536,11 +556,17 @@ function ReposTabs({
 			</div>
 			<div className="overflow-y-auto">
 				{tab === "pinned" &&
-					pinnedRepos.map((repo) => (
+					pinnedRepos.map((repo, index) => (
 						<PinnedRepoRow
 							key={repo.id}
 							repo={repo}
+							index={index}
 							onUnpin={handleUnpin}
+							onDragStart={handleDragStart}
+							onDragOver={handleDragOver}
+							onDragEnd={handleDragEnd}
+							isDragging={dragIndex === index}
+							isDragOver={dragOverIndex === index && dragIndex !== index}
 						/>
 					))}
 				{tab === "repos" &&
@@ -805,16 +831,39 @@ function RepoRow({
 
 function PinnedRepoRow({
 	repo,
+	index,
 	onUnpin,
+	onDragStart,
+	onDragOver,
+	onDragEnd,
+	isDragging,
+	isDragOver,
 }: {
 	repo: PinnedRepo;
+	index: number;
 	onUnpin: (fullName: string) => void;
+	onDragStart: (index: number) => void;
+	onDragOver: (e: React.DragEvent, index: number) => void;
+	onDragEnd: () => void;
+	isDragging: boolean;
+	isDragOver: boolean;
 }) {
 	return (
-		<div className="group flex items-center gap-2.5 px-4 py-2 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors border-b border-border/40 last:border-b-0">
+		<div
+			draggable
+			onDragStart={() => onDragStart(index)}
+			onDragOver={(e) => onDragOver(e, index)}
+			onDragEnd={onDragEnd}
+			className={cn(
+				"group flex items-center gap-2.5 px-4 py-2 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors border-b border-border/40 last:border-b-0 cursor-grab active:cursor-grabbing",
+				isDragging && "opacity-50",
+				isDragOver && "border-t-2 border-t-primary",
+			)}
+		>
 			<Link
 				href={`/${repo.full_name}`}
 				className="flex items-center gap-2.5 flex-1 min-w-0"
+				draggable={false}
 			>
 				<Image
 					src={repo.owner.avatar_url}
@@ -822,6 +871,7 @@ function PinnedRepoRow({
 					width={18}
 					height={18}
 					className="rounded-sm shrink-0 w-[18px] h-[18px] object-cover"
+					draggable={false}
 				/>
 				<span className="text-xs font-mono truncate group-hover:text-foreground transition-colors min-w-0">
 					<span className="text-muted-foreground">
@@ -863,6 +913,7 @@ function PinnedRepoRow({
 				}}
 				className="shrink-0 p-1 text-foreground/60 hover:text-foreground transition-all cursor-pointer"
 				title="Unpin repository"
+				draggable={false}
 			>
 				<PinOff className="w-3.5 h-3.5" />
 			</button>
