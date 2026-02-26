@@ -26,6 +26,7 @@ import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { InfiniteScrollSentinel, LoadingOverlay } from "@/components/shared/list-controls";
 import { LabelBadge } from "@/components/shared/label-badge";
 import { useGlobalChat } from "@/components/shared/global-chat-provider";
+import { useHotkey } from "@tanstack/react-hotkeys";
 import { Zap, GitPullRequest } from "lucide-react";
 
 interface IssueUser {
@@ -352,30 +353,65 @@ export function IssuesList({
 
 	const searchInputRef = useRef<HTMLInputElement>(null);
 	const issueLinksRef = useRef<(HTMLAnchorElement | null)[]>([]);
+	const listContainerRef = useRef<HTMLDivElement>(null);
 
 	// Focus search bar when issues tab is shown (keyboard-first UX)
 	useEffect(() => {
 		searchInputRef.current?.focus();
 	}, []);
 
-	const handleListKeyDown = useCallback(
-		(e: React.KeyboardEvent, currentIndex: number) => {
-			if (e.key === "ArrowDown" && currentIndex < visible.length - 1) {
-				e.preventDefault();
-				issueLinksRef.current[currentIndex + 1]?.focus();
-			} else if (e.key === "ArrowUp" && currentIndex > 0) {
-				e.preventDefault();
-				issueLinksRef.current[currentIndex - 1]?.focus();
-			} else if (e.key === "ArrowUp" && currentIndex === 0) {
-				e.preventDefault();
-				searchInputRef.current?.focus();
+	// ArrowDown: search -> first issue; issue N -> issue N+1
+	useHotkey(
+		"ArrowDown",
+		(e: KeyboardEvent) => {
+			if (!listContainerRef.current?.contains(document.activeElement)) return;
+			if (document.activeElement === searchInputRef.current) {
+				if (visible.length > 0) {
+					e.preventDefault();
+					issueLinksRef.current[0]?.focus();
+				}
+			} else {
+				const idx = issueLinksRef.current.findIndex(
+					(el) => el === document.activeElement,
+				);
+				if (idx >= 0 && idx < visible.length - 1) {
+					e.preventDefault();
+					issueLinksRef.current[idx + 1]?.focus();
+				}
 			}
 		},
-		[visible.length],
+		{
+			target: listContainerRef,
+			ignoreInputs: false,
+			preventDefault: false,
+		},
+	);
+
+	// ArrowUp: issue 0 -> search; issue N -> issue N-1
+	useHotkey(
+		"ArrowUp",
+		(e: KeyboardEvent) => {
+			if (!listContainerRef.current?.contains(document.activeElement)) return;
+			const idx = issueLinksRef.current.findIndex(
+				(el) => el === document.activeElement,
+			);
+			if (idx === 0) {
+				e.preventDefault();
+				searchInputRef.current?.focus();
+			} else if (idx > 0) {
+				e.preventDefault();
+				issueLinksRef.current[idx - 1]?.focus();
+			}
+		},
+		{
+			target: listContainerRef,
+			ignoreInputs: false,
+			preventDefault: false,
+		},
 	);
 
 	return (
-		<div>
+		<div ref={listContainerRef}>
 			{/* Toolbar */}
 			<div className="sticky top-0 z-10 bg-background pb-3 pt-4 before:content-[''] before:absolute before:left-0 before:right-0 before:bottom-full before:h-8 before:bg-background">
 				{/* Row 1: Search + Sort + Filter + New Issue */}
@@ -388,15 +424,6 @@ export function IssuesList({
 							placeholder="Search issues..."
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							onKeyDown={(e) => {
-								if (
-									e.key === "ArrowDown" &&
-									visible.length > 0
-								) {
-									e.preventDefault();
-									issueLinksRef.current[0]?.focus();
-								}
-							}}
 							className="w-full h-8 bg-transparent border border-border rounded-lg pl-9 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground/20 transition-colors"
 							aria-label="Search issues"
 						/>
@@ -955,9 +982,6 @@ export function IssuesList({
 							}}
 							href={`/${owner}/${repo}/issues/${issue.number}`}
 							className="group flex items-start gap-3 px-4 py-3 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background rounded-sm"
-							onKeyDown={(e) =>
-								handleListKeyDown(e, index)
-							}
 							tabIndex={0}
 						>
 							{issue.state === "open" ? (
