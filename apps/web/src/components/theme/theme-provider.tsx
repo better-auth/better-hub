@@ -51,7 +51,9 @@ function getStored(key: string, fallback: string): string {
 function getInitialTheme(): string {
 	if (typeof window === "undefined") return DARK_THEME_ID;
 	const stored = localStorage.getItem(STORAGE_KEY);
-	if (stored && getTheme(stored)) return stored;
+	// Trust the stored value - the inline script already validated it.
+	// This prevents hydration mismatches where getTheme() might not be ready.
+	if (stored) return stored;
 	const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? true;
 	const darkPref = localStorage.getItem(DARK_THEME_KEY) ?? DARK_THEME_ID;
 	const lightPref = localStorage.getItem(LIGHT_THEME_KEY) ?? LIGHT_THEME_ID;
@@ -140,7 +142,7 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 				}
 				(
 					document as unknown as {
-						startViewTransition: (cb: () => void) => void;
+						startViewTransition: (cb: () => () => void) => void;
 					}
 				).startViewTransition(fn);
 			} else {
@@ -173,12 +175,7 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 			fetch("/api/user-settings", {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					colorTheme: id,
-					...(theme.mode === "dark"
-						? { darkTheme: id }
-						: { lightTheme: id }),
-				}),
+				body: JSON.stringify({ colorTheme: id }),
 			}).catch(() => {});
 		},
 		[applyWithTransition],
@@ -208,12 +205,7 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 			fetch("/api/user-settings", {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					colorTheme: nextId,
-					...(theme.mode === "dark"
-						? { darkTheme: nextId }
-						: { lightTheme: nextId }),
-				}),
+				body: JSON.stringify({ colorTheme: nextId }),
 			}).catch(() => {});
 		},
 		[mode, darkThemeId, lightThemeId, applyWithTransition],

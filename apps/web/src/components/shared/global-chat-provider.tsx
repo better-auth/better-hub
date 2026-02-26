@@ -65,6 +65,10 @@ interface GlobalChatContextValue {
 	switchTab: (tabId: string) => void;
 	renameTab: (tabId: string, label: string) => void;
 	replaceCurrentTab: (newId: string, label: string) => void;
+	/** Register refetch for ghost history (called when panel mounts). Pass null to unregister. */
+	registerGhostHistoryRefetch: (fn: (() => void) | null) => void;
+	/** Notify that ghost history changed (e.g. after persist); triggers refetch. */
+	notifyGhostHistoryChanged: () => void;
 }
 
 // ── Pathname helpers for context-change detection ────────────────────────────
@@ -383,6 +387,14 @@ export function GlobalChatProvider({ children, initialTabState }: GlobalChatProv
 		contextHandlerRef.current = fn;
 	}, []);
 
+	const ghostHistoryRefetchRef = useRef<(() => void) | null>(null);
+	const registerGhostHistoryRefetch = useCallback((fn: (() => void) | null) => {
+		ghostHistoryRefetchRef.current = fn;
+	}, []);
+	const notifyGhostHistoryChanged = useCallback(() => {
+		ghostHistoryRefetchRef.current?.();
+	}, []);
+
 	// Cmd+I / Ctrl+I to toggle AI panel, Cmd+N to add tab when open
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
@@ -418,6 +430,8 @@ export function GlobalChatProvider({ children, initialTabState }: GlobalChatProv
 				switchTab,
 				renameTab,
 				replaceCurrentTab,
+				registerGhostHistoryRefetch,
+				notifyGhostHistoryChanged,
 			}}
 		>
 			{children}
