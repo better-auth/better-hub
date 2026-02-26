@@ -1,8 +1,11 @@
 import type { ThemeColors, ThemeDefinition, ThemeVariant, ShikiTheme } from "./types";
 import {
 	arctic,
+	browserbase,
+	cloudflare,
 	elevenlabs,
 	ember,
+	gemini,
 	hub,
 	mintlify,
 	nordWave,
@@ -36,6 +39,9 @@ const themes: ThemeDefinition[] = [
 	resend,
 	triggerdev,
 	nuxt,
+	browserbase,
+	cloudflare,
+	gemini,
 ];
 
 export type { ThemeColors, ThemeDefinition, ThemeVariant, ShikiTheme };
