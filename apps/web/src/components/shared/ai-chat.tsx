@@ -806,7 +806,9 @@ export function AIChat({
 			.then(async (res) => {
 				const data = await res.json();
 				if (!res.ok) {
-					throw new Error(data.error || `Load failed (${res.status})`);
+					throw new Error(
+						data.error || `Load failed (${res.status})`,
+					);
 				}
 				return data;
 			})
@@ -866,7 +868,9 @@ export function AIChat({
 			.catch((err) => {
 				if (!cancelled) {
 					setHistoryLoadError(
-						err instanceof Error ? err.message : "Could not load chat history",
+						err instanceof Error
+							? err.message
+							: "Could not load chat history",
 					);
 					setHistoryLoaded(true);
 				}
@@ -910,7 +914,9 @@ export function AIChat({
 			}).then(async (res) => {
 				const data = await res.json();
 				if (!res.ok) {
-					throw new Error(data.error || `Save failed (${res.status})`);
+					throw new Error(
+						data.error || `Save failed (${res.status})`,
+					);
 				}
 				return data;
 			});
@@ -921,14 +927,17 @@ export function AIChat({
 			if (failed.length > 0) {
 				const firstReason =
 					failed[0].status === "rejected"
-						? failed[0].reason?.message || "Could not save chat history"
+						? failed[0].reason?.message ||
+							"Could not save chat history"
 						: "Could not save chat history";
 				setPersistError(firstReason);
 				return;
 			}
 			setPersistError(null);
 			const firstFulfilled = results.find(
-				(r): r is PromiseFulfilledResult<{ conversation?: { id: string } }> =>
+				(
+					r,
+				): r is PromiseFulfilledResult<{ conversation?: { id: string } }> =>
 					r.status === "fulfilled",
 			);
 			if (firstFulfilled?.value?.conversation) {
@@ -1613,21 +1622,28 @@ export function AIChat({
 							)}
 
 							{/* History load error — could not load previous chat */}
-							{historyLoadError && messages.length === 0 && (
-								<div className="flex flex-col items-center gap-2 py-4">
-									<span className="text-[11px] text-muted-foreground/50 text-center max-w-[260px]">
-										{historyLoadError}
-									</span>
-									<button
-										type="button"
-										onClick={() => setHistoryLoadError(null)}
-										className="mt-1 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-medium bg-foreground text-background hover:bg-foreground/85 transition-colors cursor-pointer"
-									>
-										<X className="w-3 h-3" />
-										Dismiss
-									</button>
-								</div>
-							)}
+							{historyLoadError &&
+								messages.length === 0 && (
+									<div className="flex flex-col items-center gap-2 py-4">
+										<span className="text-[11px] text-muted-foreground/50 text-center max-w-[260px]">
+											{
+												historyLoadError
+											}
+										</span>
+										<button
+											type="button"
+											onClick={() =>
+												setHistoryLoadError(
+													null,
+												)
+											}
+											className="mt-1 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-medium bg-foreground text-background hover:bg-foreground/85 transition-colors cursor-pointer"
+										>
+											<X className="w-3 h-3" />
+											Dismiss
+										</button>
+									</div>
+								)}
 
 							{/* Error state — stream died, timed out, etc. */}
 							{error && historyLoaded && (
