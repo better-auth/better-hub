@@ -173,12 +173,7 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 			fetch("/api/user-settings", {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					colorTheme: id,
-					...(theme.mode === "dark"
-						? { darkTheme: id }
-						: { lightTheme: id }),
-				}),
+				body: JSON.stringify({ colorTheme: id }),
 			}).catch(() => {});
 		},
 		[applyWithTransition],
@@ -208,12 +203,7 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 			fetch("/api/user-settings", {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					colorTheme: nextId,
-					...(theme.mode === "dark"
-						? { darkTheme: nextId }
-						: { lightTheme: nextId }),
-				}),
+				body: JSON.stringify({ colorTheme: nextId }),
 			}).catch(() => {});
 		},
 		[mode, darkThemeId, lightThemeId, applyWithTransition],
