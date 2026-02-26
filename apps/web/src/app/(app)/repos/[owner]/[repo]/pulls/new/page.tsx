@@ -396,6 +396,7 @@ export default function NewPullRequestPage() {
 	);
 
 	useEffect(() => {
+		const headFromUrl = searchParams.get("head");
 		fetchBranches(owner, repo).then((b) => {
 			setBranches(b);
 			setBase((prev) => {
@@ -403,6 +404,14 @@ export default function NewPullRequestPage() {
 				const def = b.find((br) => br.isDefault && br.owner === owner);
 				return def ? branchKey(def, owner) : "";
 			});
+			if (headFromUrl) {
+				const match = b.find(
+					(br) =>
+						br.name === headFromUrl ||
+						branchKey(br, owner) === headFromUrl,
+				);
+				if (match) setHead(branchKey(match, owner));
+			}
 			setLoadingBranches(false);
 		});
 	}, [owner, repo]);
@@ -540,7 +549,7 @@ export default function NewPullRequestPage() {
 	const canSubmit = title.trim() && base && head && base !== head;
 
 	return (
-		<div className="max-w-5xl mx-auto px-4 py-6">
+		<div className="max-w-5xl px-4 py-6">
 			<div className="flex items-center gap-3 mb-6">
 				<Link
 					href={`/repos/${owner}/${repo}/pulls`}
@@ -550,7 +559,7 @@ export default function NewPullRequestPage() {
 					Pull Requests
 				</Link>
 				<span className="text-muted-foreground/20">/</span>
-				<h1 className="text-lg font-medium">New Pull Request</h1>
+				<h1 className="text-base font-medium">New Pull Request</h1>
 			</div>
 
 			<div className="flex items-end gap-3 mb-6 p-4 rounded-lg border border-border/50 dark:border-white/6 bg-muted/10 dark:bg-white/[0.01]">
