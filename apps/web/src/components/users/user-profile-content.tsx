@@ -129,9 +129,31 @@ export function UserProfileContent({
 	const [languageFilter, setLanguageFilter] = useState<string | null>(null);
 	const [showMoreLanguages, setShowMoreLanguages] = useState(false);
 	const moreLanguagesRef = useRef<HTMLDivElement | null>(null);
+	const moreLanguagesMenuRef = useRef<HTMLDivElement | null>(null);
+	const [moreLanguagesPlacement, setMoreLanguagesPlacement] = useState<
+		"down-left" | "down-right" | "up-left" | "up-right"
+	>("down-left");
 
 	useEffect(() => {
 		if (!showMoreLanguages) return;
+		const root = moreLanguagesRef.current;
+		const menu = moreLanguagesMenuRef.current;
+		if (root && menu) {
+			const rootRect = root.getBoundingClientRect();
+			const menuRect = menu.getBoundingClientRect();
+			const shouldOpenUp =
+				rootRect.bottom + 6 + menuRect.height > window.innerHeight - 8;
+			const shouldAlignRight =
+				rootRect.left + menuRect.width > window.innerWidth - 8;
+			setMoreLanguagesPlacement(
+				`${shouldOpenUp ? "up" : "down"}-${shouldAlignRight ? "right" : "left"}`,
+			);
+		}
+		const firstItem = moreLanguagesMenuRef.current?.querySelector<HTMLButtonElement>(
+			'button[data-more-lang-item="true"]',
+		);
+		firstItem?.focus();
+
 		function onPointerDown(event: MouseEvent) {
 			if (!moreLanguagesRef.current) return;
 			const target = event.target;
@@ -142,7 +164,41 @@ export function UserProfileContent({
 		function onKeyDown(event: KeyboardEvent) {
 			if (event.key === "Escape") {
 				setShowMoreLanguages(false);
+				const trigger =
+					moreLanguagesRef.current?.querySelector<HTMLButtonElement>(
+						'button[data-more-lang-trigger="true"]',
+					);
+				trigger?.focus();
+				return;
 			}
+			if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+			if (!moreLanguagesRef.current?.contains(document.activeElement)) return;
+			const items = Array.from(
+				moreLanguagesMenuRef.current?.querySelectorAll<HTMLButtonElement>(
+					'button[data-more-lang-item="true"]',
+				) ?? [],
+			);
+			if (items.length === 0) return;
+			event.preventDefault();
+			const activeIdx = items.findIndex((el) => el === document.activeElement);
+			if (event.key === "Home") {
+				items[0]?.focus();
+				return;
+			}
+			if (event.key === "End") {
+				items[items.length - 1]?.focus();
+				return;
+			}
+			if (event.key === "ArrowDown") {
+				const next = activeIdx < 0 ? 0 : (activeIdx + 1) % items.length;
+				items[next]?.focus();
+				return;
+			}
+			const prev =
+				activeIdx < 0
+					? items.length - 1
+					: (activeIdx - 1 + items.length) % items.length;
+			items[prev]?.focus();
 		}
 		document.addEventListener("mousedown", onPointerDown);
 		document.addEventListener("keydown", onKeyDown);
@@ -616,6 +672,7 @@ export function UserProfileContent({
 										}
 									>
 										<button
+											data-more-lang-trigger="true"
 											onClick={() =>
 												setShowMoreLanguages(
 													(
@@ -638,7 +695,24 @@ export function UserProfileContent({
 											more
 										</button>
 										{showMoreLanguages && (
-											<div className="absolute left-0 top-[calc(100%+6px)] z-20 min-w-40 max-h-56 overflow-y-auto rounded-md border border-border bg-background/95 backdrop-blur-sm p-1.5 shadow-xl">
+											<div
+												ref={
+													moreLanguagesMenuRef
+												}
+												className={cn(
+													"absolute z-20 min-w-40 max-h-56 overflow-y-auto rounded-md border border-border bg-background/95 backdrop-blur-sm p-1.5 shadow-xl",
+													moreLanguagesPlacement.startsWith(
+														"up",
+													)
+														? "bottom-[calc(100%+6px)]"
+														: "top-[calc(100%+6px)]",
+													moreLanguagesPlacement.endsWith(
+														"right",
+													)
+														? "right-0"
+														: "left-0",
+												)}
+											>
 												<div className="flex flex-col gap-1">
 													{extraLanguages.map(
 														(
@@ -648,6 +722,7 @@ export function UserProfileContent({
 																key={
 																	lang
 																}
+																data-more-lang-item="true"
 																onClick={() =>
 																	toggleLanguageFilter(
 																		lang,
