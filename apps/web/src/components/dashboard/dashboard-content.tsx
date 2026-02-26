@@ -121,7 +121,9 @@ export function DashboardContent({
 			{/* Header */}
 			<div className="shrink-0 pb-3">
 				<h1 className="text-sm font-medium" suppressHydrationWarning>
-					{greeting ? `${greeting}, ${user.name || user.login}` : `${user.name || user.login}`}
+					{greeting
+						? `${greeting}, ${user.name || user.login}`
+						: `${user.name || user.login}`}
 				</h1>
 				<p
 					className="text-[11px] text-muted-foreground font-mono"
