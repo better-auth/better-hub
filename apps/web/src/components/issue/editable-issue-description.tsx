@@ -1,29 +1,16 @@
 "use client";
 
-import { useState, useTransition, useRef, useCallback } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-	Pencil,
-	X,
-	Loader2,
-	AlertCircle,
-	Eye,
-	Bold,
-	Italic,
-	Code,
-	Link as LinkIcon,
-	List,
-	ListOrdered,
-	Quote,
-} from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import { Pencil, X, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";
 import { CollapsibleBody } from "@/components/issue/collapsible-body";
 import { ReactionDisplay, type Reactions } from "@/components/shared/reaction-display";
 import { UserTooltip } from "@/components/shared/user-tooltip";
+import { MarkdownEditor } from "@/components/shared/markdown-editor";
 import { updateIssue } from "@/app/(app)/repos/[owner]/[repo]/issues/issue-actions";
 
 interface EditableIssueDescriptionProps {
@@ -51,10 +38,8 @@ export function EditableIssueDescription({
 	const [isEditing, setIsEditing] = useState(false);
 	const [editTitle, setEditTitle] = useState(issueTitle);
 	const [editBody, setEditBody] = useState(entry.body);
-	const [bodyTab, setBodyTab] = useState<"write" | "preview">("write");
 	const [error, setError] = useState<string | null>(null);
 	const [isPending, startTransition] = useTransition();
-	const textareaRef = useRef<HTMLTextAreaElement>(null);
 
 	const hasBody = Boolean(entry.body && entry.body.trim().length > 0);
 	const isLong = hasBody && entry.body.length > 800;
@@ -86,7 +71,6 @@ export function EditableIssueDescription({
 				setError(result.error);
 			} else {
 				setIsEditing(false);
-				setBodyTab("write");
 				router.refresh();
 			}
 		});
@@ -95,69 +79,12 @@ export function EditableIssueDescription({
 	const handleCancel = () => {
 		setEditTitle(issueTitle);
 		setEditBody(entry.body);
-		setBodyTab("write");
 		setError(null);
 		setIsEditing(false);
 	};
 
-	const insertMarkdown = useCallback(
-		(prefix: string, suffix: string = prefix) => {
-			const ta = textareaRef.current;
-			if (!ta) return;
-			const start = ta.selectionStart;
-			const end = ta.selectionEnd;
-			const selected = editBody.slice(start, end);
-			const replacement = selected
-				? `${prefix}${selected}${suffix}`
-				: `${prefix}${suffix}`;
-			const newBody =
-				editBody.slice(0, start) + replacement + editBody.slice(end);
-			setEditBody(newBody);
-			requestAnimationFrame(() => {
-				ta.focus();
-				const cursorPos = selected
-					? start + replacement.length
-					: start + prefix.length;
-				ta.setSelectionRange(cursorPos, cursorPos);
-			});
-		},
-		[editBody],
-	);
-
-	const insertLinePrefix = useCallback(
-		(prefix: string) => {
-			const ta = textareaRef.current;
-			if (!ta) return;
-			const start = ta.selectionStart;
-			const lineStart = editBody.lastIndexOf("\n", start - 1) + 1;
-			const newBody =
-				editBody.slice(0, lineStart) + prefix + editBody.slice(lineStart);
-			setEditBody(newBody);
-			requestAnimationFrame(() => {
-				ta.focus();
-				ta.setSelectionRange(start + prefix.length, start + prefix.length);
-			});
-		},
-		[editBody],
-	);
-
-	const toolbarActions = [
-		{ icon: Bold, action: () => insertMarkdown("**"), title: "Bold" },
-		{ icon: Italic, action: () => insertMarkdown("_"), title: "Italic" },
-		{ icon: Code, action: () => insertMarkdown("`"), title: "Code" },
-		{ icon: LinkIcon, action: () => insertMarkdown("[", "](url)"), title: "Link" },
-		{ icon: Quote, action: () => insertLinePrefix("> "), title: "Quote" },
-		{ icon: List, action: () => insertLinePrefix("- "), title: "Bullet list" },
-		{
-			icon: ListOrdered,
-			action: () => insertLinePrefix("1. "),
-			title: "Numbered list",
-		},
-	];
-
 	return (
 		<div className="border border-border/60 rounded-lg overflow-hidden">
-			{/* Header */}
 			<div className="flex items-center gap-2 px-3.5 py-2 border-b border-border/60 bg-card/80">
 				{entry.user && (
 					<UserTooltip username={entry.user.login}>
@@ -193,9 +120,7 @@ export function EditableIssueDescription({
 			</div>
 
 			{isEditing ? (
-				/* Edit form */
 				<div className="p-3.5 space-y-3">
-					{/* Title */}
 					<div>
 						<label className="text-[11px] text-muted-foreground/50 mb-1 block">
 							Title
@@ -215,137 +140,28 @@ export function EditableIssueDescription({
 						/>
 					</div>
 
-					{/* Body editor */}
 					<div>
 						<label className="text-[11px] text-muted-foreground/50 mb-1 block">
 							Body
 						</label>
-
-						{/* Tabs + toolbar */}
-						<div className="flex items-center gap-0 mb-1.5">
-							<div className="flex items-center gap-0 mr-3">
-								<button
-									type="button"
-									onClick={() =>
-										setBodyTab("write")
-									}
-									className={cn(
-										"flex items-center gap-1 px-2 py-1 text-[11px] rounded-md transition-colors cursor-pointer",
-										bodyTab === "write"
-											? "text-foreground bg-muted/60 dark:bg-white/5 font-medium"
-											: "text-muted-foreground/50 hover:text-muted-foreground",
-									)}
-								>
-									<Pencil className="w-3 h-3" />
-									Write
-								</button>
-								<button
-									type="button"
-									onClick={() =>
-										setBodyTab(
-											"preview",
-										)
-									}
-									className={cn(
-										"flex items-center gap-1 px-2 py-1 text-[11px] rounded-md transition-colors cursor-pointer",
-										bodyTab ===
-											"preview"
-											? "text-foreground bg-muted/60 dark:bg-white/5 font-medium"
-											: "text-muted-foreground/50 hover:text-muted-foreground",
-									)}
-								>
-									<Eye className="w-3 h-3" />
-									Preview
-								</button>
-							</div>
-
-							{/* Markdown toolbar — only in write mode */}
-							{bodyTab === "write" && (
-								<div className="flex items-center gap-0 border-l border-border/30 dark:border-white/5 pl-2">
-									{toolbarActions.map(
-										({
-											icon: Icon,
-											action,
-											title: t,
-										}) => (
-											<button
-												key={
-													t
-												}
-												type="button"
-												onClick={
-													action
-												}
-												title={
-													t
-												}
-												className="p-1 text-muted-foreground/35 hover:text-muted-foreground transition-colors cursor-pointer rounded"
-											>
-												<Icon className="w-3.5 h-3.5" />
-											</button>
-										),
-									)}
-								</div>
-							)}
-						</div>
-
-						{/* Write / Preview area */}
-						<div
-							className={cn(
-								"rounded-lg border border-border/50 dark:border-white/6 overflow-hidden bg-muted/15 dark:bg-white/[0.01] transition-colors",
-								bodyTab === "write" &&
-									"focus-within:border-foreground/15",
-							)}
-						>
-							{bodyTab === "write" ? (
-								<textarea
-									ref={textareaRef}
-									value={editBody}
-									onChange={(e) =>
-										setEditBody(
-											e.target
-												.value,
-										)
-									}
-									rows={10}
-									className="w-full bg-transparent px-3 py-2.5 text-[13px] leading-relaxed placeholder:text-muted-foreground/25 focus:outline-none resize-y font-mono"
-									placeholder="Describe the issue... (Markdown supported)"
-									onKeyDown={(e) => {
-										if (
-											e.key ===
-											"Escape"
-										)
-											handleCancel();
-										if (
-											e.key ===
-												"Enter" &&
-											(e.metaKey ||
-												e.ctrlKey)
-										) {
-											e.preventDefault();
-											handleSave();
-										}
-									}}
-								/>
-							) : (
-								<div className="min-h-[160px] px-3 py-2.5 overflow-y-auto">
-									{editBody.trim() ? (
-										<div className="ghmd text-[13px]">
-											<ReactMarkdown>
-												{
-													editBody
-												}
-											</ReactMarkdown>
-										</div>
-									) : (
-										<p className="text-[13px] text-muted-foreground/25 italic">
-											Nothing to
-											preview
-										</p>
-									)}
-								</div>
-							)}
-						</div>
+						<MarkdownEditor
+							value={editBody}
+							onChange={setEditBody}
+							placeholder="Describe the issue... (Markdown supported)"
+							rows={10}
+							owner={owner}
+							onKeyDown={(e) => {
+								if (e.key === "Escape")
+									handleCancel();
+								if (
+									e.key === "Enter" &&
+									(e.metaKey || e.ctrlKey)
+								) {
+									e.preventDefault();
+									handleSave();
+								}
+							}}
+						/>
 					</div>
 
 					{error && (
@@ -394,7 +210,6 @@ export function EditableIssueDescription({
 					</div>
 				</div>
 			) : (
-				/* Read view */
 				<>
 					{hasBody && renderedBody ? (
 						<div className="px-3.5 py-3">
