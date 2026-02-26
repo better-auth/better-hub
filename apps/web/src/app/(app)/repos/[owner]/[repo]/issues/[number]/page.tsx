@@ -30,8 +30,15 @@ export async function generateMetadata({
 }): Promise<Metadata> {
 	const { owner, repo, number: numStr } = await params;
 	const issueNumber = parseInt(numStr, 10);
-	const issue = await getIssue(owner, repo, issueNumber);
 
+	const repoData = await getRepo(owner, repo);
+	const isPrivate = !repoData || repoData.private === true;
+
+	if (isPrivate) {
+		return { title: `Issue #${issueNumber} · ${owner}/${repo}` };
+	}
+
+	const issue = await getIssue(owner, repo, issueNumber);
 	const ogUrl = ogImageUrl({ type: "issue", owner, repo, number: issueNumber });
 
 	if (!issue) {
