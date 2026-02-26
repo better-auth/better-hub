@@ -318,7 +318,13 @@ export default function NewPullRequestPage() {
 			setUploadingImage(true);
 			setError(null);
 			try {
-				const result = await uploadImage(owner, repo, file);
+				const result = await uploadImage(
+					owner,
+					repo,
+					file,
+					"pull",
+					head || undefined,
+				);
 				if (result.success && result.url) {
 					const ta = textareaRef.current;
 					const md = `\n![${file.name}](${result.url})\n`;
@@ -348,7 +354,7 @@ export default function NewPullRequestPage() {
 				if (fileInputRef.current) fileInputRef.current.value = "";
 			}
 		},
-		[owner, repo],
+		[owner, repo, head],
 	);
 
 	const handleDragOver = useCallback((e: React.DragEvent) => {

@@ -241,15 +241,18 @@ interface UploadImageResult {
 }
 
 /**
- * Upload an image to a temporary location in the repository for use in issue bodies.
- * GitHub doesn't have a dedicated API for uploading images to issues directly,
- * so we upload to a special branch or use the GitHub asset upload pattern.
+ * Upload an image to a temporary location in the repository for use in issue/PR bodies.
+ * GitHub hosts issue/PR paste images on their own asset storage (user-attachments);
+ * we don't have that API, so we commit to the repo in .github-images/.
+ * - For issues: upload to default branch (no branch context).
+ * - For PRs: pass `branch` (head branch) so the image is part of the PR and merges with it.
  */
 export async function uploadImage(
 	owner: string,
 	repo: string,
 	file: File,
 	type: "issue" | "pull" = "issue",
+	branch?: string,
 ): Promise<UploadImageResult> {
 	const octokit = await getOctokit();
 	if (!octokit) return { success: false, error: "Not authenticated" };
@@ -265,27 +268,27 @@ export async function uploadImage(
 		const ext = file.name.split(".").pop()?.toLowerCase() || "png";
 		const filename = `${type}-upload-${timestamp}-${randomId}.${ext}`;
 
-		// Get the default branch first
-		const { data: repoData } = await octokit.repos.get({ owner, repo });
-		const defaultBranch = repoData.default_branch;
+		// Use provided branch (e.g. PR head) or default branch
+		const targetBranch =
+			branch ?? (await octokit.repos.get({ owner, repo })).data.default_branch;
 
 		// Try to create/update the file in a hidden .github-images directory
 		// This follows GitHub's pattern for issue assets
 		const path = `.github-images/${filename}`;
 
 		try {
-			// Create or update file on the default branch
+			// Create or update file on the target branch
 			await octokit.repos.createOrUpdateFileContents({
 				owner,
 				repo,
 				path,
 				message: `Upload image for ${type}: ${filename}`,
 				content: base64Content,
-				branch: defaultBranch,
+				branch: targetBranch,
 			});
 
 			// Construct the raw GitHub URL for the uploaded image
-			const imageUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${defaultBranch}/${path}`;
+			const imageUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${targetBranch}/${path}`;
 
 			return { success: true, url: imageUrl };
 		} catch (error) {
@@ -297,7 +300,7 @@ export async function uploadImage(
 				error.status === 422
 			) {
 				// File might already exist, construct URL anyway
-				const imageUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${defaultBranch}/${path}`;
+				const imageUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${targetBranch}/${path}`;
 				return { success: true, url: imageUrl };
 			}
 			throw error;
