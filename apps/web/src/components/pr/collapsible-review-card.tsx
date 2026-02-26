@@ -298,7 +298,7 @@ export function CollapsibleReviewCard({
 					{hasContent && (
 						<ChevronDown
 							className={cn(
-								"w-3 h-3 text-muted-foreground/40 transition-transform duration-200 shrink-0",
+								"w-3 h-3 text-muted-foreground transition-transform duration-200 shrink-0",
 								!expanded && "-rotate-90",
 							)}
 						/>
@@ -335,12 +335,12 @@ export function CollapsibleReviewCard({
 						{badge.label}
 					</span>
 					{!expanded && comments.length > 0 && (
-						<span className="text-[10px] text-muted-foreground/40">
+						<span className="text-[10px] text-muted-foreground">
 							{comments.length} comment
 							{comments.length !== 1 ? "s" : ""}
 						</span>
 					)}
-					<span className="text-[10px] text-muted-foreground/40 ml-auto shrink-0">
+					<span className="text-[10px] text-muted-foreground ml-auto shrink-0">
 						<TimeAgo date={timestamp} />
 					</span>
 				</button>

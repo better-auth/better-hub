@@ -277,7 +277,7 @@ export function PRDetailLayout({
 												100,
 											)
 										}
-										className="flex items-center justify-center w-6 h-6 rounded-full border border-border bg-background text-muted-foreground/40 hover:text-muted-foreground hover:border-border/80 transition-all cursor-pointer"
+										className="flex items-center justify-center w-6 h-6 rounded-full border border-border bg-background text-muted-foreground hover:text-muted-foreground hover:border-border/80 transition-all cursor-pointer"
 										title="Hide conversation"
 									>
 										<ChevronRight className="w-3 h-3" />

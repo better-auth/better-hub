@@ -299,7 +299,7 @@ export function PRAuthorDossier({
 					{author.name || author.login}
 				</span>
 				{author.name && (
-					<span className="text-[10px] font-mono text-muted-foreground/40 truncate hidden sm:inline">
+					<span className="text-[10px] font-mono text-muted-foreground truncate hidden sm:inline">
 						{author.login}
 					</span>
 				)}
@@ -338,7 +338,7 @@ export function PRAuthorDossier({
 							</p>
 						)}
 						{!author.bio && score && (
-							<p className="text-[10px] text-muted-foreground/40 italic">
+							<p className="text-[10px] text-muted-foreground italic">
 								No bio
 							</p>
 						)}
@@ -416,7 +416,7 @@ export function PRAuthorDossier({
 								</span>
 							)}
 							{repoActivity.commits > 0 && (
-								<span className="text-[10px] font-mono text-muted-foreground/40">
+								<span className="text-[10px] font-mono text-muted-foreground">
 									{fmtN(repoActivity.commits)}{" "}
 									commit
 									{repoActivity.commits !== 1
@@ -425,7 +425,7 @@ export function PRAuthorDossier({
 								</span>
 							)}
 							{repoActivity.prs > 0 && (
-								<span className="text-[10px] font-mono text-muted-foreground/40">
+								<span className="text-[10px] font-mono text-muted-foreground">
 									{fmtN(repoActivity.prs)} PR
 									{repoActivity.prs !== 1
 										? "s"
@@ -433,7 +433,7 @@ export function PRAuthorDossier({
 								</span>
 							)}
 							{repoActivity.reviews > 0 && (
-								<span className="text-[10px] font-mono text-muted-foreground/40">
+								<span className="text-[10px] font-mono text-muted-foreground">
 									{fmtN(repoActivity.reviews)}{" "}
 									review
 									{repoActivity.reviews !== 1
@@ -442,7 +442,7 @@ export function PRAuthorDossier({
 								</span>
 							)}
 							{repoActivity.issues > 0 && (
-								<span className="text-[10px] font-mono text-muted-foreground/40">
+								<span className="text-[10px] font-mono text-muted-foreground">
 									{fmtN(repoActivity.issues)}{" "}
 									issue
 									{repoActivity.issues !== 1
@@ -508,7 +508,7 @@ export function PRAuthorDossier({
 									{r.name}
 								</span>
 								<Star className="w-2 h-2 text-muted-foreground/30" />
-								<span className="text-muted-foreground/40">
+								<span className="text-muted-foreground">
 									{fmtN(r.stargazers_count)}
 								</span>
 							</Link>

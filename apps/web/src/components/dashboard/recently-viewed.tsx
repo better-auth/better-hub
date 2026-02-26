@@ -56,7 +56,7 @@ export function RecentlyViewed() {
 											false,
 										);
 								}}
-								className="w-40 text-[11px] font-mono pl-7 pr-2.5 py-1.5 rounded-md border border-border bg-transparent placeholder:text-muted-foreground/40 focus:outline-none transition-all duration-200"
+								className="w-40 text-[11px] font-mono pl-7 pr-2.5 py-1.5 rounded-md border border-border bg-transparent placeholder:text-muted-foreground focus:outline-none transition-all duration-200"
 							/>
 						</div>
 					) : (
@@ -70,7 +70,7 @@ export function RecentlyViewed() {
 									0,
 								);
 							}}
-							className="p-1.5 text-muted-foreground/40 hover:text-muted-foreground transition-colors cursor-pointer"
+							className="p-1.5 text-muted-foreground hover:text-muted-foreground transition-colors cursor-pointer"
 						>
 							<Search className="w-3 h-3" />
 						</button>
@@ -84,7 +84,7 @@ export function RecentlyViewed() {
 					))
 				) : (
 					<div className="py-6 text-center">
-						<p className="text-[11px] text-muted-foreground/40 font-mono">
+						<p className="text-[11px] text-muted-foreground font-mono">
 							No matches
 						</p>
 					</div>

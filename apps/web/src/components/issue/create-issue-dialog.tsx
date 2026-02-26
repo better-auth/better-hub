@@ -278,7 +278,7 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 							</div>
 							<button
 								onClick={handleClose}
-								className="text-muted-foreground/40 hover:text-foreground transition-colors cursor-pointer p-1 rounded-md hover:bg-muted/50"
+								className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer p-1 rounded-md hover:bg-muted/50"
 							>
 								<X className="w-3.5 h-3.5" />
 							</button>
@@ -300,7 +300,7 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 									}
 									className="w-full flex items-start gap-3 px-3 py-2.5 border border-border/50 dark:border-white/6 hover:border-foreground/15 hover:bg-muted/30 dark:hover:bg-white/[0.02] transition-colors cursor-pointer text-left rounded-lg group"
 								>
-									<FileText className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground/60 shrink-0 mt-0.5 transition-colors" />
+									<FileText className="w-3.5 h-3.5 text-muted-foreground group-hover:text-muted-foreground/60 shrink-0 mt-0.5 transition-colors" />
 									<div className="min-w-0 flex-1">
 										<span className="text-[13px] font-medium block">
 											{t.name}
@@ -359,7 +359,7 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 								onClick={selectBlank}
 								className="w-full flex items-center gap-3 px-3 py-2.5 border border-dashed border-border/60 dark:border-white/8 hover:border-foreground/15 hover:bg-muted/30 dark:hover:bg-white/[0.02] transition-colors cursor-pointer rounded-lg"
 							>
-								<Plus className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
+								<Plus className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
 								<span className="text-[13px] text-muted-foreground/60">
 									Blank issue
 								</span>
@@ -603,7 +603,7 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 														true,
 													)
 												}
-												className="text-[11px] text-muted-foreground/40 hover:text-foreground transition-colors cursor-pointer shrink-0"
+												className="text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
 											>
 												{selectedLabels.length >
 												0

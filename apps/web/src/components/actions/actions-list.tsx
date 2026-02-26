@@ -317,7 +317,7 @@ function WorkflowFilterDropdown({
 					/>
 					<div className="absolute top-full left-0 mt-1 z-20 min-w-[260px] border border-border bg-background shadow-lg">
 						<div className="flex items-center gap-2 px-2.5 py-2 border-b border-border/60">
-							<Search className="w-3 h-3 text-muted-foreground/40 shrink-0" />
+							<Search className="w-3 h-3 text-muted-foreground shrink-0" />
 							<input
 								ref={inputRef}
 								type="text"
@@ -333,7 +333,7 @@ function WorkflowFilterDropdown({
 									onClick={() =>
 										setSearch("")
 									}
-									className="text-muted-foreground/40 hover:text-muted-foreground cursor-pointer"
+									className="text-muted-foreground hover:text-muted-foreground cursor-pointer"
 								>
 									<X className="w-3 h-3" />
 								</button>
@@ -370,7 +370,7 @@ function WorkflowFilterDropdown({
 								</button>
 							))}
 							{filtered.length === 0 && (
-								<div className="px-3 py-3 text-[11px] font-mono text-muted-foreground/40 text-center">
+								<div className="px-3 py-3 text-[11px] font-mono text-muted-foreground text-center">
 									No workflows match
 								</div>
 							)}
@@ -668,7 +668,7 @@ export function ActionsList({
 										selectedRuns.size >=
 											2
 											? "border-blue-500/30 text-blue-400 hover:bg-blue-500/10 cursor-pointer"
-											: "border-border/40 text-muted-foreground/40 cursor-default",
+											: "border-border/40 text-muted-foreground cursor-default",
 									)}
 								>
 									<span className="text-blue-400 text-[10px] font-medium tabular-nums">
@@ -694,7 +694,7 @@ export function ActionsList({
 
 						{/* Run count + pagination info */}
 						<div className="mt-4 mb-2 flex items-center justify-between">
-							<span className="text-[11px] font-mono text-muted-foreground/40">
+							<span className="text-[11px] font-mono text-muted-foreground">
 								{totalCount.toLocaleString()} run
 								{totalCount !== 1 ? "s" : ""} total
 								{hasActiveFilters
@@ -704,7 +704,7 @@ export function ActionsList({
 									` · page ${page} of ${totalPages}`}
 							</span>
 							{loading && (
-								<Loader2 className="w-3.5 h-3.5 text-muted-foreground/40 animate-spin" />
+								<Loader2 className="w-3.5 h-3.5 text-muted-foreground animate-spin" />
 							)}
 						</div>
 					</>
@@ -858,7 +858,7 @@ export function ActionsList({
 											</div>
 										</div>
 										<div className="shrink-0 text-right hidden sm:block">
-											<div className="text-[11px] text-muted-foreground/40">
+											<div className="text-[11px] text-muted-foreground">
 												<TimeAgo
 													date={
 														run.updated_at
@@ -906,7 +906,7 @@ export function ActionsList({
 						{!loading && filteredRuns.length === 0 && (
 							<div className="py-16 text-center">
 								<Play className="w-5 h-5 text-muted-foreground/20 mx-auto mb-3" />
-								<p className="text-[11px] text-muted-foreground/40 font-mono">
+								<p className="text-[11px] text-muted-foreground font-mono">
 									No workflow runs found
 								</p>
 							</div>

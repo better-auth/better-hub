@@ -124,9 +124,9 @@ function GhostThinkingIndicator({ status }: { status: string }) {
 				</span>
 			)}
 			<span className="flex gap-[2px]">
-				<span className="ghost-dot-1 w-[3px] h-[3px] rounded-full bg-muted-foreground/40" />
-				<span className="ghost-dot-2 w-[3px] h-[3px] rounded-full bg-muted-foreground/40" />
-				<span className="ghost-dot-3 w-[3px] h-[3px] rounded-full bg-muted-foreground/40" />
+				<span className="ghost-dot-1 w-[3px] h-[3px] rounded-full bg-muted-foreground" />
+				<span className="ghost-dot-2 w-[3px] h-[3px] rounded-full bg-muted-foreground" />
+				<span className="ghost-dot-3 w-[3px] h-[3px] rounded-full bg-muted-foreground" />
 			</span>
 		</div>
 	);
@@ -324,7 +324,7 @@ function createGhostMarkdownComponents(
 							onClick={() =>
 								navigator.clipboard.writeText(text)
 							}
-							className="opacity-0 group-hover/code:opacity-100 ml-0.5 p-0.5 rounded text-muted-foreground/40 hover:text-foreground transition-all duration-150 cursor-pointer self-center"
+							className="opacity-0 group-hover/code:opacity-100 ml-0.5 p-0.5 rounded text-muted-foreground hover:text-foreground transition-all duration-150 cursor-pointer self-center"
 							title="Copy"
 						>
 							<Copy className="w-2.5 h-2.5" />
@@ -1326,7 +1326,7 @@ export function AIChat({
 				<div ref={scrollRef} className="h-full overflow-y-auto px-3 py-3">
 					{messages.length === 0 && !isLoading && historyLoaded ? (
 						<div className="flex flex-col items-center justify-center h-full text-center gap-3">
-							<Ghost className="size-6 text-muted-foreground/40" />
+							<Ghost className="size-6 text-muted-foreground" />
 							<div>
 								<p
 									className="text-xs font-medium text-foreground/70 mb-0.5"
@@ -1412,7 +1412,7 @@ export function AIChat({
 																.length ===
 															1 ? (
 																<span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted/60 text-[10px] font-mono text-muted-foreground/60">
-																	<Code2 className="w-2.5 h-2.5 text-muted-foreground/40 shrink-0" />
+																	<Code2 className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
 																	<span className="truncate max-w-[140px]">
 																		{messageContexts[
 																			message
@@ -1447,7 +1447,7 @@ export function AIChat({
 																</span>
 															) : (
 																<span className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-muted/60 text-[10px] font-mono text-muted-foreground/60">
-																	<Code2 className="w-2.5 h-2.5 text-muted-foreground/40 shrink-0" />
+																	<Code2 className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
 																	<span className="size-4 rounded-full bg-foreground/10 flex items-center justify-center text-[9px] font-semibold text-muted-foreground/80 tabular-nums">
 																		{
 																			messageContexts[
@@ -1794,7 +1794,7 @@ export function AIChat({
 														: "hover:bg-muted/50",
 												)}
 											>
-												<Code2 className="w-3 h-3 text-muted-foreground/40 shrink-0" />
+												<Code2 className="w-3 h-3 text-muted-foreground shrink-0" />
 												<span className="text-[12px] font-mono truncate">
 													<span className="text-foreground/80">
 														{
@@ -1802,7 +1802,7 @@ export function AIChat({
 														}
 													</span>
 													{dir && (
-														<span className="text-muted-foreground/40 ml-1">
+														<span className="text-muted-foreground ml-1">
 															{
 																dir
 															}
@@ -1823,7 +1823,7 @@ export function AIChat({
 							>
 								{filteredHashPrFiles.length > 0 && (
 									<>
-										<div className="px-3 py-1 text-[10px] font-medium text-muted-foreground/40 uppercase tracking-wider">
+										<div className="px-3 py-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
 											PR Files
 										</div>
 										{filteredHashPrFiles.map(
@@ -1870,7 +1870,7 @@ export function AIChat({
 																: "hover:bg-muted/50",
 														)}
 													>
-														<Code2 className="w-3 h-3 text-muted-foreground/40 shrink-0" />
+														<Code2 className="w-3 h-3 text-muted-foreground shrink-0" />
 														<span className="text-[12px] font-mono truncate">
 															<span className="text-foreground/80">
 																{
@@ -1878,7 +1878,7 @@ export function AIChat({
 																}
 															</span>
 															{dir && (
-																<span className="text-muted-foreground/40 ml-1">
+																<span className="text-muted-foreground ml-1">
 																	{
 																		dir
 																	}
@@ -1894,7 +1894,7 @@ export function AIChat({
 								{(hashRepoResults.length > 0 ||
 									hashSearching) && (
 									<>
-										<div className="px-3 py-1 text-[10px] font-medium text-muted-foreground/40 uppercase tracking-wider">
+										<div className="px-3 py-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
 											Repository
 										</div>
 										{hashRepoResults.map(
@@ -1944,7 +1944,7 @@ export function AIChat({
 																: "hover:bg-muted/50",
 														)}
 													>
-														<Code2 className="w-3 h-3 text-muted-foreground/40 shrink-0" />
+														<Code2 className="w-3 h-3 text-muted-foreground shrink-0" />
 														<span className="text-[12px] font-mono truncate">
 															<span className="text-foreground/80">
 																{
@@ -1952,7 +1952,7 @@ export function AIChat({
 																}
 															</span>
 															{dir && (
-																<span className="text-muted-foreground/40 ml-1">
+																<span className="text-muted-foreground ml-1">
 																	{
 																		dir
 																	}
@@ -1964,7 +1964,7 @@ export function AIChat({
 											},
 										)}
 										{hashSearching && (
-											<div className="flex items-center gap-2 px-3 py-1.5 text-[11px] text-muted-foreground/40">
+											<div className="flex items-center gap-2 px-3 py-1.5 text-[11px] text-muted-foreground">
 												<Loader2 className="w-3 h-3 animate-spin" />
 												Searching...
 											</div>

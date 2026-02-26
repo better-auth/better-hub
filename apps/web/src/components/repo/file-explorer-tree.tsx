@@ -208,7 +208,7 @@ function FileSearchBar({
 									<span className="text-foreground">
 										{node.name}
 									</span>
-									<span className="text-muted-foreground/40 ml-1.5">
+									<span className="text-muted-foreground ml-1.5">
 										{node.path}
 									</span>
 								</span>

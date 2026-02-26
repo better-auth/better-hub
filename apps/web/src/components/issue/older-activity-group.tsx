@@ -30,7 +30,7 @@ export function OlderActivityGroup({
 			>
 				<ChevronRight
 					className={cn(
-						"w-3 h-3 text-muted-foreground/40 transition-transform duration-150 shrink-0",
+						"w-3 h-3 text-muted-foreground transition-transform duration-150 shrink-0",
 						expanded && "rotate-90",
 					)}
 				/>

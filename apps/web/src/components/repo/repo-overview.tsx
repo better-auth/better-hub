@@ -83,7 +83,7 @@ function Section({
 
 function EmptyState({ message }: { message: string }) {
 	return (
-		<div className="flex items-center justify-center h-24 text-xs font-mono text-muted-foreground/40">
+		<div className="flex items-center justify-center h-24 text-xs font-mono text-muted-foreground">
 			{message}
 		</div>
 	);
@@ -180,7 +180,7 @@ function SortableList({
 				items.length > 1 ? (
 					<button
 						onClick={nextSort}
-						className="text-[10px] font-mono text-muted-foreground/40 hover:text-muted-foreground transition-colors cursor-pointer"
+						className="text-[10px] font-mono text-muted-foreground hover:text-muted-foreground transition-colors cursor-pointer"
 					>
 						{sortLabel} &darr;
 					</button>
@@ -408,7 +408,7 @@ function ActivityItem({ event }: { event: RepoEvent }) {
 					{event.org?.login && (
 						<>
 							{" "}
-							<span className="text-muted-foreground/40">
+							<span className="text-muted-foreground">
 								@
 							</span>
 							<Link
@@ -428,7 +428,7 @@ function ActivityItem({ event }: { event: RepoEvent }) {
 					</p>
 				)}
 			</div>
-			<span className="text-[9px] font-mono text-muted-foreground/40 shrink-0 mt-0.5">
+			<span className="text-[9px] font-mono text-muted-foreground shrink-0 mt-0.5">
 				{timeAgo(event.created_at)}
 			</span>
 		</div>
@@ -451,7 +451,7 @@ function CommitActivityGraph({ data }: { data: CommitActivityWeek[] }) {
 	return (
 		<div className="mb-3 pb-3 border-b border-border/20">
 			<div className="flex items-center justify-between mb-2">
-				<span className="text-[9px] font-mono text-muted-foreground/40 uppercase tracking-wider">
+				<span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">
 					Commits &middot; 16 weeks
 				</span>
 				<span className="text-[9px] font-mono text-muted-foreground/50">

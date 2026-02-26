@@ -132,7 +132,7 @@ export function EditablePRTitle({ title, number, owner, repo, canEdit }: Editabl
 			<button
 				type="button"
 				onClick={() => setEditing(true)}
-				className="inline-flex ml-1.5 p-0.5 rounded opacity-0 group-hover/title:opacity-100 hover:bg-muted/50 text-muted-foreground/40 hover:text-muted-foreground transition-all cursor-pointer align-middle"
+				className="inline-flex ml-1.5 p-0.5 rounded opacity-0 group-hover/title:opacity-100 hover:bg-muted/50 text-muted-foreground hover:text-muted-foreground transition-all cursor-pointer align-middle"
 				title="Edit title"
 			>
 				<Pencil className="w-3 h-3" />

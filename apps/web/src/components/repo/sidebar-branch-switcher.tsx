@@ -86,7 +86,7 @@ export function SidebarBranchSwitcher({
 												.value,
 										)
 									}
-									className="w-full bg-transparent text-[11px] pl-6 pr-2 py-1 border border-border placeholder:text-muted-foreground/40 focus:outline-none focus:border-foreground/20 rounded-sm"
+									className="w-full bg-transparent text-[11px] pl-6 pr-2 py-1 border border-border placeholder:text-muted-foreground focus:outline-none focus:border-foreground/20 rounded-sm"
 									autoFocus
 								/>
 							</div>
@@ -117,7 +117,7 @@ export function SidebarBranchSwitcher({
 										{b.name}
 									</span>
 									{isDefault && (
-										<span className="text-[9px] text-muted-foreground/40 shrink-0">
+										<span className="text-[9px] text-muted-foreground shrink-0">
 											default
 										</span>
 									)}

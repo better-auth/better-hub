@@ -500,7 +500,7 @@ function LanguagesSection({ languages }: { languages: Record<string, number> }) 
 							<span className="font-mono text-muted-foreground/60 ml-auto tabular-nums">
 								{pct}%
 							</span>
-							<span className="font-mono text-muted-foreground/40 tabular-nums w-16 text-right">
+							<span className="font-mono text-muted-foreground tabular-nums w-16 text-right">
 								{formatBytes(bytes)}
 							</span>
 						</div>

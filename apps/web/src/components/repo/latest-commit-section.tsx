@@ -80,7 +80,7 @@ export function LatestCommitSection({ owner, repoName, initialCommit }: LatestCo
 						<span className="text-[10px] text-muted-foreground/60 font-mono">
 							{commit.author?.login ?? "unknown"}
 						</span>
-						<span className="text-[10px] text-muted-foreground/40">
+						<span className="text-[10px] text-muted-foreground">
 							<TimeAgo date={commit.date} />
 						</span>
 					</div>

@@ -120,7 +120,7 @@ export function PROptimisticCommentsDisplay() {
 						<span className="text-xs font-medium text-foreground/80">
 							{c.userName || "You"}
 						</span>
-						<span className="text-[10px] text-muted-foreground/40 ml-auto shrink-0">
+						<span className="text-[10px] text-muted-foreground ml-auto shrink-0">
 							<TimeAgo date={c.created_at} />
 						</span>
 					</div>

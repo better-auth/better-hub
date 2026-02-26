@@ -93,7 +93,7 @@ export function MessageActionsMenu({
 		<DropdownMenu open={open} onOpenChange={setOpen}>
 			<DropdownMenuTrigger asChild>
 				<button
-					className="p-0.5 rounded hover:bg-accent text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+					className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-muted-foreground transition-colors"
 					aria-label="Message actions"
 					disabled={deleting}
 				>
