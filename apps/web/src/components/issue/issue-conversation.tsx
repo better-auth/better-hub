@@ -305,6 +305,10 @@ function ThreadEntry({
 }) {
 	const hasBody = Boolean(entry.body && entry.body.trim().length > 0);
 	const isLong = hasBody && entry.body.length > 800;
+	const canEditComment = !!(
+		currentUserLogin &&
+		(currentUserLogin === entry.user?.login || viewerHasWriteAccess)
+	);
 
 	const renderedBody = entry.bodyHtml ? (
 		<MarkdownCopyHandler>
@@ -372,14 +376,7 @@ function ThreadEntry({
 						owner={owner}
 						repo={repo}
 						issueNumber={issueNumber}
-						canEditComment={
-							!!(
-								currentUserLogin &&
-								(currentUserLogin ===
-									entry.user?.login ||
-									viewerHasWriteAccess)
-							)
-						}
+						canEditComment={canEditComment}
 					/>
 				)}
 			</div>
@@ -557,6 +554,10 @@ function ThreadComment({
 }) {
 	const hasBody = Boolean(entry.body && entry.body.trim().length > 0);
 	const isLong = hasBody && entry.body.length > 800;
+	const canEditComment = !!(
+		currentUserLogin &&
+		(currentUserLogin === entry.user?.login || viewerHasWriteAccess)
+	);
 
 	const renderedBody = entry.bodyHtml ? (
 		<MarkdownCopyHandler>
@@ -590,13 +591,7 @@ function ThreadComment({
 			owner={owner}
 			repo={repo}
 			issueNumber={issueNumber}
-			canEditComment={
-				!!(
-					currentUserLogin &&
-					(currentUserLogin === entry.user?.login ||
-						viewerHasWriteAccess)
-				)
-			}
+			canEditComment={canEditComment}
 		/>
 	);
 }
