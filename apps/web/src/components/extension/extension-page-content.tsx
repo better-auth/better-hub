@@ -87,8 +87,7 @@ const FIREFOX_STEPS = [
 	{
 		number: "04",
 		title: "Click gear icon",
-		description:
-			'Click the gear icon in the upper right and select "Debug Add-ons".',
+		description: 'Click the gear icon in the upper right and select "Debug Add-ons".',
 		icon: Settings,
 	},
 	{
@@ -177,7 +176,9 @@ export function ExtensionPageContent() {
 								Chrome
 							</button>
 							<button
-								onClick={() => setBrowser("firefox")}
+								onClick={() =>
+									setBrowser("firefox")
+								}
 								className={cn(
 									"inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-mono rounded-md transition-all",
 									browser === "firefox"
@@ -192,7 +193,7 @@ export function ExtensionPageContent() {
 					</div>
 				</div>
 
-					{/* Download button */}
+				{/* Download button */}
 				<div className="mt-6 flex items-center gap-3">
 					<a
 						href={`/api/extension-download?browser=${browser}`}
@@ -206,12 +207,16 @@ export function ExtensionPageContent() {
 						}}
 						className={cn(
 							"inline-flex items-center gap-2 px-5 py-2.5 text-sm font-mono rounded-md transition-all",
-							(browser === "chrome" && chromeDownloaded) || (browser === "firefox" && firefoxDownloaded)
+							(browser === "chrome" &&
+								chromeDownloaded) ||
+								(browser === "firefox" &&
+									firefoxDownloaded)
 								? "bg-[var(--contrib-1)] border border-[var(--contrib-3)]/30 text-[var(--contrib-4)]"
 								: "bg-foreground text-background hover:bg-foreground/90",
 						)}
 					>
-						{(browser === "chrome" && chromeDownloaded) || (browser === "firefox" && firefoxDownloaded) ? (
+						{(browser === "chrome" && chromeDownloaded) ||
+						(browser === "firefox" && firefoxDownloaded) ? (
 							<>
 								<Check className="w-4 h-4" />
 								Downloaded — follow steps below
@@ -219,7 +224,10 @@ export function ExtensionPageContent() {
 						) : (
 							<>
 								<Download className="w-4 h-4" />
-								Download for {browser === "chrome" ? "Chrome" : "Firefox"}
+								Download for{" "}
+								{browser === "chrome"
+									? "Chrome"
+									: "Firefox"}
 							</>
 						)}
 					</a>
@@ -232,7 +240,11 @@ export function ExtensionPageContent() {
 			</div>
 
 			{/* Scrollable content */}
-			<div className="flex-1 min-h-0 overflow-y-auto pt-6" key={browser} style={{ animation: 'none' }}>
+			<div
+				className="flex-1 min-h-0 overflow-y-auto pt-6"
+				key={browser}
+				style={{ animation: "none" }}
+			>
 				{/* Installation steps */}
 				<div className="mb-10">
 					<h2 className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-5">
@@ -243,7 +255,10 @@ export function ExtensionPageContent() {
 						{/* Vertical connector line */}
 						<div className="absolute left-[19px] top-6 bottom-6 w-px bg-border" />
 
-						<div className="flex flex-col gap-0 animate-none" key={browser}>
+						<div
+							className="flex flex-col gap-0 animate-none"
+							key={browser}
+						>
 							{currentSteps.map((step, i) => (
 								<div
 									key={`step-${step.number}`}
