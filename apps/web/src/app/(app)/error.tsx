@@ -154,7 +154,7 @@ function RateLimitUI({ reset }: { reset: () => void }) {
 
 				{/* Progress bar */}
 				<div className="space-y-3">
-					<div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-muted-foreground/40">
+					<div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
 						<span>Recovering</span>
 						<span>{Math.round(progress)}%</span>
 					</div>
@@ -178,7 +178,7 @@ function RateLimitUI({ reset }: { reset: () => void }) {
 				{/* Countdown */}
 				<div className="flex items-center justify-center gap-6">
 					<div className="text-center">
-						<div className="flex items-center gap-1.5 text-muted-foreground/40 mb-1">
+						<div className="flex items-center gap-1.5 text-muted-foreground mb-1">
 							<Clock className="w-3 h-3" />
 							<span className="text-[10px] font-mono uppercase tracking-wider">
 								Resets in
@@ -193,7 +193,7 @@ function RateLimitUI({ reset }: { reset: () => void }) {
 				{/* Info card */}
 				<div className="border border-border/40 rounded-lg p-4 space-y-3">
 					<div className="flex items-center gap-2">
-						<Github className="w-3.5 h-3.5 text-muted-foreground/40" />
+						<Github className="w-3.5 h-3.5 text-muted-foreground" />
 						<span className="text-[11px] font-mono text-muted-foreground/60">
 							GitHub API &middot;{" "}
 							{rateLimitInfo
@@ -201,7 +201,7 @@ function RateLimitUI({ reset }: { reset: () => void }) {
 								: "5,000 requests/hour"}
 						</span>
 					</div>
-					<p className="text-xs text-muted-foreground/40 leading-relaxed">
+					<p className="text-xs text-muted-foreground leading-relaxed">
 						Cached data may still be available. Try navigating
 						to a page you&apos;ve visited before, or wait for
 						the limit to reset.

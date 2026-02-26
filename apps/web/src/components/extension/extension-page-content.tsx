@@ -137,7 +137,7 @@ export function ExtensionPageContent() {
 							</>
 						)}
 					</a>
-					<span className="text-[10px] text-muted-foreground/40 font-mono">
+					<span className="text-[10px] text-muted-foreground font-mono">
 						Manual install required (unpacked extension)
 					</span>
 				</div>
@@ -149,7 +149,7 @@ export function ExtensionPageContent() {
 			<div className="flex-1 min-h-0 overflow-y-auto pt-6">
 				{/* Installation steps */}
 				<div className="mb-10">
-					<h2 className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest mb-5">
+					<h2 className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-5">
 						Installation Guide
 					</h2>
 
@@ -207,7 +207,7 @@ export function ExtensionPageContent() {
 															step.code!,
 														)
 													}
-													className="text-[10px] font-mono text-muted-foreground/40 hover:text-foreground transition-colors cursor-pointer"
+													className="text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
 												>
 													copy
 												</button>
@@ -222,7 +222,7 @@ export function ExtensionPageContent() {
 
 				{/* Route mappings */}
 				<div className="mb-10">
-					<h2 className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest mb-4">
+					<h2 className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-4">
 						Route Mappings
 					</h2>
 					<div className="border border-border rounded-md divide-y divide-border overflow-hidden">

@@ -84,7 +84,7 @@ export function CommitDialog({
 					<div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
 						<GitCommit className="w-3.5 h-3.5" />
 						<span>{branch}</span>
-						<span className="text-muted-foreground/40">/</span>
+						<span className="text-muted-foreground">/</span>
 						<span className="truncate">{filename}</span>
 					</div>
 
@@ -94,7 +94,7 @@ export function CommitDialog({
 							onChange={(e) => setMessage(e.target.value)}
 							placeholder="Commit message..."
 							rows={3}
-							className="w-full rounded-md border border-border bg-muted/30 px-3 py-2 pr-8 text-xs font-mono text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+							className="w-full rounded-md border border-border bg-muted/30 px-3 py-2 pr-8 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
 							onKeyDown={(e) => {
 								if (
 									e.key === "Enter" &&
@@ -109,7 +109,7 @@ export function CommitDialog({
 							type="button"
 							onClick={handleGenerate}
 							disabled={isGenerating || isCommitting}
-							className="absolute right-2 top-2 p-0.5 text-muted-foreground/40 hover:text-foreground/70 transition-colors cursor-pointer disabled:cursor-wait"
+							className="absolute right-2 top-2 p-0.5 text-muted-foreground hover:text-foreground/70 transition-colors cursor-pointer disabled:cursor-wait"
 							title="Generate with AI"
 						>
 							<Sparkles

@@ -185,7 +185,7 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 								href={`https://github.com/${githubProfile.login}`}
 								target="_blank"
 								rel="noopener noreferrer"
-								className="text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+								className="text-muted-foreground hover:text-muted-foreground transition-colors"
 							>
 								<ExternalLink className="w-3 h-3" />
 							</a>
@@ -228,7 +228,7 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 						{meta.map((m) => (
 							<span
 								key={m.text}
-								className="inline-flex items-center gap-1 text-[10px] font-mono text-muted-foreground/40"
+								className="inline-flex items-center gap-1 text-[10px] font-mono text-muted-foreground"
 							>
 								<m.icon className="w-2.5 h-2.5" />
 								{m.text}
@@ -255,11 +255,11 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 							<span className="text-xs font-mono">
 								GitHub
 							</span>
-							<span className="text-[10px] font-mono text-muted-foreground/40">
+							<span className="text-[10px] font-mono text-muted-foreground">
 								connected
 							</span>
 						</div>
-						<span className="text-[10px] font-mono text-muted-foreground/40 bg-muted/50 dark:bg-white/[0.04] px-1.5 py-0.5">
+						<span className="text-[10px] font-mono text-muted-foreground bg-muted/50 dark:bg-white/[0.04] px-1.5 py-0.5">
 							primary
 						</span>
 					</div>
@@ -407,7 +407,7 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 									"flex items-center gap-1.5 border px-3 py-1.5 text-xs font-mono transition-colors cursor-pointer",
 									hasChanges
 										? "border-foreground/30 text-foreground hover:bg-muted/50 dark:hover:bg-white/[0.04]"
-										: "border-border text-muted-foreground/40 cursor-not-allowed",
+										: "border-border text-muted-foreground cursor-not-allowed",
 								)}
 							>
 								<ExternalLink className="w-3 h-3" />
@@ -425,7 +425,7 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 
 						<div className="flex items-center gap-1.5 mt-2">
 							<span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-							<span className="text-[10px] font-mono text-muted-foreground/40">
+							<span className="text-[10px] font-mono text-muted-foreground">
 								= currently granted
 							</span>
 						</div>

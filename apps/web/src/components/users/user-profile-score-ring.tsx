@@ -119,7 +119,7 @@ export function UserProfileScoreRing({ score }: { score: ProfileScoreResult }) {
 			</div>
 
 			<div className="min-w-0">
-				<div className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest">
+				<div className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
 					Profile Score
 				</div>
 				<div

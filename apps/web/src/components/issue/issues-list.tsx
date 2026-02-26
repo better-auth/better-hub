@@ -357,13 +357,13 @@ export function IssuesList({
 				{/* Row 1: Search + Sort + Filter + New Issue */}
 				<div className="flex items-center gap-2 mb-3 flex-wrap">
 					<div className="relative flex-1 max-w-sm">
-						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40" />
+						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
 						<input
 							type="text"
 							placeholder="Search issues..."
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							className="w-full h-8 bg-transparent border border-border rounded-lg pl-9 pr-4 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-foreground/20 transition-colors"
+							className="w-full h-8 bg-transparent border border-border rounded-lg pl-9 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground/20 transition-colors"
 						/>
 					</div>
 
@@ -411,7 +411,7 @@ export function IssuesList({
 							<div className="absolute z-30 top-full right-0 mt-2 w-[calc(100vw-2rem)] sm:w-72 border border-border/60 bg-background shadow-xl rounded-xl overflow-hidden">
 								{/* Activity */}
 								<div className="px-3.5 pt-3 pb-2.5">
-									<span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/40">
+									<span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
 										Activity
 									</span>
 									<div className="flex flex-wrap gap-1 mt-2">
@@ -472,7 +472,7 @@ export function IssuesList({
 
 								{/* Assignee */}
 								<div className="px-3.5 pt-2.5 pb-2.5">
-									<span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/40">
+									<span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
 										Assignee
 									</span>
 									<div className="flex flex-wrap gap-1 mt-2">
@@ -529,7 +529,7 @@ export function IssuesList({
 
 								{/* Author */}
 								<div className="px-3.5 pt-2.5 pb-2.5">
-									<span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/40">
+									<span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
 										Author
 									</span>
 									<div
@@ -597,7 +597,7 @@ export function IssuesList({
 															true,
 														)
 													}
-													className="w-full bg-transparent border-b border-border/40 px-1 py-1 text-[10px] font-mono placeholder:text-muted-foreground/40 focus:outline-none focus:border-foreground/20 transition-colors"
+													className="w-full bg-transparent border-b border-border/40 px-1 py-1 text-[10px] font-mono placeholder:text-muted-foreground focus:outline-none focus:border-foreground/20 transition-colors"
 												/>
 												{authorDropdownOpen &&
 													filteredAuthors.length >
@@ -677,7 +677,7 @@ export function IssuesList({
 									<>
 										<div className="border-t border-border/30 mx-3" />
 										<div className="px-3.5 pt-2.5 pb-2.5">
-											<span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/40">
+											<span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
 												Label
 											</span>
 											<div className="flex flex-wrap gap-1 mt-2">
@@ -730,7 +730,7 @@ export function IssuesList({
 									<>
 										<div className="border-t border-border/30 mx-3" />
 										<div className="px-3.5 pt-2.5 pb-2.5">
-											<span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/40">
+											<span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
 												Milestone
 											</span>
 											<div className="flex flex-wrap gap-1 mt-2">

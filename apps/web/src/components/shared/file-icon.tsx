@@ -158,7 +158,7 @@ export function FileTypeIcon({
 
 	return (
 		<span className={`${className} relative inline-flex items-center justify-center`}>
-			<Icon className="w-full h-full text-muted-foreground/40" />
+			<Icon className="w-full h-full text-muted-foreground" />
 			{color && (
 				<span
 					className="absolute -bottom-px -right-px w-1.5 h-1.5 rounded-full ring-1 ring-background"

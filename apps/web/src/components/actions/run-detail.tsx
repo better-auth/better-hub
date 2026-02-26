@@ -83,7 +83,7 @@ function StepLogViewer({ stepLog }: { stepLog: StepLog | undefined }) {
 
 	if (!stepLog || stepLog.lines.length === 0) {
 		return (
-			<div className="px-4 py-3 text-[11px] font-mono text-muted-foreground/40">
+			<div className="px-4 py-3 text-[11px] font-mono text-muted-foreground">
 				No log output for this step
 			</div>
 		);
@@ -121,7 +121,7 @@ function StepLogViewer({ stepLog }: { stepLog: StepLog | undefined }) {
 											? "text-yellow-400"
 											: line.annotation ===
 												  "debug"
-												? "text-muted-foreground/40"
+												? "text-muted-foreground"
 												: line.annotation ===
 													  "notice"
 													? "text-blue-400"
@@ -311,13 +311,13 @@ export function RunDetail({
 								<span className="text-[9px] font-mono px-1 py-0.5 border border-border text-muted-foreground/50">
 									{run.event}
 								</span>
-								<span className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground/40">
+								<span className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground">
 									<GitCommit className="w-2.5 h-2.5" />
 									{run.head_sha.slice(0, 7)}
 								</span>
 								{run.run_started_at && (
 									<span
-										className="flex items-center gap-1 text-[10px] text-muted-foreground/40"
+										className="flex items-center gap-1 text-[10px] text-muted-foreground"
 										suppressHydrationWarning
 									>
 										<Clock className="w-2.5 h-2.5" />
@@ -423,7 +423,7 @@ export function RunDetail({
 											>
 												<ChevronRight
 													className={cn(
-														"w-3 h-3 text-muted-foreground/40 transition-transform shrink-0",
+														"w-3 h-3 text-muted-foreground transition-transform shrink-0",
 														isExpanded &&
 															"rotate-90",
 													)}
@@ -448,7 +448,7 @@ export function RunDetail({
 													}
 												</span>
 												{step.started_at && (
-													<span className="text-[10px] font-mono text-muted-foreground/40 shrink-0">
+													<span className="text-[10px] font-mono text-muted-foreground shrink-0">
 														{formatDuration(
 															step.started_at,
 															step.completed_at ??
@@ -462,16 +462,16 @@ export function RunDetail({
 												<div className="border-t border-border/30">
 													{loading ? (
 														<div className="flex items-center gap-2 px-4 py-4">
-															<Loader2 className="w-3 h-3 animate-spin text-muted-foreground/40" />
-															<span className="text-[11px] font-mono text-muted-foreground/40">
+															<Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+															<span className="text-[11px] font-mono text-muted-foreground">
 																Loading
 																logs...
 															</span>
 														</div>
 													) : error ? (
 														<div className="flex items-center gap-2 px-4 py-4">
-															<AlertCircle className="w-3 h-3 text-muted-foreground/40" />
-															<span className="text-[11px] font-mono text-muted-foreground/40">
+															<AlertCircle className="w-3 h-3 text-muted-foreground" />
+															<span className="text-[11px] font-mono text-muted-foreground">
 																{
 																	error
 																}

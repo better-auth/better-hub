@@ -315,7 +315,7 @@ export function OrgDetailContent({ org, repos }: { org: OrgDetails; repos: OrgRe
 										}}
 									/>
 								) : (
-									<FolderGit2 className="w-3.5 h-3.5 text-muted-foreground/40" />
+									<FolderGit2 className="w-3.5 h-3.5 text-muted-foreground" />
 								)}
 							</div>
 							<div className="flex-1 min-w-0">

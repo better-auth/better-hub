@@ -92,51 +92,80 @@ export default async function HomePage({
 				</span>
 			</div>
 
-			{/* Content — centered on screen */}
-			<div className="relative z-20 min-h-screen flex items-center justify-center px-6">
-				<div className="w-full max-w-md">
-					{/* Heading */}
-					<h1
-						className="hero-in text-3xl sm:text-4xl lg:text-5xl font-medium tracking-tight text-foreground leading-[1.1] mb-2"
-						style={{ animationDelay: "0.4s" }}
-					>
-						Re-imagining{" "}
-						<span className="text-white/80 font-mono">
-							code
-						</span>
-						<br />
-						collaboration.
-					</h1>
+			{/* Content — side by side layout */}
+			<div className="relative z-20 min-h-screen flex items-center justify-center px-6 lg:px-12 xl:px-16 py-20">
+				<div className="w-full max-w-[1600px] grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-12 lg:gap-16 items-center">
+					{/* Left — Hero text */}
+					<div className="w-full max-w-md mx-auto lg:mx-0">
+						{/* Heading */}
+						<h1
+							className="hero-in text-3xl sm:text-4xl lg:text-5xl font-medium tracking-tight text-foreground leading-[1.1] mb-2"
+							style={{ animationDelay: "0.4s" }}
+						>
+							Re-imagining{" "}
+							<span className="text-white/80 font-mono">
+								code
+							</span>
+							<br />
+							collaboration.
+						</h1>
 
-					<p
-						className="hero-in text-foreground/50 text-sm leading-relaxed mt-4 max-w-sm"
-						style={{ animationDelay: "0.6s" }}
-					>
-						A better place to collaborate on code — for humans
-						and agents
-					</p>
+						<p
+							className="hero-in text-foreground/50 text-sm leading-relaxed mt-4 max-w-sm"
+							style={{ animationDelay: "0.6s" }}
+						>
+							A better place to collaborate on code — for
+							humans and agents
+						</p>
 
-					{/* Divider */}
-					<div
-						className="hero-in my-8 h-px"
-						style={{
-							animationDelay: "0.8s",
-							background: "var(--hero-border)",
-						}}
-					/>
+						{/* Divider */}
+						<div
+							className="hero-in my-8 h-px"
+							style={{
+								animationDelay: "0.8s",
+								background: "var(--hero-border)",
+							}}
+						/>
 
-					{/* Login */}
-					<div className="hero-in" style={{ animationDelay: "1.0s" }}>
-						<LoginButton redirectTo={redirectTo} />
+						{/* Login */}
+						<div
+							className="hero-in"
+							style={{ animationDelay: "1.0s" }}
+						>
+							<LoginButton redirectTo={redirectTo} />
+						</div>
+
+						<p
+							className="hero-in text-[11px] text-foreground/40 mt-3"
+							style={{ animationDelay: "1.2s" }}
+						>
+							Your access token is encrypted and stored
+							securely. Only the permissions you grant
+							will be used.
+						</p>
 					</div>
 
-					<p
-						className="hero-in text-[11px] text-foreground/40 mt-3"
-						style={{ animationDelay: "1.2s" }}
+					{/* Right — Demo Video */}
+					<div
+						className="hero-in w-full"
+						style={{ animationDelay: "0.6s" }}
 					>
-						Your access token is encrypted and stored securely.
-						Only the permissions you grant will be used.
-					</p>
+						<div className="relative rounded-xl overflow-hidden border border-[var(--hero-border)] bg-black/50 backdrop-blur-sm shadow-2xl shadow-black/50">
+							<div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+							<video
+								className="w-full h-auto"
+								autoPlay
+								loop
+								muted
+								playsInline
+							>
+								<source
+									src="/demo.mp4"
+									type="video/mp4"
+								/>
+							</video>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>

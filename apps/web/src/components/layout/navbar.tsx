@@ -499,7 +499,7 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 													] ||
 														notif.reason}
 												</span>
-												<span className="flex items-center gap-0.5 text-[10px] text-muted-foreground/40 shrink-0">
+												<span className="flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0">
 													<Clock className="w-2.5 h-2.5" />
 													<TimeAgo
 														date={

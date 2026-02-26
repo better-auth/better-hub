@@ -32,11 +32,7 @@ function CheckIcon({ state, className }: { state: CheckRun["state"]; className?:
 				/>
 			);
 		case "skipped":
-			return (
-				<SkipForward
-					className={cn("text-muted-foreground/40", className)}
-				/>
-			);
+			return <SkipForward className={cn("text-muted-foreground", className)} />;
 	}
 }
 
@@ -210,7 +206,7 @@ function ProviderSection({
 							{check.runId && owner && repo ? (
 								<Link
 									href={`/${owner}/${repo}/actions/${check.runId}`}
-									className="shrink-0 text-muted-foreground/40 hover:text-foreground transition-colors opacity-0 group-hover/check:opacity-100"
+									className="shrink-0 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/check:opacity-100"
 								>
 									<ArrowRight className="w-3 h-3" />
 								</Link>
@@ -219,7 +215,7 @@ function ProviderSection({
 									href={check.url}
 									target="_blank"
 									rel="noopener noreferrer"
-									className="shrink-0 text-muted-foreground/40 hover:text-foreground transition-colors opacity-0 group-hover/check:opacity-100"
+									className="shrink-0 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover/check:opacity-100"
 								>
 									<ExternalLink className="w-3 h-3" />
 								</a>
@@ -293,7 +289,7 @@ export function PRChecksPanel({
 			>
 				<ChevronRight
 					className={cn(
-						"w-3 h-3 text-muted-foreground/40 transition-transform duration-150 shrink-0",
+						"w-3 h-3 text-muted-foreground transition-transform duration-150 shrink-0",
 						expanded && "rotate-90",
 					)}
 				/>

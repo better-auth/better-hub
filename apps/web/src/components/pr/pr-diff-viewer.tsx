@@ -1914,7 +1914,7 @@ function SingleFileDiff({
 				{/* Inline search bar */}
 				{searchOpen && (
 					<div className="flex items-center gap-1.5 px-3 py-1.5 border-t border-border/50">
-						<Search className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
+						<Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
 						<input
 							ref={searchInputRef}
 							type="text"
@@ -1924,7 +1924,7 @@ function SingleFileDiff({
 							}
 							onKeyDown={handleDiffSearchKeyDown}
 							placeholder="Find in diff..."
-							className="flex-1 bg-transparent text-xs font-mono text-foreground placeholder:text-muted-foreground/40 outline-none min-w-0"
+							className="flex-1 bg-transparent text-xs font-mono text-foreground placeholder:text-muted-foreground outline-none min-w-0"
 							autoFocus
 						/>
 						{searchQuery && (
@@ -1963,7 +1963,7 @@ function SingleFileDiff({
 									"px-1 py-0.5 rounded text-[10px] font-mono font-bold transition-colors cursor-pointer",
 									matchCase
 										? "text-foreground bg-accent"
-										: "text-muted-foreground/40 hover:text-foreground",
+										: "text-muted-foreground hover:text-foreground",
 								)}
 								title="Match case"
 							>
@@ -2021,7 +2021,7 @@ function SingleFileDiff({
 													"text-[12.5px] leading-[20px] font-mono h-[20px] pr-2 pl-2 flex items-center justify-end gap-1",
 													isPrChanged
 														? "text-muted-foreground/60"
-														: "text-muted-foreground/40",
+														: "text-muted-foreground",
 													isPrChanged &&
 														"bg-diff-add-bg",
 												)}
@@ -2841,7 +2841,7 @@ function DiffLineRow({
 					className={cn(
 						"w-10 py-0 pr-2 text-right text-[11px] font-mono select-none border-r border-border/40 sticky left-[3px] z-[1] relative",
 						isSelected
-							? "bg-muted-foreground/[0.06] text-muted-foreground/40"
+							? "bg-muted-foreground/[0.06] text-muted-foreground"
 							: isAdd
 								? "bg-diff-add-gutter text-diff-add-gutter"
 								: isDel
@@ -3160,7 +3160,7 @@ function InlineCommentForm({
 						"flex items-center gap-1.5 pl-2.5 pr-2 py-1 rounded-md text-[10px] font-medium transition-all cursor-pointer",
 						body.trim()
 							? "bg-foreground text-background hover:bg-foreground/90"
-							: "bg-muted text-muted-foreground/40",
+							: "bg-muted text-muted-foreground",
 						"disabled:opacity-40 disabled:cursor-not-allowed",
 					)}
 				>
@@ -3281,7 +3281,7 @@ function InlineCommentDisplay({
 			>
 				<ChevronDown
 					className={cn(
-						"w-3 h-3 shrink-0 text-muted-foreground/40 transition-transform",
+						"w-3 h-3 shrink-0 text-muted-foreground transition-transform",
 						collapsed && "-rotate-90",
 					)}
 				/>
@@ -3375,7 +3375,7 @@ function InlineCommentDisplay({
 											className={cn(
 												"flex-1 min-w-0 px-2 py-1 text-[10px] font-mono",
 												"bg-transparent border border-border rounded-md",
-												"text-foreground/70 placeholder:text-muted-foreground/40",
+												"text-foreground/70 placeholder:text-muted-foreground",
 												"focus:outline-none focus:ring-1 focus:ring-foreground/20",
 												"disabled:opacity-40 disabled:cursor-not-allowed",
 											)}
@@ -3714,7 +3714,7 @@ function SplitDiffTable({
 						isEmpty
 							? "diff-split-empty"
 							: isSelected
-								? "bg-muted-foreground/[0.06] text-muted-foreground/40"
+								? "bg-muted-foreground/[0.06] text-muted-foreground"
 								: isAdd
 									? "bg-diff-add-gutter text-diff-add-gutter"
 									: isDel
@@ -4702,8 +4702,8 @@ function SidebarCommits({
 
 			{loadingStatuses && (
 				<div className="px-3 py-1.5 flex items-center gap-1.5">
-					<Loader2 className="w-2.5 h-2.5 animate-spin text-muted-foreground/40" />
-					<span className="text-[9px] font-mono text-muted-foreground/40">
+					<Loader2 className="w-2.5 h-2.5 animate-spin text-muted-foreground" />
+					<span className="text-[9px] font-mono text-muted-foreground">
 						Loading check statuses...
 					</span>
 				</div>
@@ -4783,7 +4783,7 @@ function SidebarCommits({
 											</span>
 										)}
 										{date && (
-											<span className="text-[9px] text-muted-foreground/40 ml-auto shrink-0">
+											<span className="text-[9px] text-muted-foreground ml-auto shrink-0">
 												<TimeAgo
 													date={
 														date
@@ -4978,7 +4978,7 @@ function SidebarReviews({
 													</span>
 												)}
 												{thread.line && (
-													<span className="text-[9px] font-mono text-muted-foreground/40 ml-auto shrink-0">
+													<span className="text-[9px] font-mono text-muted-foreground ml-auto shrink-0">
 														L
 														{
 															thread.line

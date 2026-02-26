@@ -188,7 +188,7 @@ function RunMetadataCard({
 					</Link>
 
 					{/* Inline metadata */}
-					<div className="flex items-center gap-2.5 text-[10px] font-mono text-muted-foreground/40 min-w-0 flex-1 overflow-hidden">
+					<div className="flex items-center gap-2.5 text-[10px] font-mono text-muted-foreground min-w-0 flex-1 overflow-hidden">
 						{run.run.head_branch && (
 							<Link
 								href={`/${owner}/${repo}/tree/${run.run.head_branch}`}
@@ -1016,7 +1016,7 @@ export function RunComparisonDiff({
 					</tbody>
 					<tfoot>
 						<tr className="border-t border-border/30 bg-muted/[0.04]">
-							<td className="px-4 py-2.5 text-[11px] font-mono font-medium text-muted-foreground/40">
+							<td className="px-4 py-2.5 text-[11px] font-mono font-medium text-muted-foreground">
 								Total
 							</td>
 							<td className="px-4 py-2.5 text-[12px] font-mono font-medium text-right tabular-nums">

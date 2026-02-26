@@ -65,7 +65,7 @@ export default withSentryConfig(nextConfig, {
 	// For all available options, see:
 	// https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
-	org: "test-better-hub",
+	org: "better-hub",
 
 	project: "javascript-nextjs",
 

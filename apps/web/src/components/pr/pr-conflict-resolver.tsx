@@ -920,7 +920,7 @@ function HunkView({
 			<div className="group">
 				<button
 					onClick={() => setCollapsed((c) => !c)}
-					className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors cursor-pointer mb-0.5"
+					className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-muted-foreground/70 transition-colors cursor-pointer mb-0.5"
 				>
 					{collapsed ? (
 						<ChevronRight className="w-2.5 h-2.5" />
@@ -930,7 +930,7 @@ function HunkView({
 					{lines.length} unchanged line{lines.length !== 1 ? "s" : ""}
 				</button>
 				{!collapsed && (
-					<pre className="text-[11px] font-mono leading-relaxed text-muted-foreground/40 overflow-x-auto max-h-40 overflow-y-auto bg-muted/20 px-3 py-1.5 border border-border/30 rounded-sm">
+					<pre className="text-[11px] font-mono leading-relaxed text-muted-foreground overflow-x-auto max-h-40 overflow-y-auto bg-muted/20 px-3 py-1.5 border border-border/30 rounded-sm">
 						{isLong ? (
 							<>
 								{lines

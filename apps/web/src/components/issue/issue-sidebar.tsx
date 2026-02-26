@@ -167,7 +167,7 @@ export function IssueSidebar({
 										<CircleDot className="w-3 h-3 shrink-0" />
 									)}
 									{!isLocal && (
-										<span className="text-muted-foreground/40 text-[10px] truncate max-w-[80px]">
+										<span className="text-muted-foreground text-[10px] truncate max-w-[80px]">
 											{
 												ref.repoOwner
 											}
@@ -184,7 +184,7 @@ export function IssueSidebar({
 										{ref.title}
 									</span>
 									{!isLocal && (
-										<ExternalLink className="w-2.5 h-2.5 shrink-0 text-muted-foreground/40" />
+										<ExternalLink className="w-2.5 h-2.5 shrink-0 text-muted-foreground" />
 									)}
 								</Link>
 							);

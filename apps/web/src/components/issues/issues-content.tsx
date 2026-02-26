@@ -120,13 +120,13 @@ export function IssuesContent({
 				{/* Row 1: Search + Sort */}
 				<div className="flex items-center gap-2 mb-3">
 					<div className="relative flex-1 max-w-sm">
-						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40" />
+						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
 						<input
 							type="text"
 							placeholder="Search issues..."
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							className="w-full h-8 bg-transparent border border-border rounded-lg pl-9 pr-4 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-foreground/20 transition-colors"
+							className="w-full h-8 bg-transparent border border-border rounded-lg pl-9 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground/20 transition-colors"
 						/>
 					</div>
 
@@ -265,7 +265,7 @@ export function IssuesContent({
 													}
 												</span>
 											)}
-										<span className="flex items-center gap-1 text-[11px] text-muted-foreground/40 font-mono">
+										<span className="flex items-center gap-1 text-[11px] text-muted-foreground font-mono">
 											<Clock className="w-3 h-3" />
 											<TimeAgo
 												date={
@@ -275,7 +275,7 @@ export function IssuesContent({
 										</span>
 										{issue.comments >
 											0 && (
-											<span className="flex items-center gap-1 text-[11px] text-muted-foreground/40">
+											<span className="flex items-center gap-1 text-[11px] text-muted-foreground">
 												<MessageSquare className="w-3 h-3" />
 												{
 													issue.comments

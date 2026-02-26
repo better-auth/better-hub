@@ -262,11 +262,11 @@ export function AdvisoryDetail({
 										1,
 									)}
 								</span>
-								<span className="text-[10px] text-muted-foreground/40">
+								<span className="text-[10px] text-muted-foreground">
 									/ 10.0
 								</span>
 							</div>
-							<p className="text-[10px] font-mono text-muted-foreground/40 break-all">
+							<p className="text-[10px] font-mono text-muted-foreground break-all">
 								{advisory.cvss.vectorString}
 							</p>
 						</div>
@@ -332,14 +332,14 @@ export function AdvisoryDetail({
 													className="rounded-full"
 												/>
 											) : (
-												<User className="w-5 h-5 text-muted-foreground/40" />
+												<User className="w-5 h-5 text-muted-foreground" />
 											)}
 											<span className="text-xs">
 												{
 													credit.login
 												}
 											</span>
-											<span className="text-[10px] font-mono text-muted-foreground/40">
+											<span className="text-[10px] font-mono text-muted-foreground">
 												{
 													credit.type
 												}
@@ -424,7 +424,7 @@ export function AdvisoryDetail({
 										className="rounded-full"
 									/>
 								) : (
-									<User className="w-5 h-5 text-muted-foreground/40" />
+									<User className="w-5 h-5 text-muted-foreground" />
 								)}
 								<span className="text-xs">
 									{advisory.author.login}

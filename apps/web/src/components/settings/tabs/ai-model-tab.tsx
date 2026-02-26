@@ -74,7 +74,7 @@ export function AIModelTab({ settings, onUpdate }: AIModelTabProps) {
 						>
 							<span>
 								{model.label}
-								<span className="text-muted-foreground/40 ml-2">
+								<span className="text-muted-foreground ml-2">
 									{model.desc}
 								</span>
 							</span>

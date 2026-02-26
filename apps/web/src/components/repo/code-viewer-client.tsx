@@ -777,7 +777,7 @@ export function CodeViewerClient({
 
 					{searchOpen && (
 						<div className="flex items-center gap-1.5 px-3 py-1.5 rounded-t-md border border-b-0 border-border shadow-sm bg-background/95">
-							<Search className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
+							<Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
 							<input
 								ref={searchInputRef}
 								type="text"
@@ -789,7 +789,7 @@ export function CodeViewerClient({
 								}
 								onKeyDown={handleSearchKeyDown}
 								placeholder="Find in file..."
-								className="flex-1 bg-transparent text-xs font-mono text-foreground placeholder:text-muted-foreground/40 outline-none min-w-0"
+								className="flex-1 bg-transparent text-xs font-mono text-foreground placeholder:text-muted-foreground outline-none min-w-0"
 								autoFocus
 							/>
 							{searchQuery && (
@@ -830,7 +830,7 @@ export function CodeViewerClient({
 										"px-1 py-0.5 rounded text-[10px] font-mono font-bold transition-colors cursor-pointer",
 										matchCase
 											? "text-foreground bg-muted"
-											: "text-muted-foreground/40 hover:text-foreground",
+											: "text-muted-foreground hover:text-foreground",
 									)}
 									title="Match case"
 								>
@@ -864,7 +864,7 @@ export function CodeViewerClient({
 									.map((_, i) => (
 										<div
 											key={i}
-											className="text-[13px] leading-relaxed font-mono text-muted-foreground/40 px-3"
+											className="text-[13px] leading-relaxed font-mono text-muted-foreground px-3"
 											style={{
 												height: "1lh",
 											}}
