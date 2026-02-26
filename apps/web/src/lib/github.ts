@@ -2957,6 +2957,7 @@ export interface CrossReference {
 	html_url: string;
 	repoOwner: string;
 	repoName: string;
+	created_at: string;
 }
 
 /**
@@ -2984,26 +2985,26 @@ export async function getCrossReferences(
 
 		for (const event of events) {
 			if (event.event !== "cross-referenced") continue;
-			const source = (
-				event as {
-					source?: {
-						issue?: {
-							pull_request?: {
-								merged_at?: string | null;
-							};
-							repository?: { full_name?: string };
-							number: number;
-							title: string;
-							state: string;
-							user?: {
-								login: string;
-								avatar_url: string;
-							} | null;
-							html_url: string;
+			const typedEvent = event as {
+				created_at?: string;
+				source?: {
+					issue?: {
+						pull_request?: {
+							merged_at?: string | null;
 						};
+						repository?: { full_name?: string };
+						number: number;
+						title: string;
+						state: string;
+						user?: {
+							login: string;
+							avatar_url: string;
+						} | null;
+						html_url: string;
 					};
-				}
-			).source?.issue;
+				};
+			};
+			const source = typedEvent.source?.issue;
 			if (!source) continue;
 
 			const repoFullName = source.repository?.full_name;
@@ -3032,6 +3033,7 @@ export async function getCrossReferences(
 				html_url: source.html_url,
 				repoOwner: refOwner,
 				repoName: refName,
+				created_at: typedEvent.created_at ?? "",
 			});
 		}
 

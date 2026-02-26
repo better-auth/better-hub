@@ -24,6 +24,7 @@ import {
 	type ReviewCommentEntry,
 	type CommitEntry,
 	type StateChangeEntry,
+	type CrossReferenceEntry,
 } from "@/components/pr/pr-conversation";
 import { PRMergePanel } from "@/components/pr/pr-merge-panel";
 import { PRCommentForm } from "@/components/pr/pr-comment-form";
@@ -312,6 +313,23 @@ export default async function PRDetailPage({
 			user: s.actor,
 			created_at: s.created_at,
 			merge_ref_name: s.merge_ref_name,
+		};
+		timeline.push(entry);
+	}
+
+	for (const ref of crossRefs) {
+		const entry: CrossReferenceEntry = {
+			type: "cross_reference",
+			id: `xref-${ref.repoOwner}-${ref.repoName}-${ref.number}`,
+			number: ref.number,
+			title: ref.title,
+			state: ref.state,
+			merged: ref.merged,
+			isPullRequest: ref.isPullRequest,
+			user: ref.user,
+			repoOwner: ref.repoOwner,
+			repoName: ref.repoName,
+			created_at: ref.created_at,
 		};
 		timeline.push(entry);
 	}
