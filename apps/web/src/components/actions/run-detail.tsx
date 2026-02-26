@@ -316,7 +316,7 @@ export function RunDetail({
 									<GitCommit className="w-2.5 h-2.5" />
 									{run.head_sha.slice(0, 7)}
 								</span>
-								{run.run_started_at && (
+								{run.run_started_at?.trim() && (
 									<span className="flex items-center gap-1 text-[10px] text-muted-foreground">
 										<Clock className="w-2.5 h-2.5" />
 										<LiveDuration

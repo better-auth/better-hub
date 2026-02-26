@@ -11,7 +11,8 @@ interface LiveDurationProps {
 }
 
 export function LiveDuration({ startedAt, completedAt, className }: LiveDurationProps) {
-	const [tick, setTick] = useState(0);
+	// tick forces re-renders when subscribeLiveTick fires; value is unused in render
+	const [, setTick] = useState(0);
 
 	useEffect(() => {
 		if (!startedAt || completedAt != null) return;
