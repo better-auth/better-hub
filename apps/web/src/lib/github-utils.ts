@@ -173,7 +173,7 @@ function parsePositiveInt(value: string | undefined): number | null {
 	if (!value) return null;
 	if (!/^\d+$/.test(value)) return null;
 	const parsed = Number.parseInt(value, 10);
-	return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+	return parsed > 0 && parsed <= Number.MAX_SAFE_INTEGER ? parsed : null;
 }
 
 export function parseGitHubUrl(htmlUrl: string): ParsedGitHubUrl | null {
