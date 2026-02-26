@@ -117,6 +117,7 @@ function BranchPicker({
 								onChange={(e) =>
 									setSearch(e.target.value)
 								}
+								spellCheck={false}
 								placeholder="Filter branches..."
 								className="w-full bg-transparent text-[11px] placeholder:text-muted-foreground/30 focus:outline-none"
 							/>
@@ -425,6 +426,7 @@ export default function NewPullRequestPage() {
 					<div className="rounded-lg border border-border/50 dark:border-white/6 overflow-hidden mb-6">
 						<div className="px-4 pt-4 pb-2">
 							<input
+								spellCheck={false}
 								type="text"
 								value={title}
 								onChange={(e) =>
