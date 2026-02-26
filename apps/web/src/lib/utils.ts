@@ -80,6 +80,21 @@ export function calculateDuration(
 	);
 }
 
+/**
+ * Validates a redirect URL to prevent open redirect attacks.
+ * Only allows relative paths on the same origin. Returns the
+ * fallback for any absolute URL, protocol-relative URL, or
+ * path that doesn't start with "/".
+ */
+export function safeRedirect(url: string | undefined, fallback = "/dashboard"): string {
+	if (!url) return fallback;
+	const trimmed = url.trim();
+	if (!trimmed.startsWith("/") || trimmed.startsWith("//") || trimmed.startsWith("/\\")) {
+		return fallback;
+	}
+	return trimmed;
+}
+
 export function formatDurationDelta(deltaSeconds: number): { text: string; className: string } {
 	if (deltaSeconds === 0) return { text: "", className: "" };
 	const abs = Math.abs(deltaSeconds);

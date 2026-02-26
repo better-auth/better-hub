@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/auth";
+import { safeRedirect } from "@/lib/utils";
 import { HalftoneBackground } from "@/components/ui/halftone-background";
 import { LoginButton } from "@/components/login-button";
 import { DemoVideo } from "@/components/demo-video";
@@ -14,9 +15,10 @@ export default async function HomePage({
 }) {
 	const session = await getServerSession();
 	const { redirect: redirectTo } = await searchParams;
+	const safeTarget = safeRedirect(redirectTo);
 
 	if (session) {
-		redirect(redirectTo || "/dashboard");
+		redirect(safeTarget);
 	}
 
 	return (
@@ -133,7 +135,7 @@ export default async function HomePage({
 							className="hero-in"
 							style={{ animationDelay: "1.0s" }}
 						>
-							<LoginButton redirectTo={redirectTo} />
+							<LoginButton redirectTo={safeTarget} />
 						</div>
 
 						<p

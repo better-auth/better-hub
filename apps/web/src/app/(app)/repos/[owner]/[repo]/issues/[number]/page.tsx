@@ -37,6 +37,10 @@ export async function generateMetadata({
 
 	return {
 		title: `${issue.title} · Issue #${issueNumber} · ${owner}/${repo}`,
+		description: issue.body
+			? issue.body.slice(0, 200)
+			: `Issue #${issueNumber} on ${owner}/${repo}`,
+		openGraph: { title: `${issue.title} · Issue #${issueNumber}` },
 	};
 }
 

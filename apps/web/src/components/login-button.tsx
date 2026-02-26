@@ -3,7 +3,7 @@
 import { signIn } from "@/lib/auth-client";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { cn, safeRedirect } from "@/lib/utils";
 import { SCOPE_GROUPS } from "@/lib/github-scopes";
 import { PlusIcon } from "lucide-react";
 
@@ -216,7 +216,7 @@ export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 		}
 		signIn.social({
 			provider: "github",
-			callbackURL: redirectTo || "/dashboard",
+			callbackURL: safeRedirect(redirectTo),
 			scopes,
 		});
 	}
@@ -241,7 +241,7 @@ export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 				setLoading(false);
 				return;
 			}
-			router.push(redirectTo || "/dashboard");
+			router.push(safeRedirect(redirectTo));
 		} catch {
 			setPatError("Network error. Please try again.");
 			setLoading(false);

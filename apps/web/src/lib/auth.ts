@@ -13,14 +13,16 @@ import { admin, oAuthProxy } from "better-auth/plugins";
 import { patSignIn } from "./auth-plugins/pat-signin";
 
 async function getOctokitUser(token: string) {
-	const cached = await redis.get<ReturnType<(typeof octokit)["users"]["getAuthenticated"]>>(
-		`github_user:${token}`,
-	);
+	const hash = await createHash("SHA-256", "base64").digest(token);
+	const cacheKey = `github_user:${hash}`;
+	const cached =
+		await redis.get<ReturnType<(typeof octokit)["users"]["getAuthenticated"]>>(
+			cacheKey,
+		);
 	if (cached) return cached;
 	const octokit = new Octokit({ auth: token });
 	const githubUser = await octokit.users.getAuthenticated();
-	const hash = await createHash("SHA-256", "base64").digest(token);
-	waitUntil(redis.set(`github_user:${hash}`, JSON.stringify(githubUser.data)));
+	waitUntil(redis.set(cacheKey, JSON.stringify(githubUser.data), { ex: 3600 }));
 	return githubUser;
 }
 
@@ -79,7 +81,7 @@ export const auth = betterAuth({
 	session: {
 		cookieCache: {
 			enabled: true,
-			maxAge: 60 * 60 * 24 * 7,
+			maxAge: 60 * 60,
 		},
 	},
 	trustedOrigins: [

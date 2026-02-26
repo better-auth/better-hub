@@ -5,6 +5,9 @@ export type PromptRequestStatus = "open" | "accepted" | "closed";
 export interface PromptRequest {
 	id: string;
 	userId: string;
+	userLogin: string | null;
+	userName: string | null;
+	userAvatarUrl: string | null;
 	owner: string;
 	repo: string;
 	title: string;
@@ -19,6 +22,9 @@ export interface PromptRequest {
 function toPromptRequest(row: {
 	id: string;
 	userId: string;
+	userLogin: string | null;
+	userName: string | null;
+	userAvatarUrl: string | null;
 	owner: string;
 	repo: string;
 	title: string;
@@ -32,6 +38,9 @@ function toPromptRequest(row: {
 	return {
 		id: row.id,
 		userId: row.userId,
+		userLogin: row.userLogin,
+		userName: row.userName,
+		userAvatarUrl: row.userAvatarUrl,
 		owner: row.owner,
 		repo: row.repo,
 		title: row.title,
@@ -46,6 +55,9 @@ function toPromptRequest(row: {
 
 export async function createPromptRequest(
 	userId: string,
+	userLogin: string | null,
+	userName: string | null,
+	userAvatarUrl: string | null,
 	owner: string,
 	repo: string,
 	title: string,
@@ -58,6 +70,9 @@ export async function createPromptRequest(
 		data: {
 			id,
 			userId,
+			userLogin,
+			userName,
+			userAvatarUrl,
 			owner,
 			repo,
 			title,
@@ -153,6 +168,7 @@ export interface PromptRequestComment {
 	id: string;
 	promptRequestId: string;
 	userId: string;
+	userLogin: string | null;
 	userName: string;
 	userAvatarUrl: string;
 	body: string;
@@ -164,6 +180,7 @@ function toPromptRequestComment(row: {
 	id: string;
 	promptRequestId: string;
 	userId: string;
+	userLogin: string | null;
 	userName: string;
 	userAvatarUrl: string;
 	body: string;
@@ -174,6 +191,7 @@ function toPromptRequestComment(row: {
 		id: row.id,
 		promptRequestId: row.promptRequestId,
 		userId: row.userId,
+		userLogin: row.userLogin,
 		userName: row.userName,
 		userAvatarUrl: row.userAvatarUrl,
 		body: row.body,
@@ -185,6 +203,7 @@ function toPromptRequestComment(row: {
 export async function createPromptRequestComment(
 	promptRequestId: string,
 	userId: string,
+	userLogin: string | null,
 	userName: string,
 	userAvatarUrl: string,
 	body: string,
@@ -197,6 +216,7 @@ export async function createPromptRequestComment(
 			id,
 			promptRequestId,
 			userId,
+			userLogin,
 			userName,
 			userAvatarUrl,
 			body,

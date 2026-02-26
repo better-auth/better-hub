@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useQueryState, parseAsStringLiteral, parseAsString } from "nuqs";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -79,8 +80,11 @@ interface ContributionData {
 	weeks: ContributionWeek[];
 }
 
-type FilterType = "all" | "sources" | "forks" | "archived";
-type SortType = "updated" | "name" | "stars";
+const filterTypes = ["all", "sources", "forks", "archived"] as const;
+type FilterType = (typeof filterTypes)[number];
+
+const sortTypes = ["updated", "name", "stars"] as const;
+type SortType = (typeof sortTypes)[number];
 
 function formatJoinedDate(value: string | null): string | null {
 	if (!value) return null;
@@ -113,9 +117,15 @@ export function UserProfileContent({
 	contributions: ContributionData | null;
 	orgTopRepos?: OrgTopRepo[];
 }) {
-	const [search, setSearch] = useState("");
-	const [filter, setFilter] = useState<FilterType>("all");
-	const [sort, setSort] = useState<SortType>("updated");
+	const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
+	const [filter, setFilter] = useQueryState(
+		"filter",
+		parseAsStringLiteral(filterTypes).withDefault("all"),
+	);
+	const [sort, setSort] = useQueryState(
+		"sort",
+		parseAsStringLiteral(sortTypes).withDefault("updated"),
+	);
 
 	const filtered = useMemo(
 		() =>
