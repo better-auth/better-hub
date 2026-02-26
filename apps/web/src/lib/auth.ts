@@ -37,7 +37,7 @@ export const auth = betterAuth({
 				enabled: true,
 			},
 		}),
-    sentinel(),
+		sentinel(),
 		admin(),
 		patSignIn(),
 		stripe({

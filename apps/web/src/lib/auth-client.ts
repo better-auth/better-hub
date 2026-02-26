@@ -8,7 +8,7 @@ export const authClient = createAuthClient({
 	plugins: [
 		inferAdditionalFields<typeof auth>(),
 		dashClient(),
-    sentinelClient(),
+		sentinelClient(),
 		stripeClient({ subscription: true }),
 	],
 });
