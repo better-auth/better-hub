@@ -5,6 +5,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { SCOPE_GROUPS } from "@/lib/github-scopes";
+import { PlusIcon } from "lucide-react";
 
 /* ── Icons ── */
 
@@ -363,25 +364,38 @@ export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 							</code>{" "}
 							scopes.
 						</p>
-						<input
-							type="password"
-							value={patValue}
-							onChange={(e) => {
-								setPatValue(e.target.value);
-								setPatError("");
-							}}
-							onKeyDown={(e) => {
-								if (e.key === "Enter" && !loading)
-									handlePatSignIn();
-							}}
-							placeholder="ghp_..."
-							className="w-full bg-transparent border border-foreground/15 rounded-md px-3 py-2.5 text-sm text-foreground placeholder:text-foreground/25 focus:outline-none focus:border-foreground/30 transition-colors font-mono"
-						/>
-						{patError && (
-							<p className="text-[11px] text-red-400 mt-1.5">
-								{patError}
-							</p>
-						)}
+						<div className="flex flex-col gap-1.5">
+							<input
+								type="password"
+								value={patValue}
+								onChange={(e) => {
+									setPatValue(e.target.value);
+									setPatError("");
+								}}
+								onKeyDown={(e) => {
+									if (
+										e.key === "Enter" &&
+										!loading
+									)
+										handlePatSignIn();
+								}}
+								placeholder="ghp_..."
+								className="w-full bg-transparent border border-foreground/15 rounded-md px-3 py-2.5 text-sm text-foreground placeholder:text-foreground/25 focus:outline-none focus:border-foreground/30 transition-colors font-mono"
+							/>
+							<a
+								href="https://github.com/settings/tokens/new"
+								target="_blank"
+								className="ms-auto text-xs text-foreground/30 hover:text-muted-foreground focus-visible:text-foreground inline-flex items-center gap-1 transition-colors cursor-pointer"
+							>
+								<PlusIcon className="size-3.5" />
+								Generate Token
+							</a>
+							{patError && (
+								<p className="text-[11px] text-red-400 mt-1.5">
+									{patError}
+								</p>
+							)}
+						</div>
 					</div>
 
 					{/* PAT sign in button */}

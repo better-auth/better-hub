@@ -9,6 +9,10 @@ function makePrisma() {
 		max: 100,
 		idleTimeoutMillis: 30_000,
 		connectionTimeoutMillis: 10_000,
+		max: 5, // normally 2 is good, but we have external pooler (PgBouncer) in front of us
+		idleTimeoutMillis: 30_000,
+		connectionTimeoutMillis: 5_000,
+		allowExitOnIdle: true,
 	});
 	attachDatabasePool(pool);
 	const adapter = new PrismaPg(pool);
