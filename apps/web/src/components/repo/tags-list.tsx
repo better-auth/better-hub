@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { Tag, Download, ExternalLink, Search, X, Rocket, AlertCircle, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { fetchTagsPage } from "@/app/(app)/repos/[owner]/[repo]/tags/actions";
 
 type RepoTag = {
@@ -170,9 +169,12 @@ export function TagsList({
 
 								<div className="flex-1 min-w-0">
 									<div className="flex items-center gap-2 flex-wrap">
-										<span className="text-sm font-mono font-medium text-foreground truncate">
+										<Link
+											href={`/${owner}/${repo}/releases/${tag.name}`}
+											className="text-sm font-mono font-medium text-foreground truncate hover:underline hover:cursor-pointer"
+										>
 											{tag.name}
-										</span>
+										</Link>
 										{release &&
 											!release.draft && (
 												<>
