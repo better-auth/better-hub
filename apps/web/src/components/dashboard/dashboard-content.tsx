@@ -49,6 +49,7 @@ import type {
 	TrendingRepoItem,
 	GitHubUser,
 	SearchResult,
+	DashboardPRCategoryMap,
 } from "@/lib/github-types";
 
 const tabKeys = ["reviews", "prs", "issues", "notifs"] as const;
@@ -58,6 +59,7 @@ interface DashboardContentProps {
 	user: GitHubUser;
 	reviewRequests: SearchResult<IssueItem>;
 	myOpenPRs: SearchResult<IssueItem>;
+	openPRCategories: DashboardPRCategoryMap;
 	myIssues: SearchResult<IssueItem>;
 	repos: Array<RepoItem>;
 	notifications: Array<NotificationItem>;
@@ -74,6 +76,7 @@ export function DashboardContent({
 	user,
 	reviewRequests,
 	myOpenPRs,
+	openPRCategories,
 	myIssues,
 	repos,
 	notifications,
@@ -180,6 +183,7 @@ export function DashboardContent({
 					<WorkTabs
 						reviewRequests={reviewRequests}
 						myOpenPRs={myOpenPRs}
+						openPRCategories={openPRCategories}
 						myIssues={myIssues}
 						notifications={notifications}
 						hasWork={hasWork}
@@ -243,6 +247,7 @@ function ExtensionBanner() {
 function WorkTabs({
 	reviewRequests,
 	myOpenPRs,
+	openPRCategories,
 	myIssues,
 	notifications,
 	hasWork,
@@ -251,6 +256,7 @@ function WorkTabs({
 }: {
 	reviewRequests: SearchResult<IssueItem>;
 	myOpenPRs: SearchResult<IssueItem>;
+	openPRCategories: DashboardPRCategoryMap;
 	myIssues: SearchResult<IssueItem>;
 	notifications: Array<NotificationItem>;
 	hasWork: boolean;
@@ -290,9 +296,10 @@ function WorkTabs({
 				))}
 			{activeTab === "prs" &&
 				(myOpenPRs.items.length > 0 ? (
-					myOpenPRs.items.map((pr) => (
-						<ItemRow key={pr.id} item={pr} type="pr" />
-					))
+					<PRSections
+						prs={myOpenPRs.items}
+						openPRCategories={openPRCategories}
+					/>
 				) : (
 					<EmptyTab message="No open PRs" />
 				))}
@@ -332,6 +339,114 @@ function EmptyTab({ message }: { message: string }) {
 	return (
 		<div className="py-10 text-center">
 			<p className="text-xs text-muted-foreground/50 font-mono">{message}</p>
+		</div>
+	);
+}
+
+function WorkSection({
+	title,
+	subtitle,
+	count,
+	children,
+}: {
+	title: string;
+	subtitle?: string;
+	count: number;
+	children: React.ReactNode;
+}) {
+	return (
+		<div className="border-b border-border/60 last:border-b-0">
+			<div className="px-4 py-2 border-b border-border/60 bg-muted/20">
+				<div className="flex items-start justify-between gap-3">
+					<div className="min-w-0">
+						<p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/70">
+							{title}
+						</p>
+						{subtitle && (
+							<p className="text-[11px] text-muted-foreground/50 leading-snug">
+								{subtitle}
+							</p>
+						)}
+					</div>
+					<span className="shrink-0 text-[11px] font-mono tabular-nums text-muted-foreground/60">
+						{count}
+					</span>
+				</div>
+			</div>
+			<div>{children}</div>
+		</div>
+	);
+}
+
+function PRSections({
+	prs,
+	openPRCategories,
+}: {
+	prs: Array<IssueItem>;
+	openPRCategories: DashboardPRCategoryMap;
+}) {
+	const actionRequired = prs.filter(
+		(pr) => openPRCategories[pr.html_url] === "action_required",
+	);
+	const readyToMerge = prs.filter((pr) => openPRCategories[pr.html_url] === "ready_to_merge");
+	const needsReview = prs.filter((pr) => openPRCategories[pr.html_url] === "needs_review");
+
+	const other = prs.filter((pr) => {
+		const cat = openPRCategories[pr.html_url];
+		return (
+			cat !== "action_required" &&
+			cat !== "ready_to_merge" &&
+			cat !== "needs_review"
+		);
+	});
+
+	const sections: Array<{
+		key: string;
+		title: string;
+		subtitle?: string;
+		items: Array<IssueItem>;
+	}> = [
+		{
+			key: "action",
+			title: "Requires action",
+			subtitle: "Changes requested — you need to push updates.",
+			items: actionRequired,
+		},
+		{
+			key: "ready",
+			title: "Ready to merge",
+			subtitle: "Unblocked — you can merge now.",
+			items: readyToMerge,
+		},
+		{
+			key: "needs-review",
+			title: "Needs reviews",
+			subtitle: "No decision yet — ping teammates.",
+			items: needsReview,
+		},
+		{
+			key: "other",
+			title: "Open PRs",
+			items: other,
+		},
+	];
+
+	return (
+		<div className="flex flex-col">
+			{sections
+				.filter((s) => s.items.length > 0)
+				.map((section) => (
+					<WorkSection
+						key={section.key}
+						title={section.title}
+						subtitle={section.subtitle}
+						count={section.items.length}
+					>
+						{section.items.map((pr) => (
+							<ItemRow key={pr.id} item={pr} type="pr" />
+						))}
+					</WorkSection>
+				))}
 		</div>
 	);
 }
@@ -713,9 +828,11 @@ function ItemRow({ item, type }: { item: IssueItem; type: "pr" | "issue" }) {
 				<CircleDot className="w-3.5 h-3.5 text-success shrink-0" />
 			)}
 			<div className="flex-1 min-w-0">
-				<span className="text-sm truncate block group-hover:text-foreground transition-colors">
-					{item.title}
-				</span>
+				<div className="flex items-center gap-2 min-w-0">
+					<span className="text-sm truncate min-w-0 flex-1 group-hover:text-foreground transition-colors">
+						{item.title}
+					</span>
+				</div>
 				<div className="flex items-center gap-2 mt-px">
 					<span className="text-[11px] font-mono text-muted-foreground/70">
 						{repo}#{item.number}

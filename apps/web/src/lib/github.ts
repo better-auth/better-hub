@@ -19,6 +19,7 @@ import {
 import { redis } from "./redis";
 import { computeContributorScore } from "./contributor-score";
 import { getCachedAuthorDossier, setCachedAuthorDossier } from "./repo-data-cache";
+import type { DashboardPRCategoryMap } from "./github-types";
 
 export type RepoPermissions = {
 	admin: boolean;
@@ -1971,6 +1972,89 @@ export async function searchIssues(query: string, perPage = 20) {
 		jobPayload: { query, perPage },
 		fetchRemote: (octokit) => fetchSearchIssuesFromGitHub(octokit, query, perPage),
 	});
+}
+
+interface DashboardPRCategoryNode {
+	url?: string | null;
+	isDraft?: boolean | null;
+	reviewDecision?: string | null;
+	mergeable?: string | null;
+	mergeStateStatus?: string | null;
+}
+
+export async function getDashboardOpenPRCategories(
+	authorLogin: string,
+	perPage = 30,
+): Promise<DashboardPRCategoryMap> {
+	const token = await getGitHubToken();
+	if (!token) return {};
+
+	const query = `
+		query($query: String!, $first: Int!) {
+			search(query: $query, type: ISSUE, first: $first) {
+				nodes {
+					... on PullRequest {
+						url
+						isDraft
+						reviewDecision
+						mergeable
+						mergeStateStatus
+					}
+				}
+			}
+		}
+	`;
+
+	try {
+		const response = await fetch("https://api.github.com/graphql", {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				query,
+				variables: {
+					query: `is:pr is:open author:${authorLogin} sort:updated-desc`,
+					first: perPage,
+				},
+			}),
+		});
+		if (!response.ok) return {};
+
+		const json = await response.json();
+		const nodes = (json?.data?.search?.nodes ?? []) as DashboardPRCategoryNode[];
+		const categories: DashboardPRCategoryMap = {};
+
+		for (const node of nodes) {
+			if (!node?.url) continue;
+
+			if (node.reviewDecision === "CHANGES_REQUESTED") {
+				categories[node.url] = "action_required";
+				continue;
+			}
+
+			const isReadyToMerge =
+				node.reviewDecision === "APPROVED" &&
+				node.isDraft !== true &&
+				node.mergeable === "MERGEABLE" &&
+				node.mergeStateStatus === "CLEAN";
+
+			if (isReadyToMerge) {
+				categories[node.url] = "ready_to_merge";
+				continue;
+			}
+
+			if (node.reviewDecision === "REVIEW_REQUIRED") {
+				categories[node.url] = "needs_review";
+			}
+		}
+
+		return categories;
+	} catch (error) {
+		rethrowKnownGitHubErrors(error);
+		return {};
+	}
 }
 
 export async function getUserEvents(username: string, perPage = 30) {

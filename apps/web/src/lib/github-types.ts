@@ -84,3 +84,7 @@ export interface SearchResult<T> {
 	items: Array<T>;
 	total_count: number;
 }
+
+export type DashboardPRCategory = "action_required" | "ready_to_merge" | "needs_review";
+
+export type DashboardPRCategoryMap = Record<string, DashboardPRCategory>;
