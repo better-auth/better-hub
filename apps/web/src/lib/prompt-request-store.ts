@@ -246,3 +246,106 @@ export async function getPromptRequestComment(id: string): Promise<PromptRequest
 	const row = await prisma.promptRequestComment.findUnique({ where: { id } });
 	return row ? toPromptRequestComment(row) : null;
 }
+
+// --- Prompt Request Reactions ---
+
+export type PromptReactionContent =
+	| "+1"
+	| "-1"
+	| "laugh"
+	| "confused"
+	| "heart"
+	| "hooray"
+	| "rocket"
+	| "eyes";
+
+export interface PromptRequestReaction {
+	id: string;
+	promptRequestId: string;
+	userId: string;
+	userLogin: string | null;
+	userName: string;
+	userAvatarUrl: string;
+	content: PromptReactionContent;
+	createdAt: string;
+}
+
+function toPromptRequestReaction(row: {
+	id: string;
+	promptRequestId: string;
+	userId: string;
+	userLogin: string | null;
+	userName: string;
+	userAvatarUrl: string;
+	content: string;
+	createdAt: string;
+}): PromptRequestReaction {
+	return {
+		id: row.id,
+		promptRequestId: row.promptRequestId,
+		userId: row.userId,
+		userLogin: row.userLogin,
+		userName: row.userName,
+		userAvatarUrl: row.userAvatarUrl,
+		content: row.content as PromptReactionContent,
+		createdAt: row.createdAt,
+	};
+}
+
+export async function addPromptRequestReaction(
+	promptRequestId: string,
+	userId: string,
+	userLogin: string | null,
+	userName: string,
+	userAvatarUrl: string,
+	content: PromptReactionContent,
+): Promise<PromptRequestReaction> {
+	const id = crypto.randomUUID();
+	const now = new Date().toISOString();
+
+	const created = await prisma.promptRequestReaction.create({
+		data: {
+			id,
+			promptRequestId,
+			userId,
+			userLogin,
+			userName,
+			userAvatarUrl,
+			content,
+			createdAt: now,
+		},
+	});
+
+	return toPromptRequestReaction(created);
+}
+
+export async function removePromptRequestReaction(
+	promptRequestId: string,
+	userId: string,
+	content: PromptReactionContent,
+): Promise<void> {
+	await prisma.promptRequestReaction.deleteMany({
+		where: { promptRequestId, userId, content },
+	});
+}
+
+export async function listPromptRequestReactions(
+	promptRequestId: string,
+): Promise<PromptRequestReaction[]> {
+	const rows = await prisma.promptRequestReaction.findMany({
+		where: { promptRequestId },
+		orderBy: { createdAt: "asc" },
+	});
+	return rows.map(toPromptRequestReaction);
+}
+
+export async function getUserReactionForPrompt(
+	promptRequestId: string,
+	userId: string,
+	content: PromptReactionContent,
+): Promise<PromptRequestReaction | null> {
+	const row = await prisma.promptRequestReaction.findFirst({
+		where: { promptRequestId, userId, content },
+	});
+	return row ? toPromptRequestReaction(row) : null;
+}

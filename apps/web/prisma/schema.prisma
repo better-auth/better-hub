@@ -271,3 +271,19 @@ model PromptRequestComment {
   @@index([userId])
   @@map("prompt_request_comments")
 }
+
+model PromptRequestReaction {
+  id              String @id
+  promptRequestId String
+  userId          String
+  userLogin       String?
+  userName        String
+  userAvatarUrl   String
+  content         String
+  createdAt       String
+
+  @@unique([promptRequestId, userId, content])
+  @@index([promptRequestId])
+  @@index([userId])
+  @@map("prompt_request_reactions")
+}

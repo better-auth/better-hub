@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
@@ -26,13 +26,16 @@ const jetbrainsMono = JetBrains_Mono({
 
 const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://better-hub.com";
 
+export const viewport: Viewport = {
+	themeColor: "#000000",
+};
+
 export const metadata: Metadata = {
 	title: {
 		default: "Better Hub",
 		template: "%s | Better Hub",
 	},
 	description: "Re-imagining code collaboration for humans and agents.",
-	themeColor: "#000000",
 	metadataBase: new URL(siteUrl),
 	openGraph: {
 		title: "Better Hub",

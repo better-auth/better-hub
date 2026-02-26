@@ -19,6 +19,7 @@ export function GitHubLinkInterceptor({ children }: { children: React.ReactNode 
 
 			const anchor = (e.target as HTMLElement).closest("a");
 			if (!anchor) return;
+			if (anchor.hasAttribute("data-no-github-intercept")) return;
 
 			const href = anchor.href;
 			if (!href) return;

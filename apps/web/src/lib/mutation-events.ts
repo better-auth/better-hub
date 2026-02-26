@@ -47,6 +47,12 @@ export type PRConflictResolvedEvent = {
 	repo: string;
 	number: number;
 };
+export type PRCreatedEvent = {
+	type: "pr:created";
+	owner: string;
+	repo: string;
+	number: number;
+};
 
 // ── Issue Events ──────────────────────────────────────────────
 
@@ -142,6 +148,7 @@ export type MutationEvent =
 	| PRThreadResolvedEvent
 	| PRThreadUnresolvedEvent
 	| PRConflictResolvedEvent
+	| PRCreatedEvent
 	| IssueClosedEvent
 	| IssueReopenedEvent
 	| IssueCreatedEvent

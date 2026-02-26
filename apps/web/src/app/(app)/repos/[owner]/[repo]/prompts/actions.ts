@@ -10,6 +10,10 @@ import {
 	createPromptRequestComment,
 	deletePromptRequestComment,
 	getPromptRequestComment,
+	addPromptRequestReaction,
+	removePromptRequestReaction,
+	listPromptRequestReactions,
+	type PromptReactionContent,
 } from "@/lib/prompt-request-store";
 import { auth, getServerSession } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -156,4 +160,39 @@ export async function deletePromptComment(commentId: string, promptRequestId: st
 
 	await deletePromptRequestComment(commentId);
 	revalidatePath(`/repos/${pr.owner}/${pr.repo}/prompts/${promptRequestId}`);
+}
+
+export async function togglePromptReaction(
+	promptRequestId: string,
+	content: PromptReactionContent,
+) {
+	const session = await getServerSession();
+	if (!session?.user?.id) throw new Error("Unauthorized");
+
+	const pr = await getPromptRequest(promptRequestId);
+	if (!pr) throw new Error("Prompt request not found");
+
+	const existing = await listPromptRequestReactions(promptRequestId);
+	const userReaction = existing.find(
+		(r) => r.userId === session.user.id && r.content === content,
+	);
+
+	if (userReaction) {
+		await removePromptRequestReaction(promptRequestId, session.user.id, content);
+	} else {
+		await addPromptRequestReaction(
+			promptRequestId,
+			session.user.id,
+			session.githubUser?.login ?? null,
+			session.user.name,
+			session.user.image ?? "",
+			content,
+		);
+	}
+
+	revalidatePath(`/repos/${pr.owner}/${pr.repo}/prompts/${promptRequestId}`);
+}
+
+export async function getPromptReactions(promptRequestId: string) {
+	return listPromptRequestReactions(promptRequestId);
 }
