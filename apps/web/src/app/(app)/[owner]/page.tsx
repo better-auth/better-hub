@@ -26,11 +26,12 @@ export async function generateMetadata({
 	const actorData = await getUser(owner).catch(() => null);
 	if (actorData) {
 		const actorType = (actorData as { type?: string }).type;
-		const displayName = actorData.name
-			? actorType === "Organization"
-				? actorData.name
-				: `${actorData.name} (${actorData.login})`
-			: actorData.login;
+		const displayName =
+			actorType === "Organization"
+				? (actorData.name ?? actorData.login)
+				: actorData.name
+					? `${actorData.name} (${actorData.login})`
+					: actorData.login;
 		return {
 			title: displayName,
 			description: actorData.bio || `${displayName} on Better Hub`,

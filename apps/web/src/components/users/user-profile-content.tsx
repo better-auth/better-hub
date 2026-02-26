@@ -242,6 +242,13 @@ export function UserProfileContent({
 		return [];
 	}, [activeTab, filteredFollowers, filteredFollowing]);
 
+	const searchPlaceholder =
+		activeTab === "repos"
+			? "Find a repository..."
+			: activeTab === "followers"
+				? "Find a follower..."
+				: "Find a user...";
+
 	const profileScore = useMemo(() => {
 		const personalTopStars =
 			repos.length > 0 ? Math.max(...repos.map((r) => r.stargazers_count)) : 0;
@@ -355,6 +362,7 @@ export function UserProfileContent({
 							onClick={() => switchTab("followers")}
 							className="inline-flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer"
 							title="View followers"
+							aria-label={`View ${user.followers} followers`}
 						>
 							<span className="text-foreground font-medium">
 								{formatNumber(user.followers)}
@@ -368,6 +376,7 @@ export function UserProfileContent({
 						onClick={() => switchTab("following")}
 						className="hover:text-foreground transition-colors cursor-pointer"
 						title="View following"
+						aria-label={`View ${user.following} following`}
 					>
 						<span className="text-foreground font-medium">
 							{formatNumber(user.following)}
@@ -547,14 +556,7 @@ export function UserProfileContent({
 							<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50" />
 							<input
 								type="text"
-								placeholder={
-									activeTab === "repos"
-										? "Find a repository..."
-										: activeTab ===
-											  "followers"
-											? "Find a follower..."
-											: "Find a user..."
-								}
+								placeholder={searchPlaceholder}
 								value={search}
 								onChange={(e) =>
 									setSearch(e.target.value)
