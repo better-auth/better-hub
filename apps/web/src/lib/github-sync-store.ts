@@ -102,6 +102,19 @@ export async function deleteGithubCacheByPrefix(userId: string, prefix: string) 
 	} while (cursor !== 0);
 }
 
+export async function deleteSharedCacheByPrefix(prefix: string) {
+	const pattern = `ghpub:${prefix}*`;
+	let cursor = 0;
+	do {
+		const result = await redis.scan(cursor, { match: pattern, count: 100 });
+		const keys = result[1];
+		cursor = Number(result[0]);
+		if (keys.length > 0) {
+			await redis.del(...keys);
+		}
+	} while (cursor !== 0);
+}
+
 export async function enqueueGithubSyncJob<TPayload>(
 	userId: string,
 	dedupeKey: string,

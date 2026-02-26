@@ -152,6 +152,7 @@ export function PRsList({
 	onFetchAllCheckStatuses,
 	onPrefetchPRDetail,
 	onFetchPRPage,
+	currentUserLogin,
 }: {
 	owner: string;
 	repo: string;
@@ -179,6 +180,7 @@ export function PRsList({
 		authorLogin?: string | null,
 	) => Promise<void>;
 	onFetchPRPage?: FetchPRPageFn;
+	currentUserLogin?: string | null;
 }) {
 	type TabState = "open" | "merged" | "closed";
 	const searchParams = useSearchParams();
@@ -1040,6 +1042,11 @@ export function PRsList({
 					const isMerged = !!pr.merged_at;
 					const totalComments =
 						(pr.comments ?? 0) + (pr.review_comments ?? 0);
+					const isCurrentUserAuthor =
+						!!pr.user?.login &&
+						!!currentUserLogin &&
+						pr.user.login.toLowerCase() ===
+							currentUserLogin.toLowerCase();
 
 					return (
 						<Link
@@ -1156,7 +1163,13 @@ export function PRsList({
 												}
 												className="rounded-full"
 											/>
-											<span className="font-mono text-[10px]">
+											<span
+												className={cn(
+													"font-mono text-[10px]",
+													isCurrentUserAuthor &&
+														"text-warning font-semibold",
+												)}
+											>
 												{
 													pr
 														.user

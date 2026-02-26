@@ -30,7 +30,8 @@
 		"fmt:check": "oxfmt --ignore-path .oxfmtignore --check apps packages *.json *.yaml",
 		"typecheck": "pnpm -r exec tsc --noEmit",
 		"check": "pnpm lint && pnpm fmt:check && pnpm typecheck",
-		"fix": "pnpm lint:fix && pnpm fmt"
+		"fix": "pnpm lint:fix && pnpm fmt",
+		"prepare": "simple-git-hooks"
 	},
 	"devDependencies": {
 		"@types/node": "^25.3.0",

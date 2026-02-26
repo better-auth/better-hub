@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getRepoPullRequestsWithStats } from "@/lib/github";
+import { getAuthenticatedUser } from "@/lib/github";
 import { PRsList } from "@/components/pr/prs-list";
 import { fetchPRsByAuthor, fetchAllCheckStatuses, prefetchPRDetail, fetchPRPage } from "./actions";
 
@@ -18,6 +19,7 @@ export default async function PullsListPage({
 	params: Promise<{ owner: string; repo: string }>;
 }) {
 	const { owner, repo } = await params;
+	const currentUser = await getAuthenticatedUser();
 
 	const {
 		prs: openPRs,
@@ -66,6 +68,7 @@ export default async function PullsListPage({
 			}
 			onPrefetchPRDetail={prefetchPRDetail}
 			onFetchPRPage={fetchPRPage}
+			currentUserLogin={currentUser?.login ?? null}
 		/>
 	);
 }

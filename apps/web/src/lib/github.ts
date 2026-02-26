@@ -5,6 +5,7 @@ import { $Session, getServerSession } from "./auth";
 import {
 	claimDueGithubSyncJobs,
 	deleteGithubCacheByPrefix,
+	deleteSharedCacheByPrefix,
 	enqueueGithubSyncJob,
 	getGithubCacheEntry,
 	getSharedCacheEntry,
@@ -3279,7 +3280,7 @@ export async function getRepoIssuesPage(owner: string, repo: string): Promise<Re
 		openCount: 0,
 		closedCount: 0,
 	};
-	return readLocalFirstGitData({
+	const data = await readLocalFirstGitData({
 		authCtx,
 		cacheKey: buildRepoIssuesPageCacheKey(owner, repo),
 		cacheType: "repo_issues_page",
@@ -3291,6 +3292,15 @@ export async function getRepoIssuesPage(owner: string, repo: string): Promise<Re
 			return fetchRepoIssuesPageGraphQL(authCtx.token, owner, repo);
 		},
 	});
+
+	if (authCtx) {
+		const { updateCachedRepoPageDataNavCounts } = await import("@/lib/repo-data-cache");
+		updateCachedRepoPageDataNavCounts(authCtx.userId, owner, repo, {
+			openIssues: data.openCount,
+		}).catch(() => {});
+	}
+
+	return data;
 }
 
 export async function invalidateRepoPullRequestsCache(owner: string, repo: string) {
@@ -3306,6 +3316,7 @@ export async function invalidateAllPRBundlesForRepo(owner: string, repo: string)
 	const key = normalizeRepoKey(owner, repo);
 	await deleteGithubCacheByPrefix(authCtx.userId, `pr_bundle:${key}`);
 	await deleteGithubCacheByPrefix(authCtx.userId, `pull_request:${key}`);
+	await deleteSharedCacheByPrefix(`pr_bundle:${key}`);
 }
 
 export async function invalidatePullRequestCache(owner: string, repo: string, pullNumber: number) {
@@ -3330,7 +3341,8 @@ export async function invalidatePullRequestCache(owner: string, repo: string, pu
 	await deleteGithubCacheByPrefix(authCtx.userId, `pull_request_files:${key}:${pullNumber}`);
 	await deleteGithubCacheByPrefix(authCtx.userId, `repo_pull_requests:${key}`);
 	// Also invalidate nav counts and search counts so PR count updates immediately
-	await deleteGithubCacheByPrefix(authCtx.userId, buildRepoNavCountsCacheKey(owner, repo));
+	const navCountsKey = buildRepoNavCountsCacheKey(owner, repo);
+	await deleteGithubCacheByPrefix(authCtx.userId, navCountsKey);
 	await deleteGithubCacheByPrefix(
 		authCtx.userId,
 		`search_issues:${keyPart(`is:pr is:open repo:${owner}/${repo}`)}`,
@@ -3339,6 +3351,9 @@ export async function invalidatePullRequestCache(owner: string, repo: string, pu
 		authCtx.userId,
 		`search_issues:${keyPart(`is:pr is:closed repo:${owner}/${repo}`)}`,
 	);
+	// Also invalidate the shared cache so all users see the updated state
+	await deleteSharedCacheByPrefix(`pr_bundle:${key}:${pullNumber}`);
+	await deleteSharedCacheByPrefix(navCountsKey);
 }
 
 export async function invalidateFileContentCache(
@@ -3359,7 +3374,9 @@ export async function invalidateRepoIssuesCache(owner: string, repo: string) {
 	const prefix = `repo_issues:${normalizeRepoKey(owner, repo)}`;
 	await deleteGithubCacheByPrefix(authCtx.userId, prefix);
 	// Also invalidate nav counts so issue count updates immediately
-	await deleteGithubCacheByPrefix(authCtx.userId, buildRepoNavCountsCacheKey(owner, repo));
+	const navCountsKey = buildRepoNavCountsCacheKey(owner, repo);
+	await deleteGithubCacheByPrefix(authCtx.userId, navCountsKey);
+	await deleteSharedCacheByPrefix(navCountsKey);
 }
 
 export async function invalidateIssueCache(owner: string, repo: string, issueNumber: number) {
@@ -3370,7 +3387,9 @@ export async function invalidateIssueCache(owner: string, repo: string, issueNum
 	await deleteGithubCacheByPrefix(authCtx.userId, `issue_comments:${key}:${issueNumber}`);
 	await deleteGithubCacheByPrefix(authCtx.userId, `repo_issues:${key}`);
 	// Also invalidate nav counts so issue count updates immediately
-	await deleteGithubCacheByPrefix(authCtx.userId, buildRepoNavCountsCacheKey(owner, repo));
+	const navCountsKey = buildRepoNavCountsCacheKey(owner, repo);
+	await deleteGithubCacheByPrefix(authCtx.userId, navCountsKey);
+	await deleteSharedCacheByPrefix(navCountsKey);
 }
 
 export async function getRepoPullRequests(
@@ -3669,6 +3688,17 @@ export async function getRepoPullRequestsWithStats(
 						>[]
 					).map(mapGraphQLPRNode)
 				: [];
+
+		if (wantCounts) {
+			getGitHubAuthContext().then(async (authCtx) => {
+				if (!authCtx) return;
+				const { updateCachedRepoPageDataNavCounts } =
+					await import("@/lib/repo-data-cache");
+				updateCachedRepoPageDataNavCounts(authCtx.userId, owner, repo, {
+					openPrs: counts.open,
+				}).catch(() => {});
+			});
+		}
 
 		return { prs, pageInfo, counts, mergedPreview, closedPreview };
 	} catch (error) {
