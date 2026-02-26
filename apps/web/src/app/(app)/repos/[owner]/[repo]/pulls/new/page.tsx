@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useRef, useMemo, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
 	Loader2,
@@ -279,14 +279,15 @@ function CompareStats({ data }: { data: CompareResult }) {
 export default function NewPullRequestPage() {
 	const { owner, repo } = useParams<{ owner: string; repo: string }>();
 	const router = useRouter();
+	const searchParams = useSearchParams();
 
 	const [branches, setBranches] = useState<BranchInfo[]>([]);
 	const [loadingBranches, setLoadingBranches] = useState(true);
-	const [base, setBase] = useState("");
-	const [head, setHead] = useState("");
+	const [base, setBase] = useState(searchParams.get("base") ?? "");
+	const [head, setHead] = useState(searchParams.get("head") ?? "");
 
-	const [title, setTitle] = useState("");
-	const [body, setBody] = useState("");
+	const [title, setTitle] = useState(searchParams.get("title") ?? "");
+	const [body, setBody] = useState(searchParams.get("body") ?? "");
 	const [bodyTab, setBodyTab] = useState<"write" | "preview">("write");
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -305,8 +306,11 @@ export default function NewPullRequestPage() {
 	useEffect(() => {
 		fetchBranches(owner, repo).then((b) => {
 			setBranches(b);
-			const def = b.find((br) => br.isDefault && br.owner === owner);
-			if (def) setBase(branchKey(def, owner));
+			setBase((prev) => {
+				if (prev) return prev;
+				const def = b.find((br) => br.isDefault && br.owner === owner);
+				return def ? branchKey(def, owner) : "";
+			});
 			setLoadingBranches(false);
 		});
 	}, [owner, repo]);
