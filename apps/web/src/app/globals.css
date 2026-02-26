@@ -685,6 +685,7 @@ tr.diff-search-match-active > td {
 	margin-bottom: 0;
 }
 
+/* Lists */
 .ghmd ul {
 	list-style-type: disc;
 }
