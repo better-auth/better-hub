@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import { useQueryState, parseAsStringLiteral, parseAsString } from "nuqs";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -126,6 +126,22 @@ export function UserProfileContent({
 		"sort",
 		parseAsStringLiteral(sortTypes).withDefault("updated"),
 	);
+	const [languageFilter, setLanguageFilter] = useState<string | null>(null);
+	const [showMoreLanguages, setShowMoreLanguages] = useState(false);
+	const moreLanguagesRef = useRef<HTMLDivElement | null>(null);
+
+	useEffect(() => {
+		if (!showMoreLanguages) return;
+		function onPointerDown(event: MouseEvent) {
+			if (!moreLanguagesRef.current) return;
+			const target = event.target;
+			if (target instanceof Node && !moreLanguagesRef.current.contains(target)) {
+				setShowMoreLanguages(false);
+			}
+		}
+		document.addEventListener("mousedown", onPointerDown);
+		return () => document.removeEventListener("mousedown", onPointerDown);
+	}, [showMoreLanguages]);
 
 	const filtered = useMemo(
 		() =>
@@ -147,6 +163,8 @@ export function UserProfileContent({
 					if (filter === "sources" && repo.fork) return false;
 					if (filter === "forks" && !repo.fork) return false;
 					if (filter === "archived" && !repo.archived) return false;
+					if (languageFilter && repo.language !== languageFilter)
+						return false;
 					return true;
 				})
 				.sort((a, b) => {
@@ -158,13 +176,32 @@ export function UserProfileContent({
 						new Date(a.updated_at || 0).getTime()
 					);
 				}),
-		[repos, search, filter, sort],
+		[repos, search, filter, sort, languageFilter],
 	);
 
 	const languages = useMemo(
-		() => [...new Set(repos.map((repo) => repo.language).filter(Boolean))],
+		() => [
+			...new Set(
+				repos
+					.map((repo) => repo.language)
+					.filter((lang): lang is string => Boolean(lang)),
+			),
+		],
 		[repos],
 	);
+	const topLanguages = useMemo(() => languages.slice(0, 10), [languages]);
+	const extraLanguages = useMemo(() => languages.slice(10), [languages]);
+
+	const clearRepoFilters = useCallback(() => {
+		setSearch("");
+		setLanguageFilter(null);
+		setShowMoreLanguages(false);
+	}, []);
+
+	const toggleLanguageFilter = useCallback((language: string) => {
+		setLanguageFilter((current) => (current === language ? null : language));
+		setShowMoreLanguages(false);
+	}, []);
 
 	// Language distribution for the bar
 	const languageDistribution = useMemo(() => {
@@ -424,8 +461,14 @@ export function UserProfileContent({
 									<button
 										key={lang.language}
 										onClick={() =>
-											setSearch(
-												lang.language,
+											setLanguageFilter(
+												(
+													current,
+												) =>
+													current ===
+													lang.language
+														? null
+														: lang.language,
 											)
 										}
 										className="flex items-center gap-1.5 text-[10px] text-muted-foreground/70 font-mono hover:text-foreground transition-colors cursor-pointer"
@@ -464,9 +507,14 @@ export function UserProfileContent({
 								type="text"
 								placeholder="Find a repository..."
 								value={search}
-								onChange={(e) =>
-									setSearch(e.target.value)
-								}
+								onChange={(e) => {
+									const next = e.target.value;
+									setSearch(next);
+									if (next.trim())
+										setLanguageFilter(
+											null,
+										);
+								}}
 								className="w-full bg-transparent border border-border pl-9 pr-4 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground/20 focus:ring-[3px] focus:ring-ring/50 transition-colors rounded-md font-mono"
 							/>
 						</div>
@@ -522,38 +570,115 @@ export function UserProfileContent({
 					<div className="flex items-center justify-between mb-4">
 						{languages.length > 0 && (
 							<div className="flex items-center gap-1.5 flex-wrap flex-1">
-								{languages
-									.slice(0, 10)
-									.map((lang) => (
+								{topLanguages.map((lang) => (
+									<button
+										key={lang}
+										onClick={() =>
+											toggleLanguageFilter(
+												lang,
+											)
+										}
+										className={cn(
+											"flex items-center gap-1.5 px-2 py-1 text-[11px] border border-border transition-colors cursor-pointer font-mono rounded-md",
+											languageFilter ===
+												lang
+												? "bg-muted/80 dark:bg-white/6 text-foreground border-foreground/15"
+												: "text-muted-foreground hover:bg-muted/60 dark:hover:bg-white/3",
+										)}
+									>
+										<span
+											className="w-2 h-2 rounded-full"
+											style={{
+												backgroundColor:
+													getLanguageColor(
+														lang,
+													),
+											}}
+										/>
+										{lang}
+									</button>
+								))}
+								{extraLanguages.length > 0 && (
+									<div
+										className="relative"
+										ref={
+											moreLanguagesRef
+										}
+									>
 										<button
-											key={lang}
 											onClick={() =>
-												setSearch(
-													lang ||
-														"",
+												setShowMoreLanguages(
+													(
+														current,
+													) =>
+														!current,
 												)
 											}
-											className={cn(
-												"flex items-center gap-1.5 px-2 py-1 text-[11px] border border-border transition-colors cursor-pointer font-mono rounded-md",
-												search ===
-													lang
-													? "bg-muted/80 dark:bg-white/6 text-foreground border-foreground/15"
-													: "text-muted-foreground hover:bg-muted/60 dark:hover:bg-white/3",
-											)}
+											aria-expanded={
+												showMoreLanguages
+											}
+											aria-haspopup="true"
+											className="px-2 py-1 text-[11px] border border-border rounded-md text-muted-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors font-mono"
 										>
-											<span
-												className="w-2 h-2 rounded-full"
-												style={{
-													backgroundColor:
-														getLanguageColor(
-															lang,
-														),
-												}}
-											/>
-											{lang}
+											+
+											{
+												extraLanguages.length
+											}{" "}
+											more
 										</button>
-									))}
+										{showMoreLanguages && (
+											<div className="absolute left-0 top-[calc(100%+6px)] z-20 min-w-40 max-h-56 overflow-y-auto rounded-md border border-border bg-background/95 backdrop-blur-sm p-1.5 shadow-xl">
+												<div className="flex flex-col gap-1">
+													{extraLanguages.map(
+														(
+															lang,
+														) => (
+															<button
+																key={
+																	lang
+																}
+																onClick={() =>
+																	toggleLanguageFilter(
+																		lang,
+																	)
+																}
+																className={cn(
+																	"flex items-center gap-1.5 px-2 py-1 text-[11px] border border-border transition-colors cursor-pointer font-mono rounded-md text-left",
+																	languageFilter ===
+																		lang
+																		? "bg-muted/80 dark:bg-white/6 text-foreground border-foreground/15"
+																		: "text-muted-foreground hover:bg-muted/60 dark:hover:bg-white/3",
+																)}
+															>
+																<span
+																	className="w-2 h-2 rounded-full"
+																	style={{
+																		backgroundColor:
+																			getLanguageColor(
+																				lang,
+																			),
+																	}}
+																/>
+																{
+																	lang
+																}
+															</button>
+														),
+													)}
+												</div>
+											</div>
+										)}
+									</div>
+								)}
 							</div>
+						)}
+						{(search || languageFilter) && (
+							<button
+								onClick={clearRepoFilters}
+								className="ml-2 text-[11px] text-muted-foreground hover:text-foreground font-mono transition-colors"
+							>
+								Clear
+							</button>
 						)}
 						<span className="text-[11px] text-muted-foreground/30 font-mono shrink-0 ml-auto">
 							{filtered.length}/{repos.length}
