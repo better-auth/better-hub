@@ -30,7 +30,7 @@ import {
 	DialogTitle,
 	DialogDescription,
 } from "@/components/ui/dialog";
-import { formatForDisplay } from "@tanstack/react-hotkeys";
+import { formatHotkeyForDisplay } from "@/lib/format-hotkey";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import type { IssueTemplate } from "@/app/(app)/repos/[owner]/[repo]/issues/actions";
@@ -914,7 +914,7 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 										className="text-[10px] text-muted-foreground/25"
 										suppressHydrationWarning
 									>
-										{formatForDisplay(
+										{formatHotkeyForDisplay(
 											"Mod+Enter",
 										)}{" "}
 										to submit

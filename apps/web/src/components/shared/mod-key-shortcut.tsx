@@ -1,7 +1,7 @@
 "use client";
 
 import { Command } from "lucide-react";
-import { formatForDisplay } from "@tanstack/react-hotkeys";
+import { formatHotkeyForDisplay } from "@/lib/format-hotkey";
 import { useIsMac } from "@/hooks/use-platform";
 import { cn } from "@/lib/utils";
 
@@ -24,12 +24,12 @@ export function ModKeyShortcut({ hotkey, className, iconClassName }: ModKeyShort
 
 	if (isMac) {
 		// Parse hotkey to get the key part (e.g. "K" from "Mod+K")
-		// For compound shortcuts (Mod+Shift+K), fall back to formatForDisplay
+		// For compound shortcuts (Mod+Shift+K), fall back to formatHotkeyForDisplay
 		const match = hotkey.match(/^Mod\+([^+]+)$/i);
 		if (!match) {
 			return (
 				<span className={className} suppressHydrationWarning>
-					{formatForDisplay(hotkey)}
+					{formatHotkeyForDisplay(hotkey)}
 				</span>
 			);
 		}
@@ -47,7 +47,7 @@ export function ModKeyShortcut({ hotkey, className, iconClassName }: ModKeyShort
 
 	return (
 		<span className={className} suppressHydrationWarning>
-			{formatForDisplay(hotkey)}
+			{formatHotkeyForDisplay(hotkey)}
 		</span>
 	);
 }

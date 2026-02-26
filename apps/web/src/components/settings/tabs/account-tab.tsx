@@ -16,7 +16,7 @@ import {
 	Link as LinkIcon,
 	Calendar,
 } from "lucide-react";
-import { formatForDisplay } from "@tanstack/react-hotkeys";
+import { formatHotkeyForDisplay } from "@/lib/format-hotkey";
 import { cn } from "@/lib/utils";
 import { signIn, signOut } from "@/lib/auth-client";
 import { SCOPE_GROUPS, scopesToGroupIds } from "@/lib/github-scopes";
@@ -445,7 +445,7 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 					<span className="text-[10px] font-mono text-muted-foreground/50">
 						Use the command menu (
 						<kbd className="border border-border/60 px-1 py-0.5 rounded-sm text-[9px] font-mono">
-							{formatForDisplay("Mod+K")}
+							{formatHotkeyForDisplay("Mod+K")}
 						</kbd>{" "}
 						&rarr; Switch Account) to manage accounts.
 					</span>

@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { Ghost } from "lucide-react";
-import { formatForDisplay } from "@tanstack/react-hotkeys";
+import { formatHotkeyForDisplay } from "@/lib/format-hotkey";
 import { cn } from "@/lib/utils";
 import { useGlobalChat } from "@/components/shared/global-chat-provider";
 
 function useGhostTitle() {
 	const [title, setTitle] = useState("Ghost");
 	useEffect(() => {
-		setTitle(`Ghost (${formatForDisplay("Mod+I")})`);
+		setTitle(`Ghost (${formatHotkeyForDisplay("Mod+I")})`);
 		return () => {};
 	}, []);
 	return title;

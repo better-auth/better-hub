@@ -36,7 +36,7 @@ import {
 	Eye,
 	Pin,
 } from "lucide-react";
-import { formatForDisplay } from "@tanstack/react-hotkeys";
+import { formatHotkeyForDisplay } from "@/lib/format-hotkey";
 import { signOut } from "@/lib/auth-client";
 import { cn, formatNumber } from "@/lib/utils";
 import { getLanguageColor } from "@/lib/github-utils";
@@ -1656,7 +1656,7 @@ export function CommandMenu() {
 																</span>
 																{item.shortcut && (
 																	<kbd className="hidden sm:inline-flex h-5 items-center rounded border border-border/60 dark:border-white/8 bg-muted/50 dark:bg-white/3 px-1.5 font-mono text-[10px] text-muted-foreground/50 shrink-0">
-																		{formatForDisplay(
+																		{formatHotkeyForDisplay(
 																			item.shortcut,
 																		)}
 																	</kbd>
@@ -1711,7 +1711,7 @@ export function CommandMenu() {
 																</span>
 																{tool.shortcut && (
 																	<kbd className="hidden sm:inline-flex h-5 items-center rounded border border-border/60 dark:border-white/8 bg-muted/50 dark:bg-white/3 px-1.5 font-mono text-[10px] text-muted-foreground/50 shrink-0">
-																		{formatForDisplay(
+																		{formatHotkeyForDisplay(
 																			tool.shortcut,
 																		)}
 																	</kbd>

@@ -31,7 +31,8 @@
 		"typecheck": "pnpm -r exec tsc --noEmit",
 		"check": "pnpm lint && pnpm fmt:check && pnpm typecheck",
 		"fix": "pnpm lint:fix && pnpm fmt",
-		"prepare": "simple-git-hooks"
+		"prepare": "simple-git-hooks",
+		"lint-staged": "npx lint-staged"
 	},
 	"devDependencies": {
 		"@types/node": "^25.3.0",
@@ -42,7 +43,7 @@
 		"typescript": "^5.7.0"
 	},
 	"simple-git-hooks": {
-		"pre-commit": "pnpm lint-staged"
+		"pre-commit": "npx lint-staged"
 	},
 	"lint-staged": {
 		"*.{ts,tsx,js,jsx}": [

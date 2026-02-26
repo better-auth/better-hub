@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { ArrowRight, Star } from "lucide-react";
-import { formatForDisplay } from "@tanstack/react-hotkeys";
+import { formatHotkeyForDisplay } from "@/lib/format-hotkey";
 import { cn } from "@/lib/utils";
 import { useGlobalChatOptional } from "@/components/shared/global-chat-provider";
 import { authClient } from "@/lib/auth-client";
@@ -26,9 +26,9 @@ interface OnboardingOverlayProps {
 const GHOST_WELCOME_USER = "Hey Ghost! I just got here. What can you help me with?";
 
 function getGhostWelcomeResponse() {
-	const modK = formatForDisplay("Mod+K");
-	const modI = formatForDisplay("Mod+I");
-	const modSlash = formatForDisplay("Mod+/");
+	const modK = formatHotkeyForDisplay("Mod+K");
+	const modI = formatHotkeyForDisplay("Mod+I");
+	const modSlash = formatHotkeyForDisplay("Mod+/");
 
 	return `Hey! Welcome to Better Hub. I'm Ghost, your AI assistant. Here's what I can help with:
 
@@ -255,11 +255,11 @@ export function OnboardingOverlay({
 							On desktop, most things are accessible
 							through keyboard shortcuts.{" "}
 							<kbd className="text-[11px] px-1 py-0.5 rounded-sm font-mono text-white/40">
-								{formatForDisplay("Mod+K")}
+								{formatHotkeyForDisplay("Mod+K")}
 							</kbd>{" "}
 							opens the command center,{" "}
 							<kbd className="text-[11px] px-1 py-0.5 rounded-sm font-mono text-white/40">
-								{formatForDisplay("Mod+I")}
+								{formatHotkeyForDisplay("Mod+I")}
 							</kbd>{" "}
 							opens Ghost, a super helpful AI assistant.
 						</p>
