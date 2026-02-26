@@ -57,6 +57,42 @@ export interface ThemeColors {
 	"--contrib-4": string;
 }
 
+export interface ShikiThemeInput {
+	foreground: string;
+	constant?: string;
+	string?: string;
+	comment?: string;
+	keyword?: string;
+	parameter?: string;
+	function?: string;
+	stringExpression?: string;
+	punctuation?: string;
+	link?: string;
+	number?: string;
+	property?: string;
+	objectLiteral?: string;
+	highlight?: string;
+	highlightHover?: string;
+	highlightBorder?: string;
+	diffDeleted?: string;
+	diffInserted?: string;
+}
+
+export interface ShikiTheme {
+	name: string;
+	type: "light" | "dark";
+	colors: Record<string, string>;
+	tokenColors: Array<{
+		scope: string | string[];
+		settings: { foreground?: string; fontStyle?: string };
+	}>;
+}
+
+export interface SyntaxThemes {
+	light?: ShikiTheme;
+	dark?: ShikiTheme;
+}
+
 export interface ThemeDefinition {
 	id: string;
 	name: string;
@@ -67,4 +103,6 @@ export interface ThemeDefinition {
 	/** Background color for preview dot */
 	bgPreview: string;
 	colors: ThemeColors;
+	/** Optional syntax highlighting themes for code blocks */
+	syntax?: SyntaxThemes;
 }

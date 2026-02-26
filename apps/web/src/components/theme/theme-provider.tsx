@@ -47,6 +47,12 @@ function getStored(key: string, fallback: string): string {
 	return localStorage.getItem(key) ?? fallback;
 }
 
+const COOKIE_KEY = "color-theme";
+
+function setThemeCookie(themeId: string) {
+	document.cookie = `${COOKIE_KEY}=${encodeURIComponent(themeId)};path=/;max-age=${365 * 24 * 60 * 60};samesite=lax`;
+}
+
 /** Pick the initial active theme: localStorage → system preference → dark fallback */
 function getInitialTheme(): string {
 	if (typeof window === "undefined") return DARK_THEME_ID;
@@ -83,13 +89,16 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 		if (appliedRef.current === colorTheme) return;
 		appliedRef.current = colorTheme;
 		applyTheme(colorTheme);
+		setThemeCookie(colorTheme);
 		const theme = getTheme(colorTheme);
 		if (theme) setTheme(theme.mode);
 	}, [colorTheme, setTheme]);
 
 	// Mark the initial theme as already applied (FOUC script handled it)
+	// Also set cookie for server-side rendering
 	useEffect(() => {
 		appliedRef.current = colorTheme;
+		setThemeCookie(colorTheme);
 	}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
 	// On mount: fetch theme from DB — if it differs from localStorage, adopt it

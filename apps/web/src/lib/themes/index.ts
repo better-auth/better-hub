@@ -1,5 +1,16 @@
 import type { ThemeColors, ThemeDefinition } from "./types";
-import { midnight, hubLight, hubDark, ember, arctic, nordWave, dawn } from "./themes";
+import { arctic, dawn, ember, hubDark, hubLight, midnight, nordWave, vercel } from "./themes";
+
+const themes: ThemeDefinition[] = [
+	arctic,
+	dawn,
+	ember,
+	hubDark,
+	hubLight,
+	midnight,
+	nordWave,
+	vercel,
+];
 
 export type { ThemeColors, ThemeDefinition };
 
@@ -9,8 +20,6 @@ export const LIGHT_THEME_KEY = "light-theme";
 export const DEFAULT_THEME_ID = "midnight";
 export const DARK_THEME_ID = "midnight";
 export const LIGHT_THEME_ID = "hub-light";
-
-const themes: ThemeDefinition[] = [midnight, hubDark, hubLight, ember, arctic, nordWave, dawn];
 
 const themeMap = new Map(themes.map((t) => [t.id, t]));
 

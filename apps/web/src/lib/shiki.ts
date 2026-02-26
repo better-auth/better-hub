@@ -5,11 +5,13 @@ import {
 	type BundledTheme,
 } from "shiki";
 import { parseDiffPatch, getLanguageFromFilename } from "./github-utils";
-import { getBuiltInTheme } from "./code-themes/built-in";
-import { DEFAULT_CODE_THEME_LIGHT, DEFAULT_CODE_THEME_DARK } from "./code-themes/types";
+import { getTheme } from "./themes";
+import type { ShikiTheme } from "./themes/types";
 
-const FALLBACK_THEMES = [DEFAULT_CODE_THEME_LIGHT, DEFAULT_CODE_THEME_DARK] as const;
-const FALLBACK_PAIR = { light: DEFAULT_CODE_THEME_LIGHT, dark: DEFAULT_CODE_THEME_DARK };
+const DEFAULT_LIGHT_THEME = "vitesse-light";
+const DEFAULT_DARK_THEME = "vitesse-black";
+const FALLBACK_THEMES = [DEFAULT_LIGHT_THEME, DEFAULT_DARK_THEME] as const;
+const FALLBACK_PAIR = { light: DEFAULT_LIGHT_THEME, dark: DEFAULT_DARK_THEME };
 const MAX_TOKENIZE_LENGTH = 200_000; // Skip tokenization for very large inputs to avoid WASM OOM
 
 function escapeHtml(str: string): string {
@@ -34,69 +36,99 @@ function getHighlighter(): Promise<Highlighter> {
 }
 
 /**
- * Read code-theme-prefs cookie from the raw Cookie header.
+ * Read color-theme cookie to get the current app theme ID.
  * Uses dynamic import of next/headers to avoid issues in non-request contexts.
- * Returns defaults if anything goes wrong.
  */
-async function readThemePrefsFromCookie(): Promise<{ light: string; dark: string }> {
+async function readThemeIdFromCookie(): Promise<string | null> {
 	try {
-		// Dynamic import + 200ms timeout to guard against hanging cookies()/headers()
 		const result = await Promise.race([
 			(async () => {
 				const { cookies } = await import("next/headers");
 				const cookieStore = await cookies();
-				const raw = cookieStore.get("code-theme-prefs")?.value;
-				if (!raw) return FALLBACK_PAIR;
-				const parsed = JSON.parse(raw);
-				return {
-					light: (parsed.light as string) || FALLBACK_PAIR.light,
-					dark: (parsed.dark as string) || FALLBACK_PAIR.dark,
-				};
+				return cookieStore.get("color-theme")?.value ?? null;
 			})(),
-			new Promise<{ light: string; dark: string }>((resolve) =>
-				setTimeout(() => resolve(FALLBACK_PAIR), 200),
+			new Promise<string | null>((resolve) =>
+				setTimeout(() => resolve(null), 200),
 			),
 		]);
 		return result;
 	} catch {
-		return FALLBACK_PAIR;
+		return null;
 	}
 }
 
 /**
- * Ensure a theme is loaded in the highlighter.
- * Handles built-in Shiki themes by name and custom themes from DB JSON.
+ * Ensure a built-in Shiki theme is loaded.
  */
-async function ensureThemeLoaded(highlighter: Highlighter, themeId: string): Promise<string> {
+async function ensureBuiltInThemeLoaded(
+	highlighter: Highlighter,
+	themeId: string,
+): Promise<string> {
 	const loaded = highlighter.getLoadedThemes();
 	if (loaded.includes(themeId)) return themeId;
 
-	// Check if it's a built-in Shiki theme
-	const builtIn = getBuiltInTheme(themeId);
-	if (builtIn) {
-		try {
-			await highlighter.loadTheme(themeId as BundledTheme);
-			return themeId;
-		} catch {
-			// Fall through to fallback
-		}
-	}
-
-	// Check if it's a custom theme from DB (lazy import to avoid bundling issues)
 	try {
-		const { getCustomTheme } = await import("./code-themes/store");
-		const custom = await getCustomTheme(themeId);
-		if (custom) {
-			const themeJson = JSON.parse(custom.themeJson);
-			themeJson.name = themeId;
-			await highlighter.loadTheme(themeJson);
-			return themeId;
-		}
+		await highlighter.loadTheme(themeId as BundledTheme);
+		return themeId;
 	} catch {
-		// Fall through to fallback
+		return "";
 	}
+}
 
-	return "";
+/**
+ * Load a built-in theme with a custom background color.
+ * Returns a unique theme name that can be used for highlighting.
+ */
+async function loadThemeWithCustomBg(
+	highlighter: Highlighter,
+	baseThemeId: string,
+	bgColor: string,
+	uniqueName: string,
+): Promise<string> {
+	const loaded = highlighter.getLoadedThemes();
+	if (loaded.includes(uniqueName)) return uniqueName;
+
+	try {
+		// Ensure base theme is loaded first
+		await ensureBuiltInThemeLoaded(highlighter, baseThemeId);
+
+		// Get the theme object and modify its background
+		const baseTheme = highlighter.getTheme(baseThemeId);
+		const modifiedTheme = {
+			...baseTheme,
+			name: uniqueName,
+			colors: {
+				...baseTheme.colors,
+				"editor.background": bgColor,
+			},
+		};
+
+		await highlighter.loadTheme(modifiedTheme);
+		return uniqueName;
+	} catch {
+		// Fall back to the original theme
+		return baseThemeId;
+	}
+}
+
+/**
+ * Load a custom ShikiTheme object into the highlighter.
+ */
+async function loadCustomSyntaxTheme(
+	highlighter: Highlighter,
+	theme: ShikiTheme,
+	uniqueName: string,
+): Promise<string> {
+	const loaded = highlighter.getLoadedThemes();
+	if (loaded.includes(uniqueName)) return uniqueName;
+
+	try {
+		const themeWithName = { ...theme, name: uniqueName };
+		await highlighter.loadTheme(themeWithName);
+		return uniqueName;
+	} catch {
+		return "";
+	}
 }
 
 // Cache theme pair per-request to avoid redundant cookie reads + theme loads
@@ -120,17 +152,63 @@ async function resolveThemePair(
 	highlighter: Highlighter,
 ): Promise<{ light: string; dark: string }> {
 	try {
-		const prefs = await readThemePrefsFromCookie();
+		const themeId = await readThemeIdFromCookie();
+		const appTheme = themeId ? getTheme(themeId) : null;
 
-		const light =
-			(await ensureThemeLoaded(highlighter, prefs.light)) ||
-			(await ensureThemeLoaded(highlighter, DEFAULT_CODE_THEME_LIGHT)) ||
-			DEFAULT_CODE_THEME_LIGHT;
+		let light = DEFAULT_LIGHT_THEME;
+		let dark = DEFAULT_DARK_THEME;
 
-		const dark =
-			(await ensureThemeLoaded(highlighter, prefs.dark)) ||
-			(await ensureThemeLoaded(highlighter, DEFAULT_CODE_THEME_DARK)) ||
-			DEFAULT_CODE_THEME_DARK;
+		if (appTheme?.syntax) {
+			// Theme has custom syntax highlighting - use it
+			if (appTheme.syntax.light) {
+				const customLightName = `${appTheme.id}-syntax-light`;
+				const loadedName = await loadCustomSyntaxTheme(
+					highlighter,
+					appTheme.syntax.light,
+					customLightName,
+				);
+				if (loadedName) light = loadedName;
+			}
+			if (appTheme.syntax.dark) {
+				const customDarkName = `${appTheme.id}-syntax-dark`;
+				const loadedName = await loadCustomSyntaxTheme(
+					highlighter,
+					appTheme.syntax.dark,
+					customDarkName,
+				);
+				if (loadedName) dark = loadedName;
+			}
+		} else if (appTheme) {
+			// Theme has no custom syntax - use vitesse but with the theme's code-bg
+			const codeBg = appTheme.colors["--code-bg"];
+			if (codeBg) {
+				if (appTheme.mode === "light") {
+					const customName = `${appTheme.id}-vitesse-light`;
+					light = await loadThemeWithCustomBg(
+						highlighter,
+						DEFAULT_LIGHT_THEME,
+						codeBg,
+						customName,
+					);
+				} else {
+					const customName = `${appTheme.id}-vitesse-dark`;
+					dark = await loadThemeWithCustomBg(
+						highlighter,
+						DEFAULT_DARK_THEME,
+						codeBg,
+						customName,
+					);
+				}
+			}
+		}
+
+		// Ensure fallback themes are loaded for the other mode
+		if (light === DEFAULT_LIGHT_THEME) {
+			await ensureBuiltInThemeLoaded(highlighter, DEFAULT_LIGHT_THEME);
+		}
+		if (dark === DEFAULT_DARK_THEME) {
+			await ensureBuiltInThemeLoaded(highlighter, DEFAULT_DARK_THEME);
+		}
 
 		return { light, dark };
 	} catch {
