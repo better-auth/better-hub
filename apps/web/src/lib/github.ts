@@ -1,75 +1,48 @@
-import { Octokit } from "@octokit/rest";
-import { headers } from "next/headers";
-import { cache } from "react";
-import { $Session, getServerSession } from "./auth";
-import {
-	claimDueGithubSyncJobs,
-	deleteGithubCacheByPrefix,
-	deleteSharedCacheByPrefix,
-	enqueueGithubSyncJob,
-	getGithubCacheEntry,
-	getSharedCacheEntry,
-	markGithubSyncJobFailed,
-	markGithubSyncJobSucceeded,
-	touchGithubCacheEntrySyncedAt,
-	touchSharedCacheEntrySyncedAt,
-	upsertGithubCacheEntry,
-	upsertSharedCacheEntry,
-} from "./github-sync-store";
-import { redis } from "./redis";
-import { computeContributorScore } from "./contributor-score";
-import { getCachedAuthorDossier, setCachedAuthorDossier } from "./repo-data-cache";
-import type { UserBadge } from "@/components/users/user-badges";
+export async function getUserBadges(username: string): Promise<UserBadge[]> {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx) return [];
 
-export type RepoPermissions = {
-	admin: boolean;
-	push: boolean;
-	pull: boolean;
-	maintain: boolean;
-	triage: boolean;
-};
+	const query = `
+    query($username: String!) {
+      user(login: $username) {
+        badges {
+          name
+          description
+          icon
+        }
+      }
+    }
+  `;
 
-export interface FetchedUserProfile {
-	login: string;
-	name: string | null;
-	avatar_url: string;
-	html_url: string;
-	bio: string | null;
-	blog: string | null;
-	location: string | null;
-	company: string | null;
-	twitter_username?: string | null;
-	public_repos: number;
-	followers: number;
-	following: number;
-	created_at: string;
-	badges?: UserBadge[];
-	type?: string;
+	try {
+		const response = await fetch("https://api.github.com/graphql", {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${authCtx.token}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ query, variables: { username } }),
+		});
+
+		if (!response.ok) return [];
+		const json = await response.json();
+
+		// Check if badges field exists in response
+		const badges = json.data?.user?.badges;
+		if (!Array.isArray(badges)) return [];
+
+		return badges.map((badge: { name: string; description: string; icon: string }) => ({
+			name: badge.name,
+			description: badge.description,
+			icon: badge.icon,
+		}));
+	} catch {
+		return [];
+	}
 }
 
-export function extractRepoPermissions(repoData: {
-	permissions?: Partial<RepoPermissions>;
-}): RepoPermissions {
-	const p = repoData?.permissions;
-	return {
-		admin: !!p?.admin,
-		push: !!p?.push,
-		pull: !!p?.pull,
-		maintain: !!p?.maintain,
-		triage: !!p?.triage,
-	};
-}
-
-type RepoSort = "updated" | "pushed" | "full_name";
-type OrgRepoSort = "created" | "updated" | "pushed" | "full_name";
-type OrgRepoType = "all" | "public" | "private" | "forks" | "sources" | "member";
-
-interface GitHubAuthContext {
-	userId: string;
-	token: string;
-	octokit: Octokit;
-	forceRefresh: boolean;
-	githubUser: $Session["githubUser"];
-}
-
-// Rest of the file continues...
+export async function getAuthorDossier(
+	owner: string,
+	repo: string,
+	authorLogin: string,
+): Promise<AuthorDossierResult | null> {
