@@ -8,6 +8,7 @@ import { BUILT_IN_THEMES } from "@/lib/code-themes/built-in";
 import { CODE_FONTS } from "@/lib/code-themes/fonts";
 import type { CodeThemeOption } from "@/lib/code-themes/types";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
+import { HighlightedCodeBlock } from "@/components/shared/highlighted-code-block";
 
 const SAMPLE_CODE = `function fibonacci(n: number): number {
   if (n <= 1) return n;
@@ -269,17 +270,19 @@ export function EditorTab() {
 							"var(--code-theme-bg, var(--code-bg))",
 					}}
 				>
-					<pre
-						className="p-3 overflow-x-auto"
+					<div
+						className="code-content p-3 overflow-x-auto [&_pre]:!m-0 [&_pre]:!p-0 [&_pre]:!bg-transparent [&_code]:!bg-transparent"
 						style={{
 							fontFamily: "var(--code-font-override, var(--font-code)), ui-monospace, monospace",
 							fontSize: `var(--code-font-size, 13px)`,
 							lineHeight: "20px",
-							color: "var(--foreground)",
 						}}
 					>
-						<code>{SAMPLE_CODE}</code>
-					</pre>
+						<HighlightedCodeBlock
+							code={SAMPLE_CODE}
+							lang="typescript"
+						/>
+					</div>
 				</div>
 			</div>
 		</div>
