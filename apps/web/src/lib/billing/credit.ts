@@ -2,8 +2,6 @@ import type { Prisma } from "../../generated/prisma/client";
 import { prisma } from "../db";
 import { WELCOME_CREDIT_TYPE, WELCOME_CREDIT_USD, WELCOME_CREDIT_EXPIRY_DAYS } from "./config";
 
-export type TxClient = Prisma.TransactionClient;
-
 export async function grantSignupCredits(userId: string): Promise<void> {
 	if (WELCOME_CREDIT_USD <= 0) return;
 
@@ -41,7 +39,10 @@ export async function getNearestCreditExpiry(userId: string): Promise<Date | nul
 	return grant?.expiresAt ?? null;
 }
 
-export async function getCreditBalance(userId: string, tx?: TxClient): Promise<CreditBalance> {
+export async function getCreditBalance(
+	userId: string,
+	tx?: Prisma.TransactionClient,
+): Promise<CreditBalance> {
 	const db = tx ?? prisma;
 	const [grants, usageAgg] = await Promise.all([
 		db.creditLedger.findMany({

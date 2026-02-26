@@ -6,9 +6,8 @@ import {
 	type CostDetails,
 	type UsageDetails,
 } from "./ai-models";
-import type { TxClient } from "./credit";
 import { getCreditBalance } from "./credit";
-import { getActiveSubscription } from "./spending-limit";
+import { ACTIVE_SUBSCRIPTION_STATUSES } from "./config";
 import { Prisma } from "../../generated/prisma/client";
 import { prisma } from "../db";
 import { reportUsageToStripe } from "./stripe";
@@ -22,7 +21,7 @@ const TX_OPTIONS = {
 const TX_MAX_RETRIES = 3;
 
 /** Run a Serializable transaction with automatic retry on write conflicts (P2034). */
-async function withSerializableTx<T>(fn: (tx: TxClient) => Promise<T>): Promise<T> {
+async function withSerializableTx<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
 	for (let attempt = 0; ; attempt++) {
 		try {
 			return await prisma.$transaction(fn, TX_OPTIONS);
@@ -59,7 +58,7 @@ function toJsonOrNull(obj: UsageDetails | CostDetails): string | null {
 }
 
 async function splitCost(
-	tx: TxClient,
+	tx: Prisma.TransactionClient,
 	userId: string,
 	fullCost: number,
 ): Promise<{ creditUsed: number; costUsd: number }> {
@@ -69,7 +68,13 @@ async function splitCost(
 
 	// No subscription → credit-only; don't bill beyond credits
 	if (remainder > 0) {
-		const subscription = await getActiveSubscription(userId);
+		const subscription = await tx.subscription.findFirst({
+			where: {
+				referenceId: userId,
+				status: { in: [...ACTIVE_SUBSCRIPTION_STATUSES] },
+			},
+			select: { id: true },
+		});
 		if (!subscription) return { creditUsed, costUsd: 0 };
 	}
 

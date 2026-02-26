@@ -2,7 +2,6 @@ import { prisma } from "../db";
 import { getCreditBalance } from "./credit";
 import { getActiveSubscription, getCurrentPeriodUsage, getSpendingLimit } from "./spending-limit";
 import { stripeClient } from "./stripe";
-import { FREE_MESSAGE_LIMIT } from "./config";
 
 // Lazy migration for users created before the Stripe plugin was installed.
 // Creates a Stripe customer on first AI usage.
@@ -47,7 +46,7 @@ export async function checkUsageLimit(
 
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
-		select: { stripeCustomerId: true, aiMessageCount: true },
+		select: { stripeCustomerId: true },
 	});
 
 	// 2. No Stripe customer — lazy migration
@@ -58,13 +57,7 @@ export async function checkUsageLimit(
 		}
 		stripeCustomerId = await ensureStripeCustomer(userId);
 		if (!stripeCustomerId) {
-			// Stripe unavailable — fall back to message count
-			const current = user.aiMessageCount ?? 0;
-			return {
-				allowed: current < FREE_MESSAGE_LIMIT,
-				current,
-				limit: FREE_MESSAGE_LIMIT,
-			};
+			return { allowed: false, current: 0, limit: 0 };
 		}
 	}
 
