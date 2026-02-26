@@ -205,7 +205,7 @@ function SubmitButtonGroup({
 				className={cn(
 					"flex items-center gap-1.5 px-5 py-1.5 text-[12px] font-medium rounded-l-md transition-all cursor-pointer",
 					canSubmit
-						? "bg-green-600 hover:bg-green-700 text-white"
+						? "bg-white text-black hover:bg-white/90"
 						: "bg-muted dark:bg-white/5 text-muted-foreground/30 cursor-not-allowed",
 					"disabled:opacity-50 disabled:cursor-not-allowed",
 				)}
@@ -224,7 +224,7 @@ function SubmitButtonGroup({
 						className={cn(
 							"flex items-center px-2 py-1.5 border-l transition-all cursor-pointer rounded-r-md",
 							canSubmit
-								? "bg-green-600 hover:bg-green-700 text-white border-green-700"
+								? "bg-white text-black hover:bg-white/90 border-black/10"
 								: "bg-muted dark:bg-white/5 text-muted-foreground/30 border-border/30 cursor-not-allowed",
 							"disabled:opacity-50 disabled:cursor-not-allowed",
 						)}
