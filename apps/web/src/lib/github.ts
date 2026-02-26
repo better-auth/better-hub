@@ -3101,7 +3101,7 @@ export interface RepoIssueNode {
 	assignees: Array<{ login: string; avatar_url: string }>;
 	milestone: { title: string } | null;
 	reactions: { total_count: number; "+1": number };
-	pull_request?: undefined;
+	pull_request?: { url?: string; html_url?: string } | null;
 }
 
 const ISSUES_PAGE_GRAPHQL = `
@@ -3125,6 +3125,15 @@ const ISSUES_PAGE_GRAPHQL = `
 					comments { totalCount }
 					reactions { totalCount }
 					thumbsUp: reactions(content: THUMBS_UP) { totalCount }
+					timelineItems(first: 10, itemTypes: [CROSS_REFERENCED_EVENT]) {
+						nodes {
+							... on CrossReferencedEvent {
+								source {
+									... on PullRequest { number url }
+								}
+							}
+						}
+					}
 				}
 			}
 			closedIssues: issues(states: [CLOSED], first: 50, orderBy: {field: UPDATED_AT, direction: DESC}) {
@@ -3145,6 +3154,15 @@ const ISSUES_PAGE_GRAPHQL = `
 					comments { totalCount }
 					reactions { totalCount }
 					thumbsUp: reactions(content: THUMBS_UP) { totalCount }
+					timelineItems(first: 10, itemTypes: [CROSS_REFERENCED_EVENT]) {
+						nodes {
+							... on CrossReferencedEvent {
+								source {
+									... on PullRequest { number url }
+								}
+							}
+						}
+					}
 				}
 			}
 		}
@@ -3169,6 +3187,11 @@ interface GQLIssueNode {
 	milestone?: { title: string } | null;
 	reactions?: { totalCount: number };
 	thumbsUp?: { totalCount: number };
+	timelineItems?: {
+		nodes: Array<{
+			source?: { number?: number; url?: string };
+		}>;
+	};
 }
 
 function mapGraphQLIssueNode(node: GQLIssueNode): RepoIssueNode {
@@ -3202,6 +3225,11 @@ function mapGraphQLIssueNode(node: GQLIssueNode): RepoIssueNode {
 			total_count: node.reactions?.totalCount ?? 0,
 			"+1": node.thumbsUp?.totalCount ?? 0,
 		},
+		pull_request: (() => {
+			const pr = node.timelineItems?.nodes?.find((n) => n.source?.number);
+			if (!pr?.source?.url) return null;
+			return { url: pr.source.url, html_url: pr.source.url };
+		})(),
 	};
 }
 
