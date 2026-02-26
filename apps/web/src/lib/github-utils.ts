@@ -169,6 +169,13 @@ type ParsedGitHubUrl =
 			type: "user";
 	  };
 
+function parsePositiveInt(value: string | undefined): number | null {
+	if (!value) return null;
+	if (!/^\d+$/.test(value)) return null;
+	const parsed = Number.parseInt(value, 10);
+	return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
 export function parseGitHubUrl(htmlUrl: string): ParsedGitHubUrl | null {
 	try {
 		const url = new URL(htmlUrl);
@@ -187,10 +194,16 @@ export function parseGitHubUrl(htmlUrl: string): ParsedGitHubUrl | null {
 		const [owner, repo, ...rest] = parts;
 
 		if (rest.length === 0) return { owner, repo, type: "repo" };
-		if (rest[0] === "pull" && rest[1])
-			return { owner, repo, type: "pull", number: parseInt(rest[1], 10) };
-		if (rest[0] === "issues" && rest[1])
-			return { owner, repo, type: "issue", number: parseInt(rest[1], 10) };
+		if (rest[0] === "pull" && rest[1]) {
+			const number = parsePositiveInt(rest[1]);
+			if (number === null) return null;
+			return { owner, repo, type: "pull", number };
+		}
+		if (rest[0] === "issues" && rest[1]) {
+			const number = parsePositiveInt(rest[1]);
+			if (number === null) return null;
+			return { owner, repo, type: "issue", number };
+		}
 		if (rest[0] === "tree")
 			return { owner, repo, type: "tree", path: rest.slice(1).join("/") };
 		if (rest[0] === "blob")
