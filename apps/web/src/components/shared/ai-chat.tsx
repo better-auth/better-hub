@@ -521,6 +521,8 @@ export function AIChat({
 	const [inputMinHeight, setInputMinHeight] = useState(38);
 	const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
 	const [historyLoaded, setHistoryLoaded] = useState(!persistKey);
+	const [historyLoadError, setHistoryLoadError] = useState<string | null>(null);
+	const [persistError, setPersistError] = useState<string | null>(null);
 	const initialMessageCountRef = useRef(0);
 	// Context snapshots per user message (messageId → contexts at send time)
 	const [messageContexts, setMessageContexts] = useState<Record<string, AttachedContext[]>>(
@@ -790,6 +792,7 @@ export function AIChat({
 
 		let cancelled = false;
 		setHistoryLoaded(false);
+		setHistoryLoadError(null);
 		// Clear immediately so stale messages from a previous tab don't flash
 		setMessages([]);
 		clearError();
@@ -800,7 +803,13 @@ export function AIChat({
 		lastSavedCountRef.current = 0;
 
 		fetch(`/api/ai/chat-history?contextKey=${encodeURIComponent(persistKey)}`)
-			.then((res) => res.json())
+			.then(async (res) => {
+				const data = await res.json();
+				if (!res.ok) {
+					throw new Error(data.error || `Load failed (${res.status})`);
+				}
+				return data;
+			})
 			.then((data) => {
 				if (cancelled) return;
 				if (
@@ -854,8 +863,13 @@ export function AIChat({
 				}
 				setHistoryLoaded(true);
 			})
-			.catch(() => {
-				if (!cancelled) setHistoryLoaded(true);
+			.catch((err) => {
+				if (!cancelled) {
+					setHistoryLoadError(
+						err instanceof Error ? err.message : "Could not load chat history",
+					);
+					setHistoryLoaded(true);
+				}
 			});
 
 		return () => {
@@ -873,14 +887,14 @@ export function AIChat({
 		if (newMessages.length === 0) return;
 		if (status === "streaming" || status === "submitted") return;
 
-		for (const msg of newMessages) {
+		const savePromises = newMessages.map((msg) => {
 			const text =
 				msg.parts
 					?.filter((p) => p.type === "text")
 					.map((p) => (p as { type: "text"; text: string }).text)
 					.join("") || "";
 
-			fetch("/api/ai/chat-history", {
+			return fetch("/api/ai/chat-history", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
@@ -893,16 +907,35 @@ export function AIChat({
 						partsJson: JSON.stringify(msg.parts),
 					},
 				}),
-			})
-				.then((res) => res.json())
-				.then((data) => {
-					if (data.conversation) {
-						setConversationId(data.conversation.id);
-					}
-				})
-				.catch(() => {});
-		}
-		lastSavedCountRef.current = messages.length;
+			}).then(async (res) => {
+				const data = await res.json();
+				if (!res.ok) {
+					throw new Error(data.error || `Save failed (${res.status})`);
+				}
+				return data;
+			});
+		});
+
+		Promise.allSettled(savePromises).then((results) => {
+			const failed = results.filter((r) => r.status === "rejected");
+			if (failed.length > 0) {
+				const firstReason =
+					failed[0].status === "rejected"
+						? failed[0].reason?.message || "Could not save chat history"
+						: "Could not save chat history";
+				setPersistError(firstReason);
+				return;
+			}
+			setPersistError(null);
+			const firstFulfilled = results.find(
+				(r): r is PromiseFulfilledResult<{ conversation?: { id: string } }> =>
+					r.status === "fulfilled",
+			);
+			if (firstFulfilled?.value?.conversation) {
+				setConversationId(firstFulfilled.value.conversation.id);
+			}
+			lastSavedCountRef.current = messages.length;
+		});
 	}, [messages, status, persistKey, chatType, historyLoaded]);
 
 	// Track whether user has scrolled away from the bottom
@@ -1579,6 +1612,23 @@ export function AIChat({
 								/>
 							)}
 
+							{/* History load error — could not load previous chat */}
+							{historyLoadError && messages.length === 0 && (
+								<div className="flex flex-col items-center gap-2 py-4">
+									<span className="text-[11px] text-muted-foreground/50 text-center max-w-[260px]">
+										{historyLoadError}
+									</span>
+									<button
+										type="button"
+										onClick={() => setHistoryLoadError(null)}
+										className="mt-1 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-medium bg-foreground text-background hover:bg-foreground/85 transition-colors cursor-pointer"
+									>
+										<X className="w-3 h-3" />
+										Dismiss
+									</button>
+								</div>
+							)}
+
 							{/* Error state — stream died, timed out, etc. */}
 							{error && historyLoaded && (
 								<div className="flex flex-col items-center gap-2 py-4">
@@ -1701,6 +1751,22 @@ export function AIChat({
 
 			{/* Input area */}
 			<div className="shrink-0 px-3 pb-3 pt-1">
+				{/* Persist error — chat history could not be saved */}
+				{persistError && (
+					<div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2">
+						<span className="text-[11px] text-destructive/90">
+							{persistError}
+						</span>
+						<button
+							type="button"
+							onClick={() => setPersistError(null)}
+							className="shrink-0 text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+							aria-label="Dismiss"
+						>
+							<X className="w-3 h-3" />
+						</button>
+					</div>
+				)}
 				{/* New chat button */}
 				{messages.length > 0 && !isLoading && (
 					<div className="flex justify-end mb-1.5">
@@ -1710,6 +1776,8 @@ export function AIChat({
 								setMessages([]);
 								lastSavedCountRef.current = 0;
 								setMessageContexts({});
+								setPersistError(null);
+								setHistoryLoadError(null);
 								onNewChat?.();
 								if (persistKey && conversationId) {
 									fetch(
