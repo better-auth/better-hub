@@ -304,7 +304,7 @@ export default function NewPullRequestPage() {
 	const { emit } = useMutationEvents();
 
 	useEffect(() => {
-		const headFromUrl = new URLSearchParams(window.location.search).get("head");
+		const headFromUrl = searchParams.get("head");
 		fetchBranches(owner, repo).then((b) => {
 			setBranches(b);
 			setBase((prev) => {
