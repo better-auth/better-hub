@@ -60,6 +60,7 @@ type GitDataSyncJobType =
 	| "repo_tree"
 	| "repo_branches"
 	| "repo_tags"
+	| "repo_releases"
 	| "file_content"
 	| "repo_readme"
 	| "authenticated_user"
@@ -100,6 +101,7 @@ type GitDataSyncJobType =
 const SHAREABLE_CACHE_TYPES: ReadonlySet<string> = new Set([
 	"repo_branches",
 	"repo_tags",
+	"repo_releases",
 	"repo_issues",
 	"repo_pull_requests",
 	"issue",
@@ -306,6 +308,10 @@ function buildRepoBranchesCacheKey(owner: string, repo: string): string {
 
 function buildRepoTagsCacheKey(owner: string, repo: string): string {
 	return `repo_tags:${normalizeRepoKey(owner, repo)}`;
+}
+
+function buildRepoReleasesCacheKey(owner: string, repo: string): string {
+	return `repo_releases:${normalizeRepoKey(owner, repo)}`;
 }
 
 function buildFileContentCacheKey(owner: string, repo: string, path: string, ref?: string): string {
@@ -556,6 +562,15 @@ async function fetchRepoBranchesFromGitHub(octokit: Octokit, owner: string, repo
 
 async function fetchRepoTagsFromGitHub(octokit: Octokit, owner: string, repo: string) {
 	const { data } = await octokit.repos.listTags({
+		owner,
+		repo,
+		per_page: 100,
+	});
+	return data;
+}
+
+async function fetchRepoReleasesFromGitHub(octokit: Octokit, owner: string, repo: string) {
+	const { data } = await octokit.repos.listReleases({
 		owner,
 		repo,
 		per_page: 100,
@@ -1441,6 +1456,20 @@ async function processGitDataSyncJob(
 			);
 			return;
 		}
+		case "repo_releases": {
+			const data = await fetchRepoReleasesFromGitHub(
+				authCtx.octokit,
+				owner,
+				repo,
+			);
+			await upsertCacheWithShared(
+				authCtx.userId,
+				buildRepoReleasesCacheKey(owner, repo),
+				"repo_releases",
+				data,
+			);
+			return;
+		}
 		case "file_content": {
 			const path = payload.path ?? "";
 			const ref = normalizeRef(payload.ref);
@@ -2142,6 +2171,59 @@ export async function getRepoTags(owner: string, repo: string) {
 		jobPayload: { owner, repo },
 		fetchRemote: (octokit) => fetchRepoTagsFromGitHub(octokit, owner, repo),
 	});
+}
+
+export async function getRepoReleases(owner: string, repo: string) {
+	const authCtx = await getGitHubAuthContext();
+	const cacheKey = buildRepoReleasesCacheKey(owner, repo);
+
+	return readLocalFirstGitData({
+		authCtx,
+		cacheKey,
+		cacheType: "repo_releases",
+		fallback: [],
+		jobType: "repo_releases",
+		jobPayload: { owner, repo },
+		fetchRemote: (octokit) => fetchRepoReleasesFromGitHub(octokit, owner, repo),
+	});
+}
+
+export async function getRepoReleasesPage(owner: string, repo: string, page: number) {
+	const octokit = await getOctokit();
+	if (!octokit) return [];
+	try {
+		const { data } = await octokit.repos.listReleases({
+			owner,
+			repo,
+			per_page: 100,
+			page,
+		});
+		return data;
+	} catch {
+		return [];
+	}
+}
+
+export async function getRepoTagsPage(owner: string, repo: string, page: number) {
+	const octokit = await getOctokit();
+	if (!octokit) return [];
+	try {
+		const { data } = await octokit.repos.listTags({ owner, repo, per_page: 100, page });
+		return data;
+	} catch {
+		return [];
+	}
+}
+
+export async function getRepoReleaseByTag(owner: string, repo: string, tag: string) {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx?.octokit) return null;
+	try {
+		const { data } = await authCtx.octokit.repos.getReleaseByTag({ owner, repo, tag });
+		return data;
+	} catch {
+		return null;
+	}
 }
 
 export async function getFileContent(owner: string, repo: string, path: string, ref?: string) {
