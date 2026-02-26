@@ -2,7 +2,7 @@
 
 import { noSSR } from "foxact/no-ssr";
 import { Suspense, useEffect, useState, useCallback, useTransition, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useQueryState, parseAsStringLiteral } from "nuqs";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -51,6 +51,9 @@ import type {
 	SearchResult,
 } from "@/lib/github-types";
 
+const tabKeys = ["reviews", "prs", "issues", "notifs"] as const;
+type TabKey = (typeof tabKeys)[number];
+
 interface DashboardContentProps {
 	user: GitHubUser;
 	reviewRequests: SearchResult<IssueItem>;
@@ -90,28 +93,21 @@ export function DashboardContent({
 		myOpenPRs.items.length > 0 ||
 		myIssues.items.length > 0;
 
-	const searchParams = useSearchParams();
-	const tabParam = searchParams.get("tab");
-	const validTabs: TabKey[] = ["reviews", "prs", "issues", "notifs"];
-	const initialTab: TabKey = validTabs.includes(tabParam as TabKey)
-		? (tabParam as TabKey)
-		: "reviews";
-	const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
+	const [activeTab, setActiveTab] = useQueryState(
+		"tab",
+		parseAsStringLiteral(tabKeys).withDefault("reviews"),
+	);
 
-	const handleStatClick = useCallback((tab: TabKey) => {
-		setActiveTab(tab);
-		const url = new URL(window.location.href);
-		if (tab === "reviews") {
-			url.searchParams.delete("tab");
-		} else {
-			url.searchParams.set("tab", tab);
-		}
-		window.history.replaceState(null, "", url.toString());
-		document.getElementById("work-tabs")?.scrollIntoView({
-			behavior: "smooth",
-			block: "nearest",
-		});
-	}, []);
+	const handleStatClick = useCallback(
+		(tab: TabKey) => {
+			setActiveTab(tab);
+			document.getElementById("work-tabs")?.scrollIntoView({
+				behavior: "smooth",
+				block: "nearest",
+			});
+		},
+		[setActiveTab],
+	);
 
 	return (
 		<div className="flex flex-col flex-1 min-h-0 w-full">
@@ -243,7 +239,6 @@ function ExtensionBanner() {
 		</div>
 	);
 }
-type TabKey = "reviews" | "prs" | "issues" | "notifs";
 
 function WorkTabs({
 	reviewRequests,
