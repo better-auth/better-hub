@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { ArrowRight, Star } from "lucide-react";
+import { formatForDisplay } from "@tanstack/react-hotkeys";
 import { cn } from "@/lib/utils";
 import { useGlobalChatOptional } from "@/components/shared/global-chat-provider";
 import { authClient } from "@/lib/auth-client";
@@ -24,7 +25,12 @@ interface OnboardingOverlayProps {
 
 const GHOST_WELCOME_USER = "Hey Ghost! I just got here. What can you help me with?";
 
-const GHOST_WELCOME_RESPONSE = `Hey! Welcome to Better Hub. I'm Ghost, your AI assistant. Here's what I can help with:
+function getGhostWelcomeResponse() {
+	const modK = formatForDisplay("Mod+K");
+	const modI = formatForDisplay("Mod+I");
+	const modSlash = formatForDisplay("Mod+/");
+
+	return `Hey! Welcome to Better Hub. I'm Ghost, your AI assistant. Here's what I can help with:
 
 - **Review PRs and code** — I can summarize changes, spot issues, and help you understand diffs
 - **Navigate repos** — ask me about any file, function, or piece of code
@@ -32,14 +38,15 @@ const GHOST_WELCOME_RESPONSE = `Hey! Welcome to Better Hub. I'm Ghost, your AI a
 - **Write and refine** — commit messages, PR descriptions, comments
 
 **Three shortcuts to know:**
-- **⌘K** — Command Center. Search repos, switch themes, navigate anywhere
-- **⌘I** — Toggle me (Ghost) open or closed
-- **⌘/** — Quick search across repos
+- **${modK}** — Command Center. Search repos, switch themes, navigate anywhere
+- **${modI}** — Toggle me (Ghost) open or closed
+- **${modSlash}** — Quick search across repos
 
 **Things to try first:**
 1. Open a repo and ask me about the code
-2. Hit ⌘K and explore the Command Center
-3. Hit ⌘I and try chatting with Ghost about any repo`;
+2. Hit ${modK} and explore the Command Center
+3. Hit ${modI} and try chatting with Ghost about any repo`;
+}
 
 export function OnboardingOverlay({
 	userName,
@@ -83,7 +90,7 @@ export function OnboardingOverlay({
 					new CustomEvent("ghost-welcome-inject", {
 						detail: {
 							userMessage: GHOST_WELCOME_USER,
-							assistantMessage: GHOST_WELCOME_RESPONSE,
+							assistantMessage: getGhostWelcomeResponse(),
 							simulateDelay: 1200,
 						},
 					}),
@@ -248,11 +255,11 @@ export function OnboardingOverlay({
 							On desktop, most things are accessible
 							through keyboard shortcuts.{" "}
 							<kbd className="text-[11px] px-1 py-0.5 rounded-sm font-mono text-white/40">
-								⌘K
+								{formatForDisplay("Mod+K")}
 							</kbd>{" "}
 							opens the command center,{" "}
 							<kbd className="text-[11px] px-1 py-0.5 rounded-sm font-mono text-white/40">
-								⌘I
+								{formatForDisplay("Mod+I")}
 							</kbd>{" "}
 							opens Ghost, a super helpful AI assistant.
 						</p>

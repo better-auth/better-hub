@@ -6,9 +6,10 @@ import { PrismaClient } from "../generated/prisma/client";
 function makePrisma() {
 	const pool = new Pool({
 		connectionString: process.env.DATABASE_URL,
-		max: 2,
+		max: 5, // normally 2 is good, but we have external pooler (PgBouncer) in front of us
 		idleTimeoutMillis: 30_000,
-		connectionTimeoutMillis: 10_000,
+		connectionTimeoutMillis: 5_000,
+		allowExitOnIdle: true,
 	});
 	attachDatabasePool(pool);
 	const adapter = new PrismaPg(pool);

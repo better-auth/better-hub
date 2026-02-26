@@ -18,7 +18,11 @@ export async function generateMetadata({
 	params: Promise<{ owner: string; repo: string }>;
 }): Promise<Metadata> {
 	const { owner, repo } = await params;
-	return { title: `${owner}/${repo}` };
+	return {
+		title: `${owner}/${repo}`,
+		description: `View ${owner}/${repo} on Better Hub`,
+		openGraph: { title: `${owner}/${repo}` },
+	};
 }
 
 export default async function RepoPage({

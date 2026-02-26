@@ -2655,11 +2655,16 @@ The sandbox has git, node, npm, python, and common dev tools.
 					.describe("Branch to clone (defaults to default branch)"),
 			}),
 			execute: async ({ owner, repo, branch }) => {
-				// Validate owner/repo are real GitHub names (alphanumeric, hyphens, dots, underscores)
 				const validName = /^[a-zA-Z0-9._-]+$/;
 				if (!validName.test(owner) || !validName.test(repo)) {
 					return {
 						error: `Invalid owner/repo: "${owner}/${repo}". Provide valid GitHub owner and repository names.`,
+					};
+				}
+
+				if (branch && !validName.test(branch)) {
+					return {
+						error: `Invalid branch name: "${branch}". Branch names may only contain alphanumeric characters, dots, hyphens, and underscores.`,
 					};
 				}
 
@@ -2690,18 +2695,27 @@ The sandbox has git, node, npm, python, and common dev tools.
 				}
 
 				try {
-					// Git config
+					const safeName = (commitAuthor?.name ?? "Ghost").replace(
+						/["`$\\]/g,
+						"",
+					);
+					const safeEmail = (
+						commitAuthor?.email ?? "ghost@better-github.app"
+					).replace(/["`$\\]/g, "");
 					await sandbox.commands.run(
-						`git config --global user.name "${commitAuthor?.name ?? "Ghost"}" && git config --global user.email "${commitAuthor?.email ?? "ghost@better-github.app"}"`,
+						`git config --global user.name "${safeName}" && git config --global user.email "${safeEmail}"`,
 					);
 
 					repoPath = `/home/user/${repo}`;
 					repoOwner = owner;
 					repoName = repo;
 
-					// Clone with token auth – shallow clone to save time/disk
 					await sandbox.commands.run(
-						`git clone --depth 1 ${branch ? `-b ${branch}` : ""} https://x-access-token:${githubToken}@github.com/${owner}/${repo}.git ${repoPath}`,
+						`git config --global credential.helper store && printf 'protocol=https\\nhost=github.com\\nusername=x-access-token\\npassword=%s\\n' '${githubToken.replace(/'/g, "'\\''")}' | git credential approve`,
+					);
+
+					await sandbox.commands.run(
+						`git clone --depth 1 ${branch ? `-b ${branch}` : ""} https://github.com/${owner}/${repo}.git ${repoPath}`,
 						{ timeoutMs: 300_000 },
 					);
 				} catch (e: unknown) {
@@ -3334,21 +3348,17 @@ export async function POST(req: Request) {
 			headers: { Authorization: `Bearer ${apiKey}` },
 		});
 		if (!checkRes.ok) {
-			// If user's own key is invalid, fall back to the server key
-			if (usingOwnKey && serverApiKey) {
-				apiKey = serverApiKey;
-				usingOwnKey = false;
-			} else {
-				return new Response(
-					JSON.stringify({
-						error: "OpenRouter API key is invalid or expired. Please update your API key in settings.",
-					}),
-					{
-						status: 401,
-						headers: { "Content-Type": "application/json" },
-					},
-				);
-			}
+			return new Response(
+				JSON.stringify({
+					error: usingOwnKey
+						? "Your OpenRouter API key is invalid or expired. Please update it in settings."
+						: "OpenRouter API key is invalid or expired.",
+				}),
+				{
+					status: 401,
+					headers: { "Content-Type": "application/json" },
+				},
+			);
 		}
 	} catch {
 		// Network error validating key — proceed anyway

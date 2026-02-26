@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { getOrgMembers, getUser, getOctokit } from "@/lib/github";
+import { redirect } from "next/navigation";
+import { getOrgMembers, getUser, getOctokit, getRepoPageData } from "@/lib/github";
 import { PeopleList } from "@/components/people/people-list";
 import { inviteOrgMember } from "./actions";
 
@@ -18,6 +19,19 @@ export default async function PeoplePage({
 	params: Promise<{ owner: string; repo: string }>;
 }) {
 	const { owner, repo } = await params;
+
+	// Check access: only org members should see the people page
+	const pageDataResult = await getRepoPageData(owner, repo);
+	if (!pageDataResult.success) {
+		redirect(`/${owner}/${repo}`);
+	}
+
+	const { repoData, viewerIsOrgMember } = pageDataResult.data;
+	const showPeopleTab = repoData.owner.type === "Organization" && viewerIsOrgMember;
+
+	if (!showPeopleTab) {
+		redirect(`/${owner}/${repo}`);
+	}
 
 	const [members, octokit] = await Promise.all([getOrgMembers(owner, 100), getOctokit()]);
 

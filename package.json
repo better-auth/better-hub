@@ -30,13 +30,28 @@
 		"fmt:check": "oxfmt --ignore-path .oxfmtignore --check apps packages *.json *.yaml",
 		"typecheck": "pnpm -r exec tsc --noEmit",
 		"check": "pnpm lint && pnpm fmt:check && pnpm typecheck",
-		"fix": "pnpm lint:fix && pnpm fmt"
+		"fix": "pnpm lint:fix && pnpm fmt",
+		"prepare": "simple-git-hooks"
 	},
 	"devDependencies": {
 		"@types/node": "^25.3.0",
+		"lint-staged": "^16.2.7",
 		"oxfmt": "^0.34.0",
 		"oxlint": "^1.43.0",
+		"simple-git-hooks": "^2.13.1",
 		"typescript": "^5.7.0"
+	},
+	"simple-git-hooks": {
+		"pre-commit": "pnpm lint-staged"
+	},
+	"lint-staged": {
+		"*.{ts,tsx,js,jsx}": [
+			"oxfmt --write",
+			"oxlint --fix"
+		],
+		"*.json": [
+			"oxfmt --write"
+		]
 	},
 	"packageManager": "pnpm@10.10.0"
 }

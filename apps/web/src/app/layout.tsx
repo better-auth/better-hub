@@ -6,6 +6,7 @@ import "./globals.css";
 import { generateThemeScript } from "@/lib/theme-script";
 import { listThemes } from "@/lib/themes";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { SWRegister } from "@/components/pwa/sw-register";
 import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
@@ -31,6 +32,7 @@ export const metadata: Metadata = {
 		template: "%s | Better Hub",
 	},
 	description: "Re-imagining code collaboration for humans and agents.",
+	themeColor: "#000000",
 	metadataBase: new URL(siteUrl),
 	openGraph: {
 		title: "Better Hub",
@@ -70,7 +72,7 @@ export default function RootLayout({
 				/>
 			</head>
 			<body
-				className={`${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} antialiased bg-background text-foreground`}
+				className={`${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} antialiased bg-background text-foreground overflow-x-hidden`}
 				suppressHydrationWarning
 			>
 				<QueryProvider>
@@ -84,6 +86,7 @@ export default function RootLayout({
 					</ThemeProvider>
 				</QueryProvider>
 				<Analytics />
+				<SWRegister />
 			</body>
 		</html>
 	);

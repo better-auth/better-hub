@@ -3,7 +3,7 @@
 import { useMemo, useState, useCallback, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { PanelLeft } from "lucide-react";
+import { PanelLeft, Copy, Check, Download } from "lucide-react";
 import { type FileTreeNode } from "@/lib/file-tree";
 import { parseRefAndPath } from "@/lib/github-utils";
 import { FileExplorerTree } from "./file-explorer-tree";
@@ -27,6 +27,111 @@ interface CodeContentWrapperProps {
 
 const SNAP_THRESHOLD = 100;
 const DEFAULT_WIDTH = 240;
+
+function CloneDownloadButtons({
+	owner,
+	repo,
+	currentRef,
+}: {
+	owner: string;
+	repo: string;
+	currentRef: string;
+}) {
+	const [showClone, setShowClone] = useState(false);
+	const [copied, setCopied] = useState(false);
+	const [cloneProtocol, setCloneProtocol] = useState<"https" | "ssh">("https");
+
+	const cloneUrl =
+		cloneProtocol === "https"
+			? `https://github.com/${owner}/${repo}.git`
+			: `git@github.com:${owner}/${repo}.git`;
+
+	const zipUrl = `https://github.com/${owner}/${repo}/archive/${currentRef}.zip`;
+
+	function handleCopy() {
+		navigator.clipboard.writeText(cloneUrl);
+		setCopied(true);
+		setTimeout(() => setCopied(false), 2000);
+	}
+
+	return (
+		<div className="relative ml-auto flex items-center">
+			<div className="flex items-center rounded-md border border-border overflow-hidden divide-x divide-border">
+				<button
+					onClick={() => setShowClone(!showClone)}
+					className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/5 transition-colors cursor-pointer"
+				>
+					<Copy className="w-3 h-3" />
+					Clone
+				</button>
+				<a
+					href={zipUrl}
+					className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/5 transition-colors"
+				>
+					<Download className="w-3 h-3" />
+					ZIP
+				</a>
+			</div>
+
+			{showClone && (
+				<>
+					<div
+						className="fixed inset-0 z-40"
+						onClick={() => setShowClone(false)}
+					/>
+					<div className="absolute right-0 top-full mt-2 w-80 z-50 rounded-lg border border-border bg-card/95 backdrop-blur-sm shadow-xl p-3.5 animate-in fade-in slide-in-from-top-1 duration-150">
+						<div className="flex items-center gap-1 mb-3">
+							<button
+								onClick={() =>
+									setCloneProtocol("https")
+								}
+								className={`flex-1 py-1.5 text-[10px] font-mono rounded-md border transition-colors cursor-pointer ${
+									cloneProtocol === "https"
+										? "bg-muted/60 dark:bg-white/10 border-border text-foreground"
+										: "border-transparent text-muted-foreground/60 hover:text-muted-foreground"
+								}`}
+							>
+								HTTPS
+							</button>
+							<button
+								onClick={() =>
+									setCloneProtocol("ssh")
+								}
+								className={`flex-1 py-1.5 text-[10px] font-mono rounded-md border transition-colors cursor-pointer ${
+									cloneProtocol === "ssh"
+										? "bg-muted/60 dark:bg-white/10 border-border text-foreground"
+										: "border-transparent text-muted-foreground/60 hover:text-muted-foreground"
+								}`}
+							>
+								SSH
+							</button>
+						</div>
+						<p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/70 mb-2.5">
+							Clone with {cloneProtocol.toUpperCase()}
+						</p>
+						<div className="flex items-center gap-1.5">
+							<input
+								readOnly
+								value={cloneUrl}
+								className="flex-1 bg-muted/30 dark:bg-white/5 text-xs font-mono px-2.5 py-2 rounded-md border border-border text-muted-foreground focus:outline-none select-all"
+							/>
+							<button
+								onClick={handleCopy}
+								className="shrink-0 px-2.5 py-2 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/5 transition-colors cursor-pointer"
+							>
+								{copied ? (
+									<Check className="w-3.5 h-3.5 text-success" />
+								) : (
+									<Copy className="w-3.5 h-3.5" />
+								)}
+							</button>
+						</div>
+					</div>
+				</>
+			)}
+		</div>
+	);
+}
 
 export function CodeContentWrapper({
 	owner,
@@ -220,6 +325,11 @@ export function CodeContentWrapper({
 							currentRef={currentRef}
 							path={currentPath}
 							isFile={pathType === "blob"}
+						/>
+						<CloneDownloadButtons
+							owner={owner}
+							repo={repo}
+							currentRef={currentRef}
 						/>
 					</div>
 				)}

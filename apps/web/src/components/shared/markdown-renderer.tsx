@@ -3,7 +3,59 @@ import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import rehypeStringify from "rehype-stringify";
+
+/**
+ * GitHub-compatible sanitization schema.
+ * Extends the default (GitHub-like) schema with elements commonly used in READMEs
+ * while stripping dangerous tags like <script>, event handlers (onerror, onclick, etc.).
+ */
+const sanitizeSchema: typeof defaultSchema = {
+	...defaultSchema,
+	tagNames: [
+		...(defaultSchema.tagNames ?? []),
+		// GitHub README commonly uses these
+		"details",
+		"summary",
+		"picture",
+		"source",
+		"video",
+		"audio",
+		"figcaption",
+		"figure",
+		"abbr",
+		"mark",
+		"ruby",
+		"rt",
+		"rp",
+	],
+	attributes: {
+		...defaultSchema.attributes,
+		"*": [
+			...(defaultSchema.attributes?.["*"] ?? []),
+			// Allow data-* attributes (used by our code/install block placeholders)
+			["data*"],
+			// Allow class for styling
+			"className",
+		],
+		img: [...(defaultSchema.attributes?.img ?? []), "loading", "decoding"],
+		video: [
+			"src",
+			"poster",
+			"controls",
+			"muted",
+			"autoPlay",
+			"loop",
+			"width",
+			"height",
+		],
+		audio: ["src", "controls"],
+		source: ["src", "srcSet", "media", "type"],
+		details: ["open"],
+		input: [...(defaultSchema.attributes?.input ?? []), "checked", "disabled", "type"],
+	},
+};
 import { highlightCode } from "@/lib/shiki";
 import { toInternalUrl } from "@/lib/github-utils";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";
@@ -364,6 +416,7 @@ export async function renderMarkdownToHtml(
 		.use(remarkGfm)
 		.use(remarkRehype, { allowDangerousHtml: true })
 		.use(rehypeRaw)
+		.use(rehypeSanitize, sanitizeSchema)
 		.use(rehypeStringify)
 		.process(processed);
 

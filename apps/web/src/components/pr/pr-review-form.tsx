@@ -3,6 +3,7 @@
 import { useState, useTransition, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Check, AlertTriangle, MessageSquare, Loader2, ChevronDown, Eye } from "lucide-react";
+import { formatForDisplay } from "@tanstack/react-hotkeys";
 import { cn } from "@/lib/utils";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import {
@@ -256,7 +257,11 @@ export function PRReviewForm({ owner, repo, pullNumber, participants }: PRReview
 							Submit review
 							{!isPending && (
 								<kbd className="hidden sm:inline-flex items-center gap-0.5 text-[10px] text-background/50 ml-0.5">
-									<span>&#8984;&#x23CE;</span>
+									<span>
+										{formatForDisplay(
+											"Mod+Enter",
+										)}
+									</span>
 								</kbd>
 							)}
 						</button>

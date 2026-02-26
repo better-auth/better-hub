@@ -2,7 +2,7 @@ export default function PersonDetailLoading() {
 	return (
 		<div className="animate-pulse">
 			{/* Profile header */}
-			<div className="flex items-start gap-4 mb-6">
+			<div className="flex items-start gap-4 my-6">
 				<div className="h-16 w-16 rounded-full bg-muted/40 shrink-0" />
 				<div className="space-y-2 flex-1">
 					<div className="h-5 w-36 rounded bg-muted/50" />

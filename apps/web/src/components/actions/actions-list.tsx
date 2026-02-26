@@ -861,9 +861,12 @@ export function ActionsList({
 												<div className="flex items-center gap-1 text-[11px] text-muted-foreground/30 justify-end mt-0.5">
 													<Clock className="w-3 h-3" />
 													<LiveDuration
-														startedAt={run.run_started_at}
+														startedAt={
+															run.run_started_at
+														}
 														completedAt={
-															run.status === "completed"
+															run.status ===
+															"completed"
 																? run.updated_at
 																: null
 														}

@@ -41,7 +41,7 @@ export function TrendingContent({ weekly, daily, monthly }: TrendingContentProps
 								"px-3 py-1 text-[11px] font-mono transition-colors cursor-pointer rounded-sm",
 								period === p.key
 									? "bg-accent text-foreground"
-									: "text-muted-foreground/50 hover:text-muted-foreground",
+									: "text-muted-foreground/70 hover:text-muted-foreground",
 							)}
 						>
 							{p.label}
@@ -58,7 +58,7 @@ export function TrendingContent({ weekly, daily, monthly }: TrendingContentProps
 							href={`/${repo.full_name}`}
 							className="group flex gap-4 px-4 py-3 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors border-b border-border/40 last:border-b-0"
 						>
-							<span className="text-[11px] font-mono text-muted-foreground/30 tabular-nums w-5 text-right shrink-0 pt-1">
+							<span className="text-[11px] font-mono text-muted-foreground/50 tabular-nums w-5 text-right shrink-0 pt-1">
 								{i + 1}
 							</span>
 							<Image
@@ -71,14 +71,14 @@ export function TrendingContent({ weekly, daily, monthly }: TrendingContentProps
 							<div className="flex-1 min-w-0">
 								<div className="flex items-center gap-2">
 									<span className="text-sm font-mono truncate group-hover:text-foreground transition-colors">
-										<span className="text-muted-foreground/50">
+										<span className="text-muted-foreground/70">
 											{
 												repo
 													.owner
 													?.login
 											}
 										</span>
-										<span className="text-muted-foreground/30 mx-0.5">
+										<span className="text-muted-foreground/50 mx-0.5">
 											/
 										</span>
 										<span className="font-medium">
@@ -87,11 +87,11 @@ export function TrendingContent({ weekly, daily, monthly }: TrendingContentProps
 									</span>
 								</div>
 								{repo.description && (
-									<p className="text-xs text-muted-foreground/60 truncate mt-0.5">
+									<p className="text-xs text-muted-foreground/80 truncate mt-0.5">
 										{repo.description}
 									</p>
 								)}
-								<div className="flex items-center gap-3 mt-1 text-[11px] text-muted-foreground/60">
+								<div className="flex items-center gap-3 mt-1 text-[11px] text-muted-foreground/80">
 									{repo.language && (
 										<span className="flex items-center gap-1 font-mono">
 											<span

@@ -47,7 +47,7 @@ export function CodeToolbar({
 			? `https://github.com/${owner}/${repo}.git`
 			: `git@github.com:${owner}/${repo}.git`;
 
-	const zipUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/${currentRef}.zip`;
+	const zipUrl = `https://github.com/${owner}/${repo}/archive/${currentRef}.zip`;
 
 	const filteredBranches = localBranches.filter((b) =>
 		b.name.toLowerCase().includes(branchSearch.toLowerCase()),

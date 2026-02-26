@@ -8,6 +8,7 @@ import { OlderActivityGroup } from "@/components/issue/older-activity-group";
 import { CollapsibleBody } from "@/components/issue/collapsible-body";
 import { ReactionDisplay, type Reactions } from "@/components/shared/reaction-display";
 import { ChatMessageWrapper } from "@/components/pr/chat-message-wrapper";
+import { UserTooltip } from "@/components/shared/user-tooltip";
 
 interface BaseUser {
 	login: string;
@@ -286,20 +287,22 @@ function ThreadEntry({
 			{/* Avatar */}
 			<div className="shrink-0 relative z-10">
 				{entry.user ? (
-					<Link href={`/users/${entry.user.login}`}>
-						<Image
-							src={entry.user.avatar_url}
-							alt={entry.user.login}
-							width={40}
-							height={40}
-							className={cn(
-								"rounded-full bg-background",
-								isDescription
-									? "ring-2 ring-border/60"
-									: "",
-							)}
-						/>
-					</Link>
+					<UserTooltip username={entry.user.login} side="right">
+						<Link href={`/users/${entry.user.login}`}>
+							<Image
+								src={entry.user.avatar_url}
+								alt={entry.user.login}
+								width={40}
+								height={40}
+								className={cn(
+									"rounded-full bg-background",
+									isDescription
+										? "ring-2 ring-border/60"
+										: "",
+								)}
+							/>
+						</Link>
+					</UserTooltip>
 				) : (
 					<div className="w-10 h-10 rounded-full bg-muted-foreground/20" />
 				)}
@@ -354,12 +357,14 @@ function DescriptionBlock({
 		<div className="border border-border/60 rounded-lg overflow-hidden">
 			<div className="flex items-center gap-2 px-3.5 py-2 border-b border-border/60 bg-card/80">
 				{entry.user && (
-					<Link
-						href={`/users/${entry.user.login}`}
-						className="text-xs font-semibold text-foreground/90 hover:text-foreground transition-colors"
-					>
-						{entry.user.login}
-					</Link>
+					<UserTooltip username={entry.user.login}>
+						<Link
+							href={`/users/${entry.user.login}`}
+							className="text-xs font-semibold text-foreground/90 hover:text-foreground hover:underline transition-colors"
+						>
+							{entry.user.login}
+						</Link>
+					</UserTooltip>
 				)}
 				<span className="text-[11px] text-muted-foreground/50">
 					commented <TimeAgo date={entry.created_at} />
@@ -415,12 +420,14 @@ function CommentBlock({
 	const headerContent = (
 		<>
 			{entry.user ? (
-				<Link
-					href={`/users/${entry.user.login}`}
-					className="text-xs font-semibold text-foreground/90 hover:text-foreground transition-colors"
-				>
-					{entry.user.login}
-				</Link>
+				<UserTooltip username={entry.user.login}>
+					<Link
+						href={`/users/${entry.user.login}`}
+						className="text-xs font-semibold text-foreground/90 hover:text-foreground hover:underline transition-colors"
+					>
+						{entry.user.login}
+					</Link>
+				</UserTooltip>
 			) : (
 				<span className="text-xs font-semibold text-foreground/80">
 					ghost

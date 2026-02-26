@@ -248,7 +248,7 @@ export function PersonDetail({ owner, repo, user, activity, weeklyData }: Person
 	return (
 		<div className="flex flex-col flex-1 min-h-0">
 			{/* Header */}
-			<div className="shrink-0 space-y-4 pb-4">
+			<div className="shrink-0 space-y-4 py-4">
 				{/* Avatar + info */}
 				<div className="flex items-start gap-4">
 					<Image

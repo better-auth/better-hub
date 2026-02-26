@@ -213,7 +213,7 @@ export function ReadmeToolbar({
 				</button>
 
 				{dropdownOpen && (
-					<div className="absolute right-0 top-full mt-1.5 w-48 rounded-lg border border-border bg-popover shadow-lg z-50 py-1 animate-in fade-in-0 zoom-in-95 duration-100">
+					<div className="absolute right-0 top-full mt-1.5 w-48 rounded-lg border border-border bg-background shadow-lg z-50 py-1 animate-in fade-in-0 zoom-in-95 duration-100">
 						{CHAT_SERVICES.map((service) => (
 							<button
 								key={service.id}

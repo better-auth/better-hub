@@ -16,6 +16,7 @@ import {
 	Link as LinkIcon,
 	Calendar,
 } from "lucide-react";
+import { formatForDisplay } from "@tanstack/react-hotkeys";
 import { cn } from "@/lib/utils";
 import { signIn, signOut } from "@/lib/auth-client";
 import { SCOPE_GROUPS, scopesToGroupIds } from "@/lib/github-scopes";
@@ -155,24 +156,22 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 
 	return (
 		<div className="divide-y divide-border">
-			{/* Profile Header — Instagram-style */}
+			{/* Profile Header */}
 			<div className="px-4 py-5">
 				<div className="flex items-start gap-5">
 					{/* Avatar */}
 					<div className="relative shrink-0">
-						<div className="w-[72px] h-[72px] rounded-full p-[2px] bg-gradient-to-tr from-amber-400 via-pink-500 to-purple-600">
-							{user.image ? (
-								<img
-									src={user.image}
-									alt={user.name}
-									className="w-full h-full rounded-full object-cover border-2 border-background"
-								/>
-							) : (
-								<div className="w-full h-full rounded-full bg-muted border-2 border-background flex items-center justify-center">
-									<Github className="w-6 h-6 text-muted-foreground" />
-								</div>
-							)}
-						</div>
+						{user.image ? (
+							<img
+								src={user.image}
+								alt={user.name}
+								className="w-[72px] h-[72px] rounded-full object-cover"
+							/>
+						) : (
+							<div className="w-[72px] h-[72px] rounded-full bg-muted flex items-center justify-center">
+								<Github className="w-6 h-6 text-muted-foreground" />
+							</div>
+						)}
 					</div>
 
 					{/* Info + Stats */}
@@ -446,7 +445,7 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 					<span className="text-[10px] font-mono text-muted-foreground/50">
 						Use the command menu (
 						<kbd className="border border-border/60 px-1 py-0.5 rounded-sm text-[9px] font-mono">
-							&#x2318;K
+							{formatForDisplay("Mod+K")}
 						</kbd>{" "}
 						&rarr; Switch Account) to manage accounts.
 					</span>

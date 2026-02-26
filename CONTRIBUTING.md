@@ -5,7 +5,7 @@ Thanks for your interest in contributing! This guide covers what you need to get
 ## Prerequisites
 
 - **Node.js** 22+
-- **pnpm** 9+
+- **pnpm** 10+
 - **Docker** (for PostgreSQL)
 - A **GitHub OAuth App** ([create one here](https://github.com/settings/developers))
 
@@ -16,20 +16,23 @@ Thanks for your interest in contributing! This guide covers what you need to get
 git clone https://github.com/better-auth/better-hub.git
 cd better-hub
 
-# 2. Start PostgreSQL
+# 2. Use the repo Node version
+nvm use
+
+# 3. Start PostgreSQL
 docker compose up -d
 
-# 3. Configure environment
+# 4. Configure environment
 cp apps/web/.env.example apps/web/.env
 # └─ Fill in required values
 
-# 4. Install dependencies
+# 5. Install dependencies
 pnpm install
 
-# 5. Run database migrations
+# 6. Run database migrations
 cd apps/web && npx prisma migrate dev && cd ../..
 
-# 6. Start dev server
+# 7. Start dev server
 pnpm dev
 ```
 

@@ -1,4 +1,5 @@
 import { getRepoPageData, getRepoTree, prefetchPRData } from "@/lib/github";
+import { countPromptRequests } from "@/lib/prompt-request-store";
 import { buildFileTree, type FileTreeNode } from "@/lib/file-tree";
 import { RepoSidebar } from "@/components/repo/repo-sidebar";
 import { RepoNav } from "@/components/repo/repo-nav";
@@ -106,19 +107,34 @@ export default async function RepoLayout({
 		getCachedBranches(owner, repoName),
 		getCachedTags(owner, repoName),
 	]);
+	const promptCountPromise = countPromptRequests(owner, repoName, "open");
 
 	const pageDataResult = await pageDataPromise;
 	if (!pageDataResult.success) {
 		return <RepoErrorPage owner={owner} repo={repoName} error={pageDataResult.error} />;
 	}
 
-	const { repoData, navCounts, viewerHasStarred, viewerIsOrgMember, latestCommit } =
-		pageDataResult.data;
+	const {
+		repoData,
+		navCounts,
+		viewerHasStarred,
+		viewerIsOrgMember,
+		latestCommit,
+		viewerLogin,
+	} = pageDataResult.data;
+
+	const isViewingOwnFork =
+		repoData.fork &&
+		repoData.owner.type === "User" &&
+		!!viewerLogin &&
+		repoData.owner.login.toLowerCase() === viewerLogin.toLowerCase();
 
 	waitUntil(prefetchPRData(owner, repoName, { prefetchIssues: !repoData.private }));
 
 	const [cachedTree, cachedContributors, cachedLanguages, cachedBranches, cachedTags] =
 		await cachePromise;
+
+	const promptRequestsCount = await promptCountPromise;
 
 	const cookieStore = await cookies();
 	const sidebarCookie = cookieStore.get(REPO_SIDEBAR_COOKIE);
@@ -192,6 +208,7 @@ export default async function RepoLayout({
 						initialContributors={cachedContributors}
 						initialLanguages={cachedLanguages}
 						isStarred={viewerHasStarred}
+						disableForkButton={isViewingOwnFork}
 						latestCommit={latestCommit}
 					/>
 				}
@@ -206,6 +223,9 @@ export default async function RepoLayout({
 						openIssuesCount={navCounts.openIssues}
 						openPrsCount={navCounts.openPrs}
 						activeRunsCount={navCounts.activeRuns}
+						hasDiscussions={!!repoData.has_discussions}
+						discussionsCount={navCounts.discussions}
+						promptRequestsCount={promptRequestsCount}
 						showPeopleTab={showPeopleTab}
 					/>
 				</div>

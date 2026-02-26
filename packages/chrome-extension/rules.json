@@ -127,6 +127,33 @@
 		"condition": { "urlFilter": "||github.com/signup", "resourceTypes": ["main_frame"] }
 	},
 	{
+		"id": 26,
+		"priority": 5,
+		"action": { "type": "allow" },
+		"condition": {
+			"urlFilter": "||github.com/sessions",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 27,
+		"priority": 5,
+		"action": { "type": "allow" },
+		"condition": {
+			"urlFilter": "||github.com/password_reset",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
+		"id": 28,
+		"priority": 5,
+		"action": { "type": "allow" },
+		"condition": {
+			"urlFilter": "||github.com/account",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
 		"id": 17,
 		"priority": 5,
 		"action": { "type": "allow" },
@@ -189,18 +216,6 @@
 		"action": { "type": "allow" },
 		"condition": {
 			"urlFilter": "||github.com/collections",
-			"resourceTypes": ["main_frame"]
-		}
-	},
-	{
-		"id": 30,
-		"priority": 4,
-		"action": {
-			"type": "redirect",
-			"redirect": { "regexSubstitution": "https://better-hub.com/dashboard" }
-		},
-		"condition": {
-			"regexFilter": "^https://github\\.com/?$",
 			"resourceTypes": ["main_frame"]
 		}
 	},

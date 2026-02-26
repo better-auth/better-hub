@@ -77,13 +77,13 @@ function RepoRow({ repo, showOwner = true }: { repo: Repo; showOwner?: boolean }
 					<span className="text-[13px] font-mono font-medium text-foreground group-hover:text-foreground transition-colors">
 						{showOwner ? (
 							<>
-								<span className="text-muted-foreground/50 font-normal">
+								<span className="text-muted-foreground/70 font-normal">
 									{repo.owner?.login ||
 										repo.full_name.split(
 											"/",
 										)[0]}
 								</span>
-								<span className="text-muted-foreground/30 mx-0.5">
+								<span className="text-muted-foreground/50 mx-0.5">
 									/
 								</span>
 								{repo.name}
@@ -164,10 +164,10 @@ function RepoCard({ repo }: { repo: Repo }) {
 			{/* Name */}
 			<div className="flex items-center gap-2 min-w-0">
 				<span className="text-[13px] font-mono font-medium truncate">
-					<span className="text-muted-foreground/50 font-normal">
+					<span className="text-muted-foreground/70 font-normal">
 						{repo.owner?.login || repo.full_name.split("/")[0]}
 					</span>
-					<span className="text-muted-foreground/30 mx-0.5">/</span>
+					<span className="text-muted-foreground/50 mx-0.5">/</span>
 					{repo.name}
 				</span>
 				{repo.private && (
@@ -176,7 +176,7 @@ function RepoCard({ repo }: { repo: Repo }) {
 			</div>
 
 			{/* Description */}
-			<p className="text-xs text-muted-foreground/60 mt-1.5 line-clamp-2 leading-relaxed flex-1">
+			<p className="text-xs text-muted-foreground/70 mt-1.5 line-clamp-2 leading-relaxed flex-1">
 				{repo.description || "No description"}
 			</p>
 

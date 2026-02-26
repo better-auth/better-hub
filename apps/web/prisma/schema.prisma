@@ -234,3 +234,40 @@ model PinnedItem {
   @@index([userId, owner, repo])
   @@map("pinned_items")
 }
+
+model PromptRequest {
+  id             String  @id
+  userId         String
+  userLogin      String?
+  userName       String?
+  userAvatarUrl  String?
+  owner          String
+  repo           String
+  title          String
+  body           String
+  status         String  @default("open")
+  acceptedById   String?
+  acceptedByName String?
+  createdAt      String
+  updatedAt      String
+
+  @@index([owner, repo, status])
+  @@index([userId])
+  @@map("prompt_requests")
+}
+
+model PromptRequestComment {
+  id              String @id
+  promptRequestId String
+  userId          String
+  userLogin       String?
+  userName        String
+  userAvatarUrl   String
+  body            String
+  createdAt       String
+  updatedAt       String
+
+  @@index([promptRequestId, createdAt])
+  @@index([userId])
+  @@map("prompt_request_comments")
+}

@@ -147,7 +147,13 @@ export async function getConversation(
 	};
 }
 
-export async function deleteConversation(conversationId: string): Promise<void> {
+export async function deleteConversation(conversationId: string, userId: string): Promise<void> {
+	const conversation = await prisma.chatConversation.findUnique({
+		where: { id: conversationId },
+	});
+	if (!conversation || conversation.userId !== userId) {
+		throw new Error("Conversation not found");
+	}
 	await prisma.chatMessage.deleteMany({ where: { conversationId } });
 	await prisma.chatConversation.delete({ where: { id: conversationId } });
 }

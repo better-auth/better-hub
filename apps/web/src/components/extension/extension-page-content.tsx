@@ -5,6 +5,7 @@ import {
 	Check,
 	Chrome,
 	Download,
+	Flame,
 	Puzzle,
 	RefreshCw,
 	Settings,
@@ -60,6 +61,51 @@ const STEPS = [
 	},
 ];
 
+const FIREFOX_STEPS = [
+	{
+		number: "01",
+		title: "Download the extension",
+		description:
+			"Click the download button above to get the .zip file. Save it anywhere on your computer — your Downloads folder works fine.",
+		icon: Download,
+	},
+	{
+		number: "02",
+		title: "Unzip the file",
+		description:
+			"Extract the downloaded .zip file. You should see a folder containing the extension files (manifest.json, background.js, icons, etc).",
+		icon: RefreshCw,
+	},
+	{
+		number: "03",
+		title: "Open Firefox Add-ons",
+		description:
+			'Navigate to about:addons in your browser. Or click the puzzle icon in your toolbar and select "Manage Add-ons".',
+		code: "about:addons",
+		icon: Puzzle,
+	},
+	{
+		number: "04",
+		title: "Click gear icon",
+		description: 'Click the gear icon in the upper right and select "Debug Add-ons".',
+		icon: Settings,
+	},
+	{
+		number: "05",
+		title: "Load temporary add-on",
+		description:
+			'Click "Load Temporary Add-on" and select the unzipped folder. The Better Hub extension will appear in your add-ons list.',
+		icon: Chrome,
+	},
+	{
+		number: "06",
+		title: "Pin it & go",
+		description:
+			"Click the puzzle icon in your toolbar and pin Better Hub for easy access. Visit any GitHub page — it will automatically redirect to Better Hub.",
+		icon: Zap,
+	},
+];
+
 const ROUTE_MAPPINGS = [
 	{ from: "github.com", to: "/dashboard" },
 	{ from: "/:owner/:repo", to: "/:owner/:repo" },
@@ -72,7 +118,10 @@ const ROUTE_MAPPINGS = [
 ];
 
 export function ExtensionPageContent() {
-	const [downloaded, setDownloaded] = useState(false);
+	const [chromeDownloaded, setChromeDownloaded] = useState(false);
+	const [firefoxDownloaded, setFirefoxDownloaded] = useState(false);
+	const [browser, setBrowser] = useState<"chrome" | "firefox">("chrome");
+	const currentSteps = browser === "chrome" ? STEPS : FIREFOX_STEPS;
 
 	return (
 		<div className="flex-1 max-w-3xl mx-auto w-full flex flex-col min-h-0">
@@ -93,7 +142,11 @@ export function ExtensionPageContent() {
 				<div className="flex items-start gap-5">
 					{/* Extension icon */}
 					<div className="shrink-0 w-16 h-16 rounded-xl bg-gradient-to-br from-card to-muted border border-border flex items-center justify-center">
-						<Chrome className="w-7 h-7 text-foreground/80" />
+						{browser === "chrome" ? (
+							<Chrome className="w-7 h-7 text-foreground/80" />
+						) : (
+							<Flame className="w-7 h-7 text-foreground/80" />
+						)}
 					</div>
 
 					<div className="flex-1 min-w-0">
@@ -109,23 +162,61 @@ export function ExtensionPageContent() {
 							Automatically redirects GitHub links to your
 							Better Hub instance.
 						</p>
+						<div className="flex items-center gap-1 mt-3">
+							<button
+								onClick={() => setBrowser("chrome")}
+								className={cn(
+									"inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-mono rounded-md transition-all",
+									browser === "chrome"
+										? "bg-foreground text-background"
+										: "bg-muted text-muted-foreground hover:bg-muted/80",
+								)}
+							>
+								<Chrome className="w-3 h-3" />
+								Chrome
+							</button>
+							<button
+								onClick={() =>
+									setBrowser("firefox")
+								}
+								className={cn(
+									"inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-mono rounded-md transition-all",
+									browser === "firefox"
+										? "bg-foreground text-background"
+										: "bg-muted text-muted-foreground hover:bg-muted/80",
+								)}
+							>
+								<Flame className="w-3 h-3" />
+								Firefox
+							</button>
+						</div>
 					</div>
 				</div>
 
 				{/* Download button */}
 				<div className="mt-6 flex items-center gap-3">
 					<a
-						href="/api/extension-download"
+						href={`/api/extension-download?browser=${browser}`}
 						download
-						onClick={() => setDownloaded(true)}
+						onClick={() => {
+							if (browser === "chrome") {
+								setChromeDownloaded(true);
+							} else {
+								setFirefoxDownloaded(true);
+							}
+						}}
 						className={cn(
 							"inline-flex items-center gap-2 px-5 py-2.5 text-sm font-mono rounded-md transition-all",
-							downloaded
+							(browser === "chrome" &&
+								chromeDownloaded) ||
+								(browser === "firefox" &&
+									firefoxDownloaded)
 								? "bg-[var(--contrib-1)] border border-[var(--contrib-3)]/30 text-[var(--contrib-4)]"
 								: "bg-foreground text-background hover:bg-foreground/90",
 						)}
 					>
-						{downloaded ? (
+						{(browser === "chrome" && chromeDownloaded) ||
+						(browser === "firefox" && firefoxDownloaded) ? (
 							<>
 								<Check className="w-4 h-4" />
 								Downloaded — follow steps below
@@ -133,7 +224,10 @@ export function ExtensionPageContent() {
 						) : (
 							<>
 								<Download className="w-4 h-4" />
-								Download for Chrome
+								Download for{" "}
+								{browser === "chrome"
+									? "Chrome"
+									: "Firefox"}
 							</>
 						)}
 					</a>
@@ -146,26 +240,33 @@ export function ExtensionPageContent() {
 			</div>
 
 			{/* Scrollable content */}
-			<div className="flex-1 min-h-0 overflow-y-auto pt-6">
+			<div
+				className="flex-1 min-h-0 overflow-y-auto pt-6"
+				key={browser}
+				style={{ animation: "none" }}
+			>
 				{/* Installation steps */}
 				<div className="mb-10">
 					<h2 className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-5">
 						Installation Guide
 					</h2>
 
-					<div className="relative">
+					<div className="relative will-change-none" key={browser}>
 						{/* Vertical connector line */}
 						<div className="absolute left-[19px] top-6 bottom-6 w-px bg-border" />
 
-						<div className="flex flex-col gap-0">
-							{STEPS.map((step, i) => (
+						<div
+							className="flex flex-col gap-0 animate-none"
+							key={browser}
+						>
+							{currentSteps.map((step, i) => (
 								<div
-									key={step.number}
-									className="relative flex gap-4 group"
+									key={`step-${step.number}`}
+									className="relative flex gap-4 group animate-none"
 								>
 									{/* Step number circle */}
-									<div className="relative z-10 shrink-0 w-10 h-10 rounded-full border border-border bg-background flex items-center justify-center group-hover:border-foreground/20 transition-colors">
-										<span className="text-[11px] font-mono text-muted-foreground group-hover:text-foreground transition-colors">
+									<div className="relative z-10 shrink-0 w-10 h-10 rounded-full border border-border bg-background flex items-center justify-center group-hover:border-foreground/20">
+										<span className="text-[11px] font-mono text-muted-foreground group-hover:text-foreground">
 											{
 												step.number
 											}
@@ -177,7 +278,7 @@ export function ExtensionPageContent() {
 										className={cn(
 											"flex-1 pb-6",
 											i ===
-												STEPS.length -
+												currentSteps.length -
 													1 &&
 												"pb-0",
 										)}

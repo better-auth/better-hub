@@ -7,20 +7,22 @@ import { waitUntil } from "@vercel/functions";
 import { all } from "better-all";
 import { headers } from "next/headers";
 import { cache } from "react";
-import { dash } from "@better-auth/infra";
+import { dash, sentinel } from "@better-auth/infra";
 import { createHash } from "@better-auth/utils/hash";
 import { admin, oAuthProxy } from "better-auth/plugins";
 import { patSignIn } from "./auth-plugins/pat-signin";
 
 async function getOctokitUser(token: string) {
-	const cached = await redis.get<ReturnType<(typeof octokit)["users"]["getAuthenticated"]>>(
-		`github_user:${token}`,
-	);
+	const hash = await createHash("SHA-256", "base64").digest(token);
+	const cacheKey = `github_user:${hash}`;
+	const cached =
+		await redis.get<ReturnType<(typeof octokit)["users"]["getAuthenticated"]>>(
+			cacheKey,
+		);
 	if (cached) return cached;
 	const octokit = new Octokit({ auth: token });
 	const githubUser = await octokit.users.getAuthenticated();
-	const hash = await createHash("SHA-256", "base64").digest(token);
-	waitUntil(redis.set(`github_user:${hash}`, JSON.stringify(githubUser.data)));
+	waitUntil(redis.set(cacheKey, JSON.stringify(githubUser.data), { ex: 3600 }));
 	return githubUser;
 }
 
@@ -36,6 +38,7 @@ export const auth = betterAuth({
 		}),
 		admin(),
 		patSignIn(),
+		sentinel(),
 		...(process.env.VERCEL
 			? [oAuthProxy({ productionURL: "https://www.better-hub.com" })]
 			: []),
@@ -78,7 +81,7 @@ export const auth = betterAuth({
 	session: {
 		cookieCache: {
 			enabled: true,
-			maxAge: 60 * 60 * 24 * 7,
+			maxAge: 60 * 60,
 		},
 	},
 	trustedOrigins: [

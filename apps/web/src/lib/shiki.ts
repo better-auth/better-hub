@@ -12,6 +12,15 @@ const FALLBACK_THEMES = [DEFAULT_CODE_THEME_LIGHT, DEFAULT_CODE_THEME_DARK] as c
 const FALLBACK_PAIR = { light: DEFAULT_CODE_THEME_LIGHT, dark: DEFAULT_CODE_THEME_DARK };
 const MAX_TOKENIZE_LENGTH = 200_000; // Skip tokenization for very large inputs to avoid WASM OOM
 
+function escapeHtml(str: string): string {
+	return str
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#39;");
+}
+
 let highlighterPromise: Promise<Highlighter> | null = null;
 
 function getHighlighter(): Promise<Highlighter> {
@@ -130,7 +139,7 @@ async function resolveThemePair(
 }
 
 export async function highlightCode(code: string, lang: string): Promise<string> {
-	if (code.length > MAX_TOKENIZE_LENGTH) return `<pre><code>${code}</code></pre>`;
+	if (code.length > MAX_TOKENIZE_LENGTH) return `<pre><code>${escapeHtml(code)}</code></pre>`;
 	const highlighter = await getHighlighter();
 	const themes = await getThemePair(highlighter);
 

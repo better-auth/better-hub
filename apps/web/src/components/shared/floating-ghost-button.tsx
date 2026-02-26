@@ -123,7 +123,6 @@ export function NavbarGhostButton() {
 				"w-7 h-7 rounded-md",
 				"text-muted-foreground/60 hover:text-foreground",
 				"cursor-pointer transition-all duration-200",
-				"hover:bg-muted/60",
 				state.isOpen && "text-foreground",
 			)}
 			title="Ghost (⌘I)"

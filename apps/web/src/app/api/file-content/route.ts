@@ -22,7 +22,11 @@ export async function GET(request: NextRequest) {
 		);
 	}
 
-	const data = await getFileContent(owner, repo, path, ref);
+	// Decode the path to handle URL-encoded characters from Next.js routes
+	// e.g., %5Bowner%5D -> [owner], %28app%29 -> (app)
+	const decodedPath = decodeURIComponent(path);
+
+	const data = await getFileContent(owner, repo, decodedPath, ref);
 	if (!data) {
 		return NextResponse.json({ error: "File not found" }, { status: 404 });
 	}
