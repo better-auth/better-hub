@@ -139,8 +139,17 @@ export function UserProfileContent({
 				setShowMoreLanguages(false);
 			}
 		}
+		function onKeyDown(event: KeyboardEvent) {
+			if (event.key === "Escape") {
+				setShowMoreLanguages(false);
+			}
+		}
 		document.addEventListener("mousedown", onPointerDown);
-		return () => document.removeEventListener("mousedown", onPointerDown);
+		document.addEventListener("keydown", onKeyDown);
+		return () => {
+			document.removeEventListener("mousedown", onPointerDown);
+			document.removeEventListener("keydown", onKeyDown);
+		};
 	}, [showMoreLanguages]);
 
 	const filtered = useMemo(
@@ -578,6 +587,7 @@ export function UserProfileContent({
 												lang,
 											)
 										}
+										aria-label={`Filter by ${lang}`}
 										className={cn(
 											"flex items-center gap-1.5 px-2 py-1 text-[11px] border border-border transition-colors cursor-pointer font-mono rounded-md",
 											languageFilter ===
@@ -614,6 +624,7 @@ export function UserProfileContent({
 														!current,
 												)
 											}
+											aria-label={`Show ${extraLanguages.length} more languages`}
 											aria-expanded={
 												showMoreLanguages
 											}
@@ -642,6 +653,7 @@ export function UserProfileContent({
 																		lang,
 																	)
 																}
+																aria-label={`Filter by ${lang}`}
 																className={cn(
 																	"flex items-center gap-1.5 px-2 py-1 text-[11px] border border-border transition-colors cursor-pointer font-mono rounded-md text-left",
 																	languageFilter ===
@@ -675,6 +687,7 @@ export function UserProfileContent({
 						{(search || languageFilter) && (
 							<button
 								onClick={clearRepoFilters}
+								aria-label="Clear repository filters"
 								className="ml-2 text-[11px] text-muted-foreground hover:text-foreground font-mono transition-colors"
 							>
 								Clear
