@@ -81,7 +81,10 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 		// Restore draft from localStorage if present
 		let draft: { title: string; body: string } | null = null;
 		try {
-			const raw = typeof window !== "undefined" ? localStorage.getItem(draftKey) : null;
+			const raw =
+				typeof window !== "undefined"
+					? localStorage.getItem(draftKey)
+					: null;
 			if (raw) draft = JSON.parse(raw) as { title: string; body: string };
 		} catch {
 			/* ignore */

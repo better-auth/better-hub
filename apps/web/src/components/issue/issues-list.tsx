@@ -389,7 +389,10 @@ export function IssuesList({
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
 							onKeyDown={(e) => {
-								if (e.key === "ArrowDown" && visible.length > 0) {
+								if (
+									e.key === "ArrowDown" &&
+									visible.length > 0
+								) {
 									e.preventDefault();
 									issueLinksRef.current[0]?.focus();
 								}
@@ -952,7 +955,9 @@ export function IssuesList({
 							}}
 							href={`/${owner}/${repo}/issues/${issue.number}`}
 							className="group flex items-start gap-3 px-4 py-3 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background rounded-sm"
-							onKeyDown={(e) => handleListKeyDown(e, index)}
+							onKeyDown={(e) =>
+								handleListKeyDown(e, index)
+							}
 							tabIndex={0}
 						>
 							{issue.state === "open" ? (
