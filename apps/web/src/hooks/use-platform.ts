@@ -16,6 +16,7 @@ export function useIsMac(): boolean {
 					navigator.userAgent || navigator.platform || "",
 				),
 		);
+		return () => {};
 	}, []);
 
 	return isMac;

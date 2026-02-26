@@ -10,6 +10,7 @@ function useGhostTitle() {
 	const [title, setTitle] = useState("Ghost");
 	useEffect(() => {
 		setTitle(`Ghost (${formatForDisplay("Mod+I")})`);
+		return () => {};
 	}, []);
 	return title;
 }
