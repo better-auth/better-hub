@@ -40,9 +40,8 @@ const LEVEL_CLASSES = [
 
 const CELL = 10;
 const GAP = 3;
-const MONTH_LABEL_TEXT_WIDTH_PX = 24;
 const MONTH_LABEL_MIN_GAP_PX = 8;
-const MONTH_LABEL_MIN_SPACING_PX = MONTH_LABEL_TEXT_WIDTH_PX + MONTH_LABEL_MIN_GAP_PX;
+const MONTH_LABEL_MIN_SPACING_PX = 24 + MONTH_LABEL_MIN_GAP_PX;
 const TOOLTIP_EDGE_PADDING_PX = 8;
 const FALLBACK_TOOLTIP_WIDTH_PX = 120;
 
@@ -81,11 +80,20 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 	}, [data.weeks]);
 
 	const visibleMonthPositions = useMemo(() => {
-		let previousRightEdge = Number.NEGATIVE_INFINITY;
-		return monthPositions.filter(({ col }) => {
+		const candidates = monthPositions.filter((month, index, all) => {
+			if (index !== 0) return true;
+			const next = all[1];
+			if (!next) return true;
+			const firstLeft = month.col * (CELL + GAP);
+			const nextLeft = next.col * (CELL + GAP);
+			return nextLeft - firstLeft >= MONTH_LABEL_MIN_SPACING_PX;
+		});
+
+		let previousLeft = Number.NEGATIVE_INFINITY;
+		return candidates.filter(({ col }) => {
 			const left = col * (CELL + GAP);
-			if (left - previousRightEdge < MONTH_LABEL_MIN_SPACING_PX) return false;
-			previousRightEdge = left + MONTH_LABEL_TEXT_WIDTH_PX;
+			if (left - previousLeft < MONTH_LABEL_MIN_SPACING_PX) return false;
+			previousLeft = left;
 			return true;
 		});
 	}, [monthPositions]);
