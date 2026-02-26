@@ -927,7 +927,7 @@ async function fetchUserProfileFromGitHub(octokit: Octokit, username: string) {
 
 async function enrichMissingRepoLanguagesFromGraphQL<
 	T extends {
-		language: string | null;
+		language?: string | null;
 		name: string;
 		owner?: { login?: string | null } | null;
 	},
@@ -996,12 +996,14 @@ async function enrichMissingRepoLanguagesFromGraphQL<
 	}
 }
 
+type UserPublicRepo = Awaited<ReturnType<Octokit["repos"]["listForUser"]>>["data"][number];
+
 async function fetchUserPublicReposFromGitHub(
 	octokit: Octokit,
 	username: string,
 	perPage: number,
 	token?: string | null,
-) {
+): Promise<UserPublicRepo[]> {
 	// Fetch recently-updated repos for the listing + top-starred repos via
 	// search API for accurate profile scoring (listForUser can't sort by stars).
 	const half = Math.ceil(perPage / 2);
@@ -1022,7 +1024,7 @@ async function fetchUserPublicReposFromGitHub(
 	}
 	// Merge and deduplicate — recently-updated first, then top-starred fills gaps
 	const seen = new Set<number>();
-	const merged = [];
+	const merged: UserPublicRepo[] = [];
 	for (const repo of byUpdated.data) {
 		seen.add(repo.id);
 		merged.push(repo);
