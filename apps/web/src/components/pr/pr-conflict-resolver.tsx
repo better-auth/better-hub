@@ -13,6 +13,7 @@ import {
 	X,
 	Keyboard,
 } from "lucide-react";
+import { formatForDisplay } from "@tanstack/react-hotkeys";
 import { cn, getErrorMessage } from "@/lib/utils";
 import type { MergeHunk, ConflictFileData } from "@/lib/three-way-merge";
 import { commitMergeConflictResolution } from "@/app/(app)/repos/[owner]/[repo]/pulls/pr-actions";
@@ -510,8 +511,11 @@ export function PRConflictResolver({
 						accept both
 					</span>
 					<span>
-						<kbd className="px-1 py-0.5 bg-muted border border-border rounded text-[9px]">
-							⌘↵
+						<kbd
+							className="px-1 py-0.5 bg-muted border border-border rounded text-[9px]"
+							suppressHydrationWarning
+						>
+							{formatForDisplay("Mod+Enter")}
 						</kbd>{" "}
 						commit
 					</span>

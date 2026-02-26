@@ -40,6 +40,7 @@ import { TimeAgo } from "@/components/ui/time-ago";
 import { markNotificationDone, markAllNotificationsRead } from "@/app/(app)/repos/actions";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
 import { NavbarGhostButton } from "@/components/shared/floating-ghost-button";
+import { ModKeyShortcut } from "@/components/shared/mod-key-shortcut";
 import { $Session } from "@/lib/auth";
 import type { NotificationItem } from "@/lib/github-types";
 
@@ -274,8 +275,7 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 										<Search className="w-3.5 h-3.5" />
 										Search repos
 										<DropdownMenuShortcut className="flex items-center gap-0.5 text-[10px] font-mono">
-											<Command className="w-2 h-2" />
-											/
+											<ModKeyShortcut hotkey="Mod+/" />
 										</DropdownMenuShortcut>
 									</DropdownMenuItem>
 									<DropdownMenuItem
@@ -294,8 +294,7 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 										<Command className="w-3.5 h-3.5" />
 										Command menu
 										<DropdownMenuShortcut className="flex items-center gap-0.5 text-[10px] font-mono">
-											<Command className="w-2 h-2" />
-											K
+											<ModKeyShortcut hotkey="Mod+K" />
 										</DropdownMenuShortcut>
 									</DropdownMenuItem>
 								</DropdownMenuGroup>

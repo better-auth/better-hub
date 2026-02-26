@@ -1,8 +1,18 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Ghost } from "lucide-react";
+import { formatForDisplay } from "@tanstack/react-hotkeys";
 import { cn } from "@/lib/utils";
 import { useGlobalChat } from "@/components/shared/global-chat-provider";
+
+function useGhostTitle() {
+	const [title, setTitle] = useState("Ghost");
+	useEffect(() => {
+		setTitle(`Ghost (${formatForDisplay("Mod+I")})`);
+	}, []);
+	return title;
+}
 
 function GhostIcon({ isWorking }: { isWorking: boolean }) {
 	return (
@@ -113,6 +123,7 @@ function GhostIcon({ isWorking }: { isWorking: boolean }) {
 
 export function NavbarGhostButton() {
 	const { state, toggleChat } = useGlobalChat();
+	const title = useGhostTitle();
 
 	return (
 		<button
@@ -125,7 +136,7 @@ export function NavbarGhostButton() {
 				"cursor-pointer transition-all duration-200",
 				state.isOpen && "text-foreground",
 			)}
-			title="Ghost (⌘I)"
+			title={title}
 		>
 			<GhostIcon isWorking={state.isWorking} />
 		</button>
@@ -134,6 +145,7 @@ export function NavbarGhostButton() {
 
 export function FloatingGhostButton() {
 	const { state, toggleChat } = useGlobalChat();
+	const title = useGhostTitle();
 
 	return (
 		<button
@@ -151,7 +163,7 @@ export function FloatingGhostButton() {
 				"hover:scale-105 active:scale-95",
 				state.isOpen && "opacity-0 pointer-events-none",
 			)}
-			title="Ghost (⌘I)"
+			title={title}
 		>
 			<GhostIcon isWorking={state.isWorking} />
 			{state.isWorking && (

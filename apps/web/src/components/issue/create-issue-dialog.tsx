@@ -30,6 +30,7 @@ import {
 	DialogTitle,
 	DialogDescription,
 } from "@/components/ui/dialog";
+import { formatForDisplay } from "@tanstack/react-hotkeys";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import type { IssueTemplate } from "@/app/(app)/repos/[owner]/[repo]/issues/actions";
@@ -909,15 +910,14 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 									</div>
 								)}
 								<div className="flex items-center justify-between">
-									<span className="text-[10px] text-muted-foreground/25">
-										{typeof navigator !==
-											"undefined" &&
-										/Mac|iPhone|iPad/.test(
-											navigator.userAgent,
-										)
-											? "⌘"
-											: "Ctrl"}
-										+Enter to submit
+									<span
+										className="text-[10px] text-muted-foreground/25"
+										suppressHydrationWarning
+									>
+										{formatForDisplay(
+											"Mod+Enter",
+										)}{" "}
+										to submit
 									</span>
 									<div className="flex items-center gap-2">
 										<button
