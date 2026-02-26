@@ -3447,7 +3447,7 @@ function FloatingGhostTrigger({
 			data-onboarding="ghost"
 			onClick={onClick}
 			className={cn(
-				"fixed top-13 right-5 z-40 inline-flex items-center justify-center w-9 h-9 rounded-full border border-border/60 dark:border-white/8 bg-background/80 backdrop-blur-xl shadow-lg shadow-black/[0.06] dark:shadow-black/30 text-muted-foreground/60 hover:text-foreground transition-all duration-200 cursor-pointer overflow-hidden",
+				"fixed bottom-10 md:top-13 right-5 z-40 inline-flex items-center justify-center w-9 h-9 rounded-full border border-border/60 dark:border-white/8 bg-background/80 backdrop-blur-xl shadow-lg shadow-black/6 dark:shadow-black/30 text-muted-foreground/60 hover:text-foreground transition-all duration-200 cursor-pointer overflow-hidden",
 				hidden && "opacity-0 pointer-events-none",
 			)}
 			title="Ghost (⌘I)"
