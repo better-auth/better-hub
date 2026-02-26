@@ -2,7 +2,6 @@
 
 import { useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import {
 	Loader2,
 	CornerDownLeft,
@@ -12,22 +11,15 @@ import {
 	CircleDot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { TimeAgo } from "@/components/ui/time-ago";
 import {
 	addIssueComment,
 	closeIssue,
 	reopenIssue,
 } from "@/app/(app)/repos/[owner]/[repo]/issues/issue-actions";
 import { MarkdownEditor } from "@/components/shared/markdown-editor";
-import { ClientMarkdown } from "@/components/shared/client-markdown";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
-
-interface OptimisticComment {
-	id: number;
-	body: string;
-	created_at: string;
-}
+import { useIssueOptimisticComments } from "./issue-optimistic-comments-provider";
 
 type CloseReason = "completed" | "not_planned";
 
@@ -54,11 +46,11 @@ export function IssueCommentForm({
 	const [body, setBody] = useState("");
 	const [isPending, startTransition] = useTransition();
 	const [error, setError] = useState<string | null>(null);
-	const [optimisticComments, setOptimisticComments] = useState<OptimisticComment[]>([]);
 	const [closeDropdownOpen, setCloseDropdownOpen] = useState(false);
 	const [selectedReason, setSelectedReason] = useState<CloseReason>("completed");
 	const dropdownRef = useRef<HTMLDivElement>(null);
 	const { emit } = useMutationEvents();
+	const { addComment, removeComment } = useIssueOptimisticComments();
 
 	useClickOutside(dropdownRef, () => setCloseDropdownOpen(false));
 
@@ -69,35 +61,22 @@ export function IssueCommentForm({
 		const commentBody = body.trim();
 		setError(null);
 
-		const optimisticId = Date.now();
-		setOptimisticComments((prev) => [
-			...prev,
-			{
-				id: optimisticId,
-				body: commentBody,
-				created_at: new Date().toISOString(),
-			},
-		]);
+		const optimisticId = addComment({
+			body: commentBody,
+			userAvatarUrl,
+			userName,
+		});
 		setBody("");
 
 		(async () => {
 			const res = await addIssueComment(owner, repo, issueNumber, commentBody);
 			if (res.error) {
 				setError(res.error);
-				setOptimisticComments((prev) =>
-					prev.filter((c) => c.id !== optimisticId),
-				);
+				removeComment(optimisticId);
 				setBody(commentBody);
 			} else {
 				emit({ type: "issue:commented", owner, repo, number: issueNumber });
 				router.refresh();
-				setTimeout(
-					() =>
-						setOptimisticComments((prev) =>
-							prev.filter((c) => c.id !== optimisticId),
-						),
-					2000,
-				);
 			}
 		})();
 	};
@@ -144,50 +123,12 @@ export function IssueCommentForm({
 
 	return (
 		<div className="space-y-3">
-			{/* Optimistic comments */}
-			{optimisticComments.map((c) => (
-				<div
-					key={c.id}
-					className="border border-border/60 rounded-lg overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200"
-				>
-					<div className="flex items-center gap-2 px-3 py-1.5 border-b border-border/60 bg-muted/40">
-						{userAvatarUrl ? (
-							<Image
-								src={userAvatarUrl}
-								alt=""
-								width={16}
-								height={16}
-								className="rounded-full shrink-0"
-							/>
-						) : (
-							<div className="w-4 h-4 rounded-full bg-muted-foreground shrink-0" />
-						)}
-						<span className="text-xs font-medium text-foreground/80">
-							{userName || "You"}
-						</span>
-						<span className="text-[10px] text-muted-foreground ml-auto shrink-0">
-							<TimeAgo date={c.created_at} />
-						</span>
-					</div>
-					<div className="px-3 py-2.5 text-sm">
-						<ClientMarkdown content={c.body} />
-					</div>
-				</div>
-			))}
-
 			{/* Comment form */}
 			<div className="border border-border/60 rounded-md overflow-hidden">
 				<div className="px-3.5 py-2 border-b border-border/60 bg-muted/40">
 					<div className="flex items-center gap-2">
-						{userAvatarUrl && (
-							<Image
-								src={userAvatarUrl}
-								alt=""
-								width={16}
-								height={16}
-								className="rounded-full shrink-0"
-							/>
-						)}
+						{/* Avatar placeholder - actual avatar rendered by layout */}
+						<div className="w-4 h-4 rounded-full bg-muted-foreground/30 shrink-0" />
 						<span className="text-xs font-medium text-muted-foreground/60">
 							Add a comment
 						</span>
