@@ -66,7 +66,12 @@ export function reorderPinnedRepos(fromIndex: number, toIndex: number): PinnedRe
 	if (typeof window === "undefined") return [];
 	try {
 		const pinned = getPinnedRepos();
-		if (fromIndex < 0 || fromIndex >= pinned.length || toIndex < 0 || toIndex >= pinned.length) {
+		if (
+			fromIndex < 0 ||
+			fromIndex >= pinned.length ||
+			toIndex < 0 ||
+			toIndex >= pinned.length
+		) {
 			return pinned;
 		}
 		const [moved] = pinned.splice(fromIndex, 1);

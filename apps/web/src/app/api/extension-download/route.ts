@@ -5,9 +5,7 @@ export async function GET(request: Request) {
 	const url = new URL(request.url);
 	const browser = url.searchParams.get("browser");
 
-	const fileName = browser === "firefox"
-		? "better-hub-firefox.zip"
-		: "better-hub-chrome.zip";
+	const fileName = browser === "firefox" ? "better-hub-firefox.zip" : "better-hub-chrome.zip";
 
 	const filePath = join(process.cwd(), "public", "extension", fileName);
 

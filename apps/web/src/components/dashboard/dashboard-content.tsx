@@ -34,7 +34,13 @@ import { toInternalUrl, getLanguageColor } from "@/lib/github-utils";
 import { RecentlyViewed } from "./recently-viewed";
 import { CreateRepoDialog } from "@/components/repo/create-repo-dialog";
 import { markNotificationDone } from "@/app/(app)/repos/actions";
-import { getPinnedRepos, togglePinRepo, unpinRepo, reorderPinnedRepos, type PinnedRepo } from "@/lib/pinned-repos";
+import {
+	getPinnedRepos,
+	togglePinRepo,
+	unpinRepo,
+	reorderPinnedRepos,
+	type PinnedRepo,
+} from "@/lib/pinned-repos";
 import type {
 	IssueItem,
 	RepoItem,
@@ -566,7 +572,10 @@ function ReposTabs({
 							onDragOver={handleDragOver}
 							onDragEnd={handleDragEnd}
 							isDragging={dragIndex === index}
-							isDragOver={dragOverIndex === index && dragIndex !== index}
+							isDragOver={
+								dragOverIndex === index &&
+								dragIndex !== index
+							}
 						/>
 					))}
 				{tab === "repos" &&

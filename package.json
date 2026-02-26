@@ -34,9 +34,23 @@
 	},
 	"devDependencies": {
 		"@types/node": "^25.3.0",
+		"lint-staged": "^16.2.7",
 		"oxfmt": "^0.34.0",
 		"oxlint": "^1.43.0",
+		"simple-git-hooks": "^2.13.1",
 		"typescript": "^5.7.0"
+	},
+	"simple-git-hooks": {
+		"pre-commit": "pnpm lint-staged"
+	},
+	"lint-staged": {
+		"*.{ts,tsx,js,jsx}": [
+			"oxfmt --write",
+			"oxlint --fix"
+		],
+		"*.{json,yaml,yml}": [
+			"oxfmt --write"
+		]
 	},
 	"packageManager": "pnpm@10.10.0"
 }
