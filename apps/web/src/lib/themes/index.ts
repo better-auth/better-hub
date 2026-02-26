@@ -1,4 +1,4 @@
-import type { ThemeColors, ThemeDefinition } from "./types";
+import type { ThemeColors, ThemeDefinition, ShikiTheme, SyntaxThemes } from "./types";
 import { arctic, dawn, ember, hubDark, hubLight, midnight, nordWave, vercel } from "./themes";
 
 const themes: ThemeDefinition[] = [
@@ -12,7 +12,7 @@ const themes: ThemeDefinition[] = [
 	vercel,
 ];
 
-export type { ThemeColors, ThemeDefinition };
+export type { ThemeColors, ThemeDefinition, ShikiTheme, SyntaxThemes };
 
 export const STORAGE_KEY = "color-theme";
 export const DARK_THEME_KEY = "dark-theme";

@@ -42,19 +42,14 @@ export function useColorTheme(): ColorThemeContext {
 	return ctx;
 }
 
-function getStored(key: string, fallback: string): string {
-	if (typeof window === "undefined") return fallback;
-	return localStorage.getItem(key) ?? fallback;
-}
-
 const COOKIE_KEY = "color-theme";
 
 function setThemeCookie(themeId: string) {
 	document.cookie = `${COOKIE_KEY}=${encodeURIComponent(themeId)};path=/;max-age=${365 * 24 * 60 * 60};samesite=lax`;
 }
 
-/** Pick the initial active theme: localStorage → system preference → dark fallback */
-function getInitialTheme(): string {
+/** Pick the initial active theme from localStorage (client-side only) */
+function getStoredTheme(): string {
 	if (typeof window === "undefined") return DARK_THEME_ID;
 	const stored = localStorage.getItem(STORAGE_KEY);
 	if (stored && getTheme(stored)) return stored;
@@ -68,15 +63,11 @@ function getInitialTheme(): string {
 
 export function ColorThemeProvider({ children }: { children: React.ReactNode }) {
 	const { setTheme } = useTheme();
-	const [colorTheme, setColorThemeState] = useState(getInitialTheme);
-	const [darkThemeId, setDarkThemeId] = useState(() =>
-		getStored(DARK_THEME_KEY, DARK_THEME_ID),
-	);
-	const [lightThemeId, setLightThemeId] = useState(() =>
-		getStored(LIGHT_THEME_KEY, LIGHT_THEME_ID),
-	);
+	// SSR-safe defaults, will sync from localStorage on mount
+	const [colorTheme, setColorThemeState] = useState(DARK_THEME_ID);
+	const [darkThemeId, setDarkThemeId] = useState(DARK_THEME_ID);
+	const [lightThemeId, setLightThemeId] = useState(LIGHT_THEME_ID);
 	const syncedFromDb = useRef(false);
-	const appliedRef = useRef<string | null>(null);
 
 	const themes = listThemes();
 	const darkThemes = listDarkThemes();
@@ -84,54 +75,44 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 	const currentTheme = getTheme(colorTheme);
 	const mode = currentTheme?.mode ?? "dark";
 
-	// Apply CSS vars + dark/light class whenever colorTheme changes
+	// On mount: sync state from localStorage and apply theme
 	useEffect(() => {
-		if (appliedRef.current === colorTheme) return;
-		appliedRef.current = colorTheme;
-		applyTheme(colorTheme);
-		setThemeCookie(colorTheme);
-		const theme = getTheme(colorTheme);
-		if (theme) setTheme(theme.mode);
-	}, [colorTheme, setTheme]);
+		const storedTheme = getStoredTheme();
+		const storedDark = localStorage.getItem(DARK_THEME_KEY) ?? DARK_THEME_ID;
+		const storedLight = localStorage.getItem(LIGHT_THEME_KEY) ?? LIGHT_THEME_ID;
 
-	// Mark the initial theme as already applied (FOUC script handled it)
-	// Also set cookie for server-side rendering
-	useEffect(() => {
-		appliedRef.current = colorTheme;
-		setThemeCookie(colorTheme);
+		setDarkThemeId(storedDark);
+		setLightThemeId(storedLight);
+		setColorThemeState(storedTheme);
+
+		// Apply theme immediately
+		applyTheme(storedTheme);
+		setThemeCookie(storedTheme);
+		const theme = getTheme(storedTheme);
+		if (theme) setTheme(theme.mode);
 	}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-	// On mount: fetch theme from DB — if it differs from localStorage, adopt it
+	// On mount: sync current theme TO database (localStorage is source of truth)
 	useEffect(() => {
 		if (syncedFromDb.current) return;
 		syncedFromDb.current = true;
 
-		fetch("/api/user-settings")
-			.then((r) => (r.ok ? r.json() : null))
-			.then((settings) => {
-				if (!settings) return;
-				// Sync dark/light preferences from DB
-				if (settings.darkTheme && getTheme(settings.darkTheme)) {
-					localStorage.setItem(DARK_THEME_KEY, settings.darkTheme);
-					setDarkThemeId(settings.darkTheme);
-				}
-				if (settings.lightTheme && getTheme(settings.lightTheme)) {
-					localStorage.setItem(LIGHT_THEME_KEY, settings.lightTheme);
-					setLightThemeId(settings.lightTheme);
-				}
-				// Sync active theme from DB
-				if (settings.colorTheme && getTheme(settings.colorTheme)) {
-					const dbTheme = settings.colorTheme;
-					const local =
-						localStorage.getItem(STORAGE_KEY) ?? DARK_THEME_ID;
-					if (dbTheme !== local) {
-						localStorage.setItem(STORAGE_KEY, dbTheme);
-						setColorThemeState(dbTheme);
-						appliedRef.current = null;
-					}
-				}
-			})
-			.catch(() => {});
+		// Push current localStorage theme to DB to ensure consistency
+		const currentThemeId = localStorage.getItem(STORAGE_KEY);
+		const currentDark = localStorage.getItem(DARK_THEME_KEY);
+		const currentLight = localStorage.getItem(LIGHT_THEME_KEY);
+
+		if (currentThemeId) {
+			fetch("/api/user-settings", {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					colorTheme: currentThemeId,
+					...(currentDark && { darkTheme: currentDark }),
+					...(currentLight && { lightTheme: currentLight }),
+				}),
+			}).catch(() => {});
+		}
 	}, []);
 
 	const applyWithTransition = useCallback(
@@ -174,8 +155,10 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 					setLightThemeId(id);
 				}
 				localStorage.setItem(STORAGE_KEY, id);
-				appliedRef.current = null;
 				setColorThemeState(id);
+				applyTheme(id);
+				setThemeCookie(id);
+				setTheme(theme.mode);
 			});
 
 			// Persist to DB in background
@@ -190,7 +173,7 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 				}),
 			}).catch(() => {});
 		},
-		[applyWithTransition],
+		[applyWithTransition, setTheme],
 	);
 
 	const toggleMode = useCallback(
@@ -210,8 +193,10 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 					setLightThemeId(nextId);
 				}
 				localStorage.setItem(STORAGE_KEY, nextId);
-				appliedRef.current = null;
 				setColorThemeState(nextId);
+				applyTheme(nextId);
+				setThemeCookie(nextId);
+				setTheme(theme.mode);
 			}, coords);
 
 			fetch("/api/user-settings", {
@@ -225,7 +210,7 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 				}),
 			}).catch(() => {});
 		},
-		[mode, darkThemeId, lightThemeId, applyWithTransition],
+		[mode, darkThemeId, lightThemeId, applyWithTransition, setTheme],
 	);
 
 	return (
