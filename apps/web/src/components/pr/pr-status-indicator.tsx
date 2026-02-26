@@ -4,9 +4,15 @@ import { useState, useEffect } from "react";
 import { GitPullRequest, GitMerge, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMutationSubscription } from "@/hooks/use-mutation-subscription";
-import { isRepoEvent, type MutationEvent } from "@/lib/mutation-events";
+import {
+	isRepoEvent,
+	type PRMergedEvent,
+	type PRClosedEvent,
+	type PRReopenedEvent,
+} from "@/lib/mutation-events";
 
 type PRStatus = "open" | "merged" | "closed" | "draft";
+type PRStateEvent = PRMergedEvent | PRClosedEvent | PRReopenedEvent;
 
 interface PRStatusIndicatorProps {
 	owner: string;
@@ -42,10 +48,11 @@ export function PRStatusIndicator({
 
 	useMutationSubscription(
 		["pr:merged", "pr:closed", "pr:reopened"],
-		(event: MutationEvent) => {
-			if (!isRepoEvent(event, owner, repo)) return;
-			if (event.number !== number) return;
-			switch (event.type) {
+		(event) => {
+			const prEvent = event as PRStateEvent;
+			if (!isRepoEvent(prEvent, owner, repo)) return;
+			if (prEvent.number !== number) return;
+			switch (prEvent.type) {
 				case "pr:merged":
 					setStatus("merged");
 					break;
