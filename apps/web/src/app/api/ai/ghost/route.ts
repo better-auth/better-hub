@@ -1,4 +1,5 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { createOpenAI } from "@ai-sdk/openai";
 import type { UIMessage } from "ai";
 import { convertToModelMessages, generateId, stepCountIs, streamText, tool } from "ai";
 import { z } from "zod";
@@ -3325,6 +3326,9 @@ export async function POST(req: Request) {
 	const serverApiKey = process.env.OPEN_ROUTER_API_KEY ?? "";
 	let apiKey = serverApiKey;
 	let usingOwnKey = false;
+	let useOpenAiCompatible = false;
+	let openaiApiUrl: string | null = null;
+	let openaiApiKey: string | null = null;
 
 	if (userId) {
 		const settings = await getUserSettings(userId);
@@ -3333,36 +3337,43 @@ export async function POST(req: Request) {
 			apiKey = settings.openrouterApiKey;
 			usingOwnKey = true;
 		}
+		if (settings.openaiApiUrl && settings.openaiApiKey) {
+			useOpenAiCompatible = true;
+			openaiApiUrl = settings.openaiApiUrl;
+			openaiApiKey = settings.openaiApiKey;
+		}
 	}
 
 	const modelId = resolveModel(userModelChoice, taskType);
 
-	if (!apiKey) {
-		return new Response(
-			JSON.stringify({ error: "No OpenRouter API key configured." }),
-			{ status: 500, headers: { "Content-Type": "application/json" } },
-		);
+	if (!useOpenAiCompatible && !apiKey) {
+		return new Response(JSON.stringify({ error: "No API key configured." }), {
+			status: 500,
+			headers: { "Content-Type": "application/json" },
+		});
 	}
 
-	try {
-		const checkRes = await fetch("https://openrouter.ai/api/v1/auth/key", {
-			headers: { Authorization: `Bearer ${apiKey}` },
-		});
-		if (!checkRes.ok) {
-			return new Response(
-				JSON.stringify({
-					error: usingOwnKey
-						? "Your OpenRouter API key is invalid or expired. Please update it in settings."
-						: "OpenRouter API key is invalid or expired.",
-				}),
-				{
-					status: 401,
-					headers: { "Content-Type": "application/json" },
-				},
-			);
+	if (!useOpenAiCompatible) {
+		try {
+			const checkRes = await fetch("https://openrouter.ai/api/v1/auth/key", {
+				headers: { Authorization: `Bearer ${apiKey}` },
+			});
+			if (!checkRes.ok) {
+				return new Response(
+					JSON.stringify({
+						error: usingOwnKey
+							? "Your OpenRouter API key is invalid or expired. Please update it in settings."
+							: "OpenRouter API key is invalid or expired.",
+					}),
+					{
+						status: 401,
+						headers: { "Content-Type": "application/json" },
+					},
+				);
+			}
+		} catch {
+			// Network error validating key — proceed anyway
 		}
-	} catch {
-		// Network error validating key — proceed anyway
 	}
 
 	// Resolve conversation for persistence (if configured)
@@ -3383,8 +3394,15 @@ export async function POST(req: Request) {
 	}
 
 	try {
+		const provider = useOpenAiCompatible
+			? createOpenAI({
+					baseURL: openaiApiUrl!,
+					apiKey: openaiApiKey!,
+				})
+			: createOpenRouter({ apiKey });
+
 		const result = streamText({
-			model: createOpenRouter({ apiKey })(modelId),
+			model: provider(modelId),
 			system: systemPrompt,
 			messages: await convertToModelMessages(messages),
 			tools: tools as Parameters<typeof streamText>[0]["tools"],

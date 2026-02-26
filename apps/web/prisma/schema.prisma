@@ -173,6 +173,8 @@ model UserSettings {
   ghostModel       String  @default("auto")
   useOwnApiKey     Boolean @default(false)
   openrouterApiKey String?
+  openaiApiUrl     String?
+  openaiApiKey     String?
   githubPat        String?
   codeThemeLight   String  @default("vitesse-light")
   codeThemeDark    String  @default("vitesse-black")
