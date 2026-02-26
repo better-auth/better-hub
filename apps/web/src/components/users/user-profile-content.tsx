@@ -26,6 +26,7 @@ import { TimeAgo } from "@/components/ui/time-ago";
 import { ContributionChart } from "@/components/dashboard/contribution-chart";
 import { computeUserProfileScore } from "@/lib/user-profile-score";
 import { UserProfileScoreRing } from "@/components/users/user-profile-score-ring";
+import { UserBadges, type UserBadge } from "@/components/users/user-badges";
 
 export interface UserProfile {
 	login: string;
@@ -106,12 +107,14 @@ export function UserProfileContent({
 	orgs,
 	contributions,
 	orgTopRepos = [],
+	badges = [],
 }: {
 	user: UserProfile;
 	repos: UserRepo[];
 	orgs: UserOrg[];
 	contributions: ContributionData | null;
 	orgTopRepos?: OrgTopRepo[];
+	badges?: UserBadge[];
 }) {
 	const [search, setSearch] = useState("");
 	const [filter, setFilter] = useState<FilterType>("all");
@@ -255,6 +258,13 @@ export function UserProfileContent({
 						</p>
 					</div>
 				</div>
+
+				{/* Badges */}
+				{badges.length > 0 && (
+					<div className="mt-3">
+						<UserBadges badges={badges} />
+					</div>
+				)}
 
 				{user.bio && (
 					<p className="text-sm text-muted-foreground mt-3 leading-relaxed">
