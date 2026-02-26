@@ -112,8 +112,20 @@ export default async function RepoLayout({
 		return <RepoErrorPage owner={owner} repo={repoName} error={pageDataResult.error} />;
 	}
 
-	const { repoData, navCounts, viewerHasStarred, viewerIsOrgMember, latestCommit } =
-		pageDataResult.data;
+	const {
+		repoData,
+		navCounts,
+		viewerHasStarred,
+		viewerIsOrgMember,
+		latestCommit,
+		viewerLogin,
+	} = pageDataResult.data;
+
+	const isViewingOwnFork =
+		repoData.fork &&
+		repoData.owner.type === "User" &&
+		!!viewerLogin &&
+		repoData.owner.login.toLowerCase() === viewerLogin.toLowerCase();
 
 	waitUntil(prefetchPRData(owner, repoName, { prefetchIssues: !repoData.private }));
 
@@ -192,6 +204,7 @@ export default async function RepoLayout({
 						initialContributors={cachedContributors}
 						initialLanguages={cachedLanguages}
 						isStarred={viewerHasStarred}
+						disableForkButton={isViewingOwnFork}
 						latestCommit={latestCommit}
 					/>
 				}

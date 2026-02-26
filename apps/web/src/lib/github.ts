@@ -4767,6 +4767,7 @@ export interface RepoPageData {
 	};
 	navCounts: { openPrs: number; openIssues: number; activeRuns: number };
 	languages: Record<string, number>;
+	viewerLogin: string | null;
 	viewerHasStarred: boolean;
 	viewerIsOrgMember: boolean;
 	latestCommit: {
@@ -4799,6 +4800,7 @@ async function fetchRepoPageDataGraphQL(
 ): Promise<RepoPageData | null> {
 	const query = `
 		query($owner: String!, $repo: String!) {
+			viewer { login }
 			organization(login: $owner) {
 				viewerIsAMember
 			}
@@ -4897,6 +4899,7 @@ async function fetchRepoPageDataGraphQL(
 	}
 
 	const viewerIsOrgMember: boolean = json.data?.organization?.viewerIsAMember ?? false;
+	const viewerLogin: string | null = json.data?.viewer?.login ?? null;
 
 	const languages: Record<string, number> = {};
 	for (const edge of r.languages?.edges ?? []) {
@@ -4968,6 +4971,7 @@ async function fetchRepoPageDataGraphQL(
 			activeRuns: 0,
 		},
 		languages,
+		viewerLogin,
 		viewerHasStarred: r.viewerHasStarred ?? false,
 		viewerIsOrgMember,
 		latestCommit,
