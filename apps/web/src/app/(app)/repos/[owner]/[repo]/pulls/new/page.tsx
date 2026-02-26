@@ -307,8 +307,11 @@ export default function NewPullRequestPage() {
 		const headFromUrl = new URLSearchParams(window.location.search).get("head");
 		fetchBranches(owner, repo).then((b) => {
 			setBranches(b);
-			const def = b.find((br) => br.isDefault && br.owner === owner);
-			if (def) setBase(branchKey(def, owner));
+			setBase((prev) => {
+				if (prev) return prev;
+				const def = b.find((br) => br.isDefault && br.owner === owner);
+				return def ? branchKey(def, owner) : "";
+			});
 			if (headFromUrl) {
 				const match = b.find(
 					(br) =>
