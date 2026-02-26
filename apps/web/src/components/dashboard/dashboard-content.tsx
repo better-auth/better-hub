@@ -389,15 +389,10 @@ function PRSections({
 		(pr) => openPRCategories[pr.html_url] === "action_required",
 	);
 	const readyToMerge = prs.filter((pr) => openPRCategories[pr.html_url] === "ready_to_merge");
-	const needsReview = prs.filter((pr) => openPRCategories[pr.html_url] === "needs_review");
 
 	const other = prs.filter((pr) => {
 		const cat = openPRCategories[pr.html_url];
-		return (
-			cat !== "action_required" &&
-			cat !== "ready_to_merge" &&
-			cat !== "needs_review"
-		);
+		return cat !== "action_required" && cat !== "ready_to_merge";
 	});
 
 	const sections: Array<{
@@ -409,7 +404,7 @@ function PRSections({
 		{
 			key: "action",
 			title: "Requires action",
-			subtitle: "Changes requested — you need to push updates.",
+			subtitle: "Changes requested or pending review requests — follow up or update your PR.",
 			items: actionRequired,
 		},
 		{
@@ -419,14 +414,9 @@ function PRSections({
 			items: readyToMerge,
 		},
 		{
-			key: "needs-review",
-			title: "Needs reviews",
-			subtitle: "No decision yet — ping teammates.",
-			items: needsReview,
-		},
-		{
 			key: "other",
 			title: "Open PRs",
+			subtitle: "Everything else that doesn't require immediate action.",
 			items: other,
 		},
 	];

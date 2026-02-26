@@ -1980,6 +1980,7 @@ interface DashboardPRCategoryNode {
 	reviewDecision?: string | null;
 	mergeable?: string | null;
 	mergeStateStatus?: string | null;
+	reviewRequests?: { totalCount?: number | null } | null;
 }
 
 export async function getDashboardOpenPRCategories(
@@ -1999,6 +2000,9 @@ export async function getDashboardOpenPRCategories(
 						reviewDecision
 						mergeable
 						mergeStateStatus
+						reviewRequests(first: 1) {
+							totalCount
+						}
 					}
 				}
 			}
@@ -2029,11 +2033,6 @@ export async function getDashboardOpenPRCategories(
 		for (const node of nodes) {
 			if (!node?.url) continue;
 
-			if (node.reviewDecision === "CHANGES_REQUESTED") {
-				categories[node.url] = "action_required";
-				continue;
-			}
-
 			const isReadyToMerge =
 				node.reviewDecision === "APPROVED" &&
 				node.isDraft !== true &&
@@ -2045,8 +2044,14 @@ export async function getDashboardOpenPRCategories(
 				continue;
 			}
 
-			if (node.reviewDecision === "REVIEW_REQUIRED") {
-				categories[node.url] = "needs_review";
+			const hasPendingReviewRequests = (node.reviewRequests?.totalCount ?? 0) > 0;
+			const isActionRequired =
+				node.reviewDecision === "CHANGES_REQUESTED" ||
+				node.reviewDecision === "REVIEW_REQUIRED" ||
+				hasPendingReviewRequests;
+
+			if (isActionRequired) {
+				categories[node.url] = "action_required";
 			}
 		}
 
