@@ -944,8 +944,11 @@ export function AIChat({
 				setConversationId(firstFulfilled.value.conversation.id);
 			}
 			lastSavedCountRef.current = messages.length;
+			if (persistKey?.startsWith("ghost::")) {
+				globalChat?.notifyGhostHistoryChanged?.();
+			}
 		});
-	}, [messages, status, persistKey, chatType, historyLoaded]);
+	}, [messages, status, persistKey, chatType, historyLoaded, globalChat]);
 
 	// Track whether user has scrolled away from the bottom
 	const isUserScrolledUp = useRef(false);
