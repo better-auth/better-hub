@@ -175,15 +175,33 @@ export async function listGhostConversations(
 	userId: string,
 	limit = 10,
 ): Promise<ChatConversation[]> {
-	const rows = await prisma.chatConversation.findMany({
-		where: {
-			userId,
-			contextKey: { startsWith: "ghost::" },
-			title: { not: null },
-		},
-		orderBy: { updatedAt: "desc" },
-		take: limit,
-	});
+	// Sort by last message timestamp (not conversation.updatedAt) so "Recent" reflects
+	// when the last prompt was sent, not when the conversation was created.
+	// NOTE: Schema changes to ChatConversation or ChatMessage require updating this raw query.
+	type ChatConversationRow = {
+		id: string;
+		userId: string;
+		chatType: string;
+		contextKey: string;
+		title: string | null;
+		activeStreamId: string | null;
+		createdAt: string;
+		updatedAt: string;
+	};
+	const rows = await prisma.$queryRaw<ChatConversationRow[]>`
+		SELECT c.id, c."userId", c."chatType", c."contextKey", c.title, c."activeStreamId", c."createdAt", c."updatedAt"
+		FROM chat_conversations c
+		LEFT JOIN (
+			SELECT "conversationId", MAX("createdAt") as last_msg_at
+			FROM chat_messages
+			GROUP BY "conversationId"
+		) m ON c.id = m."conversationId"
+		WHERE c."userId" = ${userId}
+			AND c."contextKey" LIKE 'ghost::%'
+			AND c.title IS NOT NULL
+		ORDER BY COALESCE(m.last_msg_at, c."updatedAt") DESC
+		LIMIT ${limit}
+	`;
 	return rows.map(toConversation);
 }
 

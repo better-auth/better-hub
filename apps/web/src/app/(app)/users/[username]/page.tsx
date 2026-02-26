@@ -6,6 +6,7 @@ import {
 	getUserOrgTopRepos,
 	getContributionData,
 } from "@/lib/github";
+import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { UserProfileContent } from "@/components/users/user-profile-content";
 import { ExternalLink, User } from "lucide-react";
 
@@ -45,6 +46,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
 	const { username } = await params;
 	const userData = await getUser(username).catch(() => null);
+	const ogUrl = ogImageUrl({ type: "user", username });
+
 	if (!userData) {
 		return { title: username };
 	}
@@ -52,7 +55,8 @@ export async function generateMetadata({
 	return {
 		title: displayName,
 		description: userData.bio || `${displayName} on Better Hub`,
-		openGraph: { title: displayName },
+		openGraph: { title: displayName, ...ogImages(ogUrl) },
+		twitter: { card: "summary_large_image", ...ogImages(ogUrl) },
 	};
 }
 

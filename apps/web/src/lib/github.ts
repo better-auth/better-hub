@@ -95,25 +95,10 @@ type GitDataSyncJobType =
 	| "repo_discussions";
 
 // SECURITY: Only cache types that are safe to share across users belong here.
-// Repo-content types (file_content, repo_contents, repo_tree, repo_readme) are
-// excluded because private-repo data fetched by one user would leak to others
-// via the shared cache, bypassing GitHub permission checks.
+// Any data from repos (issues, PRs, code, branches, etc.) is excluded because
+// private-repo data fetched by one authorized user would leak to others via
+// the shared cache, bypassing GitHub permission checks.
 const SHAREABLE_CACHE_TYPES: ReadonlySet<string> = new Set([
-	"repo_branches",
-	"repo_tags",
-	"repo_issues",
-	"repo_pull_requests",
-	"issue",
-	"issue_comments",
-	"pull_request",
-	"pull_request_files",
-	"pull_request_comments",
-	"pull_request_reviews",
-	"pull_request_commits",
-	"repo_contributors",
-	"repo_workflows",
-	"repo_workflow_runs",
-	"repo_nav_counts",
 	"user_profile",
 	"user_public_repos",
 	"user_public_orgs",
@@ -121,8 +106,6 @@ const SHAREABLE_CACHE_TYPES: ReadonlySet<string> = new Set([
 	"org_repos",
 	"org_members",
 	"trending_repos",
-	"pr_bundle",
-	"person_repo_activity",
 ]);
 
 function isShareableCacheType(jobType: string): boolean {
@@ -3050,6 +3033,7 @@ export interface CrossReference {
 	html_url: string;
 	repoOwner: string;
 	repoName: string;
+	created_at: string;
 }
 
 /**
@@ -3077,26 +3061,26 @@ export async function getCrossReferences(
 
 		for (const event of events) {
 			if (event.event !== "cross-referenced") continue;
-			const source = (
-				event as {
-					source?: {
-						issue?: {
-							pull_request?: {
-								merged_at?: string | null;
-							};
-							repository?: { full_name?: string };
-							number: number;
-							title: string;
-							state: string;
-							user?: {
-								login: string;
-								avatar_url: string;
-							} | null;
-							html_url: string;
+			const typedEvent = event as {
+				created_at?: string;
+				source?: {
+					issue?: {
+						pull_request?: {
+							merged_at?: string | null;
 						};
+						repository?: { full_name?: string };
+						number: number;
+						title: string;
+						state: string;
+						user?: {
+							login: string;
+							avatar_url: string;
+						} | null;
+						html_url: string;
 					};
-				}
-			).source?.issue;
+				};
+			};
+			const source = typedEvent.source?.issue;
 			if (!source) continue;
 
 			const repoFullName = source.repository?.full_name;
@@ -3125,6 +3109,7 @@ export async function getCrossReferences(
 				html_url: source.html_url,
 				repoOwner: refOwner,
 				repoName: refName,
+				created_at: typedEvent.created_at ?? "",
 			});
 		}
 

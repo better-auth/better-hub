@@ -71,6 +71,24 @@ export default async function middleware(request: NextRequest) {
 		return NextResponse.rewrite(url);
 	}
 
+	// /:owner/:repo/compare/base...head (GitHub Desktop / gh pr create) → /repos/:owner/:repo/pulls/new?base=&head=&title=&body=
+	if (rest[0] === "compare" && rest[1]) {
+		const range = rest[1];
+		const dots = range.includes("...") ? "..." : range.includes("..") ? ".." : null;
+		const [baseBranch, headBranch] = dots ? range.split(dots) : [null, null];
+		if (baseBranch && headBranch) {
+			const url = request.nextUrl.clone();
+			url.pathname = `/repos/${owner}/${repo}/pulls/new`;
+			url.searchParams.set("base", baseBranch.trim());
+			url.searchParams.set("head", headBranch.trim());
+			const title = request.nextUrl.searchParams.get("title");
+			const body = request.nextUrl.searchParams.get("body");
+			if (title) url.searchParams.set("title", title);
+			if (body) url.searchParams.set("body", body);
+			return NextResponse.redirect(url);
+		}
+	}
+
 	// Generic: /:owner/:repo/... → /repos/:owner/:repo/...
 	const url = request.nextUrl.clone();
 	url.pathname = `/repos/${segments.join("/")}`;

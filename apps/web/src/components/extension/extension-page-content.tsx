@@ -94,7 +94,7 @@ const FIREFOX_STEPS = [
 		number: "05",
 		title: "Load temporary add-on",
 		description:
-			'Click "Load Temporary Add-on" and select the unzipped folder. The Better Hub extension will appear in your add-ons list.',
+			'Click "Load Temporary Add-on" and select the manifest in the unzipped folder. The Better Hub extension will appear in your add-ons list.',
 		icon: Chrome,
 	},
 	{

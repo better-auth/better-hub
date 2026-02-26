@@ -14,6 +14,7 @@ import {
 	FileCode2,
 	X,
 	Loader2,
+	Plus,
 } from "lucide-react";
 import type { CheckStatus, PRPageResult } from "@/lib/github";
 import { CheckStatusBadge } from "@/components/pr/check-status-badge";
@@ -33,6 +34,7 @@ import { isRepoEvent, type MutationEvent } from "@/lib/mutation-events";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerInitialData } from "@/hooks/use-server-initial-data";
 import { UserTooltip } from "@/components/shared/user-tooltip";
+import { buttonVariants } from "../ui/button";
 
 interface PRUser {
 	login: string;
@@ -618,6 +620,14 @@ export function PRsList({
 						show={activeFilterCount > 0}
 						onClear={clearAllFilters}
 					/>
+
+					<Link
+						href={`/repos/${owner}/${repo}/pulls/new`}
+						className="flex ms-auto items-center gap-1.5 px-3 py-1.5 text-xs bg-foreground hover:bg-foreground/90 text-background transition-colors cursor-pointer rounded-md"
+					>
+						<Plus className="w-3 h-3" />
+						New PR
+					</Link>
 				</div>
 
 				{/* Advanced filters panel */}

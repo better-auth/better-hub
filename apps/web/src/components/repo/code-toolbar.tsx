@@ -1,7 +1,17 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Copy, Check, Download, GitBranch, Search, Trash2, X, Loader2 } from "lucide-react";
+import {
+	Copy,
+	Check,
+	Download,
+	GitBranch,
+	Search,
+	Trash2,
+	X,
+	Loader2,
+	Monitor,
+} from "lucide-react";
 
 interface EnrichedBranch {
 	name: string;
@@ -348,6 +358,13 @@ export function CodeToolbar({
 									)}
 								</button>
 							</div>
+							<a
+								href={`x-github-client://openRepo/https://github.com/${owner}/${repo}`}
+								className="mt-3 pt-3 border-t border-border flex items-center gap-2 text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors"
+							>
+								<Monitor className="w-3.5 h-3.5" />
+								Open with GitHub Desktop
+							</a>
 						</div>
 					</div>
 				</>
