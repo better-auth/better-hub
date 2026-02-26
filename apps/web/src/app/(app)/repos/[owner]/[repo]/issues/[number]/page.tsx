@@ -5,6 +5,7 @@ import {
 	getRepo,
 	getCrossReferences,
 	getAuthenticatedUser,
+	extractRepoPermissions,
 } from "@/lib/github";
 import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { extractParticipants } from "@/lib/github-utils";
@@ -135,19 +136,9 @@ export default async function IssueDetailPage({
 	]);
 	const issuePinned = await pinnedPromise;
 
-	// Compute edit permissions
-	const repoPermissions = (
-		repoData as {
-			permissions?: { push?: boolean; maintain?: boolean; admin?: boolean };
-		} | null
-	)?.permissions;
+	const permissions = extractRepoPermissions(repoData ?? {});
 	const currentUserLogin = (currentUser as { login?: string } | null)?.login;
-	const viewerHasWriteAccess = !!(
-		repoPermissions?.push ||
-		repoPermissions?.maintain ||
-		repoPermissions?.admin
-	);
-	// Issue author OR write+ collaborator can edit the issue body/title
+	const viewerHasWriteAccess = permissions.push || permissions.maintain || permissions.admin;
 	const canEditIssue = !!(
 		currentUserLogin &&
 		(currentUserLogin === issue.user?.login || viewerHasWriteAccess)
