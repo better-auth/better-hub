@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";
+import { EditableIssueDescription } from "@/components/issue/editable-issue-description";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { BotActivityGroup } from "@/components/pr/bot-activity-group";
@@ -108,11 +109,15 @@ export function IssueConversation({
 	owner,
 	repo,
 	issueNumber,
+	canEdit,
+	issueTitle,
 }: {
 	entries: IssueTimelineEntry[];
 	owner: string;
 	repo: string;
 	issueNumber: number;
+	canEdit?: boolean;
+	issueTitle?: string;
 }) {
 	const grouped = groupEntries(entries);
 
@@ -241,6 +246,8 @@ export function IssueConversation({
 							owner={owner}
 							repo={repo}
 							issueNumber={issueNumber}
+							canEdit={canEdit}
+							issueTitle={issueTitle}
 						/>
 					);
 				})}
@@ -263,12 +270,16 @@ function ThreadEntry({
 	owner,
 	repo,
 	issueNumber,
+	canEdit,
+	issueTitle,
 }: {
 	entry: IssueTimelineEntry;
 	isDescription: boolean;
 	owner: string;
 	repo: string;
 	issueNumber: number;
+	canEdit?: boolean;
+	issueTitle?: string;
 }) {
 	const hasBody = Boolean(entry.body && entry.body.trim().length > 0);
 	const isLong = hasBody && entry.body.length > 800;
@@ -311,15 +322,25 @@ function ThreadEntry({
 			{/* Content */}
 			<div className="flex-1 min-w-0">
 				{isDescription ? (
-					<DescriptionBlock
-						entry={entry}
-						hasBody={hasBody}
-						isLong={isLong}
-						renderedBody={renderedBody}
-						owner={owner}
-						repo={repo}
-						issueNumber={issueNumber}
-					/>
+					canEdit && issueTitle !== undefined ? (
+						<EditableIssueDescription
+							entry={entry}
+							issueTitle={issueTitle}
+							owner={owner}
+							repo={repo}
+							issueNumber={issueNumber}
+						/>
+					) : (
+						<DescriptionBlock
+							entry={entry}
+							hasBody={hasBody}
+							isLong={isLong}
+							renderedBody={renderedBody}
+							owner={owner}
+							repo={repo}
+							issueNumber={issueNumber}
+						/>
+					)
 				) : (
 					<CommentBlock
 						entry={entry as IssueCommentEntry}

@@ -38,12 +38,16 @@ export function IssueCommentsClient({
 	issueNumber,
 	initialComments,
 	descriptionEntry,
+	canEdit,
+	issueTitle,
 }: {
 	owner: string;
 	repo: string;
 	issueNumber: number;
 	initialComments: IssueComment[];
 	descriptionEntry: IssueDescriptionEntry;
+	canEdit?: boolean;
+	issueTitle?: string;
 }) {
 	const { data: comments = initialComments } = useQuery({
 		queryKey: ["issue-comments", owner, repo, issueNumber],
@@ -62,6 +66,8 @@ export function IssueCommentsClient({
 			owner={owner}
 			repo={repo}
 			issueNumber={issueNumber}
+			canEdit={canEdit}
+			issueTitle={issueTitle}
 		/>
 	);
 }

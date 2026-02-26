@@ -135,6 +135,20 @@ export default async function IssueDetailPage({
 	]);
 	const issuePinned = await pinnedPromise;
 
+	// Compute edit permission: issue author OR collaborator with write/maintain/admin
+	const repoPermissions = (
+		repoData as {
+			permissions?: { push?: boolean; maintain?: boolean; admin?: boolean };
+		} | null
+	)?.permissions;
+	const canEditIssue = !!(
+		currentUser &&
+		((currentUser as { login?: string }).login === issue.user?.login ||
+			repoPermissions?.push ||
+			repoPermissions?.maintain ||
+			repoPermissions?.admin)
+	);
+
 	const commentsWithHtml: IssueComment[] = (comments || []).map((c, i) => ({
 		...c,
 		bodyHtml: commentHtmls[i],
@@ -200,6 +214,8 @@ export default async function IssueDetailPage({
 						issueNumber={issueNumber}
 						initialComments={commentsWithHtml}
 						descriptionEntry={descriptionEntry}
+						canEdit={canEditIssue}
+						issueTitle={issue.title}
 					/>
 				}
 				commentForm={
