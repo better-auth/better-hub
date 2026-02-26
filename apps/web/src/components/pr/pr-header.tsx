@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { GitPullRequest, GitMerge, XCircle, GitBranch, ArrowRight, Check, X } from "lucide-react";
+import { GitPullRequest, GitBranch, ArrowRight, Check, X } from "lucide-react";
 import type { CheckStatus, CrossReference } from "@/lib/github";
 import { CircleDot, ExternalLink } from "lucide-react";
 import { CheckStatusBadge } from "@/components/pr/check-status-badge";
@@ -11,6 +11,7 @@ import { PinButton } from "@/components/shared/pin-button";
 import { RefreshButton } from "@/components/shared/refresh-button";
 import { EditablePRTitle } from "@/components/pr/editable-pr-title";
 import { EditableBaseBranch } from "@/components/pr/editable-base-branch";
+import { PRStatusIndicator } from "@/components/pr/pr-status-indicator";
 
 interface PRHeaderProps {
 	title: string;
@@ -59,36 +60,6 @@ export function PRHeader({
 	isPinned = false,
 	crossRefs,
 }: PRHeaderProps) {
-	const statusConfig = merged
-		? {
-				dot: "bg-alert-important",
-				text: "text-alert-important",
-				icon: GitMerge,
-				label: "Merged",
-			}
-		: state === "open"
-			? draft
-				? {
-						dot: "bg-muted-foreground",
-						text: "text-muted-foreground",
-						icon: GitPullRequest,
-						label: "Draft",
-					}
-				: {
-						dot: "bg-success",
-						text: "text-success",
-						icon: GitPullRequest,
-						label: "Open",
-					}
-			: {
-					dot: "bg-destructive",
-					text: "text-destructive",
-					icon: XCircle,
-					label: "Closed",
-				};
-
-	const StatusIcon = statusConfig.icon;
-
 	return (
 		<div className="pb-3 mb-0">
 			{/* Title + actions */}
@@ -106,20 +77,14 @@ export function PRHeader({
 			{/* Meta row */}
 			<div className="flex items-center gap-2.5 flex-wrap">
 				{/* Status */}
-				<span
-					className={cn(
-						"inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider",
-						statusConfig.text,
-					)}
-				>
-					<span
-						className={cn(
-							"w-1.5 h-1.5 rounded-full shrink-0",
-							statusConfig.dot,
-						)}
-					/>
-					{statusConfig.label}
-				</span>
+				<PRStatusIndicator
+					owner={owner}
+					repo={repo}
+					number={number}
+					initialState={state}
+					initialMerged={merged}
+					initialDraft={draft}
+				/>
 
 				{/* Author */}
 				{author && (
