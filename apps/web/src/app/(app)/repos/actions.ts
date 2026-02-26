@@ -60,6 +60,7 @@ export async function markNotificationDone(threadId: string) {
 	try {
 		await octokit.activity.markThreadAsRead({ thread_id: Number(threadId) });
 		revalidatePath("/notifications");
+		revalidatePath("/dashboard", "layout");
 		return { success: true };
 	} catch (e: unknown) {
 		return { error: getErrorMessage(e) || "Failed to mark notification as done" };
@@ -72,6 +73,7 @@ export async function markAllNotificationsRead() {
 	try {
 		await octokit.activity.markNotificationsAsRead();
 		revalidatePath("/notifications");
+		revalidatePath("/dashboard", "layout");
 		return { success: true };
 	} catch (e: unknown) {
 		return { error: getErrorMessage(e) || "Failed to mark all as read" };
