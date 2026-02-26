@@ -925,7 +925,83 @@ async function fetchUserProfileFromGitHub(octokit: Octokit, username: string) {
 	return null;
 }
 
-async function fetchUserPublicReposFromGitHub(octokit: Octokit, username: string, perPage: number) {
+async function enrichMissingRepoLanguagesFromGraphQL<
+	T extends {
+		language: string | null;
+		name: string;
+		owner?: { login?: string | null } | null;
+	},
+>(token: string, repos: T[]): Promise<T[]> {
+	const missing = repos
+		.map((repo, index) => ({ repo, index }))
+		.filter(
+			({ repo }) =>
+				!repo.language &&
+				typeof repo.name === "string" &&
+				typeof repo.owner?.login === "string",
+		)
+		.slice(0, 50);
+	if (missing.length === 0) return repos;
+
+	const aliases = missing.map(
+		(_item, i) =>
+			`r${i}: repository(owner: $owner${i}, name: $name${i}) { primaryLanguage { name } }`,
+	);
+	const variableDefinitions = missing
+		.flatMap((_item, i) => [`$owner${i}: String!`, `$name${i}: String!`])
+		.join(", ");
+	const variables = Object.fromEntries(
+		missing.flatMap(({ repo }, i) => [
+			[`owner${i}`, String(repo.owner?.login)],
+			[`name${i}`, repo.name],
+		]),
+	);
+	const query = `query(${variableDefinitions}) { ${aliases.join("\n")} }`;
+
+	try {
+		const response = await fetch("https://api.github.com/graphql", {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ query, variables }),
+			signal: AbortSignal.timeout(8_000),
+		});
+		if (!response.ok) return repos;
+		const json = (await response.json()) as {
+			data?: Record<
+				string,
+				{ primaryLanguage?: { name?: string | null } } | null
+			>;
+		};
+		if (!json.data) return repos;
+
+		const languageByIndex = new Map<number, string>();
+		for (let i = 0; i < missing.length; i++) {
+			const lang = json.data[`r${i}`]?.primaryLanguage?.name;
+			if (typeof lang === "string" && lang.trim()) {
+				languageByIndex.set(missing[i].index, lang);
+			}
+		}
+
+		if (languageByIndex.size === 0) return repos;
+		return repos.map((repo, idx) =>
+			languageByIndex.has(idx)
+				? { ...repo, language: languageByIndex.get(idx) ?? repo.language }
+				: repo,
+		);
+	} catch {
+		return repos;
+	}
+}
+
+async function fetchUserPublicReposFromGitHub(
+	octokit: Octokit,
+	username: string,
+	perPage: number,
+	token?: string | null,
+) {
 	// Fetch recently-updated repos for the listing + top-starred repos via
 	// search API for accurate profile scoring (listForUser can't sort by stars).
 	const half = Math.ceil(perPage / 2);
@@ -940,7 +1016,10 @@ async function fetchUserPublicReposFromGitHub(octokit: Octokit, username: string
 			})
 			.catch(() => null),
 	]);
-	if (!topStarred) return byUpdated.data;
+	if (!topStarred) {
+		if (!token) return byUpdated.data;
+		return enrichMissingRepoLanguagesFromGraphQL(token, byUpdated.data);
+	}
 	// Merge and deduplicate — recently-updated first, then top-starred fills gaps
 	const seen = new Set<number>();
 	const merged = [];
@@ -954,7 +1033,8 @@ async function fetchUserPublicReposFromGitHub(octokit: Octokit, username: string
 			merged.push(repo as (typeof byUpdated.data)[number]);
 		}
 	}
-	return merged;
+	if (!token) return merged;
+	return enrichMissingRepoLanguagesFromGraphQL(token, merged);
 }
 
 async function fetchUserPublicOrgsFromGitHub(octokit: Octokit, username: string) {
@@ -1311,6 +1391,7 @@ async function processGitDataSyncJob(
 				authCtx.octokit,
 				payload.username,
 				perPage,
+				authCtx.token,
 			);
 			await upsertCacheWithShared(
 				authCtx.userId,
@@ -5101,7 +5182,12 @@ export async function getUserPublicRepos(username: string, perPage = 30) {
 		jobType: "user_public_repos",
 		jobPayload: { username, perPage },
 		fetchRemote: (octokit) =>
-			fetchUserPublicReposFromGitHub(octokit, username, perPage),
+			fetchUserPublicReposFromGitHub(
+				octokit,
+				username,
+				perPage,
+				authCtx?.token ?? null,
+			),
 	});
 }
 
