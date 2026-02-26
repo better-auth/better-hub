@@ -1,5 +1,32 @@
 const DEFAULT_HOST = "https://better-hub.com";
 
+// Track tabs on the logout page so we can avoid redirecting github.com/
+// after logout (declarativeNetRequest cancels the request mid-flight
+// which breaks GitHub's form submission).
+const ghLogoutTabs = new Set();
+
+chrome.webNavigation.onBeforeNavigate.addListener(
+	(details) => {
+		if (details.frameId !== 0) return;
+		ghLogoutTabs.add(details.tabId);
+		setTimeout(() => ghLogoutTabs.delete(details.tabId), 30_000);
+	},
+	{ url: [{ urlEquals: "https://github.com/logout" }] },
+);
+
+chrome.webNavigation.onCommitted.addListener(
+	(details) => {
+		if (details.frameId !== 0) return;
+		if (ghLogoutTabs.delete(details.tabId)) return;
+		chrome.storage.local.get(["enabled", "host"], (data) => {
+			if (data.enabled === false) return;
+			const host = data.host || DEFAULT_HOST;
+			chrome.tabs.update(details.tabId, { url: `${host}/dashboard` });
+		});
+	},
+	{ url: [{ urlEquals: "https://github.com/" }, { urlEquals: "https://github.com" }] },
+);
+
 // On install: just set defaults. Static rules handle the default host out of the box.
 chrome.runtime.onInstalled.addListener(() => {
 	chrome.storage.local.get(["enabled", "host"], (data) => {
@@ -110,6 +137,9 @@ const GITHUB_ONLY = [
 	"sponsors",
 	"login",
 	"signup",
+	"sessions",
+	"password_reset",
+	"account",
 	"features",
 	"pricing",
 	"enterprise",
