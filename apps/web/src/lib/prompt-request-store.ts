@@ -5,6 +5,9 @@ export type PromptRequestStatus = "open" | "accepted" | "closed";
 export interface PromptRequest {
 	id: string;
 	userId: string;
+	userLogin: string | null;
+	userName: string | null;
+	userAvatarUrl: string | null;
 	owner: string;
 	repo: string;
 	title: string;
@@ -19,6 +22,9 @@ export interface PromptRequest {
 function toPromptRequest(row: {
 	id: string;
 	userId: string;
+	userLogin: string | null;
+	userName: string | null;
+	userAvatarUrl: string | null;
 	owner: string;
 	repo: string;
 	title: string;
@@ -32,6 +38,9 @@ function toPromptRequest(row: {
 	return {
 		id: row.id,
 		userId: row.userId,
+		userLogin: row.userLogin,
+		userName: row.userName,
+		userAvatarUrl: row.userAvatarUrl,
 		owner: row.owner,
 		repo: row.repo,
 		title: row.title,
@@ -46,6 +55,9 @@ function toPromptRequest(row: {
 
 export async function createPromptRequest(
 	userId: string,
+	userLogin: string | null,
+	userName: string | null,
+	userAvatarUrl: string | null,
 	owner: string,
 	repo: string,
 	title: string,
@@ -58,6 +70,9 @@ export async function createPromptRequest(
 		data: {
 			id,
 			userId,
+			userLogin,
+			userName,
+			userAvatarUrl,
 			owner,
 			repo,
 			title,

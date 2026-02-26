@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useTransition, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
 	Sparkles,
@@ -323,6 +324,51 @@ export function PromptList({ owner, repo, promptRequests }: PromptListProps) {
 									)}
 								</div>
 								<div className="flex items-center gap-2 mt-0.5">
+									{pr.userName && (
+										<>
+											{pr.userAvatarUrl && (
+												<Image
+													src={
+														pr.userAvatarUrl
+													}
+													alt={
+														pr.userName
+													}
+													width={
+														14
+													}
+													height={
+														14
+													}
+													className="rounded-full"
+												/>
+											)}
+											{pr.userLogin ? (
+												<Link
+													href={`/users/${pr.userLogin}`}
+													onClick={(
+														e,
+													) =>
+														e.stopPropagation()
+													}
+													className="text-[11px] text-muted-foreground/60 hover:text-foreground hover:underline"
+												>
+													{
+														pr.userName
+													}
+												</Link>
+											) : (
+												<span className="text-[11px] text-muted-foreground/60">
+													{
+														pr.userName
+													}
+												</span>
+											)}
+											<span className="text-muted-foreground/30">
+												·
+											</span>
+										</>
+									)}
 									<span className="text-[11px] text-muted-foreground/50 font-mono">
 										<TimeAgo
 											date={
