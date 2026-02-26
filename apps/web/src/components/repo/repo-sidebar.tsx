@@ -56,6 +56,7 @@ interface RepoSidebarProps {
 	initialLanguages: Record<string, number> | null;
 	latestCommit: LatestCommit | null;
 	isStarred: boolean;
+	disableForkButton?: boolean;
 }
 
 export function RepoSidebar({
@@ -84,6 +85,7 @@ export function RepoSidebar({
 	initialLanguages,
 	latestCommit,
 	isStarred,
+	disableForkButton = false,
 }: RepoSidebarProps) {
 	const badges = [
 		isPrivate ? { label: "Private", icon: Lock } : { label: "Public", icon: Globe },
@@ -203,6 +205,7 @@ export function RepoSidebar({
 						owner={owner}
 						repo={repoName}
 						forkCount={forks}
+						disabled={disableForkButton}
 					/>
 					<span className="flex items-center justify-center gap-1.5 text-[11px] font-mono text-muted-foreground/60">
 						<Eye className="w-3 h-3" />

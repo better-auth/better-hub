@@ -12,7 +12,8 @@ import {
 	Loader2,
 	AlertCircle,
 } from "lucide-react";
-import { cn, formatDuration } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { LiveDuration } from "@/components/ui/live-duration";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { StatusIcon } from "./status-icon";
 
@@ -315,19 +316,17 @@ export function RunDetail({
 									<GitCommit className="w-2.5 h-2.5" />
 									{run.head_sha.slice(0, 7)}
 								</span>
-								{run.run_started_at && (
-									<span
-										className="flex items-center gap-1 text-[10px] text-muted-foreground"
-										suppressHydrationWarning
-									>
+								{run.run_started_at?.trim() && (
+									<span className="flex items-center gap-1 text-[10px] text-muted-foreground">
 										<Clock className="w-2.5 h-2.5" />
-										{formatDuration(
-											run.run_started_at,
-											run.status ===
-												"completed"
-												? run.updated_at
-												: null,
-										)}
+										<LiveDuration
+											startedAt={run.run_started_at}
+											completedAt={
+												run.status === "completed"
+													? run.updated_at
+													: null
+											}
+										/>
 									</span>
 								)}
 								<span className="text-[10px] text-muted-foreground/30">
@@ -379,10 +378,10 @@ export function RunDetail({
 							{job.started_at && (
 								<span className="flex items-center gap-1 text-[11px] font-mono text-muted-foreground/50 shrink-0">
 									<Clock className="w-3 h-3" />
-									{formatDuration(
-										job.started_at,
-										job.completed_at,
-									)}
+									<LiveDuration
+										startedAt={job.started_at}
+										completedAt={job.completed_at}
+									/>
 								</span>
 							)}
 						</div>
@@ -449,11 +448,15 @@ export function RunDetail({
 												</span>
 												{step.started_at && (
 													<span className="text-[10px] font-mono text-muted-foreground shrink-0">
-														{formatDuration(
-															step.started_at,
-															step.completed_at ??
-																null,
-														)}
+														<LiveDuration
+															startedAt={
+																step.started_at
+															}
+															completedAt={
+																step.completed_at ??
+																null
+															}
+														/>
 													</span>
 												)}
 											</button>
