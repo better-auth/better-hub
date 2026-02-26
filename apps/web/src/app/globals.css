@@ -692,6 +692,9 @@ tr.diff-search-match-active > td {
 	margin-bottom: 1em;
 	padding-left: 2em;
 }
+.ghmd ol {
+	list-style-type: decimal;
+}
 .ghmd li {
 	margin-top: 0.25em;
 }

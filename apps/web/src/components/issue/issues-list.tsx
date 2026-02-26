@@ -350,6 +350,30 @@ export function IssuesList({
 		selectedMilestone,
 	]);
 
+	const searchInputRef = useRef<HTMLInputElement>(null);
+	const issueLinksRef = useRef<(HTMLAnchorElement | null)[]>([]);
+
+	// Focus search bar when issues tab is shown (keyboard-first UX)
+	useEffect(() => {
+		searchInputRef.current?.focus();
+	}, []);
+
+	const handleListKeyDown = useCallback(
+		(e: React.KeyboardEvent, currentIndex: number) => {
+			if (e.key === "ArrowDown" && currentIndex < visible.length - 1) {
+				e.preventDefault();
+				issueLinksRef.current[currentIndex + 1]?.focus();
+			} else if (e.key === "ArrowUp" && currentIndex > 0) {
+				e.preventDefault();
+				issueLinksRef.current[currentIndex - 1]?.focus();
+			} else if (e.key === "ArrowUp" && currentIndex === 0) {
+				e.preventDefault();
+				searchInputRef.current?.focus();
+			}
+		},
+		[visible.length],
+	);
+
 	return (
 		<div>
 			{/* Toolbar */}
@@ -359,11 +383,19 @@ export function IssuesList({
 					<div className="relative flex-1 max-w-sm">
 						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
 						<input
+							ref={searchInputRef}
 							type="text"
 							placeholder="Search issues..."
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
+							onKeyDown={(e) => {
+								if (e.key === "ArrowDown" && visible.length > 0) {
+									e.preventDefault();
+									issueLinksRef.current[0]?.focus();
+								}
+							}}
 							className="w-full h-8 bg-transparent border border-border rounded-lg pl-9 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground/20 transition-colors"
+							aria-label="Search issues"
 						/>
 					</div>
 
@@ -909,14 +941,19 @@ export function IssuesList({
 			{/* Issue List */}
 			<div className="relative flex-1 min-h-0 overflow-y-auto divide-y divide-border">
 				<LoadingOverlay show={isPending} />
-				{visible.map((issue) => {
+				{visible.map((issue, index) => {
 					const reactionCount = issue.reactions?.["+1"] ?? 0;
 
 					return (
 						<Link
 							key={issue.id}
+							ref={(el) => {
+								issueLinksRef.current[index] = el;
+							}}
 							href={`/${owner}/${repo}/issues/${issue.number}`}
-							className="group flex items-start gap-3 px-4 py-3 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors"
+							className="group flex items-start gap-3 px-4 py-3 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background rounded-sm"
+							onKeyDown={(e) => handleListKeyDown(e, index)}
+							tabIndex={0}
 						>
 							{issue.state === "open" ? (
 								<CircleDot className="w-3.5 h-3.5 shrink-0 mt-0.5 text-success" />
