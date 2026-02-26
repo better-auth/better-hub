@@ -20,9 +20,23 @@ const APP_ROUTES = new Set([
 	"_next",
 ]);
 
+const GIT_SERVICES = new Set(["git-upload-pack", "git-receive-pack"]);
+
 export default async function middleware(request: NextRequest) {
 	const { pathname } = request.nextUrl;
 	const segments = pathname.split("/").filter(Boolean);
+	const repoPath = segments.slice(2).join("/");
+
+	const isInfoRefsRequest =
+		repoPath === "info/refs" &&
+		GIT_SERVICES.has(request.nextUrl.searchParams.get("service") ?? "");
+	const isPackRequest = GIT_SERVICES.has(repoPath);
+
+	if (segments.length >= 3 && (isInfoRefsRequest || isPackRequest)) {
+		const githubUrl = new URL(`https://github.com${pathname}`);
+		githubUrl.search = request.nextUrl.search;
+		return NextResponse.redirect(githubUrl, 307);
+	}
 
 	// Handle authentication first
 	const isPublic = publicPaths.some(
