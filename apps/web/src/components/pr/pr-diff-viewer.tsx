@@ -556,9 +556,18 @@ export function PRDiffViewer({
 							[]
 						}
 						viewed={viewedFiles.has(currentFile.filename)}
-						onToggleViewed={() =>
-							toggleViewed(currentFile.filename)
-						}
+						onToggleViewed={() => {
+							const wasViewed = viewedFiles.has(
+								currentFile.filename,
+							);
+							toggleViewed(currentFile.filename);
+							if (
+								!wasViewed &&
+								activeIndex < files.length - 1
+							) {
+								goToNext();
+							}
+						}}
 						owner={owner}
 						repo={repo}
 						pullNumber={pullNumber}
