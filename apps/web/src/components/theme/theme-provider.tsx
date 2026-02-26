@@ -6,32 +6,25 @@ import {
 	applyTheme,
 	getTheme,
 	listThemes,
-	listDarkThemes,
-	listLightThemes,
+	migrateLegacyThemeId,
 	STORAGE_KEY,
-	DARK_THEME_KEY,
-	LIGHT_THEME_KEY,
-	DARK_THEME_ID,
-	LIGHT_THEME_ID,
+	MODE_KEY,
+	DEFAULT_THEME_ID,
+	DEFAULT_MODE,
 	type ThemeDefinition,
 } from "@/lib/themes";
 
 interface ColorThemeContext {
 	/** Currently active theme id */
-	colorTheme: string;
-	/** Set a specific theme (also updates the dark/light preference for that mode) */
-	setColorTheme: (id: string) => void;
-	/** Toggle between dark and light mode (switches to the preferred theme for that mode). Pass a MouseEvent for a circular reveal from the click point. */
+	themeId: string;
+	/** Current mode (dark/light) */
+	mode: "dark" | "light";
+	/** Set a specific theme */
+	setTheme: (id: string) => void;
+	/** Toggle between dark and light mode */
 	toggleMode: (e?: { clientX: number; clientY: number }) => void;
 	/** All themes */
 	themes: ThemeDefinition[];
-	darkThemes: ThemeDefinition[];
-	lightThemes: ThemeDefinition[];
-	/** The preferred dark theme id */
-	darkThemeId: string;
-	/** The preferred light theme id */
-	lightThemeId: string;
-	mode: "dark" | "light";
 }
 
 const Ctx = createContext<ColorThemeContext | null>(null);
@@ -42,77 +35,83 @@ export function useColorTheme(): ColorThemeContext {
 	return ctx;
 }
 
-const COOKIE_KEY = "color-theme";
+const THEME_COOKIE_KEY = "color-theme";
+const MODE_COOKIE_KEY = "color-mode";
 
-function setThemeCookie(themeId: string) {
-	document.cookie = `${COOKIE_KEY}=${encodeURIComponent(themeId)};path=/;max-age=${365 * 24 * 60 * 60};samesite=lax`;
+function setThemeCookies(themeId: string, mode: "dark" | "light") {
+	const maxAge = 365 * 24 * 60 * 60;
+	document.cookie = `${THEME_COOKIE_KEY}=${encodeURIComponent(themeId)};path=/;max-age=${maxAge};samesite=lax`;
+	document.cookie = `${MODE_COOKIE_KEY}=${mode};path=/;max-age=${maxAge};samesite=lax`;
 }
 
-/** Pick the initial active theme from localStorage (client-side only) */
-function getStoredTheme(): string {
-	if (typeof window === "undefined") return DARK_THEME_ID;
-	const stored = localStorage.getItem(STORAGE_KEY);
-	if (stored && getTheme(stored)) return stored;
+function getStoredPreferences(): { themeId: string; mode: "dark" | "light" } {
+	if (typeof window === "undefined") {
+		return { themeId: DEFAULT_THEME_ID, mode: DEFAULT_MODE };
+	}
+
+	const storedTheme = localStorage.getItem(STORAGE_KEY);
+	const storedMode = localStorage.getItem(MODE_KEY) as "dark" | "light" | null;
+
+	if (storedTheme && storedMode && getTheme(storedTheme)) {
+		return { themeId: storedTheme, mode: storedMode };
+	}
+
+	if (storedTheme) {
+		const migration = migrateLegacyThemeId(storedTheme);
+		if (migration) {
+			localStorage.setItem(STORAGE_KEY, migration.themeId);
+			localStorage.setItem(MODE_KEY, migration.mode);
+			return migration;
+		}
+		if (getTheme(storedTheme)) {
+			const mode =
+				storedMode ??
+				(window.matchMedia?.("(prefers-color-scheme: dark)").matches
+					? "dark"
+					: "light");
+			localStorage.setItem(MODE_KEY, mode);
+			return { themeId: storedTheme, mode };
+		}
+	}
+
 	const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? true;
-	const darkPref = localStorage.getItem(DARK_THEME_KEY) ?? DARK_THEME_ID;
-	const lightPref = localStorage.getItem(LIGHT_THEME_KEY) ?? LIGHT_THEME_ID;
-	const id = prefersDark ? darkPref : lightPref;
-	localStorage.setItem(STORAGE_KEY, id);
-	return id;
+	const mode = prefersDark ? "dark" : "light";
+	localStorage.setItem(STORAGE_KEY, DEFAULT_THEME_ID);
+	localStorage.setItem(MODE_KEY, mode);
+	return { themeId: DEFAULT_THEME_ID, mode };
 }
 
 export function ColorThemeProvider({ children }: { children: React.ReactNode }) {
-	const { setTheme } = useTheme();
-	// SSR-safe defaults, will sync from localStorage on mount
-	const [colorTheme, setColorThemeState] = useState(DARK_THEME_ID);
-	const [darkThemeId, setDarkThemeId] = useState(DARK_THEME_ID);
-	const [lightThemeId, setLightThemeId] = useState(LIGHT_THEME_ID);
-	const syncedFromDb = useRef(false);
+	const { setTheme: setNextTheme } = useTheme();
+	const [themeId, setThemeIdState] = useState(DEFAULT_THEME_ID);
+	const [mode, setModeState] = useState<"dark" | "light">(DEFAULT_MODE);
+	const syncedToDb = useRef(false);
 
 	const themes = listThemes();
-	const darkThemes = listDarkThemes();
-	const lightThemes = listLightThemes();
-	const currentTheme = getTheme(colorTheme);
-	const mode = currentTheme?.mode ?? "dark";
 
-	// On mount: sync state from localStorage and apply theme
 	useEffect(() => {
-		const storedTheme = getStoredTheme();
-		const storedDark = localStorage.getItem(DARK_THEME_KEY) ?? DARK_THEME_ID;
-		const storedLight = localStorage.getItem(LIGHT_THEME_KEY) ?? LIGHT_THEME_ID;
+		const prefs = getStoredPreferences();
+		setThemeIdState(prefs.themeId);
+		setModeState(prefs.mode);
 
-		setDarkThemeId(storedDark);
-		setLightThemeId(storedLight);
-		setColorThemeState(storedTheme);
-
-		// Apply theme immediately
-		applyTheme(storedTheme);
-		setThemeCookie(storedTheme);
-		const theme = getTheme(storedTheme);
-		if (theme) setTheme(theme.mode);
+		applyTheme(prefs.themeId, prefs.mode);
+		setThemeCookies(prefs.themeId, prefs.mode);
+		setNextTheme(prefs.mode);
 	}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-	// On mount: sync current theme TO database (localStorage is source of truth)
 	useEffect(() => {
-		if (syncedFromDb.current) return;
-		syncedFromDb.current = true;
+		if (syncedToDb.current) return;
+		syncedToDb.current = true;
 
-		// Push current localStorage theme to DB to ensure consistency
-		const currentThemeId = localStorage.getItem(STORAGE_KEY);
-		const currentDark = localStorage.getItem(DARK_THEME_KEY);
-		const currentLight = localStorage.getItem(LIGHT_THEME_KEY);
-
-		if (currentThemeId) {
-			fetch("/api/user-settings", {
-				method: "PATCH",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					colorTheme: currentThemeId,
-					...(currentDark && { darkTheme: currentDark }),
-					...(currentLight && { lightTheme: currentLight }),
-				}),
-			}).catch(() => {});
-		}
+		const prefs = getStoredPreferences();
+		fetch("/api/user-settings", {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				colorTheme: prefs.themeId,
+				colorMode: prefs.mode,
+			}),
+		}).catch(() => {});
 	}, []);
 
 	const applyWithTransition = useCallback(
@@ -140,91 +139,57 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 		[],
 	);
 
-	const setColorTheme = useCallback(
+	const setTheme = useCallback(
 		(id: string) => {
 			const theme = getTheme(id);
 			if (!theme) return;
 
 			applyWithTransition(() => {
-				// Update the mode-specific preference
-				if (theme.mode === "dark") {
-					localStorage.setItem(DARK_THEME_KEY, id);
-					setDarkThemeId(id);
-				} else {
-					localStorage.setItem(LIGHT_THEME_KEY, id);
-					setLightThemeId(id);
-				}
 				localStorage.setItem(STORAGE_KEY, id);
-				setColorThemeState(id);
-				applyTheme(id);
-				setThemeCookie(id);
-				setTheme(theme.mode);
+				setThemeIdState(id);
+				applyTheme(id, mode);
+				setThemeCookies(id, mode);
 			});
 
-			// Persist to DB in background
 			fetch("/api/user-settings", {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					colorTheme: id,
-					...(theme.mode === "dark"
-						? { darkTheme: id }
-						: { lightTheme: id }),
-				}),
+				body: JSON.stringify({ colorTheme: id, colorMode: mode }),
 			}).catch(() => {});
 		},
-		[applyWithTransition, setTheme],
+		[mode, applyWithTransition],
 	);
 
 	const toggleMode = useCallback(
 		(e?: { clientX: number; clientY: number }) => {
-			const nextId = mode === "dark" ? lightThemeId : darkThemeId;
-			const theme = getTheme(nextId);
-			if (!theme) return;
-
+			const nextMode = mode === "dark" ? "light" : "dark";
 			const coords = e ? { x: e.clientX, y: e.clientY } : undefined;
 
 			applyWithTransition(() => {
-				if (theme.mode === "dark") {
-					localStorage.setItem(DARK_THEME_KEY, nextId);
-					setDarkThemeId(nextId);
-				} else {
-					localStorage.setItem(LIGHT_THEME_KEY, nextId);
-					setLightThemeId(nextId);
-				}
-				localStorage.setItem(STORAGE_KEY, nextId);
-				setColorThemeState(nextId);
-				applyTheme(nextId);
-				setThemeCookie(nextId);
-				setTheme(theme.mode);
+				localStorage.setItem(MODE_KEY, nextMode);
+				setModeState(nextMode);
+				applyTheme(themeId, nextMode);
+				setThemeCookies(themeId, nextMode);
+				setNextTheme(nextMode);
 			}, coords);
 
 			fetch("/api/user-settings", {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					colorTheme: nextId,
-					...(theme.mode === "dark"
-						? { darkTheme: nextId }
-						: { lightTheme: nextId }),
-				}),
+				body: JSON.stringify({ colorTheme: themeId, colorMode: nextMode }),
 			}).catch(() => {});
 		},
-		[mode, darkThemeId, lightThemeId, applyWithTransition, setTheme],
+		[mode, themeId, applyWithTransition, setNextTheme],
 	);
 
 	return (
 		<Ctx.Provider
 			value={{
-				colorTheme,
-				setColorTheme,
+				themeId,
+				mode,
+				setTheme,
 				toggleMode,
 				themes,
-				darkThemes,
-				lightThemes,
-				darkThemeId,
-				lightThemeId,
-				mode,
 			}}
 		>
 			{children}

@@ -5,8 +5,8 @@ import {
 	type BundledTheme,
 } from "shiki";
 import { parseDiffPatch, getLanguageFromFilename } from "./github-utils";
-import { getTheme } from "./themes";
-import type { ShikiTheme } from "./themes/types";
+import { getTheme, getThemeVariant } from "./themes";
+import type { ShikiTheme, ThemeVariant } from "./themes/types";
 
 const DEFAULT_LIGHT_THEME = "vitesse-light";
 const DEFAULT_DARK_THEME = "vitesse-black";
@@ -36,24 +36,32 @@ function getHighlighter(): Promise<Highlighter> {
 }
 
 /**
- * Read color-theme cookie to get the current app theme ID.
+ * Read theme preferences from cookies.
  * Uses dynamic import of next/headers to avoid issues in non-request contexts.
  */
-async function readThemeIdFromCookie(): Promise<string | null> {
+async function readThemePrefsFromCookie(): Promise<{
+	themeId: string | null;
+	mode: "dark" | "light";
+}> {
 	try {
 		const result = await Promise.race([
 			(async () => {
 				const { cookies } = await import("next/headers");
 				const cookieStore = await cookies();
-				return cookieStore.get("color-theme")?.value ?? null;
+				const themeId = cookieStore.get("color-theme")?.value ?? null;
+				const mode =
+					(cookieStore.get("color-mode")?.value as
+						| "dark"
+						| "light") ?? "dark";
+				return { themeId, mode };
 			})(),
-			new Promise<string | null>((resolve) =>
-				setTimeout(() => resolve(null), 200),
+			new Promise<{ themeId: string | null; mode: "dark" | "light" }>((resolve) =>
+				setTimeout(() => resolve({ themeId: null, mode: "dark" }), 200),
 			),
 		]);
 		return result;
 	} catch {
-		return null;
+		return { themeId: null, mode: "dark" };
 	}
 }
 
@@ -152,46 +160,50 @@ async function resolveThemePair(
 	highlighter: Highlighter,
 ): Promise<{ light: string; dark: string }> {
 	try {
-		const themeId = await readThemeIdFromCookie();
+		const { themeId } = await readThemePrefsFromCookie();
 		const appTheme = themeId ? getTheme(themeId) : null;
 
 		let light = DEFAULT_LIGHT_THEME;
 		let dark = DEFAULT_DARK_THEME;
 
-		if (appTheme?.syntax) {
-			// Theme has custom syntax highlighting - use it
-			if (appTheme.syntax.light) {
+		if (appTheme) {
+			// Load light variant's syntax theme
+			if (appTheme.light.syntax) {
 				const customLightName = `${appTheme.id}-syntax-light`;
 				const loadedName = await loadCustomSyntaxTheme(
 					highlighter,
-					appTheme.syntax.light,
+					appTheme.light.syntax,
 					customLightName,
 				);
 				if (loadedName) light = loadedName;
-			}
-			if (appTheme.syntax.dark) {
-				const customDarkName = `${appTheme.id}-syntax-dark`;
-				const loadedName = await loadCustomSyntaxTheme(
-					highlighter,
-					appTheme.syntax.dark,
-					customDarkName,
-				);
-				if (loadedName) dark = loadedName;
-			}
-		} else if (appTheme) {
-			// Theme has no custom syntax - use vitesse but with the theme's code-bg
-			const codeBg = appTheme.colors["--code-bg"];
-			if (codeBg) {
-				if (appTheme.mode === "light") {
-					const customName = `${appTheme.id}-vitesse-light`;
+			} else {
+				// No custom syntax - use vitesse but with the theme's code-bg
+				const codeBg = appTheme.light.colors["--code-bg"];
+				if (codeBg) {
+					const customName = `${appTheme.id}-light-vitesse`;
 					light = await loadThemeWithCustomBg(
 						highlighter,
 						DEFAULT_LIGHT_THEME,
 						codeBg,
 						customName,
 					);
-				} else {
-					const customName = `${appTheme.id}-vitesse-dark`;
+				}
+			}
+
+			// Load dark variant's syntax theme
+			if (appTheme.dark.syntax) {
+				const customDarkName = `${appTheme.id}-syntax-dark`;
+				const loadedName = await loadCustomSyntaxTheme(
+					highlighter,
+					appTheme.dark.syntax,
+					customDarkName,
+				);
+				if (loadedName) dark = loadedName;
+			} else {
+				// No custom syntax - use vitesse but with the theme's code-bg
+				const codeBg = appTheme.dark.colors["--code-bg"];
+				if (codeBg) {
+					const customName = `${appTheme.id}-dark-vitesse`;
 					dark = await loadThemeWithCustomBg(
 						highlighter,
 						DEFAULT_DARK_THEME,
@@ -202,7 +214,7 @@ async function resolveThemePair(
 			}
 		}
 
-		// Ensure fallback themes are loaded for the other mode
+		// Ensure fallback themes are loaded
 		if (light === DEFAULT_LIGHT_THEME) {
 			await ensureBuiltInThemeLoaded(highlighter, DEFAULT_LIGHT_THEME);
 		}

@@ -88,21 +88,20 @@ export interface ShikiTheme {
 	}>;
 }
 
-export interface SyntaxThemes {
-	light?: ShikiTheme;
-	dark?: ShikiTheme;
+export interface ThemeVariant {
+	/** Accent color for preview dot */
+	accentPreview: string;
+	/** Background color for preview dot */
+	bgPreview: string;
+	colors: ThemeColors;
+	/** Optional syntax highlighting theme for code blocks (matches variant mode) */
+	syntax?: ShikiTheme;
 }
 
 export interface ThemeDefinition {
 	id: string;
 	name: string;
 	description: string;
-	mode: "dark" | "light";
-	/** Accent color for preview dot */
-	accentPreview: string;
-	/** Background color for preview dot */
-	bgPreview: string;
-	colors: ThemeColors;
-	/** Optional syntax highlighting themes for code blocks */
-	syntax?: SyntaxThemes;
+	dark: ThemeVariant;
+	light: ThemeVariant;
 }

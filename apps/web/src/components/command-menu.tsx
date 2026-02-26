@@ -117,14 +117,11 @@ export function CommandMenu() {
 	const panelRef = useRef<HTMLDivElement>(null);
 	const globalChat = useGlobalChatOptional();
 	const {
-		colorTheme,
-		setColorTheme,
+		themeId: currentThemeId,
+		mode: currentMode,
+		setTheme: setColorTheme,
+		toggleMode,
 		themes: colorThemes,
-		darkThemes: colorDarkThemes,
-		lightThemes: colorLightThemes,
-		darkThemeId,
-		lightThemeId,
-		mode: _colorMode,
 	} = useColorTheme();
 	const { emit } = useMutationEvents();
 
@@ -1098,32 +1095,16 @@ export function CommandMenu() {
 	}, [search, topUserRepos, filteredUserRepos, dedupedGithubResults, router]);
 
 	// --- Theme mode items ---
-	const filteredDarkThemes = useMemo(() => {
-		if (mode !== "theme") return colorDarkThemes;
-		if (!search.trim()) return colorDarkThemes;
+	const filteredThemes = useMemo(() => {
+		if (mode !== "theme") return colorThemes;
+		if (!search.trim()) return colorThemes;
 		const s = search.toLowerCase();
-		return colorDarkThemes.filter(
+		return colorThemes.filter(
 			(t) =>
 				t.name.toLowerCase().includes(s) ||
 				t.description.toLowerCase().includes(s),
 		);
-	}, [mode, search, colorDarkThemes]);
-
-	const filteredLightThemes = useMemo(() => {
-		if (mode !== "theme") return colorLightThemes;
-		if (!search.trim()) return colorLightThemes;
-		const s = search.toLowerCase();
-		return colorLightThemes.filter(
-			(t) =>
-				t.name.toLowerCase().includes(s) ||
-				t.description.toLowerCase().includes(s),
-		);
-	}, [mode, search, colorLightThemes]);
-
-	const filteredThemes = useMemo(
-		() => [...filteredDarkThemes, ...filteredLightThemes],
-		[filteredDarkThemes, filteredLightThemes],
-	);
+	}, [mode, search, colorThemes]);
 
 	const themeItems = useMemo(() => {
 		return filteredThemes.map((t) => ({
@@ -2039,18 +2020,53 @@ export function CommandMenu() {
 								) : mode === "theme" ? (
 									/* Theme mode */
 									<>
-										{filteredDarkThemes.length >
+										{/* Mode toggle at the top */}
+										<div className="px-3 py-2 border-b border-border/50">
+											<button
+												type="button"
+												className="flex items-center justify-between w-full px-2 py-1.5 rounded-md hover:bg-muted/50 transition-colors"
+												onClick={() =>
+													toggleMode()
+												}
+											>
+												<span className="flex items-center gap-2 text-sm text-muted-foreground">
+													{currentMode ===
+													"dark" ? (
+														<Moon className="size-3.5" />
+													) : (
+														<Sun className="size-3.5" />
+													)}
+													<span>
+														{currentMode ===
+														"dark"
+															? "Dark"
+															: "Light"}{" "}
+														mode
+													</span>
+												</span>
+												<span className="text-xs text-muted-foreground/60">
+													Click
+													to
+													toggle
+												</span>
+											</button>
+										</div>
+										{filteredThemes.length >
 											0 && (
-											<CommandGroup title="Dark Themes">
-												{filteredDarkThemes.map(
+											<CommandGroup title="Themes">
+												{filteredThemes.map(
 													(
 														theme,
 													) => {
 														const idx =
 															getNextIndex();
 														const isActive =
-															darkThemeId ===
+															currentThemeId ===
 															theme.id;
+														const variant =
+															theme[
+																currentMode
+															];
 														return (
 															<CommandItemButton
 																key={
@@ -2074,79 +2090,14 @@ export function CommandMenu() {
 																		className="w-3 h-3 rounded-full border border-border/40"
 																		style={{
 																			backgroundColor:
-																				theme.bgPreview,
+																				variant.bgPreview,
 																		}}
 																	/>
 																	<span
 																		className="w-3 h-3 rounded-full border border-border/40"
 																		style={{
 																			backgroundColor:
-																				theme.accentPreview,
-																		}}
-																	/>
-																</span>
-																<span className="text-[13px] text-foreground flex-1">
-																	{
-																		theme.name
-																	}
-																</span>
-																<span className="text-[11px] text-muted-foreground hidden sm:block">
-																	{
-																		theme.description
-																	}
-																</span>
-																{isActive && (
-																	<Check className="size-3.5 text-success shrink-0" />
-																)}
-															</CommandItemButton>
-														);
-													},
-												)}
-											</CommandGroup>
-										)}
-										{filteredLightThemes.length >
-											0 && (
-											<CommandGroup title="Light Themes">
-												{filteredLightThemes.map(
-													(
-														theme,
-													) => {
-														const idx =
-															getNextIndex();
-														const isActive =
-															lightThemeId ===
-															theme.id;
-														return (
-															<CommandItemButton
-																key={
-																	theme.id
-																}
-																index={
-																	idx
-																}
-																selected={
-																	selectedIndex ===
-																	idx
-																}
-																onClick={() =>
-																	setColorTheme(
-																		theme.id,
-																	)
-																}
-															>
-																<span className="flex items-center gap-1 shrink-0">
-																	<span
-																		className="w-3 h-3 rounded-full border border-border/40"
-																		style={{
-																			backgroundColor:
-																				theme.bgPreview,
-																		}}
-																	/>
-																	<span
-																		className="w-3 h-3 rounded-full border border-border/40"
-																		style={{
-																			backgroundColor:
-																				theme.accentPreview,
+																				variant.accentPreview,
 																		}}
 																	/>
 																</span>
@@ -2676,7 +2627,7 @@ export function CommandMenu() {
 																	t,
 																) =>
 																	t.id ===
-																	colorTheme,
+																	currentThemeId,
 															)
 																?.name ??
 																"Theme"}
