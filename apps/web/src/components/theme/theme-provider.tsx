@@ -142,7 +142,7 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 				}
 				(
 					document as unknown as {
-						startViewTransition: (cb: () => () => void) => void;
+						startViewTransition: (cb: () => void) => void;
 					}
 				).startViewTransition(fn);
 			} else {
