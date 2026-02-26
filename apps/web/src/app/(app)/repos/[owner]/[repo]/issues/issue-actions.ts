@@ -47,6 +47,32 @@ export async function addIssueComment(
 	}
 }
 
+export async function updateIssueComment(
+	owner: string,
+	repo: string,
+	issueNumber: number,
+	commentId: number,
+	body: string,
+) {
+	const octokit = await getOctokit();
+	if (!octokit) return { error: "Not authenticated" };
+
+	try {
+		await octokit.issues.updateComment({
+			owner,
+			repo,
+			comment_id: commentId,
+			body,
+		});
+		await invalidateIssueCache(owner, repo, issueNumber);
+		invalidateRepoCache(owner, repo);
+		revalidatePath(`/repos/${owner}/${repo}/issues/${issueNumber}`);
+		return { success: true };
+	} catch (e: unknown) {
+		return { error: getErrorMessage(e) };
+	}
+}
+
 export async function deleteIssueComment(
 	owner: string,
 	repo: string,

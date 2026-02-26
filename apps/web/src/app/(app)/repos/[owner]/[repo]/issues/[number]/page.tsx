@@ -135,18 +135,22 @@ export default async function IssueDetailPage({
 	]);
 	const issuePinned = await pinnedPromise;
 
-	// Compute edit permission: issue author OR collaborator with write/maintain/admin
+	// Compute edit permissions
 	const repoPermissions = (
 		repoData as {
 			permissions?: { push?: boolean; maintain?: boolean; admin?: boolean };
 		} | null
 	)?.permissions;
+	const currentUserLogin = (currentUser as { login?: string } | null)?.login;
+	const viewerHasWriteAccess = !!(
+		repoPermissions?.push ||
+		repoPermissions?.maintain ||
+		repoPermissions?.admin
+	);
+	// Issue author OR write+ collaborator can edit the issue body/title
 	const canEditIssue = !!(
-		currentUser &&
-		((currentUser as { login?: string }).login === issue.user?.login ||
-			repoPermissions?.push ||
-			repoPermissions?.maintain ||
-			repoPermissions?.admin)
+		currentUserLogin &&
+		(currentUserLogin === issue.user?.login || viewerHasWriteAccess)
 	);
 
 	const commentsWithHtml: IssueComment[] = (comments || []).map((c, i) => ({
@@ -216,6 +220,8 @@ export default async function IssueDetailPage({
 						descriptionEntry={descriptionEntry}
 						canEdit={canEditIssue}
 						issueTitle={issue.title}
+						currentUserLogin={currentUserLogin}
+						viewerHasWriteAccess={viewerHasWriteAccess}
 					/>
 				}
 				commentForm={

@@ -40,6 +40,8 @@ export function IssueCommentsClient({
 	descriptionEntry,
 	canEdit,
 	issueTitle,
+	currentUserLogin,
+	viewerHasWriteAccess,
 }: {
 	owner: string;
 	repo: string;
@@ -48,6 +50,8 @@ export function IssueCommentsClient({
 	descriptionEntry: IssueDescriptionEntry;
 	canEdit?: boolean;
 	issueTitle?: string;
+	currentUserLogin?: string;
+	viewerHasWriteAccess?: boolean;
 }) {
 	const { data: comments = initialComments } = useQuery({
 		queryKey: ["issue-comments", owner, repo, issueNumber],
@@ -68,6 +72,8 @@ export function IssueCommentsClient({
 			issueNumber={issueNumber}
 			canEdit={canEdit}
 			issueTitle={issueTitle}
+			currentUserLogin={currentUserLogin}
+			viewerHasWriteAccess={viewerHasWriteAccess}
 		/>
 	);
 }

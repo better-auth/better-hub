@@ -111,6 +111,8 @@ export function IssueConversation({
 	issueNumber,
 	canEdit,
 	issueTitle,
+	currentUserLogin,
+	viewerHasWriteAccess,
 }: {
 	entries: IssueTimelineEntry[];
 	owner: string;
@@ -118,6 +120,8 @@ export function IssueConversation({
 	issueNumber: number;
 	canEdit?: boolean;
 	issueTitle?: string;
+	currentUserLogin?: string;
+	viewerHasWriteAccess?: boolean;
 }) {
 	const grouped = groupEntries(entries);
 
@@ -172,6 +176,12 @@ export function IssueConversation({
 													issueNumber={
 														issueNumber
 													}
+													currentUserLogin={
+														currentUserLogin
+													}
+													viewerHasWriteAccess={
+														viewerHasWriteAccess
+													}
 												/>
 											),
 										)}
@@ -223,6 +233,12 @@ export function IssueConversation({
 												issueNumber={
 													issueNumber
 												}
+												currentUserLogin={
+													currentUserLogin
+												}
+												viewerHasWriteAccess={
+													viewerHasWriteAccess
+												}
 											/>
 										),
 									)}
@@ -248,6 +264,8 @@ export function IssueConversation({
 							issueNumber={issueNumber}
 							canEdit={canEdit}
 							issueTitle={issueTitle}
+							currentUserLogin={currentUserLogin}
+							viewerHasWriteAccess={viewerHasWriteAccess}
 						/>
 					);
 				})}
@@ -272,6 +290,8 @@ function ThreadEntry({
 	issueNumber,
 	canEdit,
 	issueTitle,
+	currentUserLogin,
+	viewerHasWriteAccess,
 }: {
 	entry: IssueTimelineEntry;
 	isDescription: boolean;
@@ -280,6 +300,8 @@ function ThreadEntry({
 	issueNumber: number;
 	canEdit?: boolean;
 	issueTitle?: string;
+	currentUserLogin?: string;
+	viewerHasWriteAccess?: boolean;
 }) {
 	const hasBody = Boolean(entry.body && entry.body.trim().length > 0);
 	const isLong = hasBody && entry.body.length > 800;
@@ -350,6 +372,14 @@ function ThreadEntry({
 						owner={owner}
 						repo={repo}
 						issueNumber={issueNumber}
+						canEditComment={
+							!!(
+								currentUserLogin &&
+								(currentUserLogin ===
+									entry.user?.login ||
+									viewerHasWriteAccess)
+							)
+						}
 					/>
 				)}
 			</div>
@@ -429,6 +459,7 @@ function CommentBlock({
 	owner,
 	repo,
 	issueNumber,
+	canEditComment,
 }: {
 	entry: IssueCommentEntry;
 	hasBody: boolean;
@@ -437,6 +468,7 @@ function CommentBlock({
 	owner: string;
 	repo: string;
 	issueNumber: number;
+	canEditComment?: boolean;
 }) {
 	const headerContent = (
 		<>
@@ -503,6 +535,7 @@ function CommentBlock({
 			issueNumber={issueNumber}
 			commentId={entry.id}
 			body={entry.body}
+			canEdit={canEditComment}
 		/>
 	);
 }
@@ -512,11 +545,15 @@ function ThreadComment({
 	owner,
 	repo,
 	issueNumber,
+	currentUserLogin,
+	viewerHasWriteAccess,
 }: {
 	entry: IssueTimelineEntry;
 	owner: string;
 	repo: string;
 	issueNumber: number;
+	currentUserLogin?: string;
+	viewerHasWriteAccess?: boolean;
 }) {
 	const hasBody = Boolean(entry.body && entry.body.trim().length > 0);
 	const isLong = hasBody && entry.body.length > 800;
@@ -553,6 +590,13 @@ function ThreadComment({
 			owner={owner}
 			repo={repo}
 			issueNumber={issueNumber}
+			canEditComment={
+				!!(
+					currentUserLogin &&
+					(currentUserLogin === entry.user?.login ||
+						viewerHasWriteAccess)
+				)
+			}
 		/>
 	);
 }
