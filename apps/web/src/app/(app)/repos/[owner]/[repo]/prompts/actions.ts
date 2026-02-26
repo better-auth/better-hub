@@ -11,7 +11,7 @@ import {
 	deletePromptRequestComment,
 	getPromptRequestComment,
 } from "@/lib/prompt-request-store";
-import { auth } from "@/lib/auth";
+import { auth, getServerSession } from "@/lib/auth";
 import { headers } from "next/headers";
 import { getOctokit, extractRepoPermissions } from "@/lib/github";
 
@@ -114,7 +114,7 @@ export async function deletePromptRequestAction(id: string) {
 }
 
 export async function addPromptComment(promptRequestId: string, body: string) {
-	const session = await auth.api.getSession({ headers: await headers() });
+	const session = await getServerSession();
 	if (!session?.user?.id) throw new Error("Unauthorized");
 
 	const pr = await getPromptRequest(promptRequestId);
@@ -123,6 +123,7 @@ export async function addPromptComment(promptRequestId: string, body: string) {
 	const comment = await createPromptRequestComment(
 		promptRequestId,
 		session.user.id,
+		session.githubUser?.login ?? null,
 		session.user.name,
 		session.user.image ?? "",
 		body,

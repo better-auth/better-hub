@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { getPromptRequest, listPromptRequestComments } from "@/lib/prompt-request-store";
 import { PromptDetail } from "@/components/prompt-request/prompt-detail";
 import { notFound } from "next/navigation";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { getServerSession } from "@/lib/auth";
 import { getOctokit, extractRepoPermissions } from "@/lib/github";
 
 export async function generateMetadata({
@@ -28,7 +27,7 @@ export default async function PromptDetailPage({
 	const [promptRequest, comments, session] = await Promise.all([
 		getPromptRequest(id),
 		listPromptRequestComments(id),
-		auth.api.getSession({ headers: await headers() }),
+		getServerSession(),
 	]);
 
 	if (!promptRequest) {
@@ -36,7 +35,12 @@ export default async function PromptDetailPage({
 	}
 
 	const currentUser = session?.user
-		? { id: session.user.id, name: session.user.name, image: session.user.image ?? "" }
+		? {
+				id: session.user.id,
+				login: session.githubUser?.login ?? null,
+				name: session.user.name,
+				image: session.user.image ?? "",
+			}
 		: null;
 
 	// Check repo maintainer permissions (push/admin/maintain)

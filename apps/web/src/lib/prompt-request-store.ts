@@ -153,6 +153,7 @@ export interface PromptRequestComment {
 	id: string;
 	promptRequestId: string;
 	userId: string;
+	userLogin: string | null;
 	userName: string;
 	userAvatarUrl: string;
 	body: string;
@@ -164,6 +165,7 @@ function toPromptRequestComment(row: {
 	id: string;
 	promptRequestId: string;
 	userId: string;
+	userLogin: string | null;
 	userName: string;
 	userAvatarUrl: string;
 	body: string;
@@ -174,6 +176,7 @@ function toPromptRequestComment(row: {
 		id: row.id,
 		promptRequestId: row.promptRequestId,
 		userId: row.userId,
+		userLogin: row.userLogin,
 		userName: row.userName,
 		userAvatarUrl: row.userAvatarUrl,
 		body: row.body,
@@ -185,6 +188,7 @@ function toPromptRequestComment(row: {
 export async function createPromptRequestComment(
 	promptRequestId: string,
 	userId: string,
+	userLogin: string | null,
 	userName: string,
 	userAvatarUrl: string,
 	body: string,
@@ -197,6 +201,7 @@ export async function createPromptRequestComment(
 			id,
 			promptRequestId,
 			userId,
+			userLogin,
 			userName,
 			userAvatarUrl,
 			body,

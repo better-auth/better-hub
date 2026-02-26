@@ -102,7 +102,7 @@ export function PromptList({ owner, repo, promptRequests }: PromptListProps) {
 		const c = { open: 0, closed: 0 };
 		for (const pr of promptRequests) {
 			if (pr.status === "open") c.open++;
-			else c.closed++;
+			else if (pr.status === "accepted" || pr.status === "closed") c.closed++;
 		}
 		return c;
 	}, [promptRequests]);
