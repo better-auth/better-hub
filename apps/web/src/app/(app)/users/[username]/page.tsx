@@ -26,6 +26,7 @@ function UnknownUserPage({ username }: { username: string }) {
 			</div>
 			<a
 				href={githubUrl}
+				data-no-github-intercept
 				target="_blank"
 				rel="noopener noreferrer"
 				className="flex items-center gap-1.5 text-[11px] font-mono px-3 py-1.5 border border-border text-muted-foreground hover:text-foreground hover:border-border transition-colors"
