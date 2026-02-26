@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
-import { useQueryState, parseAsStringLiteral, parseAsString } from "nuqs";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -63,23 +62,18 @@ function formatJoinedDate(value: string | null): string | null {
 	const parsed = new Date(value);
 	if (Number.isNaN(parsed.getTime())) return null;
 
-	return parsed.toLocaleDateString(undefined, {
+	return new Intl.DateTimeFormat("en-US", {
 		year: "numeric",
 		month: "short",
 		day: "numeric",
-	});
+		timeZone: "UTC",
+	}).format(parsed);
 }
 
 export function OrgDetailContent({ org, repos }: { org: OrgDetails; repos: OrgRepo[] }) {
-	const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
-	const [filter, setFilter] = useQueryState(
-		"filter",
-		parseAsStringLiteral(orgFilterTypes).withDefault("all"),
-	);
-	const [sort, setSort] = useQueryState(
-		"sort",
-		parseAsStringLiteral(sortTypes).withDefault("updated"),
-	);
+	const [search, setSearch] = useState("");
+	const [filter, setFilter] = useState<FilterType>("all");
+	const [sort, setSort] = useState<SortType>("updated");
 
 	const filtered = useMemo(
 		() =>
@@ -170,11 +164,22 @@ export function OrgDetailContent({ org, repos }: { org: OrgDetails; repos: OrgRe
 								)}{" "}
 								repos
 							</span>
-							<span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
+							<Link
+								href={`/users/${org.login}?tab=followers`}
+								className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-mono hover:text-foreground transition-colors"
+							>
 								<Users className="w-3 h-3" />
 								{formatNumber(org.followers)}{" "}
 								followers
-							</span>
+							</Link>
+							<Link
+								href={`/users/${org.login}?tab=following`}
+								className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-mono hover:text-foreground transition-colors"
+							>
+								<Users className="w-3 h-3" />
+								{formatNumber(org.following)}{" "}
+								following
+							</Link>
 							{org.location && (
 								<span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
 									<MapPin className="w-3 h-3" />

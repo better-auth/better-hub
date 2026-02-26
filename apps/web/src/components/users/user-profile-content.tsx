@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
-import { useQueryState, parseAsStringLiteral, parseAsString } from "nuqs";
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
 	ArrowUpDown,
+	Bot,
 	Building2,
 	CalendarDays,
 	ChevronRight,
@@ -17,12 +18,14 @@ import {
 	Lock,
 	MapPin,
 	Search,
+	Shield,
 	Star,
 	Twitter,
 	Users,
 } from "lucide-react";
-import { cn, formatNumber } from "@/lib/utils";
+import { cn, formatNumber, type ProfileTab } from "@/lib/utils";
 import { getLanguageColor } from "@/lib/github-utils";
+import type { UserFollow } from "@/lib/github";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { ContributionChart } from "@/components/dashboard/contribution-chart";
 import { computeUserProfileScore } from "@/lib/user-profile-score";
@@ -109,22 +112,49 @@ export function UserProfileContent({
 	repos,
 	orgs,
 	contributions,
+	followers = [],
+	following = [],
+	initialTab = "repos",
 	orgTopRepos = [],
 }: {
 	user: UserProfile;
 	repos: UserRepo[];
 	orgs: UserOrg[];
 	contributions: ContributionData | null;
+	followers?: UserFollow[];
+	following?: UserFollow[];
+	initialTab?: ProfileTab;
 	orgTopRepos?: OrgTopRepo[];
 }) {
-	const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
-	const [filter, setFilter] = useQueryState(
-		"filter",
-		parseAsStringLiteral(filterTypes).withDefault("all"),
-	);
-	const [sort, setSort] = useQueryState(
-		"sort",
-		parseAsStringLiteral(sortTypes).withDefault("updated"),
+	const router = useRouter();
+	const pathname = usePathname();
+	const searchParamsObj = useSearchParams();
+
+	const [search, setSearch] = useState("");
+	const [filter, setFilter] = useState<FilterType>("all");
+	const [sort, setSort] = useState<SortType>("updated");
+	const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab);
+	const deferredSearch = useDeferredValue(search);
+
+	useEffect(() => {
+		setActiveTab(initialTab);
+		setSearch("");
+	}, [initialTab]);
+
+	const switchTab = useCallback(
+		(tab: ProfileTab) => {
+			setActiveTab(tab);
+			setSearch("");
+			const params = new URLSearchParams(searchParamsObj.toString());
+			if (tab === "repos") {
+				params.delete("tab");
+			} else {
+				params.set("tab", tab);
+			}
+			const qs = params.toString();
+			router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+		},
+		[router, pathname, searchParamsObj],
 	);
 
 	const filtered = useMemo(
@@ -132,7 +162,7 @@ export function UserProfileContent({
 			repos
 				.filter((repo) => {
 					if (
-						search &&
+						deferredSearch &&
 						![
 							repo.name,
 							repo.description ?? "",
@@ -140,7 +170,7 @@ export function UserProfileContent({
 						]
 							.join(" ")
 							.toLowerCase()
-							.includes(search.toLowerCase())
+							.includes(deferredSearch.toLowerCase())
 					) {
 						return false;
 					}
@@ -158,7 +188,7 @@ export function UserProfileContent({
 						new Date(a.updated_at || 0).getTime()
 					);
 				}),
-		[repos, search, filter, sort],
+		[repos, deferredSearch, filter, sort],
 	);
 
 	const languages = useMemo(
@@ -193,6 +223,24 @@ export function UserProfileContent({
 	);
 
 	const totalForks = useMemo(() => repos.reduce((sum, r) => sum + r.forks_count, 0), [repos]);
+
+	const filteredFollowers = useMemo(() => {
+		const q = deferredSearch.trim().toLowerCase();
+		if (!q) return followers;
+		return followers.filter((p) => p.login.toLowerCase().includes(q));
+	}, [followers, deferredSearch]);
+
+	const filteredFollowing = useMemo(() => {
+		const q = deferredSearch.trim().toLowerCase();
+		if (!q) return following;
+		return following.filter((p) => p.login.toLowerCase().includes(q));
+	}, [following, deferredSearch]);
+
+	const activePeople = useMemo(() => {
+		if (activeTab === "followers") return filteredFollowers;
+		if (activeTab === "following") return filteredFollowing;
+		return [];
+	}, [activeTab, filteredFollowers, filteredFollowing]);
 
 	const profileScore = useMemo(() => {
 		const personalTopStars =
@@ -302,18 +350,30 @@ export function UserProfileContent({
 				<div className="flex items-center gap-3 mt-4 text-xs text-muted-foreground font-mono">
 					<span className="inline-flex items-center gap-1.5">
 						<Users className="w-3 h-3" />
-						<span className="text-foreground font-medium">
-							{formatNumber(user.followers)}
-						</span>{" "}
-						followers
+						<button
+							type="button"
+							onClick={() => switchTab("followers")}
+							className="inline-flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer"
+							title="View followers"
+						>
+							<span className="text-foreground font-medium">
+								{formatNumber(user.followers)}
+							</span>{" "}
+							followers
+						</button>
 					</span>
 					<span className="text-muted-foreground/30">&middot;</span>
-					<span>
+					<button
+						type="button"
+						onClick={() => switchTab("following")}
+						className="hover:text-foreground transition-colors cursor-pointer"
+						title="View following"
+					>
 						<span className="text-foreground font-medium">
 							{formatNumber(user.following)}
 						</span>{" "}
 						following
-					</span>
+					</button>
 				</div>
 
 				{/* Metadata */}
@@ -394,7 +454,7 @@ export function UserProfileContent({
 				)}
 
 				{/* Language distribution */}
-				{languageDistribution.length > 0 && (
+				{activeTab === "repos" && languageDistribution.length > 0 && (
 					<div className="my-5 pt-5 border-t border-border">
 						<h2 className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3">
 							Languages
@@ -455,6 +515,31 @@ export function UserProfileContent({
 
 			{/* ── Main content ── */}
 			<main className="flex-1 min-w-0 flex flex-col min-h-0">
+				<div className="shrink-0 mb-3">
+					<div className="flex items-center border border-border divide-x divide-border rounded-md w-fit">
+						{(
+							[
+								["repos", "Repositories"],
+								["followers", "Followers"],
+								["following", "Following"],
+							] as const
+						).map(([value, label]) => (
+							<button
+								key={value}
+								onClick={() => switchTab(value)}
+								className={cn(
+									"px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
+									activeTab === value
+										? "bg-muted/50 dark:bg-white/4 text-foreground"
+										: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
+								)}
+							>
+								{label}
+							</button>
+						))}
+					</div>
+				</div>
+
 				{/* Search & filters */}
 				<div className="shrink-0">
 					<div className="flex items-center gap-2 mb-3">
@@ -462,7 +547,14 @@ export function UserProfileContent({
 							<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50" />
 							<input
 								type="text"
-								placeholder="Find a repository..."
+								placeholder={
+									activeTab === "repos"
+										? "Find a repository..."
+										: activeTab ===
+											  "followers"
+											? "Find a follower..."
+											: "Find a user..."
+								}
 								value={search}
 								onChange={(e) =>
 									setSearch(e.target.value)
@@ -471,56 +563,76 @@ export function UserProfileContent({
 							/>
 						</div>
 
-						<div className="flex items-center border border-border divide-x divide-border rounded-md shrink-0">
-							{(
-								[
-									["all", "All"],
-									["sources", "Sources"],
-									["forks", "Forks"],
-									["archived", "Archived"],
-								] as const
-							).map(([value, label]) => (
-								<button
-									key={value}
-									onClick={() =>
-										setFilter(value)
-									}
-									className={cn(
-										"px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
-										filter === value
-											? "bg-muted/50 dark:bg-white/4 text-foreground"
-											: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
-									)}
-								>
-									{label}
-								</button>
-							))}
-						</div>
+						{activeTab === "repos" && (
+							<>
+								<div className="flex items-center border border-border divide-x divide-border rounded-md shrink-0">
+									{(
+										[
+											[
+												"all",
+												"All",
+											],
+											[
+												"sources",
+												"Sources",
+											],
+											[
+												"forks",
+												"Forks",
+											],
+											[
+												"archived",
+												"Archived",
+											],
+										] as const
+									).map(([value, label]) => (
+										<button
+											key={value}
+											onClick={() =>
+												setFilter(
+													value,
+												)
+											}
+											className={cn(
+												"px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
+												filter ===
+													value
+													? "bg-muted/50 dark:bg-white/4 text-foreground"
+													: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
+											)}
+										>
+											{label}
+										</button>
+									))}
+								</div>
 
-						<button
-							onClick={() =>
-								setSort((current) =>
-									current === "updated"
-										? "stars"
-										: current ===
-											  "stars"
-											? "name"
-											: "updated",
-								)
-							}
-							className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground border border-border hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer rounded-md shrink-0"
-						>
-							<ArrowUpDown className="w-3 h-3" />
-							{sort === "updated"
-								? "Updated"
-								: sort === "stars"
-									? "Stars"
-									: "Name"}
-						</button>
+								<button
+									onClick={() =>
+										setSort((current) =>
+											current ===
+											"updated"
+												? "stars"
+												: current ===
+													  "stars"
+													? "name"
+													: "updated",
+										)
+									}
+									className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground border border-border hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer rounded-md shrink-0"
+								>
+									<ArrowUpDown className="w-3 h-3" />
+									{sort === "updated"
+										? "Updated"
+										: sort === "stars"
+											? "Stars"
+											: "Name"}
+								</button>
+							</>
+						)}
 					</div>
 
 					<div className="flex items-center justify-between mb-4">
-						{languages.length > 0 && (
+						{activeTab === "repos" && languages.length > 0 && (
 							<div className="flex items-center gap-1.5 flex-wrap flex-1">
 								{languages
 									.slice(0, 10)
@@ -556,13 +668,17 @@ export function UserProfileContent({
 							</div>
 						)}
 						<span className="text-[11px] text-muted-foreground/30 font-mono shrink-0 ml-auto">
-							{filtered.length}/{repos.length}
+							{activeTab === "repos"
+								? `${filtered.length}/${repos.length}`
+								: activeTab === "followers"
+									? `${filteredFollowers.length}/${followers.length}`
+									: `${filteredFollowing.length}/${following.length}`}
 						</span>
 					</div>
 				</div>
 
 				{/* Contribution chart */}
-				{contributions && (
+				{activeTab === "repos" && contributions && (
 					<div className="shrink-0 mb-4 border border-border rounded-md p-4 bg-card/50">
 						<ContributionChart data={contributions} />
 					</div>
@@ -570,98 +686,186 @@ export function UserProfileContent({
 
 				{/* Repo list */}
 				<div className="flex-1 min-h-0 overflow-y-auto border border-border rounded-md divide-y divide-border">
-					{filtered.map((repo) => (
-						<Link
-							key={repo.id}
-							href={`/${repo.full_name}`}
-							className="group flex items-center gap-4 px-4 py-3 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors"
-						>
-							<FolderGit2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-							<div className="flex-1 min-w-0">
-								<div className="flex items-center gap-2">
-									<span className="text-sm text-foreground group-hover:text-foreground transition-colors font-mono">
-										{repo.name}
-									</span>
-									{repo.private ? (
-										<span className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 border border-border text-muted-foreground/60 rounded-sm">
-											<Lock className="w-2.5 h-2.5" />
-											Private
+					{activeTab === "repos" &&
+						filtered.map((repo) => (
+							<Link
+								key={repo.id}
+								href={`/${repo.full_name}`}
+								className="group flex items-center gap-4 px-4 py-3 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors"
+							>
+								<FolderGit2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+								<div className="flex-1 min-w-0">
+									<div className="flex items-center gap-2">
+										<span className="text-sm text-foreground group-hover:text-foreground transition-colors font-mono">
+											{repo.name}
 										</span>
-									) : (
-										<span className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 border border-border text-muted-foreground/60 rounded-sm">
-											<Globe className="w-2.5 h-2.5" />
-											Public
-										</span>
-									)}
-									{repo.archived && (
-										<span className="text-[9px] font-mono px-1.5 py-0.5 border border-warning/30 text-warning rounded-sm">
-											Archived
-										</span>
-									)}
-									{repo.fork && (
-										<span className="text-[9px] font-mono px-1.5 py-0.5 border border-border text-muted-foreground/60 rounded-sm">
-											Fork
-										</span>
+										{repo.private ? (
+											<span className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 border border-border text-muted-foreground/60 rounded-sm">
+												<Lock className="w-2.5 h-2.5" />
+												Private
+											</span>
+										) : (
+											<span className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 border border-border text-muted-foreground/60 rounded-sm">
+												<Globe className="w-2.5 h-2.5" />
+												Public
+											</span>
+										)}
+										{repo.archived && (
+											<span className="text-[9px] font-mono px-1.5 py-0.5 border border-warning/30 text-warning rounded-sm">
+												Archived
+											</span>
+										)}
+										{repo.fork && (
+											<span className="text-[9px] font-mono px-1.5 py-0.5 border border-border text-muted-foreground/60 rounded-sm">
+												Fork
+											</span>
+										)}
+									</div>
+
+									{repo.description && (
+										<p className="text-[11px] text-muted-foreground/60 mt-1 truncate max-w-lg">
+											{
+												repo.description
+											}
+										</p>
 									)}
 								</div>
 
-								{repo.description && (
-									<p className="text-[11px] text-muted-foreground/60 mt-1 truncate max-w-lg">
-										{repo.description}
-									</p>
-								)}
-							</div>
-
-							<div className="flex items-center gap-4 shrink-0">
-								{repo.language && (
-									<span className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60 font-mono">
-										<span
-											className="w-2 h-2 rounded-full"
-											style={{
-												backgroundColor:
-													getLanguageColor(
-														repo.language,
-													),
-											}}
-										/>
-										{repo.language}
-									</span>
-								)}
-								{repo.stargazers_count > 0 && (
-									<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
-										<Star className="w-3 h-3" />
-										{formatNumber(
-											repo.stargazers_count,
-										)}
-									</span>
-								)}
-								{repo.forks_count > 0 && (
-									<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
-										<GitFork className="w-3 h-3" />
-										{formatNumber(
-											repo.forks_count,
-										)}
-									</span>
-								)}
-								{repo.updated_at && (
-									<span className="text-[11px] text-muted-foreground font-mono w-14 text-right">
-										<TimeAgo
-											date={
-												repo.updated_at
+								<div className="flex items-center gap-4 shrink-0">
+									{repo.language && (
+										<span className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60 font-mono">
+											<span
+												className="w-2 h-2 rounded-full"
+												style={{
+													backgroundColor:
+														getLanguageColor(
+															repo.language,
+														),
+												}}
+											/>
+											{
+												repo.language
 											}
-										/>
-									</span>
-								)}
-								<ChevronRight className="w-3 h-3 text-foreground/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-							</div>
-						</Link>
-					))}
+										</span>
+									)}
+									{repo.stargazers_count >
+										0 && (
+										<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
+											<Star className="w-3 h-3" />
+											{formatNumber(
+												repo.stargazers_count,
+											)}
+										</span>
+									)}
+									{repo.forks_count > 0 && (
+										<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
+											<GitFork className="w-3 h-3" />
+											{formatNumber(
+												repo.forks_count,
+											)}
+										</span>
+									)}
+									{repo.updated_at && (
+										<span className="text-[11px] text-muted-foreground font-mono w-14 text-right">
+											<TimeAgo
+												date={
+													repo.updated_at
+												}
+											/>
+										</span>
+									)}
+									<ChevronRight className="w-3 h-3 text-foreground/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+								</div>
+							</Link>
+						))}
 
-					{filtered.length === 0 && (
+					{activeTab !== "repos" &&
+						activePeople.map((person) => (
+							<Link
+								key={person.login}
+								href={`/users/${person.login}`}
+								className="group flex items-start gap-3 px-4 py-3 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors"
+							>
+								<Image
+									src={person.avatar_url}
+									alt={person.login}
+									width={28}
+									height={28}
+									className="rounded-full shrink-0 ring-1 ring-border/60"
+								/>
+								<div className="min-w-0 flex-1">
+									<div className="flex items-center gap-2 min-w-0">
+										<div className="text-sm font-medium truncate">
+											{person.name ??
+												person.login}
+										</div>
+										{person.name && (
+											<div className="text-[11px] font-mono text-muted-foreground/60 truncate">
+												{
+													person.login
+												}
+											</div>
+										)}
+									</div>
+									<div className="mt-0.5 min-h-4 text-[11px] text-muted-foreground/60 truncate">
+										{person.bio ?? ""}
+									</div>
+									<div className="mt-1 min-h-4 flex items-center gap-3 text-[10px] font-mono text-muted-foreground/50">
+										{person.company && (
+											<span className="inline-flex items-center gap-1 truncate max-w-[200px]">
+												<Building2 className="w-3 h-3 shrink-0" />
+												<span className="truncate">
+													{
+														person.company
+													}
+												</span>
+											</span>
+										)}
+										{person.location && (
+											<span className="inline-flex items-center gap-1 truncate max-w-[180px]">
+												<MapPin className="w-3 h-3 shrink-0" />
+												<span className="truncate">
+													{
+														person.location
+													}
+												</span>
+											</span>
+										)}
+										{person.site_admin && (
+											<span className="inline-flex items-center gap-1">
+												<Shield className="w-3 h-3 shrink-0" />
+												GitHub
+												staff
+											</span>
+										)}
+										{person.type ===
+											"Bot" && (
+											<span className="inline-flex items-center gap-1">
+												<Bot className="w-3 h-3 shrink-0" />
+												Bot
+											</span>
+										)}
+									</div>
+								</div>
+								<ChevronRight className="w-3 h-3 text-foreground/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+							</Link>
+						))}
+
+					{activeTab === "repos" && filtered.length === 0 && (
 						<div className="py-16 text-center">
 							<FolderGit2 className="w-6 h-6 text-muted-foreground/20 mx-auto mb-3" />
 							<p className="text-xs text-muted-foreground/50 font-mono">
 								No repositories found
+							</p>
+						</div>
+					)}
+					{activeTab !== "repos" && activePeople.length === 0 && (
+						<div className="py-16 text-center">
+							<Users className="w-6 h-6 text-muted-foreground/20 mx-auto mb-3" />
+							<p className="text-xs text-muted-foreground/50 font-mono">
+								{activeTab === "followers"
+									? "No followers found"
+									: "No following users found"}
 							</p>
 						</div>
 					)}

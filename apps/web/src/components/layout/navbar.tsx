@@ -212,27 +212,36 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 									</div>
 									{gh && (
 										<div className="flex items-center gap-3 mt-2.5 pt-2 border-t border-border/40">
-											<span className="text-[10px] text-muted-foreground font-mono">
+											<Link
+												href={`/users/${gh.login}?tab=followers`}
+												className="text-[10px] text-muted-foreground font-mono hover:text-foreground transition-colors"
+											>
 												<span className="text-foreground/80 font-medium">
 													{gh.followers ??
 														0}
 												</span>{" "}
 												followers
-											</span>
-											<span className="text-[10px] text-muted-foreground font-mono">
+											</Link>
+											<Link
+												href={`/users/${gh.login}?tab=following`}
+												className="text-[10px] text-muted-foreground font-mono hover:text-foreground transition-colors"
+											>
 												<span className="text-foreground/80 font-medium">
 													{gh.following ??
 														0}
 												</span>{" "}
 												following
-											</span>
-											<span className="text-[10px] text-muted-foreground font-mono">
+											</Link>
+											<Link
+												href={`/users/${gh.login}`}
+												className="text-[10px] text-muted-foreground font-mono hover:text-foreground transition-colors"
+											>
 												<span className="text-foreground/80 font-medium">
 													{gh.public_repos ??
 														0}
 												</span>{" "}
 												repos
-											</span>
+											</Link>
 										</div>
 									)}
 								</div>

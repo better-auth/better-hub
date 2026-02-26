@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
 	getOrg,
 	getOrgRepos,
@@ -7,9 +7,12 @@ import {
 	getUserPublicRepos,
 	getUserPublicOrgs,
 	getUserOrgTopRepos,
+	getUserFollowers,
+	getUserFollowing,
 	getContributionData,
 } from "@/lib/github";
 import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
+import { resolveProfileTab } from "@/lib/utils";
 import { OrgDetailContent } from "@/components/orgs/org-detail-content";
 import { UserProfileContent } from "@/components/users/user-profile-content";
 
@@ -20,6 +23,21 @@ export async function generateMetadata({
 }): Promise<Metadata> {
 	const { owner } = await params;
 	const ogUrl = ogImageUrl({ type: "owner", owner });
+	const actorData = await getUser(owner).catch(() => null);
+	if (actorData) {
+		const actorType = (actorData as { type?: string }).type;
+		const displayName = actorData.name
+			? actorType === "Organization"
+				? actorData.name
+				: `${actorData.name} (${actorData.login})`
+			: actorData.login;
+		return {
+			title: displayName,
+			description: actorData.bio || `${displayName} on Better Hub`,
+			openGraph: { title: displayName, ...ogImages(ogUrl) },
+			twitter: { card: "summary_large_image", ...ogImages(ogUrl) },
+		};
+	}
 	const orgData = await getOrg(owner).catch(() => null);
 	if (orgData) {
 		return {
@@ -31,28 +49,33 @@ export async function generateMetadata({
 			twitter: { card: "summary_large_image", ...ogImages(ogUrl) },
 		};
 	}
-	const userData = await getUser(owner).catch(() => null);
-	if (userData) {
-		const displayName = userData.name
-			? `${userData.name} (${userData.login})`
-			: userData.login;
-		return {
-			title: displayName,
-			description: userData.bio || `${displayName} on Better Hub`,
-			openGraph: { title: displayName, ...ogImages(ogUrl) },
-			twitter: { card: "summary_large_image", ...ogImages(ogUrl) },
-		};
-	}
 	return { title: owner };
 }
 
-export default async function OwnerPage({ params }: { params: Promise<{ owner: string }> }) {
+export default async function OwnerPage({
+	params,
+	searchParams,
+}: {
+	params: Promise<{ owner: string }>;
+	searchParams?: Promise<{ tab?: string }>;
+}) {
 	const { owner } = await params;
+	const rawTab = (await searchParams)?.tab;
+	const tab = resolveProfileTab(rawTab);
 
-	// Try org first — GitHub orgs return from getOrg, users don't
-	const orgData = await getOrg(owner).catch(() => null);
+	// Resolve actor via /users first to avoid noisy /orgs/* 404s for normal users.
+	const actorData = await getUser(owner).catch(() => null);
+	const actorType = (actorData as { type?: string } | null)?.type;
 
-	if (orgData) {
+	if (actorType === "Organization") {
+		const orgData = await getOrg(owner).catch(() => null);
+		if (!orgData) {
+			notFound();
+		}
+
+		if (tab === "followers" || tab === "following") {
+			redirect(`/${owner}`);
+		}
 		const reposData = await getOrgRepos(owner, {
 			perPage: 100,
 			sort: "updated",
@@ -95,34 +118,50 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 		);
 	}
 
-	// Fall back to user profile
-	const userData = await getUser(owner).catch(() => null);
-
+	const userData = actorData;
 	if (!userData) {
 		notFound();
 	}
 
-	const isBot = (userData as { type?: string }).type === "Bot";
+	const userActorType = (userData as { type?: string }).type;
+	const isBot = userActorType === "Bot";
+	const isStandardUser = userActorType === "User" || !userActorType;
 
 	let reposData: Awaited<ReturnType<typeof getUserPublicRepos>> = [];
 	let orgsData: Awaited<ReturnType<typeof getUserPublicOrgs>> = [];
 	let contributionData: Awaited<ReturnType<typeof getContributionData>> = null;
 	let orgTopRepos: Awaited<ReturnType<typeof getUserOrgTopRepos>> = [];
+	let followersData: Awaited<ReturnType<typeof getUserFollowers>> = [];
+	let followingData: Awaited<ReturnType<typeof getUserFollowing>> = [];
 
 	if (!isBot) {
-		try {
-			[reposData, orgsData, contributionData] = await Promise.all([
-				getUserPublicRepos(userData.login, 100),
-				getUserPublicOrgs(userData.login),
-				getContributionData(userData.login),
-			]);
-			if (orgsData.length > 0) {
-				orgTopRepos = await getUserOrgTopRepos(
-					orgsData.map((o) => o.login),
-				);
-			}
-		} catch {
-			// Show profile with whatever we have
+		const [
+			reposResult,
+			orgsResult,
+			contributionResult,
+			followersResult,
+			followingResult,
+		] = await Promise.allSettled([
+			getUserPublicRepos(userData.login, 100),
+			isStandardUser ? getUserPublicOrgs(userData.login) : Promise.resolve([]),
+			isStandardUser
+				? getContributionData(userData.login)
+				: Promise.resolve(null),
+			getUserFollowers(userData.login, 100),
+			getUserFollowing(userData.login, 100),
+		]);
+
+		reposData = reposResult.status === "fulfilled" ? reposResult.value : [];
+		orgsData = orgsResult.status === "fulfilled" ? orgsResult.value : [];
+		contributionData =
+			contributionResult.status === "fulfilled" ? contributionResult.value : null;
+		followersData = followersResult.status === "fulfilled" ? followersResult.value : [];
+		followingData = followingResult.status === "fulfilled" ? followingResult.value : [];
+
+		if (isStandardUser && orgsData.length > 0) {
+			orgTopRepos = await getUserOrgTopRepos(orgsData.map((o) => o.login)).catch(
+				() => [],
+			);
 		}
 	}
 
@@ -165,6 +204,9 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 				avatar_url: org.avatar_url,
 			}))}
 			contributions={contributionData}
+			followers={followersData}
+			following={followingData}
+			initialTab={tab}
 			orgTopRepos={orgTopRepos.map((r) => ({
 				name: r.name,
 				full_name: r.full_name,
