@@ -373,7 +373,10 @@ export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 									setPatError("");
 								}}
 								onKeyDown={(e) => {
-									if (e.key === "Enter" && !loading)
+									if (
+										e.key === "Enter" &&
+										!loading
+									)
 										handlePatSignIn();
 								}}
 								placeholder="ghp_..."
@@ -383,7 +386,7 @@ export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 								href="https://github.com/settings/tokens/new"
 								target="_blank"
 								className="ms-auto text-xs text-foreground/30 hover:text-muted-foreground focus-visible:text-foreground inline-flex items-center gap-1 transition-colors cursor-pointer"
-								>
+							>
 								<PlusIcon className="size-3.5" />
 								Generate Token
 							</a>

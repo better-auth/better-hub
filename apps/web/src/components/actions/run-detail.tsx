@@ -320,9 +320,12 @@ export function RunDetail({
 									<span className="flex items-center gap-1 text-[10px] text-muted-foreground">
 										<Clock className="w-2.5 h-2.5" />
 										<LiveDuration
-											startedAt={run.run_started_at}
+											startedAt={
+												run.run_started_at
+											}
 											completedAt={
-												run.status === "completed"
+												run.status ===
+												"completed"
 													? run.updated_at
 													: null
 											}
@@ -379,8 +382,12 @@ export function RunDetail({
 								<span className="flex items-center gap-1 text-[11px] font-mono text-muted-foreground/50 shrink-0">
 									<Clock className="w-3 h-3" />
 									<LiveDuration
-										startedAt={job.started_at}
-										completedAt={job.completed_at}
+										startedAt={
+											job.started_at
+										}
+										completedAt={
+											job.completed_at
+										}
 									/>
 								</span>
 							)}
