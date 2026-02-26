@@ -1,4 +1,5 @@
 import { getRepoPageData, getRepoTree, prefetchPRData } from "@/lib/github";
+import { countPromptRequests } from "@/lib/prompt-request-store";
 import { buildFileTree, type FileTreeNode } from "@/lib/file-tree";
 import { RepoSidebar } from "@/components/repo/repo-sidebar";
 import { RepoNav } from "@/components/repo/repo-nav";
@@ -106,6 +107,7 @@ export default async function RepoLayout({
 		getCachedBranches(owner, repoName),
 		getCachedTags(owner, repoName),
 	]);
+	const promptCountPromise = countPromptRequests(owner, repoName, "open");
 
 	const pageDataResult = await pageDataPromise;
 	if (!pageDataResult.success) {
@@ -131,6 +133,8 @@ export default async function RepoLayout({
 
 	const [cachedTree, cachedContributors, cachedLanguages, cachedBranches, cachedTags] =
 		await cachePromise;
+
+	const promptRequestsCount = await promptCountPromise;
 
 	const cookieStore = await cookies();
 	const sidebarCookie = cookieStore.get(REPO_SIDEBAR_COOKIE);
@@ -219,6 +223,9 @@ export default async function RepoLayout({
 						openIssuesCount={navCounts.openIssues}
 						openPrsCount={navCounts.openPrs}
 						activeRunsCount={navCounts.activeRuns}
+						hasDiscussions={!!repoData.has_discussions}
+						discussionsCount={navCounts.discussions}
+						promptRequestsCount={promptRequestsCount}
 						showPeopleTab={showPeopleTab}
 					/>
 				</div>

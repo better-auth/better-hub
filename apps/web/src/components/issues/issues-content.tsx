@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
+import { useQueryState, parseAsString, parseAsStringLiteral } from "nuqs";
 import Link from "next/link";
 import {
 	CircleDot,
@@ -19,8 +20,11 @@ import { TimeAgo } from "@/components/ui/time-ago";
 import { CopyLinkButton } from "@/components/shared/copy-link-button";
 import type { IssueItem } from "@/lib/github-types";
 
-type TabType = "assigned" | "created" | "mentioned";
-type SortType = "updated" | "newest" | "oldest";
+const issueTabTypes = ["assigned", "created", "mentioned"] as const;
+type TabType = (typeof issueTabTypes)[number];
+
+const issueSortTypes = ["updated", "newest", "oldest"] as const;
+type SortType = (typeof issueSortTypes)[number];
 
 const sortLabels: Record<SortType, string> = {
 	updated: "Updated",
@@ -46,9 +50,15 @@ export function IssuesContent({
 	mentioned: { items: IssueItem[]; total_count: number };
 	username: string;
 }) {
-	const [tab, setTab] = useState<TabType>("assigned");
-	const [search, setSearch] = useState("");
-	const [sort, setSort] = useState<SortType>("updated");
+	const [tab, setTab] = useQueryState(
+		"tab",
+		parseAsStringLiteral(issueTabTypes).withDefault("assigned"),
+	);
+	const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
+	const [sort, setSort] = useQueryState(
+		"sort",
+		parseAsStringLiteral(issueSortTypes).withDefault("updated"),
+	);
 
 	const tabItems: { key: TabType; label: string; icon: React.ReactNode; count: number }[] = [
 		{

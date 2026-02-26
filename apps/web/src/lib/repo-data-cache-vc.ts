@@ -12,6 +12,7 @@ export {
 	getCachedOverviewEvents,
 	getCachedOverviewCommitActivity,
 	getCachedOverviewCI,
+	updateCachedRepoPageDataNavCounts,
 	type ContributorAvatarsData,
 	type BranchRef,
 } from "./repo-data-cache";

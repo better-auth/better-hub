@@ -20,14 +20,23 @@ export async function generateMetadata({
 	const { owner } = await params;
 	const orgData = await getOrg(owner).catch(() => null);
 	if (orgData) {
-		return { title: orgData.name || orgData.login };
+		return {
+			title: orgData.name || orgData.login,
+			description:
+				orgData.description ||
+				`${orgData.name || orgData.login} on Better Hub`,
+			openGraph: { title: orgData.name || orgData.login },
+		};
 	}
 	const userData = await getUser(owner).catch(() => null);
 	if (userData) {
+		const displayName = userData.name
+			? `${userData.name} (${userData.login})`
+			: userData.login;
 		return {
-			title: userData.name
-				? `${userData.name} (${userData.login})`
-				: userData.login,
+			title: displayName,
+			description: userData.bio || `${displayName} on Better Hub`,
+			openGraph: { title: displayName },
 		};
 	}
 	return { title: owner };

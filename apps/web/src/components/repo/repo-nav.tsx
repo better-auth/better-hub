@@ -13,6 +13,9 @@ interface RepoNavProps {
 	openIssuesCount?: number;
 	openPrsCount?: number;
 	activeRunsCount?: number;
+	hasDiscussions?: boolean;
+	discussionsCount?: number;
+	promptRequestsCount?: number;
 
 	showPeopleTab?: boolean;
 }
@@ -23,6 +26,9 @@ export function RepoNav({
 	openIssuesCount,
 	openPrsCount,
 	activeRunsCount,
+	hasDiscussions,
+	discussionsCount,
+	promptRequestsCount,
 
 	showPeopleTab,
 }: RepoNavProps) {
@@ -31,11 +37,11 @@ export function RepoNav({
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [indicator, setIndicator] = useState({ left: 0, width: 0 });
 	const [hasAnimated, setHasAnimated] = useState(false);
-	const [countAdjustments, setCountAdjustments] = useState({ prs: 0, issues: 0 });
+	const [countAdjustments, setCountAdjustments] = useState({ prs: 0, issues: 0, prompts: 0 });
 
 	useEffect(() => {
-		setCountAdjustments({ prs: 0, issues: 0 });
-	}, [openPrsCount, openIssuesCount]);
+		setCountAdjustments({ prs: 0, issues: 0, prompts: 0 });
+	}, [openPrsCount, openIssuesCount, promptRequestsCount]);
 
 	useMutationSubscription(
 		[
@@ -45,6 +51,10 @@ export function RepoNav({
 			"issue:closed",
 			"issue:reopened",
 			"issue:created",
+			"prompt:created",
+			"prompt:accepted",
+			"prompt:closed",
+			"prompt:reopened",
 		],
 		(event: MutationEvent) => {
 			if (!isRepoEvent(event, owner, repo)) return;
@@ -60,6 +70,12 @@ export function RepoNav({
 					case "issue:reopened":
 					case "issue:created":
 						return { ...prev, issues: prev.issues + 1 };
+					case "prompt:created":
+					case "prompt:reopened":
+						return { ...prev, prompts: prev.prompts + 1 };
+					case "prompt:accepted":
+					case "prompt:closed":
+						return { ...prev, prompts: prev.prompts - 1 };
 					default:
 						return prev;
 				}
@@ -101,6 +117,22 @@ export function RepoNav({
 			href: `${base}/issues`,
 			active: pathname.startsWith(`${base}/issues`),
 			count: (openIssuesCount ?? 0) + countAdjustments.issues,
+		},
+		...(hasDiscussions
+			? [
+					{
+						label: "Discussions",
+						href: `${base}/discussions`,
+						active: pathname.startsWith(`${base}/discussions`),
+						count: discussionsCount,
+					},
+				]
+			: []),
+		{
+			label: "Prompts",
+			href: `${base}/prompts`,
+			active: pathname.startsWith(`${base}/prompts`),
+			count: (promptRequestsCount ?? 0) + countAdjustments.prompts,
 		},
 		...(showPeopleTab
 			? [
@@ -195,7 +227,7 @@ export function RepoNav({
 			))}
 			<div
 				className={cn(
-					"absolute bottom-0 h-0.5 bg-foreground",
+					"absolute bottom-0 h-0.5 bg-foreground/50",
 					hasAnimated ? "transition-all duration-200 ease-out" : "",
 				)}
 				style={{ left: indicator.left, width: indicator.width }}

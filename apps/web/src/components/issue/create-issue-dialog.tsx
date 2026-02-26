@@ -21,6 +21,7 @@ import {
 	CornerDownLeft,
 	Eye,
 	Pencil,
+	Image,
 } from "lucide-react";
 import {
 	Dialog,
@@ -36,6 +37,7 @@ import {
 	createIssue,
 	getIssueTemplates,
 	getRepoLabels,
+	uploadImage,
 } from "@/app/(app)/repos/[owner]/[repo]/issues/actions";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 
@@ -70,12 +72,15 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 	const [error, setError] = useState<string | null>(null);
 	const [isPending, startTransition] = useTransition();
 	const [bodyTab, setBodyTab] = useState<"write" | "preview">("write");
+	const [uploadingImages, setUploadingImages] = useState(false);
 	const { emit } = useMutationEvents();
 
 	// Track whether user has touched the form (to avoid yanking them to templates)
 	const userTouchedForm = useRef(false);
 	const openId = useRef(0);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
+	const fileInputRef = useRef<HTMLInputElement>(null);
+	const dropZoneRef = useRef<HTMLDivElement>(null);
 
 	const handleOpen = useCallback(() => {
 		// Restore draft from localStorage if present
@@ -105,6 +110,7 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 		setLabelSearch("");
 		setError(null);
 		setBodyTab("write");
+		setUploadingImages(false);
 
 		if (!draft?.title && !draft?.body && cached && cached.templates.length > 0) {
 			setTemplates(cached.templates);
@@ -212,6 +218,117 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 			}
 		});
 	};
+
+	// Handle image upload and insert markdown
+	const handleImageUpload = async (file: File) => {
+		if (!file.type.startsWith("image/")) {
+			setError("Only image files are allowed");
+			return;
+		}
+
+		// Check file size (GitHub has a 100MB limit but we'll use 10MB for issues)
+		if (file.size > 10 * 1024 * 1024) {
+			setError("Image file is too large (max 10MB)");
+			return;
+		}
+
+		setUploadingImages(true);
+		setError(null);
+
+		try {
+			const result = await uploadImage(owner, repo, file);
+			if (result.success && result.url) {
+				// Insert markdown image at cursor position
+				const ta = textareaRef.current;
+				if (ta) {
+					const start = ta.selectionStart;
+					const end = ta.selectionEnd;
+					const imageMarkdown = `\n![${file.name}](${result.url})\n`;
+					const newBody =
+						body.slice(0, start) +
+						imageMarkdown +
+						body.slice(end);
+					setBody(newBody);
+					userTouchedForm.current = true;
+
+					// Restore cursor position after the image
+					requestAnimationFrame(() => {
+						ta.focus();
+						const cursorPos = start + imageMarkdown.length;
+						ta.setSelectionRange(cursorPos, cursorPos);
+					});
+				} else {
+					// Fallback: append to end
+					setBody(
+						(prev) =>
+							prev + `\n![${file.name}](${result.url})\n`,
+					);
+				}
+			} else {
+				setError(result.error || "Failed to upload image");
+			}
+		} catch (err) {
+			setError("Failed to upload image");
+		} finally {
+			setUploadingImages(false);
+			if (fileInputRef.current) {
+				fileInputRef.current.value = "";
+			}
+		}
+	};
+
+	// Handle file input change
+	const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const files = e.target.files;
+		if (files && files.length > 0) {
+			handleImageUpload(files[0]);
+		}
+	};
+
+	// Handle drag and drop events
+	const handleDragOver = useCallback((e: React.DragEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+	}, []);
+
+	const handleDrop = useCallback(
+		(e: React.DragEvent) => {
+			e.preventDefault();
+			e.stopPropagation();
+
+			const files = e.dataTransfer.files;
+			if (files && files.length > 0) {
+				// Upload the first image file
+				for (const file of files) {
+					if (file.type.startsWith("image/")) {
+						handleImageUpload(file);
+						break;
+					}
+				}
+			}
+		},
+		[body],
+	);
+
+	// Handle paste events
+	const handlePaste = useCallback(
+		async (e: React.ClipboardEvent) => {
+			const items = e.clipboardData?.items;
+			if (!items) return;
+
+			for (const item of items) {
+				if (item.type.startsWith("image/")) {
+					e.preventDefault();
+					const file = item.getAsFile();
+					if (file) {
+						await handleImageUpload(file);
+					}
+					break;
+				}
+			}
+		},
+		[body],
+	);
 
 	// Insert markdown formatting around selection or at cursor
 	const insertMarkdown = (prefix: string, suffix: string = prefix) => {
@@ -500,44 +617,99 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 													</button>
 												),
 											)}
+											{/* Image upload button */}
+											<button
+												onClick={() =>
+													fileInputRef.current?.click()
+												}
+												className="p-1 text-muted-foreground/35 hover:text-muted-foreground transition-colors cursor-pointer rounded"
+												title="Upload image"
+												type="button"
+												disabled={
+													uploadingImages
+												}
+											>
+												{uploadingImages ? (
+													<Loader2 className="w-3.5 h-3.5 animate-spin" />
+												) : (
+													<Image className="w-3.5 h-3.5" />
+												)}
+											</button>
 										</div>
 									)}
 								</div>
 
 								{/* Write / Preview */}
-								<div className="flex-1 min-h-0 rounded-lg border border-border/50 dark:border-white/6 overflow-hidden bg-muted/15 dark:bg-white/[0.01] focus-within:border-foreground/15 transition-colors">
+								<div
+									ref={dropZoneRef}
+									onDragOver={handleDragOver}
+									onDrop={handleDrop}
+									className={cn(
+										"flex-1 min-h-0 rounded-lg border border-border/50 dark:border-white/6 overflow-hidden bg-muted/15 dark:bg-white/[0.01] focus-within:border-foreground/15 transition-colors",
+										bodyTab ===
+											"write" &&
+											"relative",
+									)}
+								>
+									{/* Hidden file input for image upload */}
+									<input
+										type="file"
+										ref={fileInputRef}
+										onChange={
+											handleFileInputChange
+										}
+										accept="image/*"
+										className="hidden"
+									/>
 									{bodyTab === "write" ? (
-										<textarea
-											ref={
-												textareaRef
-											}
-											value={body}
-											onChange={(
-												e,
-											) => {
-												setBody(
-													e
-														.target
-														.value,
-												);
-												userTouchedForm.current = true;
-											}}
-											placeholder="Describe the issue... (Markdown supported)"
-											className="w-full h-full bg-transparent px-3 py-2.5 text-[13px] leading-relaxed placeholder:text-muted-foreground/25 focus:outline-none resize-none font-mono"
-											onKeyDown={(
-												e,
-											) => {
-												if (
-													e.key ===
-														"Enter" &&
-													(e.metaKey ||
-														e.ctrlKey)
-												) {
-													e.preventDefault();
-													handleSubmit();
+										<>
+											<textarea
+												ref={
+													textareaRef
 												}
-											}}
-										/>
+												value={
+													body
+												}
+												onChange={(
+													e,
+												) => {
+													setBody(
+														e
+															.target
+															.value,
+													);
+													userTouchedForm.current = true;
+												}}
+												placeholder="Describe the issue... (Markdown supported)"
+												className="w-full h-full bg-transparent px-3 py-2.5 text-[13px] leading-relaxed placeholder:text-muted-foreground/25 focus:outline-none resize-none font-mono"
+												onKeyDown={(
+													e,
+												) => {
+													if (
+														e.key ===
+															"Enter" &&
+														(e.metaKey ||
+															e.ctrlKey)
+													) {
+														e.preventDefault();
+														handleSubmit();
+													}
+												}}
+												onPaste={
+													handlePaste
+												}
+											/>
+											{/* Drag overlay hint */}
+											{uploadingImages && (
+												<div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+													<div className="flex items-center gap-2 text-sm text-muted-foreground">
+														<Loader2 className="w-4 h-4 animate-spin" />
+														Uploading
+														image...
+													</div>
+												</div>
+											)}
+										</>
 									) : (
 										<div className="h-full overflow-y-auto px-3 py-2.5">
 											{body.trim() ? (
@@ -557,6 +729,16 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 											)}
 										</div>
 									)}
+								</div>
+
+								{/* Upload hint */}
+								<div className="flex items-center justify-between mt-1">
+									<span className="text-[10px] text-muted-foreground/40">
+										Drag & drop, paste,
+										or click the image
+										button to upload
+										images
+									</span>
 								</div>
 							</div>
 

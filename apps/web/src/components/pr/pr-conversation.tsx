@@ -20,6 +20,7 @@ import { CollapsibleDescription } from "./collapsible-description";
 import { ChatMessageWrapper } from "./chat-message-wrapper";
 import { PRChecksPanel } from "./pr-checks-panel";
 import type { CheckStatus } from "@/lib/github";
+import { UserTooltip } from "@/components/shared/user-tooltip";
 
 interface BaseUser {
 	login: string;
@@ -385,21 +386,23 @@ async function ChatMessage({
 	const headerContent = (
 		<>
 			{entry.user ? (
-				<Link
-					href={`/users/${entry.user.login}`}
-					className="flex items-center gap-2 hover:text-foreground transition-colors"
-				>
-					<Image
-						src={entry.user.avatar_url}
-						alt={entry.user.login}
-						width={16}
-						height={16}
-						className="rounded-full shrink-0"
-					/>
-					<span className="text-xs font-medium text-foreground/80">
-						{entry.user.login}
-					</span>
-				</Link>
+				<UserTooltip username={entry.user.login}>
+					<Link
+						href={`/users/${entry.user.login}`}
+						className="flex items-center gap-2 hover:text-foreground transition-colors"
+					>
+						<Image
+							src={entry.user.avatar_url}
+							alt={entry.user.login}
+							width={16}
+							height={16}
+							className="rounded-full shrink-0"
+						/>
+						<span className="text-xs font-medium text-foreground/80 hover:underline">
+							{entry.user.login}
+						</span>
+					</Link>
+				</UserTooltip>
 			) : (
 				<>
 					<div className="w-4 h-4 rounded-full bg-muted-foreground shrink-0" />
@@ -521,24 +524,30 @@ function CommitGroup({ commits }: { commits: CommitEntry[] }) {
 						<GitCommitHorizontal className="w-3.5 h-3.5 text-muted-foreground/30 shrink-0" />
 						<div className="flex items-center -space-x-1 shrink-0">
 							{commit.user ? (
-								<Link
-									href={`/users/${commit.user.login}`}
-									className="relative z-10"
+								<UserTooltip
+									username={commit.user.login}
 								>
-									<Image
-										src={
-											commit.user
-												.avatar_url
-										}
-										alt={
-											commit.user
-												.login
-										}
-										width={16}
-										height={16}
-										className="rounded-full border border-background"
-									/>
-								</Link>
+									<Link
+										href={`/users/${commit.user.login}`}
+										className="relative z-10"
+									>
+										<Image
+											src={
+												commit
+													.user
+													.avatar_url
+											}
+											alt={
+												commit
+													.user
+													.login
+											}
+											width={16}
+											height={16}
+											className="rounded-full border border-background"
+										/>
+									</Link>
+								</UserTooltip>
 							) : (
 								<div className="w-4 h-4 rounded-full bg-muted-foreground border border-background relative z-10 shrink-0" />
 							)}
@@ -640,21 +649,23 @@ function StateChangeEvent({ entry }: { entry: StateChangeEntry }) {
 			<Icon className={cn("w-4 h-4 shrink-0", config.color)} />
 			<div className="flex items-center gap-2 min-w-0 flex-1">
 				{entry.user ? (
-					<Link
-						href={`/users/${entry.user.login}`}
-						className="flex items-center gap-1.5 hover:opacity-80 transition-opacity shrink-0"
-					>
-						<Image
-							src={entry.user.avatar_url}
-							alt={entry.user.login}
-							width={16}
-							height={16}
-							className="rounded-full"
-						/>
-						<span className="text-xs font-medium text-foreground/80">
-							{entry.user.login}
-						</span>
-					</Link>
+					<UserTooltip username={entry.user.login}>
+						<Link
+							href={`/users/${entry.user.login}`}
+							className="flex items-center gap-1.5 hover:opacity-80 transition-opacity shrink-0"
+						>
+							<Image
+								src={entry.user.avatar_url}
+								alt={entry.user.login}
+								width={16}
+								height={16}
+								className="rounded-full"
+							/>
+							<span className="text-xs font-medium text-foreground/80 hover:underline">
+								{entry.user.login}
+							</span>
+						</Link>
+					</UserTooltip>
 				) : (
 					<span className="text-xs font-medium text-foreground/80">
 						Someone

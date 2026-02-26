@@ -28,6 +28,7 @@ import { LabelBadge } from "@/components/shared/label-badge";
 import { useGlobalChat } from "@/components/shared/global-chat-provider";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { Zap, GitPullRequest } from "lucide-react";
+import { UserTooltip } from "@/components/shared/user-tooltip";
 
 interface IssueUser {
 	login: string;
@@ -1045,25 +1046,34 @@ export function IssuesList({
 													(
 														a,
 													) => (
-														<Image
+														<UserTooltip
 															key={
 																a.login
 															}
-															src={
-																a.avatar_url
-															}
-															alt={
+															username={
 																a.login
 															}
-															width={
-																16
-															}
-															height={
-																16
-															}
-															className="rounded-full border border-border"
-															title={`Assignee: ${a.login}`}
-														/>
+														>
+															<Link
+																href={`/users/${a.login}`}
+															>
+																<Image
+																	src={
+																		a.avatar_url
+																	}
+																	alt={
+																		a.login
+																	}
+																	width={
+																		16
+																	}
+																	height={
+																		16
+																	}
+																	className="rounded-full border border-border hover:ring-2 hover:ring-primary/50 transition-all"
+																/>
+															</Link>
+														</UserTooltip>
 													),
 												)}
 										</span>
@@ -1073,34 +1083,45 @@ export function IssuesList({
 								{/* Row 2: Author avatar + login + opened X ago */}
 								<div className="flex items-center gap-3 mt-1">
 									{issue.user && (
-										<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
-											<Image
-												src={
-													issue
-														.user
-														.avatar_url
-												}
-												alt={
-													issue
-														.user
-														.login
-												}
-												width={
-													14
-												}
-												height={
-													14
-												}
-												className="rounded-full"
-											/>
-											<span className="font-mono text-[10px]">
-												{
-													issue
-														.user
-														.login
-												}
-											</span>
-										</span>
+										<UserTooltip
+											username={
+												issue
+													.user
+													.login
+											}
+										>
+											<Link
+												href={`/users/${issue.user.login}`}
+												className="flex items-center gap-1 text-[11px] text-muted-foreground/60 hover:text-foreground transition-colors"
+											>
+												<Image
+													src={
+														issue
+															.user
+															.avatar_url
+													}
+													alt={
+														issue
+															.user
+															.login
+													}
+													width={
+														14
+													}
+													height={
+														14
+													}
+													className="rounded-full"
+												/>
+												<span className="font-mono text-[10px] hover:underline">
+													{
+														issue
+															.user
+															.login
+													}
+												</span>
+											</Link>
+										</UserTooltip>
 									)}
 									<span className="text-[11px] text-muted-foreground/50">
 										opened{" "}

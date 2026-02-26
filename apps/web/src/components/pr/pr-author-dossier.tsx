@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import type { ScoreResult } from "@/lib/contributor-score";
+import { UserTooltip } from "@/components/shared/user-tooltip";
 
 interface AuthorOrg {
 	login: string;
@@ -288,21 +289,28 @@ export function PRAuthorDossier({
 		<div className="mb-1">
 			{/* Author summary row */}
 			<div className="flex items-center gap-2 px-1 py-1.5">
-				<Image
-					src={author.avatar_url}
-					alt={author.login}
-					width={20}
-					height={20}
-					className="rounded-full shrink-0"
-				/>
-				<span className="text-[11px] font-medium text-foreground/80 truncate">
-					{author.name || author.login}
-				</span>
-				{author.name && (
-					<span className="text-[10px] font-mono text-muted-foreground truncate hidden sm:inline">
-						{author.login}
-					</span>
-				)}
+				<UserTooltip username={author.login} side="bottom" align="start">
+					<Link
+						href={`/users/${author.login}`}
+						className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+					>
+						<Image
+							src={author.avatar_url}
+							alt={author.login}
+							width={20}
+							height={20}
+							className="rounded-full shrink-0"
+						/>
+						<span className="text-[11px] font-medium text-foreground/80 truncate hover:underline">
+							{author.name || author.login}
+						</span>
+						{author.name && (
+							<span className="text-[10px] font-mono text-muted-foreground truncate hidden sm:inline">
+								{author.login}
+							</span>
+						)}
+					</Link>
+				</UserTooltip>
 				{isBot && (
 					<span className="text-[8px] px-1 py-px bg-muted text-muted-foreground rounded-full font-mono uppercase shrink-0">
 						bot

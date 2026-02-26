@@ -18,7 +18,7 @@ At Better Auth, we spend a lot of our time on GitHub. So we decided to build the
 - **CI/CD status** — view workflow runs and compare across branches
 - **Security advisories** — track vulnerabilities per repo
 - **Keyboard-first** — most actions accessible via shortcuts
-- **Chrome extension** — adds a "Open in Better Hub" button on GitHub pages
+- **Browser extension** — adds a "Open in Better Hub" button on GitHub pages (Chrome & Firefox supported)
 
 ## Contributing
 

@@ -12,7 +12,7 @@ export async function GET(request: Request) {
 	try {
 		const buffer = await readFile(filePath);
 
-		return new Response(buffer, {
+		return new Response(new Uint8Array(buffer), {
 			headers: {
 				"Content-Type": "application/zip",
 				"Content-Disposition": `attachment; filename="${fileName}"`,

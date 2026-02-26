@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useMemo, useCallback } from "react";
+import { useQueryState, parseAsString, parseAsStringLiteral } from "nuqs";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import Link from "next/link";
 import Image from "next/image";
@@ -46,8 +47,12 @@ interface Repo {
 	};
 }
 
-type FilterType = "all" | "public" | "private" | "forks" | "archived";
-type SortType = "updated" | "name" | "stars";
+const repoFilterTypes = ["all", "public", "private", "forks", "archived"] as const;
+type FilterType = (typeof repoFilterTypes)[number];
+
+const sortTypes = ["updated", "name", "stars"] as const;
+type SortType = (typeof sortTypes)[number];
+
 type ViewMode = "list" | "grid" | "grouped";
 
 function RepoRow({ repo, showOwner = true }: { repo: Repo; showOwner?: boolean }) {
@@ -77,13 +82,13 @@ function RepoRow({ repo, showOwner = true }: { repo: Repo; showOwner?: boolean }
 					<span className="text-[13px] font-mono font-medium text-foreground group-hover:text-foreground transition-colors">
 						{showOwner ? (
 							<>
-								<span className="text-muted-foreground/50 font-normal">
+								<span className="text-muted-foreground/70 font-normal">
 									{repo.owner?.login ||
 										repo.full_name.split(
 											"/",
 										)[0]}
 								</span>
-								<span className="text-muted-foreground/30 mx-0.5">
+								<span className="text-muted-foreground/50 mx-0.5">
 									/
 								</span>
 								{repo.name}
@@ -164,10 +169,10 @@ function RepoCard({ repo }: { repo: Repo }) {
 			{/* Name */}
 			<div className="flex items-center gap-2 min-w-0">
 				<span className="text-[13px] font-mono font-medium truncate">
-					<span className="text-muted-foreground/50 font-normal">
+					<span className="text-muted-foreground/70 font-normal">
 						{repo.owner?.login || repo.full_name.split("/")[0]}
 					</span>
-					<span className="text-muted-foreground/30 mx-0.5">/</span>
+					<span className="text-muted-foreground/50 mx-0.5">/</span>
 					{repo.name}
 				</span>
 				{repo.private && (
@@ -176,7 +181,7 @@ function RepoCard({ repo }: { repo: Repo }) {
 			</div>
 
 			{/* Description */}
-			<p className="text-xs text-muted-foreground/60 mt-1.5 line-clamp-2 leading-relaxed flex-1">
+			<p className="text-xs text-muted-foreground/70 mt-1.5 line-clamp-2 leading-relaxed flex-1">
 				{repo.description || "No description"}
 			</p>
 
@@ -214,10 +219,16 @@ function RepoCard({ repo }: { repo: Repo }) {
 }
 
 export function ReposContent({ repos }: { repos: Repo[] }) {
-	const [search, setSearch] = useState("");
-	const [filter, setFilter] = useState<FilterType>("all");
-	const [sort, setSort] = useState<SortType>("updated");
-	const [lang, setLang] = useState("");
+	const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
+	const [filter, setFilter] = useQueryState(
+		"filter",
+		parseAsStringLiteral(repoFilterTypes).withDefault("all"),
+	);
+	const [sort, setSort] = useQueryState(
+		"sort",
+		parseAsStringLiteral(sortTypes).withDefault("updated"),
+	);
+	const [lang, setLang] = useQueryState("lang", parseAsString.withDefault(""));
 	const [showFilters, setShowFilters] = useState(false);
 	const [sortOpen, setSortOpen] = useState(false);
 	const [view, setView] = useState<ViewMode>(() => {

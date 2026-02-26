@@ -233,3 +233,85 @@ export async function getRepoLabels(
 		return [];
 	}
 }
+
+interface UploadImageResult {
+	success: boolean;
+	url?: string;
+	error?: string;
+}
+
+/**
+ * Upload an image to a temporary location in the repository for use in issue bodies.
+ * GitHub doesn't have a dedicated API for uploading images to issues directly,
+ * so we upload to a special branch or use the GitHub asset upload pattern.
+ */
+export async function uploadImage(
+	owner: string,
+	repo: string,
+	file: File,
+): Promise<UploadImageResult> {
+	const octokit = await getOctokit();
+	if (!octokit) return { success: false, error: "Not authenticated" };
+
+	try {
+		// Read file as base64
+		const bytes = await file.arrayBuffer();
+		const base64Content = Buffer.from(bytes).toString("base64");
+
+		// Generate a unique filename with timestamp
+		const timestamp = Date.now();
+		const randomId = Math.random().toString(36).substring(2, 10);
+		const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+		const filename = `issue-upload-${timestamp}-${randomId}.${ext}`;
+
+		// Get the default branch first
+		const { data: repoData } = await octokit.repos.get({ owner, repo });
+		const defaultBranch = repoData.default_branch;
+
+		// Try to create/update the file in a hidden .github-images directory
+		// This follows GitHub's pattern for issue assets
+		const path = `.github-images/${filename}`;
+
+		try {
+			// Create or update file on the default branch
+			await octokit.repos.createOrUpdateFileContents({
+				owner,
+				repo,
+				path,
+				message: `Upload image for issue: ${filename}`,
+				content: base64Content,
+				branch: defaultBranch,
+			});
+
+			// Construct the raw GitHub URL for the uploaded image
+			const imageUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${defaultBranch}/${path}`;
+
+			return { success: true, url: imageUrl };
+		} catch (error) {
+			// If the file already exists (rare but possible), try to get it
+			if (
+				typeof error === "object" &&
+				error !== null &&
+				"status" in error &&
+				error.status === 422
+			) {
+				// File might already exist, construct URL anyway
+				const imageUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${defaultBranch}/${path}`;
+				return { success: true, url: imageUrl };
+			}
+			throw error;
+		}
+	} catch (err: unknown) {
+		const message = getErrorMessage(err);
+		// Check if it's a permission error - users without write access can't upload this way
+		if (typeof err === "object" && err !== null && "status" in err) {
+			if (err.status === 403 || err.status === 404) {
+				return {
+					success: false,
+					error: "You don't have permission to upload images to this repository. Please drag and drop images directly into the GitHub text editor instead.",
+				};
+			}
+		}
+		return { success: false, error: `Upload failed: ${message}` };
+	}
+}

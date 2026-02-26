@@ -6,7 +6,7 @@ const MIME_TYPES: Record<string, string> = {
 	jpg: "image/jpeg",
 	jpeg: "image/jpeg",
 	gif: "image/gif",
-	svg: "image/svg+xml",
+	// SVG intentionally excluded — handled separately to prevent XSS
 	webp: "image/webp",
 	ico: "image/x-icon",
 	bmp: "image/bmp",
@@ -50,6 +50,27 @@ export async function GET(request: NextRequest) {
 		}
 
 		const ext = path.split(".").pop()?.toLowerCase() || "";
+
+		// SVGs can contain embedded scripts (<svg onload>, <script>, etc.).
+		// Serve with Content-Disposition: attachment so direct navigation triggers
+		// a download instead of rendering. Browsers ignore this header for <img> src
+		// loads, so SVGs in READMEs still display correctly. CSP blocks scripts as
+		// an additional defense layer.
+		if (ext === "svg") {
+			const filename = path.split("/").pop() || "image.svg";
+			return new NextResponse(upstream.body, {
+				headers: {
+					"Content-Type": "image/svg+xml",
+					"Content-Disposition": `attachment; filename="${filename}"`,
+					"Cache-Control":
+						"public, max-age=3600, stale-while-revalidate=86400",
+					"Content-Security-Policy":
+						"default-src 'none'; style-src 'unsafe-inline'",
+					"X-Content-Type-Options": "nosniff",
+				},
+			});
+		}
+
 		const contentType =
 			MIME_TYPES[ext] ||
 			upstream.headers.get("content-type") ||
@@ -60,6 +81,8 @@ export async function GET(request: NextRequest) {
 				"Content-Type": contentType,
 				"Cache-Control":
 					"public, max-age=3600, stale-while-revalidate=86400",
+				"Content-Security-Policy": "default-src 'none'",
+				"X-Content-Type-Options": "nosniff",
 			},
 		});
 	} catch {

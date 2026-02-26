@@ -124,6 +124,27 @@ export async function setCachedRepoPageData<T>(
 	});
 }
 
+export async function updateCachedRepoPageDataNavCounts(
+	userId: string,
+	owner: string,
+	repo: string,
+	updates: { openPrs?: number; openIssues?: number },
+): Promise<void> {
+	const key = userRepoKey(userId, owner, repo, "repo_page_data");
+	const existing = await redis.get<{
+		navCounts?: { openPrs: number; openIssues: number; activeRuns: number };
+	}>(key);
+	if (!existing || !existing.navCounts) return;
+
+	const updatedNavCounts = {
+		...existing.navCounts,
+		...(updates.openPrs !== undefined && { openPrs: updates.openPrs }),
+		...(updates.openIssues !== undefined && { openIssues: updates.openIssues }),
+	};
+
+	await redis.set(key, { ...existing, navCounts: updatedNavCounts }, { ex: TTL.medium });
+}
+
 export async function getCachedRepoTree<T>(owner: string, repo: string): Promise<T | null> {
 	return redis.get<T>(repoKey(owner, repo, "repo_file_tree"));
 }

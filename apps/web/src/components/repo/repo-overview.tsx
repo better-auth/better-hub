@@ -69,7 +69,7 @@ function Section({
 			<div className="flex items-baseline gap-2 mb-4 shrink-0">
 				<h3 className="text-sm font-medium text-foreground">{title}</h3>
 				{subtitle && (
-					<span className="text-[10px] font-mono text-muted-foreground/50 bg-muted/60 px-1.5 py-0.5 rounded">
+					<span className="text-[10px] font-mono text-muted-foreground/70 bg-muted/60 px-1.5 py-0.5 rounded">
 						{subtitle}
 					</span>
 				)}
@@ -83,7 +83,7 @@ function Section({
 
 function EmptyState({ message }: { message: string }) {
 	return (
-		<div className="flex items-center justify-center h-24 text-xs font-mono text-muted-foreground">
+		<div className="flex items-center justify-center h-24 text-xs font-mono text-muted-foreground/60">
 			{message}
 		</div>
 	);
@@ -114,12 +114,12 @@ function ListItem({
 			<Icon className="w-3.5 h-3.5 mt-0.5 shrink-0 text-success" />
 			<div className="min-w-0 flex-1">
 				<p className="text-xs text-foreground/80 truncate group-hover:text-foreground transition-colors">
-					<span className="font-mono text-muted-foreground/60 mr-1.5">
+					<span className="font-mono text-muted-foreground/70 mr-1.5">
 						#{number}
 					</span>
 					{title}
 				</p>
-				<p className="text-[10px] font-mono text-muted-foreground/50 mt-0.5 flex items-center gap-1">
+				<p className="text-[10px] font-mono text-muted-foreground/70 mt-0.5 flex items-center gap-1">
 					{user?.avatar_url && (
 						<Image
 							src={user.avatar_url}
@@ -180,7 +180,7 @@ function SortableList({
 				items.length > 1 ? (
 					<button
 						onClick={nextSort}
-						className="text-[10px] font-mono text-muted-foreground hover:text-muted-foreground transition-colors cursor-pointer"
+						className="text-[10px] font-mono text-muted-foreground/60 hover:text-muted-foreground transition-colors cursor-pointer"
 					>
 						{sortLabel} &darr;
 					</button>
@@ -211,7 +211,7 @@ function SortableList({
 					{totalCount > 10 && (
 						<Link
 							href={viewAllHref}
-							className="block text-[10px] font-mono text-muted-foreground/60 hover:text-foreground/60 mt-2 transition-colors"
+							className="block text-[10px] font-mono text-muted-foreground/70 hover:text-foreground/70 mt-2 transition-colors"
 						>
 							View all {totalCount} &rarr;
 						</Link>
@@ -408,27 +408,27 @@ function ActivityItem({ event }: { event: RepoEvent }) {
 					{event.org?.login && (
 						<>
 							{" "}
-							<span className="text-muted-foreground">
+							<span className="text-muted-foreground/60">
 								@
 							</span>
 							<Link
 								href={`/${event.org.login}`}
-								className="text-muted-foreground/50 hover:underline"
+								className="text-muted-foreground/70 hover:underline"
 								onClick={(e) => e.stopPropagation()}
 							>
 								{event.org.login}
 							</Link>
 						</>
 					)}{" "}
-					<span className="text-muted-foreground/60">{verb}</span>
+					<span className="text-muted-foreground/80">{verb}</span>
 				</p>
 				{detail && (
-					<p className="text-[10px] font-mono text-muted-foreground/50 truncate mt-0.5">
+					<p className="text-[10px] font-mono text-muted-foreground/70 truncate mt-0.5">
 						{detail}
 					</p>
 				)}
 			</div>
-			<span className="text-[9px] font-mono text-muted-foreground shrink-0 mt-0.5">
+			<span className="text-[9px] font-mono text-muted-foreground/60 shrink-0 mt-0.5">
 				{timeAgo(event.created_at)}
 			</span>
 		</div>
@@ -451,10 +451,10 @@ function CommitActivityGraph({ data }: { data: CommitActivityWeek[] }) {
 	return (
 		<div className="mb-3 pb-3 border-b border-border/20">
 			<div className="flex items-center justify-between mb-2">
-				<span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">
+				<span className="text-[9px] font-mono text-muted-foreground/60 uppercase tracking-wider">
 					Commits &middot; 16 weeks
 				</span>
-				<span className="text-[9px] font-mono text-muted-foreground/50">
+				<span className="text-[9px] font-mono text-muted-foreground/70">
 					{formatNumber(total)} total
 				</span>
 			</div>
@@ -557,7 +557,7 @@ function ActivityFeed({
 					{events.length > ACTIVITY_COUNT && (
 						<Link
 							href={`${base}/activity`}
-							className="block text-[10px] font-mono text-muted-foreground/60 hover:text-foreground/60 mt-3 pt-2 border-t border-border/20 transition-colors text-center shrink-0"
+							className="block text-[10px] font-mono text-muted-foreground/70 hover:text-foreground/70 mt-3 pt-2 border-t border-border/20 transition-colors text-center shrink-0"
 						>
 							View all activity &rarr;
 						</Link>
@@ -667,7 +667,7 @@ function TickerCard({ item }: { item: HotItem }) {
 			<Icon className="w-3.5 h-3.5 mt-0.5 shrink-0 text-success" />
 			<div className="min-w-0 flex-1">
 				<p className="text-xs text-foreground/80 truncate group-hover:text-foreground transition-colors">
-					<span className="font-mono text-muted-foreground/60 mr-1.5">
+					<span className="font-mono text-muted-foreground/70 mr-1.5">
 						#{item.number}
 					</span>
 					{item.title}
@@ -682,14 +682,14 @@ function TickerCard({ item }: { item: HotItem }) {
 							className="rounded-full shrink-0"
 						/>
 					)}
-					<span className="text-[10px] font-mono text-muted-foreground/50 truncate">
+					<span className="text-[10px] font-mono text-muted-foreground/70 truncate">
 						{item.user?.login ?? "unknown"}
 					</span>
-					<span className="text-[10px] font-mono text-muted-foreground/50 ml-auto shrink-0">
+					<span className="text-[10px] font-mono text-muted-foreground/60 ml-auto shrink-0">
 						{timeAgo(item.createdAt)}
 					</span>
 					{item.comments > 0 && (
-						<span className="flex items-center gap-0.5 text-[10px] font-mono text-muted-foreground/50 shrink-0">
+						<span className="flex items-center gap-0.5 text-[10px] font-mono text-muted-foreground/70 shrink-0">
 							<MessageSquare className="w-3 h-3" />
 							{item.comments}
 						</span>
@@ -757,7 +757,7 @@ function PinnedItemsSection({
 			<div className="flex items-center gap-2 px-4 pt-3 pb-1">
 				<Pin className="w-3 h-3 text-muted-foreground/60" />
 				<h3 className="text-sm font-medium text-foreground">Pinned</h3>
-				<span className="text-[10px] font-mono text-muted-foreground/50 bg-muted/60 px-1.5 py-0.5 rounded">
+				<span className="text-[10px] font-mono text-muted-foreground/70 bg-muted/60 px-1.5 py-0.5 rounded">
 					{localItems.length}
 				</span>
 			</div>

@@ -5,6 +5,7 @@ import { $Session, getServerSession } from "./auth";
 import {
 	claimDueGithubSyncJobs,
 	deleteGithubCacheByPrefix,
+	deleteSharedCacheByPrefix,
 	enqueueGithubSyncJob,
 	getGithubCacheEntry,
 	getSharedCacheEntry,
@@ -89,7 +90,8 @@ type GitDataSyncJobType =
 	| "repo_nav_counts"
 	| "org_members"
 	| "person_repo_activity"
-	| "pr_bundle";
+	| "pr_bundle"
+	| "repo_discussions";
 
 const SHAREABLE_CACHE_TYPES: ReadonlySet<string> = new Set([
 	"repo_contents",
@@ -3104,6 +3106,531 @@ export interface RepoIssueNode {
 	pull_request?: { url?: string; html_url?: string } | null;
 }
 
+// ── Discussion types ──
+
+export interface DiscussionCategory {
+	id: string;
+	name: string;
+	emoji: string;
+	description: string;
+	isAnswerable: boolean;
+}
+
+export interface RepoDiscussionNode {
+	id: string;
+	number: number;
+	title: string;
+	createdAt: string;
+	updatedAt: string;
+	author: { login: string; avatar_url: string } | null;
+	category: { name: string; emoji: string; isAnswerable: boolean };
+	commentsCount: number;
+	upvoteCount: number;
+	isAnswered: boolean;
+	labels: Array<{ name?: string; color?: string | null }>;
+	bodyText: string;
+}
+
+export interface RepoDiscussionsPageData {
+	discussions: RepoDiscussionNode[];
+	totalCount: number;
+	categories: DiscussionCategory[];
+	hasNextPage: boolean;
+	endCursor: string | null;
+	repositoryId: string;
+}
+
+export interface DiscussionReply {
+	id: string;
+	databaseId: number;
+	body: string;
+	bodyHtml?: string;
+	createdAt: string;
+	author: { login: string; avatar_url: string; type?: string } | null;
+	upvoteCount: number;
+	isAnswer: boolean;
+}
+
+export interface DiscussionComment {
+	id: string;
+	databaseId: number;
+	body: string;
+	bodyHtml?: string;
+	createdAt: string;
+	author: { login: string; avatar_url: string; type?: string } | null;
+	upvoteCount: number;
+	isAnswer: boolean;
+	replies: DiscussionReply[];
+}
+
+export interface DiscussionDetail {
+	id: string;
+	number: number;
+	title: string;
+	body: string;
+	createdAt: string;
+	updatedAt: string;
+	author: { login: string; avatar_url: string } | null;
+	category: { name: string; emoji: string; isAnswerable: boolean };
+	commentsCount: number;
+	upvoteCount: number;
+	isAnswered: boolean;
+	answerChosenAt: string | null;
+	labels: Array<{ name?: string; color?: string | null }>;
+}
+
+// ── Discussion GraphQL queries ──
+
+const DISCUSSIONS_PAGE_GRAPHQL = `
+	query($owner: String!, $repo: String!, $after: String) {
+		repository(owner: $owner, name: $repo) {
+			id
+			discussions(first: 30, after: $after, orderBy: {field: UPDATED_AT, direction: DESC}) {
+				totalCount
+				pageInfo {
+					hasNextPage
+					endCursor
+				}
+				nodes {
+					id
+					number
+					title
+					createdAt
+					updatedAt
+					author { login avatarUrl }
+					category { name emoji isAnswerable }
+					comments { totalCount }
+					upvoteCount
+					isAnswered
+					labels(first: 20) { nodes { name color } }
+					bodyText
+				}
+			}
+			discussionCategories(first: 25) {
+				nodes {
+					id
+					name
+					emoji
+					description
+					isAnswerable
+				}
+			}
+		}
+	}
+`;
+
+const DISCUSSION_DETAIL_GRAPHQL = `
+	query($owner: String!, $repo: String!, $number: Int!) {
+		repository(owner: $owner, name: $repo) {
+			discussion(number: $number) {
+				id
+				number
+				title
+				body
+				createdAt
+				updatedAt
+				author { __typename login avatarUrl }
+				category { name emoji isAnswerable }
+				comments(first: 50) {
+					totalCount
+					nodes {
+						id
+						databaseId
+						body
+						createdAt
+						author { __typename login avatarUrl }
+						upvoteCount
+						isAnswer
+						replies(first: 20) {
+							nodes {
+								id
+								databaseId
+								body
+								createdAt
+								author { __typename login avatarUrl }
+								upvoteCount
+								isAnswer
+							}
+						}
+					}
+				}
+				upvoteCount
+				isAnswered
+				answerChosenAt
+				labels(first: 20) { nodes { name color } }
+			}
+		}
+	}
+`;
+
+const ADD_DISCUSSION_COMMENT_MUTATION = `
+	mutation($discussionId: ID!, $body: String!, $replyToId: ID) {
+		addDiscussionComment(input: { discussionId: $discussionId, body: $body, replyToId: $replyToId }) {
+			comment {
+				id
+				databaseId
+				body
+				createdAt
+				author { login avatarUrl }
+			}
+		}
+	}
+`;
+
+// ── Discussion GraphQL types ──
+
+interface GQLDiscussionNode {
+	id: string;
+	number: number;
+	title: string;
+	createdAt: string;
+	updatedAt: string;
+	author: { login: string; avatarUrl: string } | null;
+	category: { name: string; emoji: string; isAnswerable: boolean };
+	comments?: { totalCount: number };
+	upvoteCount: number;
+	isAnswered: boolean;
+	labels?: { nodes: { name: string; color: string }[] };
+	bodyText: string;
+}
+
+interface GQLDiscussionCommentNode {
+	id: string;
+	databaseId: number;
+	body: string;
+	createdAt: string;
+	author: { login: string; avatarUrl: string; __typename?: string } | null;
+	upvoteCount: number;
+	isAnswer: boolean;
+	replies?: {
+		nodes: {
+			id: string;
+			databaseId: number;
+			body: string;
+			createdAt: string;
+			author: { login: string; avatarUrl: string; __typename?: string } | null;
+			upvoteCount: number;
+			isAnswer: boolean;
+		}[];
+	};
+}
+
+function mapGQLAuthor(author: { login: string; avatarUrl: string; __typename?: string } | null) {
+	return author
+		? {
+				login: author.login,
+				avatar_url: author.avatarUrl,
+				type: author.__typename === "Bot" ? "Bot" : "User",
+			}
+		: null;
+}
+
+function mapGQLDiscussionNode(node: GQLDiscussionNode): RepoDiscussionNode {
+	return {
+		id: node.id,
+		number: node.number,
+		title: node.title,
+		createdAt: node.createdAt,
+		updatedAt: node.updatedAt,
+		author: mapGQLAuthor(node.author),
+		category: node.category,
+		commentsCount: node.comments?.totalCount ?? 0,
+		upvoteCount: node.upvoteCount,
+		isAnswered: node.isAnswered,
+		labels: (node.labels?.nodes ?? []).map((l) => ({ name: l.name, color: l.color })),
+		bodyText: node.bodyText,
+	};
+}
+
+function mapGQLDiscussionComment(node: GQLDiscussionCommentNode): DiscussionComment {
+	return {
+		id: node.id,
+		databaseId: node.databaseId,
+		body: node.body,
+		createdAt: node.createdAt,
+		author: mapGQLAuthor(node.author),
+		upvoteCount: node.upvoteCount,
+		isAnswer: node.isAnswer,
+		replies: (node.replies?.nodes ?? []).map((r) => ({
+			id: r.id,
+			databaseId: r.databaseId,
+			body: r.body,
+			createdAt: r.createdAt,
+			author: mapGQLAuthor(r.author),
+			upvoteCount: r.upvoteCount,
+			isAnswer: r.isAnswer,
+		})),
+	};
+}
+
+// ── Discussion fetchers ──
+
+async function fetchRepoDiscussionsPageGraphQL(
+	token: string,
+	owner: string,
+	repo: string,
+	after?: string | null,
+): Promise<RepoDiscussionsPageData> {
+	const response = await fetch("https://api.github.com/graphql", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			query: DISCUSSIONS_PAGE_GRAPHQL,
+			variables: { owner, repo, after: after ?? null },
+		}),
+	});
+
+	if (!response.ok) {
+		throw new Error(`GraphQL request failed: ${response.status}`);
+	}
+	const json = await response.json();
+	const r = json.data?.repository;
+	if (!r) {
+		return {
+			discussions: [],
+			totalCount: 0,
+			categories: [],
+			hasNextPage: false,
+			endCursor: null,
+			repositoryId: "",
+		};
+	}
+
+	return {
+		discussions: (r.discussions?.nodes ?? []).map(mapGQLDiscussionNode),
+		totalCount: r.discussions?.totalCount ?? 0,
+		categories: (r.discussionCategories?.nodes ?? []).map(
+			(c: {
+				id: string;
+				name: string;
+				emoji: string;
+				description: string;
+				isAnswerable: boolean;
+			}) => ({
+				id: c.id,
+				name: c.name,
+				emoji: c.emoji,
+				description: c.description,
+				isAnswerable: c.isAnswerable,
+			}),
+		),
+		hasNextPage: r.discussions?.pageInfo?.hasNextPage ?? false,
+		endCursor: r.discussions?.pageInfo?.endCursor ?? null,
+		repositoryId: r.id ?? "",
+	};
+}
+
+async function fetchDiscussionDetailGraphQL(
+	token: string,
+	owner: string,
+	repo: string,
+	number: number,
+): Promise<{ detail: DiscussionDetail; comments: DiscussionComment[] } | null> {
+	const response = await fetch("https://api.github.com/graphql", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			query: DISCUSSION_DETAIL_GRAPHQL,
+			variables: { owner, repo, number },
+		}),
+	});
+
+	if (!response.ok) {
+		throw new Error(`GraphQL request failed: ${response.status}`);
+	}
+	const json = await response.json();
+	const d = json.data?.repository?.discussion;
+	if (!d) return null;
+
+	const detail: DiscussionDetail = {
+		id: d.id,
+		number: d.number,
+		title: d.title,
+		body: d.body ?? "",
+		createdAt: d.createdAt,
+		updatedAt: d.updatedAt,
+		author: mapGQLAuthor(d.author),
+		category: d.category,
+		commentsCount: d.comments?.totalCount ?? 0,
+		upvoteCount: d.upvoteCount,
+		isAnswered: d.isAnswered,
+		answerChosenAt: d.answerChosenAt ?? null,
+		labels: (d.labels?.nodes ?? []).map((l: { name: string; color: string }) => ({
+			name: l.name,
+			color: l.color,
+		})),
+	};
+
+	const comments: DiscussionComment[] = (d.comments?.nodes ?? []).map(
+		mapGQLDiscussionComment,
+	);
+
+	return { detail, comments };
+}
+
+// ── Discussion exported functions ──
+
+function buildRepoDiscussionsCacheKey(owner: string, repo: string): string {
+	return `repo_discussions:${normalizeRepoKey(owner, repo)}`;
+}
+
+export async function getRepoDiscussionsPage(
+	owner: string,
+	repo: string,
+): Promise<RepoDiscussionsPageData> {
+	const authCtx = await getGitHubAuthContext();
+	const fallback: RepoDiscussionsPageData = {
+		discussions: [],
+		totalCount: 0,
+		categories: [],
+		hasNextPage: false,
+		endCursor: null,
+		repositoryId: "",
+	};
+	const data = await readLocalFirstGitData({
+		authCtx,
+		cacheKey: buildRepoDiscussionsCacheKey(owner, repo),
+		cacheType: "repo_discussions",
+		fallback,
+		jobType: "repo_discussions" as GitDataSyncJobType,
+		jobPayload: { owner, repo },
+		fetchRemote: async () => {
+			if (!authCtx) return fallback;
+			return fetchRepoDiscussionsPageGraphQL(authCtx.token, owner, repo);
+		},
+	});
+	// Old cached entries may lack pagination fields
+	return {
+		...data,
+		hasNextPage: data.hasNextPage ?? false,
+		endCursor: data.endCursor ?? null,
+		repositoryId: data.repositoryId ?? "",
+	};
+}
+
+export async function fetchMoreDiscussions(
+	owner: string,
+	repo: string,
+	cursor: string,
+): Promise<{ discussions: RepoDiscussionNode[]; hasNextPage: boolean; endCursor: string | null }> {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx) return { discussions: [], hasNextPage: false, endCursor: null };
+	const data = await fetchRepoDiscussionsPageGraphQL(authCtx.token, owner, repo, cursor);
+	return {
+		discussions: data.discussions,
+		hasNextPage: data.hasNextPage,
+		endCursor: data.endCursor,
+	};
+}
+
+export async function getDiscussion(
+	owner: string,
+	repo: string,
+	number: number,
+): Promise<DiscussionDetail | null> {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx) return null;
+	const result = await fetchDiscussionDetailGraphQL(authCtx.token, owner, repo, number);
+	return result?.detail ?? null;
+}
+
+export async function getDiscussionComments(
+	owner: string,
+	repo: string,
+	number: number,
+): Promise<DiscussionComment[]> {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx) return [];
+	const result = await fetchDiscussionDetailGraphQL(authCtx.token, owner, repo, number);
+	return result?.comments ?? [];
+}
+
+export async function addDiscussionCommentViaGraphQL(
+	discussionId: string,
+	body: string,
+	replyToId?: string,
+): Promise<{ id: string; databaseId: number } | null> {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx) return null;
+
+	const response = await fetch("https://api.github.com/graphql", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${authCtx.token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			query: ADD_DISCUSSION_COMMENT_MUTATION,
+			variables: { discussionId, body, replyToId: replyToId ?? null },
+		}),
+	});
+
+	if (!response.ok) {
+		throw new Error(`GraphQL mutation failed: ${response.status}`);
+	}
+	const json = await response.json();
+	if (json.errors?.length) {
+		throw new Error(json.errors.map((e: { message: string }) => e.message).join("; "));
+	}
+	const comment = json.data?.addDiscussionComment?.comment;
+	return comment ? { id: comment.id, databaseId: comment.databaseId } : null;
+}
+
+const CREATE_DISCUSSION_MUTATION = `
+	mutation($repositoryId: ID!, $categoryId: ID!, $title: String!, $body: String!) {
+		createDiscussion(input: { repositoryId: $repositoryId, categoryId: $categoryId, title: $title, body: $body }) {
+			discussion { id number title }
+		}
+	}
+`;
+
+export async function createDiscussionViaGraphQL(
+	repositoryId: string,
+	categoryId: string,
+	title: string,
+	body: string,
+): Promise<{ id: string; number: number; title: string } | null> {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx) return null;
+
+	const response = await fetch("https://api.github.com/graphql", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${authCtx.token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			query: CREATE_DISCUSSION_MUTATION,
+			variables: { repositoryId, categoryId, title, body },
+		}),
+	});
+
+	if (!response.ok) {
+		throw new Error(`GraphQL mutation failed: ${response.status}`);
+	}
+	const json = await response.json();
+	if (json.errors?.length) {
+		throw new Error(json.errors.map((e: { message: string }) => e.message).join("; "));
+	}
+	const discussion = json.data?.createDiscussion?.discussion;
+	return discussion
+		? { id: discussion.id, number: discussion.number, title: discussion.title }
+		: null;
+}
+
+export async function invalidateRepoDiscussionsCache(owner: string, repo: string) {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx) return;
+	const prefix = buildRepoDiscussionsCacheKey(owner, repo);
+	await deleteGithubCacheByPrefix(authCtx.userId, prefix);
+}
+
 const ISSUES_PAGE_GRAPHQL = `
 	query($owner: String!, $repo: String!) {
 		repository(owner: $owner, name: $repo) {
@@ -3279,7 +3806,7 @@ export async function getRepoIssuesPage(owner: string, repo: string): Promise<Re
 		openCount: 0,
 		closedCount: 0,
 	};
-	return readLocalFirstGitData({
+	const data = await readLocalFirstGitData({
 		authCtx,
 		cacheKey: buildRepoIssuesPageCacheKey(owner, repo),
 		cacheType: "repo_issues_page",
@@ -3291,6 +3818,15 @@ export async function getRepoIssuesPage(owner: string, repo: string): Promise<Re
 			return fetchRepoIssuesPageGraphQL(authCtx.token, owner, repo);
 		},
 	});
+
+	if (authCtx) {
+		const { updateCachedRepoPageDataNavCounts } = await import("@/lib/repo-data-cache");
+		updateCachedRepoPageDataNavCounts(authCtx.userId, owner, repo, {
+			openIssues: data.openCount,
+		}).catch(() => {});
+	}
+
+	return data;
 }
 
 export async function invalidateRepoPullRequestsCache(owner: string, repo: string) {
@@ -3306,6 +3842,7 @@ export async function invalidateAllPRBundlesForRepo(owner: string, repo: string)
 	const key = normalizeRepoKey(owner, repo);
 	await deleteGithubCacheByPrefix(authCtx.userId, `pr_bundle:${key}`);
 	await deleteGithubCacheByPrefix(authCtx.userId, `pull_request:${key}`);
+	await deleteSharedCacheByPrefix(`pr_bundle:${key}`);
 }
 
 export async function invalidatePullRequestCache(owner: string, repo: string, pullNumber: number) {
@@ -3330,7 +3867,8 @@ export async function invalidatePullRequestCache(owner: string, repo: string, pu
 	await deleteGithubCacheByPrefix(authCtx.userId, `pull_request_files:${key}:${pullNumber}`);
 	await deleteGithubCacheByPrefix(authCtx.userId, `repo_pull_requests:${key}`);
 	// Also invalidate nav counts and search counts so PR count updates immediately
-	await deleteGithubCacheByPrefix(authCtx.userId, buildRepoNavCountsCacheKey(owner, repo));
+	const navCountsKey = buildRepoNavCountsCacheKey(owner, repo);
+	await deleteGithubCacheByPrefix(authCtx.userId, navCountsKey);
 	await deleteGithubCacheByPrefix(
 		authCtx.userId,
 		`search_issues:${keyPart(`is:pr is:open repo:${owner}/${repo}`)}`,
@@ -3339,6 +3877,9 @@ export async function invalidatePullRequestCache(owner: string, repo: string, pu
 		authCtx.userId,
 		`search_issues:${keyPart(`is:pr is:closed repo:${owner}/${repo}`)}`,
 	);
+	// Also invalidate the shared cache so all users see the updated state
+	await deleteSharedCacheByPrefix(`pr_bundle:${key}:${pullNumber}`);
+	await deleteSharedCacheByPrefix(navCountsKey);
 }
 
 export async function invalidateFileContentCache(
@@ -3359,7 +3900,9 @@ export async function invalidateRepoIssuesCache(owner: string, repo: string) {
 	const prefix = `repo_issues:${normalizeRepoKey(owner, repo)}`;
 	await deleteGithubCacheByPrefix(authCtx.userId, prefix);
 	// Also invalidate nav counts so issue count updates immediately
-	await deleteGithubCacheByPrefix(authCtx.userId, buildRepoNavCountsCacheKey(owner, repo));
+	const navCountsKey = buildRepoNavCountsCacheKey(owner, repo);
+	await deleteGithubCacheByPrefix(authCtx.userId, navCountsKey);
+	await deleteSharedCacheByPrefix(navCountsKey);
 }
 
 export async function invalidateIssueCache(owner: string, repo: string, issueNumber: number) {
@@ -3370,7 +3913,9 @@ export async function invalidateIssueCache(owner: string, repo: string, issueNum
 	await deleteGithubCacheByPrefix(authCtx.userId, `issue_comments:${key}:${issueNumber}`);
 	await deleteGithubCacheByPrefix(authCtx.userId, `repo_issues:${key}`);
 	// Also invalidate nav counts so issue count updates immediately
-	await deleteGithubCacheByPrefix(authCtx.userId, buildRepoNavCountsCacheKey(owner, repo));
+	const navCountsKey = buildRepoNavCountsCacheKey(owner, repo);
+	await deleteGithubCacheByPrefix(authCtx.userId, navCountsKey);
+	await deleteSharedCacheByPrefix(navCountsKey);
 }
 
 export async function getRepoPullRequests(
@@ -3669,6 +4214,17 @@ export async function getRepoPullRequestsWithStats(
 						>[]
 					).map(mapGraphQLPRNode)
 				: [];
+
+		if (wantCounts) {
+			getGitHubAuthContext().then(async (authCtx) => {
+				if (!authCtx) return;
+				const { updateCachedRepoPageDataNavCounts } =
+					await import("@/lib/repo-data-cache");
+				updateCachedRepoPageDataNavCounts(authCtx.userId, owner, repo, {
+					openPrs: counts.open,
+				}).catch(() => {});
+			});
+		}
 
 		return { prs, pageInfo, counts, mergedPreview, closedPreview };
 	} catch (error) {
@@ -4792,8 +5348,9 @@ export interface RepoPageData {
 		homepage: string | null;
 		parent: { full_name: string; owner: { login: string }; name: string } | null;
 		open_issues_count: number;
+		has_discussions: boolean;
 	};
-	navCounts: { openPrs: number; openIssues: number; activeRuns: number };
+	navCounts: { openPrs: number; openIssues: number; activeRuns: number; discussions: number };
 	languages: Record<string, number>;
 	viewerLogin: string | null;
 	viewerHasStarred: boolean;
@@ -4841,6 +5398,7 @@ async function fetchRepoPageDataGraphQL(
 				isPrivate
 				isArchived
 				isFork
+				hasDiscussionsEnabled
 				owner { login avatarUrl }
 				defaultBranchRef {
 					name
@@ -4873,6 +5431,7 @@ async function fetchRepoPageDataGraphQL(
 				}
 				pullRequests(states: [OPEN]) { totalCount }
 				issues(states: [OPEN]) { totalCount }
+				discussions { totalCount }
 				languages(first: 20, orderBy: { field: SIZE, direction: DESC }) {
 					edges { size node { name } }
 				}
@@ -4992,11 +5551,13 @@ async function fetchRepoPageDataGraphQL(
 					}
 				: null,
 			open_issues_count: r.issues?.totalCount ?? 0,
+			has_discussions: r.hasDiscussionsEnabled ?? false,
 		},
 		navCounts: {
 			openPrs: r.pullRequests?.totalCount ?? 0,
 			openIssues: r.issues?.totalCount ?? 0,
 			activeRuns: 0,
+			discussions: r.discussions?.totalCount ?? 0,
 		},
 		languages,
 		viewerLogin,
@@ -5073,7 +5634,7 @@ export async function getRepoOverviewData(
 	if (result.success)
 		return { navCounts: result.data.navCounts, languages: result.data.languages };
 	return {
-		navCounts: { openPrs: 0, openIssues: 0, activeRuns: 0 },
+		navCounts: { openPrs: 0, openIssues: 0, activeRuns: 0, discussions: 0 },
 		languages: {},
 	};
 }

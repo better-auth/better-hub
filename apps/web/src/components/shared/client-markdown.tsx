@@ -3,10 +3,47 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { parseGitHubUrl, toInternalUrl } from "@/lib/github-utils";
 import { HighlightedCodeBlock } from "@/components/shared/highlighted-code-block";
+
+const sanitizeSchema: typeof defaultSchema = {
+	...defaultSchema,
+	tagNames: [
+		...(defaultSchema.tagNames ?? []),
+		"details",
+		"summary",
+		"picture",
+		"source",
+		"video",
+		"audio",
+		"figure",
+		"figcaption",
+		"abbr",
+		"mark",
+	],
+	attributes: {
+		...defaultSchema.attributes,
+		"*": [...(defaultSchema.attributes?.["*"] ?? []), ["data*"], "className"],
+		img: [...(defaultSchema.attributes?.img ?? []), "loading", "decoding"],
+		video: [
+			"src",
+			"poster",
+			"controls",
+			"muted",
+			"autoPlay",
+			"loop",
+			"width",
+			"height",
+		],
+		audio: ["src", "controls"],
+		source: ["src", "srcSet", "media", "type"],
+		details: ["open"],
+		input: [...(defaultSchema.attributes?.input ?? []), "checked", "disabled", "type"],
+	},
+};
 
 /** Convert @username in markdown source to links (skip inside code fences/backticks) */
 function linkifyMentionsMd(md: string): string {
@@ -26,7 +63,7 @@ export function ClientMarkdown({ content, className }: { content: string; classN
 		<div className={cn("ghmd ghmd-sm", className)}>
 			<ReactMarkdown
 				remarkPlugins={[remarkGfm]}
-				rehypePlugins={[rehypeRaw]}
+				rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
 				components={{
 					code({ className: codeClassName, children, ref, ...rest }) {
 						const match = /language-(\w+)/.exec(

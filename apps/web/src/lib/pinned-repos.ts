@@ -5,9 +5,11 @@ export interface PinnedRepo {
 	id: number;
 	full_name: string;
 	name: string;
+	description?: string | null;
 	owner: { login: string; avatar_url: string };
 	language: string | null;
 	stargazers_count: number;
+	forks_count?: number;
 	private: boolean;
 	pinnedAt: number;
 }

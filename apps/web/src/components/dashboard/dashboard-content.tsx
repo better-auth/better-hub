@@ -2,7 +2,7 @@
 
 import { noSSR } from "foxact/no-ssr";
 import { Suspense, useEffect, useState, useCallback, useTransition, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useQueryState, parseAsStringLiteral } from "nuqs";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -51,6 +51,9 @@ import type {
 	SearchResult,
 } from "@/lib/github-types";
 
+const tabKeys = ["reviews", "prs", "issues", "notifs"] as const;
+type TabKey = (typeof tabKeys)[number];
+
 interface DashboardContentProps {
 	user: GitHubUser;
 	reviewRequests: SearchResult<IssueItem>;
@@ -90,28 +93,21 @@ export function DashboardContent({
 		myOpenPRs.items.length > 0 ||
 		myIssues.items.length > 0;
 
-	const searchParams = useSearchParams();
-	const tabParam = searchParams.get("tab");
-	const validTabs: TabKey[] = ["reviews", "prs", "issues", "notifs"];
-	const initialTab: TabKey = validTabs.includes(tabParam as TabKey)
-		? (tabParam as TabKey)
-		: "reviews";
-	const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
+	const [activeTab, setActiveTab] = useQueryState(
+		"tab",
+		parseAsStringLiteral(tabKeys).withDefault("reviews"),
+	);
 
-	const handleStatClick = useCallback((tab: TabKey) => {
-		setActiveTab(tab);
-		const url = new URL(window.location.href);
-		if (tab === "reviews") {
-			url.searchParams.delete("tab");
-		} else {
-			url.searchParams.set("tab", tab);
-		}
-		window.history.replaceState(null, "", url.toString());
-		document.getElementById("work-tabs")?.scrollIntoView({
-			behavior: "smooth",
-			block: "nearest",
-		});
-	}, []);
+	const handleStatClick = useCallback(
+		(tab: TabKey) => {
+			setActiveTab(tab);
+			document.getElementById("work-tabs")?.scrollIntoView({
+				behavior: "smooth",
+				block: "nearest",
+			});
+		},
+		[setActiveTab],
+	);
 
 	return (
 		<div className="flex flex-col flex-1 min-h-0 w-full">
@@ -243,7 +239,6 @@ function ExtensionBanner() {
 		</div>
 	);
 }
-type TabKey = "reviews" | "prs" | "issues" | "notifs";
 
 function WorkTabs({
 	reviewRequests,
@@ -472,9 +467,11 @@ function ReposTabs({
 			id: repo.id,
 			full_name: repo.full_name,
 			name: repo.name,
+			description: repo.description,
 			owner: repo.owner,
 			language: repo.language,
 			stargazers_count: repo.stargazers_count,
+			forks_count: repo.forks_count,
 			private: repo.private,
 		});
 		setPinnedRepos(updated);
@@ -548,7 +545,7 @@ function ReposTabs({
 				{tab === "trending" && (
 					<Link
 						href="/trending"
-						className="ml-auto mr-3 flex items-center gap-1 text-[10px] font-mono text-muted-foreground/50 hover:text-foreground transition-colors"
+						className="ml-auto mr-3 flex items-center gap-1 text-[10px] font-mono text-muted-foreground/70 hover:text-foreground transition-colors"
 					>
 						See all
 						<ChevronRight className="w-3 h-3" />
@@ -622,7 +619,7 @@ function Stat({
 	const content = (
 		<>
 			{/* Noise texture */}
-			<div className="pointer-events-none absolute inset-0 stat-noise opacity-[0.25] dark:opacity-[0.5] mix-blend-overlay" />
+			<div className="pointer-events-none absolute inset-0 stat-noise opacity-10 dark:opacity-5 mix-blend-overlay" />
 			{/* Diagonal shine */}
 			<div className="pointer-events-none absolute -inset-1/2 w-[200%] h-[200%] rotate-12 bg-gradient-to-br from-transparent via-white/[0.5] dark:via-white/[0.03] to-transparent translate-x-[-30%] translate-y-[-10%]" />
 			<div className="relative flex flex-col gap-1.5">
@@ -667,7 +664,7 @@ function Stat({
 	);
 
 	const className = cn(
-		"stat-card relative overflow-hidden rounded-lg px-3 py-3 text-left w-full",
+		"stat-card isolate relative overflow-hidden rounded-lg px-3 py-3 text-left w-full",
 		"bg-gradient-to-br from-black/[0.02] via-black/[0.01] to-transparent dark:from-white/[0.04] dark:via-white/[0.02] dark:to-transparent",
 		"transition-all duration-150 cursor-pointer",
 		"hover:border-black/[0.08] dark:hover:border-white/[0.12]",
@@ -766,48 +763,71 @@ function RepoRow({
 	onTogglePin?: (repo: RepoItem) => void;
 }) {
 	return (
-		<div className="group flex items-center gap-2.5 px-4 py-2 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors border-b border-border/40 last:border-b-0">
+		<div className="group relative">
 			<Link
 				href={`/${repo.full_name}`}
-				className="flex items-center gap-2.5 flex-1 min-w-0"
+				className="flex items-start gap-2.5 px-4 py-2.5 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors border-b border-border/40 last:border-b-0"
 			>
 				<Image
 					src={repo.owner.avatar_url}
 					alt={repo.owner.login}
 					width={18}
 					height={18}
-					className="rounded-sm shrink-0 w-[18px] h-[18px] object-cover"
+					className="rounded-sm shrink-0 mt-0.5 w-[18px] h-[18px] object-cover"
 				/>
-				<span className="text-xs font-mono truncate group-hover:text-foreground transition-colors min-w-0">
-					<span className="text-muted-foreground">
-						{repo.owner.login}
-					</span>
-					<span className="text-muted-foreground/25 mx-0.5">/</span>
-					<span className="font-medium">{repo.name}</span>
-				</span>
-				{repo.private && (
-					<Lock className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
-				)}
-				<div className="flex items-center gap-2.5 ml-auto shrink-0 text-[10px] text-muted-foreground/45">
-					{repo.language && (
-						<span className="flex items-center gap-1 font-mono">
-							<span
-								className="w-1.5 h-1.5 rounded-full shrink-0"
-								style={{
-									backgroundColor:
-										getLanguageColor(
-											repo.language,
-										),
-								}}
-							/>
-							{repo.language}
+				<div className="flex-1 min-w-0">
+					<div className="flex items-center gap-2">
+						<span className="text-xs font-mono truncate group-hover:text-foreground transition-colors">
+							<span className="text-muted-foreground/60">
+								{repo.owner.login}
+							</span>
+							<span className="text-muted-foreground/40 mx-0.5">
+								/
+							</span>
+							<span className="font-medium">
+								{repo.name}
+							</span>
 						</span>
-					)}
-					{repo.stargazers_count > 0 && (
-						<span className="flex items-center gap-0.5">
-							<Star className="w-2.5 h-2.5" />
-							{formatNumber(repo.stargazers_count)}
-						</span>
+						{repo.private && (
+							<Lock className="w-2.5 h-2.5 text-muted-foreground/50 shrink-0" />
+						)}
+						<div className="flex items-center gap-2 ml-auto shrink-0 text-[10px] text-muted-foreground/65">
+							{repo.language && (
+								<span className="flex items-center gap-1 font-mono">
+									<span
+										className="w-1.5 h-1.5 rounded-full shrink-0"
+										style={{
+											backgroundColor:
+												getLanguageColor(
+													repo.language,
+												),
+										}}
+									/>
+									{repo.language}
+								</span>
+							)}
+							{repo.stargazers_count > 0 && (
+								<span className="flex items-center gap-0.5">
+									<Star className="w-2.5 h-2.5" />
+									{formatNumber(
+										repo.stargazers_count,
+									)}
+								</span>
+							)}
+							{repo.forks_count > 0 && (
+								<span className="flex items-center gap-0.5">
+									<GitFork className="w-2.5 h-2.5" />
+									{formatNumber(
+										repo.forks_count,
+									)}
+								</span>
+							)}
+						</div>
+					</div>
+					{repo.description && (
+						<p className="text-[10px] text-muted-foreground/60 truncate mt-0.5">
+							{repo.description}
+						</p>
 					)}
 				</div>
 			</Link>
@@ -815,13 +835,14 @@ function RepoRow({
 				<button
 					onClick={(e) => {
 						e.preventDefault();
+						e.stopPropagation();
 						onTogglePin(repo);
 					}}
 					className={cn(
-						"shrink-0 p-1 transition-all cursor-pointer",
+						"absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-sm transition-all cursor-pointer bg-background/80 backdrop-blur-sm",
 						isPinned
-							? "text-foreground/60 hover:text-foreground"
-							: "text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:text-foreground/60",
+							? "text-foreground/60 hover:text-foreground opacity-0 group-hover:opacity-100"
+							: "text-muted-foreground/40 opacity-0 group-hover:opacity-100 hover:text-foreground/60",
 					)}
 					title={isPinned ? "Unpin repository" : "Pin repository"}
 				>
@@ -864,14 +885,14 @@ function PinnedRepoRow({
 			onDragOver={(e) => onDragOver(e, index)}
 			onDragEnd={onDragEnd}
 			className={cn(
-				"group flex items-center gap-2.5 px-4 py-2 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors border-b border-border/40 last:border-b-0 cursor-grab active:cursor-grabbing",
+				"group flex items-start gap-2.5 px-4 py-2.5 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors border-b border-border/40 last:border-b-0 cursor-grab active:cursor-grabbing",
 				isDragging && "opacity-50",
 				isDragOver && "border-t-2 border-t-primary",
 			)}
 		>
 			<Link
 				href={`/${repo.full_name}`}
-				className="flex items-center gap-2.5 flex-1 min-w-0"
+				className="flex items-start gap-2.5 flex-1 min-w-0"
 				draggable={false}
 			>
 				<Image
@@ -879,39 +900,62 @@ function PinnedRepoRow({
 					alt={repo.owner.login}
 					width={18}
 					height={18}
-					className="rounded-sm shrink-0 w-[18px] h-[18px] object-cover"
+					className="rounded-sm shrink-0 mt-0.5 w-[18px] h-[18px] object-cover"
 					draggable={false}
 				/>
-				<span className="text-xs font-mono truncate group-hover:text-foreground transition-colors min-w-0">
-					<span className="text-muted-foreground">
-						{repo.owner.login}
-					</span>
-					<span className="text-muted-foreground/25 mx-0.5">/</span>
-					<span className="font-medium">{repo.name}</span>
-				</span>
-				{repo.private && (
-					<Lock className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
-				)}
-				<div className="flex items-center gap-2.5 ml-auto shrink-0 text-[10px] text-muted-foreground/45">
-					{repo.language && (
-						<span className="flex items-center gap-1 font-mono">
-							<span
-								className="w-1.5 h-1.5 rounded-full shrink-0"
-								style={{
-									backgroundColor:
-										getLanguageColor(
-											repo.language,
-										),
-								}}
-							/>
-							{repo.language}
+				<div className="flex-1 min-w-0">
+					<div className="flex items-center gap-2">
+						<span className="text-xs font-mono truncate group-hover:text-foreground transition-colors">
+							<span className="text-muted-foreground/60">
+								{repo.owner.login}
+							</span>
+							<span className="text-muted-foreground/40 mx-0.5">
+								/
+							</span>
+							<span className="font-medium">
+								{repo.name}
+							</span>
 						</span>
-					)}
-					{repo.stargazers_count > 0 && (
-						<span className="flex items-center gap-0.5">
-							<Star className="w-2.5 h-2.5" />
-							{formatNumber(repo.stargazers_count)}
-						</span>
+						{repo.private && (
+							<Lock className="w-2.5 h-2.5 text-muted-foreground/50 shrink-0" />
+						)}
+						<div className="flex items-center gap-2 ml-auto shrink-0 text-[10px] text-muted-foreground/65">
+							{repo.language && (
+								<span className="flex items-center gap-1 font-mono">
+									<span
+										className="w-1.5 h-1.5 rounded-full shrink-0"
+										style={{
+											backgroundColor:
+												getLanguageColor(
+													repo.language,
+												),
+										}}
+									/>
+									{repo.language}
+								</span>
+							)}
+							{repo.stargazers_count > 0 && (
+								<span className="flex items-center gap-0.5">
+									<Star className="w-2.5 h-2.5" />
+									{formatNumber(
+										repo.stargazers_count,
+									)}
+								</span>
+							)}
+							{(repo.forks_count ?? 0) > 0 && (
+								<span className="flex items-center gap-0.5">
+									<GitFork className="w-2.5 h-2.5" />
+									{formatNumber(
+										repo.forks_count!,
+									)}
+								</span>
+							)}
+						</div>
+					</div>
+					{repo.description && (
+						<p className="text-[10px] text-muted-foreground/60 truncate mt-0.5">
+							{repo.description}
+						</p>
 					)}
 				</div>
 			</Link>
@@ -920,7 +964,7 @@ function PinnedRepoRow({
 					e.preventDefault();
 					onUnpin(repo.full_name);
 				}}
-				className="shrink-0 p-1 text-foreground/60 hover:text-foreground transition-all cursor-pointer"
+				className="shrink-0 p-1 mt-0.5 text-foreground/60 hover:text-foreground transition-all cursor-pointer"
 				title="Unpin repository"
 				draggable={false}
 			>
@@ -948,15 +992,15 @@ function TrendingRow({ repo }: { repo: TrendingRepoItem }) {
 			<div className="flex-1 min-w-0">
 				<div className="flex items-center gap-2">
 					<span className="text-xs font-mono truncate group-hover:text-foreground transition-colors">
-						<span className="text-muted-foreground">
+						<span className="text-muted-foreground/60">
 							{repo.owner?.login}
 						</span>
-						<span className="text-muted-foreground/25 mx-0.5">
+						<span className="text-muted-foreground/40 mx-0.5">
 							/
 						</span>
 						<span className="font-medium">{repo.name}</span>
 					</span>
-					<div className="flex items-center gap-2 ml-auto shrink-0 text-[10px] text-muted-foreground/45">
+					<div className="flex items-center gap-2 ml-auto shrink-0 text-[10px] text-muted-foreground/65">
 						{repo.language && (
 							<span className="flex items-center gap-1 font-mono">
 								<span
@@ -984,7 +1028,7 @@ function TrendingRow({ repo }: { repo: TrendingRepoItem }) {
 					</div>
 				</div>
 				{repo.description && (
-					<p className="text-[10px] text-muted-foreground truncate mt-0.5">
+					<p className="text-[10px] text-muted-foreground/60 truncate mt-0.5">
 						{repo.description}
 					</p>
 				)}
@@ -1234,8 +1278,8 @@ function ActivityMarquee({ activity }: { activity: Array<ActivityEvent> }) {
 			href={item.href}
 			className="inline-flex items-center gap-1 shrink-0 hover:text-foreground transition-colors"
 		>
-			<span className="text-muted-foreground/30">{item.time}</span>
-			<span className="text-muted-foreground/50">{item.icon}</span>
+			<span className="text-muted-foreground/50">{item.time}</span>
+			<span className="text-muted-foreground/70">{item.icon}</span>
 			<span>{item.text}</span>
 			<span className="text-muted-foreground/15 mx-1">&middot;</span>
 		</Link>

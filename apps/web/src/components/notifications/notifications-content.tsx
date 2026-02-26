@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useQueryState, parseAsStringLiteral } from "nuqs";
 import Link from "next/link";
 import {
 	Bell,
@@ -19,7 +20,8 @@ import { TimeAgo } from "@/components/ui/time-ago";
 import type { NotificationItem } from "@/lib/github-types";
 import { markNotificationDone, markAllNotificationsRead } from "@/app/(app)/repos/actions";
 
-type FilterType = "all" | "unread" | "participating" | "mention";
+const notifFilterTypes = ["all", "unread", "participating", "mention"] as const;
+type FilterType = (typeof notifFilterTypes)[number];
 
 const reasonLabels: Record<string, string> = {
 	assign: "Assigned",
@@ -58,7 +60,10 @@ function getNotificationHref(notif: NotificationItem): string | null {
 }
 
 export function NotificationsContent({ notifications }: { notifications: NotificationItem[] }) {
-	const [filter, setFilter] = useState<FilterType>("all");
+	const [filter, setFilter] = useQueryState(
+		"filter",
+		parseAsStringLiteral(notifFilterTypes).withDefault("all"),
+	);
 	const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
 	const [markingAll, startMarkAll] = useTransition();
 	const [markingId, setMarkingId] = useState<string | null>(null);

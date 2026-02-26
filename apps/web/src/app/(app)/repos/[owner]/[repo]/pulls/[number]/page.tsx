@@ -54,6 +54,10 @@ export async function generateMetadata({
 
 	return {
 		title: `${bundle.pr.title} · PR #${pullNumber} · ${owner}/${repo}`,
+		description: bundle.pr.body
+			? bundle.pr.body.slice(0, 200)
+			: `Pull request #${pullNumber} on ${owner}/${repo}`,
+		openGraph: { title: `${bundle.pr.title} · PR #${pullNumber}` },
 	};
 }
 

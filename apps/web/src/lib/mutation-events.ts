@@ -75,6 +75,29 @@ export type IssueCommentedEvent = {
 	number: number;
 };
 
+// ── Discussion Events ──────────────────────────────────────────
+
+export type DiscussionCreatedEvent = {
+	type: "discussion:created";
+	owner: string;
+	repo: string;
+	number: number;
+};
+export type DiscussionCommentedEvent = {
+	type: "discussion:commented";
+	owner: string;
+	repo: string;
+	number: number;
+};
+
+// ── Prompt Events ─────────────────────────────────────────────
+
+export type PromptCreatedEvent = { type: "prompt:created"; owner: string; repo: string };
+export type PromptAcceptedEvent = { type: "prompt:accepted"; owner: string; repo: string };
+export type PromptClosedEvent = { type: "prompt:closed"; owner: string; repo: string };
+export type PromptReopenedEvent = { type: "prompt:reopened"; owner: string; repo: string };
+export type PromptDeletedEvent = { type: "prompt:deleted"; owner: string; repo: string };
+
 // ── Repo Events ───────────────────────────────────────────────
 
 export type RepoStarredEvent = { type: "repo:starred"; owner: string; repo: string };
@@ -123,6 +146,13 @@ export type MutationEvent =
 	| IssueReopenedEvent
 	| IssueCreatedEvent
 	| IssueCommentedEvent
+	| DiscussionCreatedEvent
+	| DiscussionCommentedEvent
+	| PromptCreatedEvent
+	| PromptAcceptedEvent
+	| PromptClosedEvent
+	| PromptReopenedEvent
+	| PromptDeletedEvent
 	| RepoStarredEvent
 	| RepoUnstarredEvent
 	| RepoCreatedEvent
