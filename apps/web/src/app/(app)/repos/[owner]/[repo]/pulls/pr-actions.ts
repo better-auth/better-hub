@@ -18,6 +18,7 @@ const PR_ACTION_SCOPES: Record<string, PRMutationScope[]> = {
 	merge: ["detail", "list", "layout"],
 	close: ["detail", "list", "layout"],
 	reopen: ["detail", "list", "layout"],
+	convertToDraft: ["detail", "list", "layout"],
 	rename: ["detail", "list"],
 	updateBase: ["detail", "list"],
 	review: ["detail"],
@@ -174,6 +175,24 @@ export async function reopenPullRequest(owner: string, repo: string, pullNumber:
 		return { success: true };
 	} catch (e: unknown) {
 		return { error: getErrorMessage(e) || "Failed to reopen" };
+	}
+}
+
+export async function convertPRToDraft(owner: string, repo: string, pullNumber: number) {
+	const octokit = await getOctokit();
+	if (!octokit) return { error: "Not authenticated" };
+
+	try {
+		await octokit.pulls.update({
+			owner,
+			repo,
+			pull_number: pullNumber,
+			draft: true,
+		});
+		await revalidateAfterPRMutation(owner, repo, pullNumber, "convertToDraft");
+		return { success: true };
+	} catch (e: unknown) {
+		return { error: getErrorMessage(e) || "Failed to convert to draft" };
 	}
 }
 
