@@ -13,6 +13,7 @@ import {
 	type AuthorDossierResult,
 	getCrossReferences,
 } from "@/lib/github";
+import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { extractParticipants } from "@/lib/github-utils";
 import { highlightDiffLines, type SyntaxToken } from "@/lib/shiki";
 import { PRHeader } from "@/components/pr/pr-header";
@@ -24,6 +25,7 @@ import {
 	type ReviewCommentEntry,
 	type CommitEntry,
 	type StateChangeEntry,
+	type CrossReferenceEntry,
 } from "@/components/pr/pr-conversation";
 import { PRMergePanel } from "@/components/pr/pr-merge-panel";
 import { PRCommentForm } from "@/components/pr/pr-comment-form";
@@ -48,6 +50,8 @@ export async function generateMetadata({
 	const pullNumber = parseInt(numStr, 10);
 	const bundle = await getPullRequestBundle(owner, repo, pullNumber);
 
+	const ogUrl = ogImageUrl({ type: "pr", owner, repo, number: pullNumber });
+
 	if (!bundle) {
 		return { title: `PR #${pullNumber} · ${owner}/${repo}` };
 	}
@@ -57,7 +61,8 @@ export async function generateMetadata({
 		description: bundle.pr.body
 			? bundle.pr.body.slice(0, 200)
 			: `Pull request #${pullNumber} on ${owner}/${repo}`,
-		openGraph: { title: `${bundle.pr.title} · PR #${pullNumber}` },
+		openGraph: { title: `${bundle.pr.title} · PR #${pullNumber}`, ...ogImages(ogUrl) },
+		twitter: { card: "summary_large_image", ...ogImages(ogUrl) },
 	};
 }
 
@@ -312,6 +317,23 @@ export default async function PRDetailPage({
 			user: s.actor,
 			created_at: s.created_at,
 			merge_ref_name: s.merge_ref_name,
+		};
+		timeline.push(entry);
+	}
+
+	for (const ref of crossRefs) {
+		const entry: CrossReferenceEntry = {
+			type: "cross_reference",
+			id: `xref-${ref.repoOwner}-${ref.repoName}-${ref.number}`,
+			number: ref.number,
+			title: ref.title,
+			state: ref.state,
+			merged: ref.merged,
+			isPullRequest: ref.isPullRequest,
+			user: ref.user,
+			repoOwner: ref.repoOwner,
+			repoName: ref.repoName,
+			created_at: ref.created_at,
 		};
 		timeline.push(entry);
 	}

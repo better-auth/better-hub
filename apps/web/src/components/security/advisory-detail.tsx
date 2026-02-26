@@ -436,6 +436,7 @@ export function AdvisoryDetail({
 					{/* View on GitHub */}
 					<a
 						href={advisory.htmlUrl}
+						data-no-github-intercept
 						target="_blank"
 						rel="noopener noreferrer"
 						className="flex items-center justify-center gap-2 w-full border border-border px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"

@@ -6,6 +6,7 @@ import {
 	getCrossReferences,
 	getAuthenticatedUser,
 } from "@/lib/github";
+import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { extractParticipants } from "@/lib/github-utils";
 import { renderMarkdownToHtml } from "@/components/shared/markdown-renderer";
 import { IssueHeader } from "@/components/issue/issue-header";
@@ -31,6 +32,8 @@ export async function generateMetadata({
 	const issueNumber = parseInt(numStr, 10);
 	const issue = await getIssue(owner, repo, issueNumber);
 
+	const ogUrl = ogImageUrl({ type: "issue", owner, repo, number: issueNumber });
+
 	if (!issue) {
 		return { title: `Issue #${issueNumber} · ${owner}/${repo}` };
 	}
@@ -40,7 +43,8 @@ export async function generateMetadata({
 		description: issue.body
 			? issue.body.slice(0, 200)
 			: `Issue #${issueNumber} on ${owner}/${repo}`,
-		openGraph: { title: `${issue.title} · Issue #${issueNumber}` },
+		openGraph: { title: `${issue.title} · Issue #${issueNumber}`, ...ogImages(ogUrl) },
+		twitter: { card: "summary_large_image", ...ogImages(ogUrl) },
 	};
 }
 

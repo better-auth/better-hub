@@ -69,6 +69,7 @@ function RepoErrorPage({ owner, repo, error }: { owner: string; repo: string; er
 			</div>
 			<a
 				href={githubUrl}
+				data-no-github-intercept
 				target="_blank"
 				rel="noopener noreferrer"
 				className="flex items-center gap-1.5 text-[11px] font-mono px-3 py-1.5 border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors"

@@ -35,7 +35,9 @@ import type {
 	PromptRequest,
 	PromptRequestStatus,
 	PromptRequestComment,
+	PromptRequestReaction,
 } from "@/lib/prompt-request-store";
+import { PromptReactionDisplay } from "./prompt-reaction-display";
 
 const statusColors: Record<PromptRequestStatus, string> = {
 	open: "bg-green-500/15 text-green-400",
@@ -54,6 +56,7 @@ interface PromptDetailProps {
 	repo: string;
 	promptRequest: PromptRequest;
 	comments: PromptRequestComment[];
+	reactions: PromptRequestReaction[];
 	currentUser: { id: string; login: string | null; name: string; image: string } | null;
 	canManage: boolean;
 	isMaintainer: boolean;
@@ -64,6 +67,7 @@ export function PromptDetail({
 	repo,
 	promptRequest,
 	comments,
+	reactions,
 	currentUser,
 	canManage,
 	isMaintainer,
@@ -276,6 +280,13 @@ export function PromptDetail({
 					<div className="border border-border rounded-lg p-4">
 						<ClientMarkdown content={promptRequest.body} />
 					</div>
+
+					{/* Reactions */}
+					<PromptReactionDisplay
+						promptRequestId={promptRequest.id}
+						reactions={reactions}
+						currentUserId={currentUser?.id ?? null}
+					/>
 
 					{/* Inline actions */}
 					<div className="flex items-center gap-1.5">
