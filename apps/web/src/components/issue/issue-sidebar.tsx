@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import type { CrossReference } from "@/lib/github";
+import { UserTooltip } from "@/components/shared/user-tooltip";
 
 interface Assignee {
 	login: string;
@@ -109,22 +110,27 @@ export function IssueSidebar({
 					<SectionHeading>Assignees</SectionHeading>
 					<div className="space-y-1.5">
 						{assignees.map((a) => (
-							<Link
+							<UserTooltip
 								key={a.login}
-								href={`/users/${a.login}`}
-								className="flex items-center gap-2 text-xs text-foreground/70 hover:text-foreground transition-colors"
+								username={a.login}
+								side="left"
 							>
-								<Image
-									src={a.avatar_url}
-									alt={a.login}
-									width={18}
-									height={18}
-									className="rounded-full"
-								/>
-								<span className="font-mono truncate">
-									{a.login}
-								</span>
-							</Link>
+								<Link
+									href={`/users/${a.login}`}
+									className="flex items-center gap-2 text-xs text-foreground/70 hover:text-foreground transition-colors"
+								>
+									<Image
+										src={a.avatar_url}
+										alt={a.login}
+										width={18}
+										height={18}
+										className="rounded-full"
+									/>
+									<span className="font-mono truncate hover:underline">
+										{a.login}
+									</span>
+								</Link>
+							</UserTooltip>
 						))}
 					</div>
 				</div>
@@ -298,23 +304,32 @@ export function IssueSidebar({
 								<span className="text-muted-foreground/50">
 									Closed by
 								</span>
-								<Link
-									href={`/users/${closedBy.login}`}
-									className="flex items-center gap-1.5 text-foreground/60 hover:text-foreground transition-colors"
+								<UserTooltip
+									username={closedBy.login}
+									side="left"
 								>
-									<Image
-										src={
-											closedBy.avatar_url
-										}
-										alt={closedBy.login}
-										width={14}
-										height={14}
-										className="rounded-full"
-									/>
-									<span className="font-mono text-[11px]">
-										{closedBy.login}
-									</span>
-								</Link>
+									<Link
+										href={`/users/${closedBy.login}`}
+										className="flex items-center gap-1.5 text-foreground/60 hover:text-foreground transition-colors"
+									>
+										<Image
+											src={
+												closedBy.avatar_url
+											}
+											alt={
+												closedBy.login
+											}
+											width={14}
+											height={14}
+											className="rounded-full"
+										/>
+										<span className="font-mono text-[11px] hover:underline">
+											{
+												closedBy.login
+											}
+										</span>
+									</Link>
+								</UserTooltip>
 							</div>
 						)}
 					</div>
