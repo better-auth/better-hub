@@ -2085,22 +2085,28 @@ export function CommandMenu() {
 																	)
 																}
 															>
-																<span className="flex items-center gap-1 shrink-0">
-																	<span
-																		className="w-3 h-3 rounded-full border border-border/40"
-																		style={{
-																			backgroundColor:
-																				variant.bgPreview,
-																		}}
-																	/>
-																	<span
-																		className="w-3 h-3 rounded-full border border-border/40"
-																		style={{
-																			backgroundColor:
-																				variant.accentPreview,
-																		}}
-																	/>
-																</span>
+																{theme.icon ? (
+																	<div className="min-w-[28px] flex items-center justify-center">
+																		<theme.icon className="size-4 shrink-0" />
+																	</div>
+																) : (
+																	<span className="flex items-center gap-1 shrink-0">
+																		<span
+																			className="w-3 h-3 rounded-full border border-border/40"
+																			style={{
+																				backgroundColor:
+																					variant.bgPreview,
+																			}}
+																		/>
+																		<span
+																			className="w-3 h-3 rounded-full border border-border/40"
+																			style={{
+																				backgroundColor:
+																					variant.accentPreview,
+																			}}
+																		/>
+																	</span>
+																)}
 																<span className="text-[13px] text-foreground flex-1">
 																	{
 																		theme.name

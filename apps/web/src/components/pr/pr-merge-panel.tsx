@@ -524,22 +524,6 @@ export function PRMergePanel({
 					</div>
 				)}
 
-				{/* Convert to draft */}
-				{canConvertToDraft && (
-					<button
-						onClick={handleConvertToDraft}
-						disabled={isPending}
-						className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-					>
-						{isPending && pendingAction === "draft" ? (
-							<Loader2 className="w-3 h-3 animate-spin" />
-						) : (
-							<FilePenLine className="w-3 h-3" />
-						)}
-						Convert to draft
-					</button>
-				)}
-
 				{showUpdateBranch &&
 					(updateBranchDisabled ? (
 						<Tooltip delayDuration={0}>

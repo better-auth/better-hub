@@ -21,12 +21,7 @@ import {
 
 const themes: ThemeDefinition[] = [
 	hub,
-	ember,
-	zinc,
-	arctic,
-	nordWave,
 	vercel,
-	rabbit,
 	supabase,
 	tailwind,
 	openai,
@@ -34,6 +29,11 @@ const themes: ThemeDefinition[] = [
 	cloudflare,
 	gemini,
 	stripe,
+	ember,
+	zinc,
+	arctic,
+	nordWave,
+	rabbit,
 	noir,
 	forest,
 ];

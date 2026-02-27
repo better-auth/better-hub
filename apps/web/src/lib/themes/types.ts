@@ -104,4 +104,6 @@ export interface ThemeDefinition {
 	description: string;
 	dark: ThemeVariant;
 	light: ThemeVariant;
+	/** Optional custom icon to display in theme switcher instead of color preview circles */
+	icon?: React.ComponentType<{ className?: string }>;
 }
