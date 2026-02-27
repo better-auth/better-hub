@@ -13,8 +13,9 @@ export async function POST(req: Request) {
 		return new Response("Unauthorized", { status: 401 });
 	}
 
-	// Check AI message limit
-	const limitResult = await checkUsageLimit(session.user.id);
+	const { model, modelId, isCustomApiKey } = await getInternalModel(session.user.id);
+
+	const limitResult = await checkUsageLimit(session.user.id, isCustomApiKey);
 	if (!limitResult.allowed) {
 		const errorCode = getBillingErrorCode(limitResult);
 		return new Response(JSON.stringify({ error: errorCode, ...limitResult }), {
@@ -24,7 +25,6 @@ export async function POST(req: Request) {
 	}
 
 	const body = await req.json();
-	const { model, modelId, isCustomApiKey } = await getInternalModel(session.user.id);
 
 	if (body.mode === "squash") {
 		const { prTitle, prBody, prNumber, commits } = body;

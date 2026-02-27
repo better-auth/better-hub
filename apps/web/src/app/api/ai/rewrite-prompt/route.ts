@@ -13,7 +13,9 @@ export async function POST(req: Request) {
 		return new Response("Unauthorized", { status: 401 });
 	}
 
-	const limitResult = await checkUsageLimit(session.user.id);
+	const { model, modelId, isCustomApiKey } = await getInternalModel(session.user.id);
+
+	const limitResult = await checkUsageLimit(session.user.id, isCustomApiKey);
 	if (!limitResult.allowed) {
 		const errorCode = getBillingErrorCode(limitResult);
 		return new Response(JSON.stringify({ error: errorCode, ...limitResult }), {
@@ -27,8 +29,6 @@ export async function POST(req: Request) {
 	if (!prompt || !owner || !repo) {
 		return Response.json({ error: "Missing fields" }, { status: 400 });
 	}
-
-	const { model, modelId, isCustomApiKey } = await getInternalModel(session.user.id);
 
 	try {
 		const { text, usage } = await generateText({

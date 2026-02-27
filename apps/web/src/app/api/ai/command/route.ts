@@ -40,8 +40,9 @@ export async function POST(req: Request) {
 		return new Response("Unauthorized", { status: 401 });
 	}
 
-	// Check AI message limit
-	const limitResult = await checkUsageLimit(userId);
+	const { model, modelId, isCustomApiKey } = await getInternalModel(userId);
+
+	const limitResult = await checkUsageLimit(userId, isCustomApiKey);
 	if (!limitResult.allowed) {
 		const errorCode = getBillingErrorCode(limitResult);
 		return new Response(JSON.stringify({ error: errorCode, ...limitResult }), {
@@ -49,8 +50,6 @@ export async function POST(req: Request) {
 			headers: { "Content-Type": "application/json" },
 		});
 	}
-
-	const { model, modelId, isCustomApiKey } = await getInternalModel(userId);
 
 	// Get authenticated user info
 	let currentUser: { login: string } | null = null;
