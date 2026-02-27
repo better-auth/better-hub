@@ -10,6 +10,7 @@ import type { UserSettings } from "@/lib/user-settings-store";
 interface GeneralTabProps {
 	settings: UserSettings;
 	onUpdate: (updates: Partial<UserSettings>) => Promise<void>;
+	onThemeTransition?: () => void;
 }
 
 function ThemeGrid({
@@ -84,9 +85,23 @@ const RADIUS_OPTIONS: { id: BorderRadiusPreset; label: string; description: stri
 	{ id: "large", label: "Large", description: "Soft & rounded" },
 ];
 
-export function GeneralTab({ settings: _settings, onUpdate: _onUpdate }: GeneralTabProps) {
+export function GeneralTab({
+	settings: _settings,
+	onUpdate: _onUpdate,
+	onThemeTransition,
+}: GeneralTabProps) {
 	const { themeId, mode, borderRadius, setTheme, toggleMode, setBorderRadius, themes } =
 		useColorTheme();
+
+	const handleSetTheme = (id: string) => {
+		onThemeTransition?.();
+		setTheme(id);
+	};
+
+	const handleToggleMode = () => {
+		onThemeTransition?.();
+		toggleMode();
+	};
 
 	return (
 		<div className="divide-y divide-border">
@@ -105,7 +120,9 @@ export function GeneralTab({ settings: _settings, onUpdate: _onUpdate }: General
 				</p>
 				<div className="flex gap-2">
 					<button
-						onClick={() => mode === "light" && toggleMode()}
+						onClick={() =>
+							mode === "light" && handleToggleMode()
+						}
 						className={cn(
 							"flex items-center gap-2 px-3 py-2 border text-sm transition-colors",
 							mode === "dark"
@@ -120,7 +137,9 @@ export function GeneralTab({ settings: _settings, onUpdate: _onUpdate }: General
 						)}
 					</button>
 					<button
-						onClick={() => mode === "dark" && toggleMode()}
+						onClick={() =>
+							mode === "dark" && handleToggleMode()
+						}
 						className={cn(
 							"flex items-center gap-2 px-3 py-2 border text-sm transition-colors",
 							mode === "light"
@@ -150,7 +169,7 @@ export function GeneralTab({ settings: _settings, onUpdate: _onUpdate }: General
 					themes={themes}
 					activeId={themeId}
 					mode={mode}
-					onSelect={setTheme}
+					onSelect={handleSetTheme}
 				/>
 			</div>
 

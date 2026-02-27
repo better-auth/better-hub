@@ -27,9 +27,15 @@ interface SettingsContentProps {
 	initialSettings: UserSettings;
 	user: { name: string; email: string; image: string | null };
 	githubProfile: GitHubProfile;
+	onThemeTransition?: () => void;
 }
 
-export function SettingsContent({ initialSettings, user, githubProfile }: SettingsContentProps) {
+export function SettingsContent({
+	initialSettings,
+	user,
+	githubProfile,
+	onThemeTransition,
+}: SettingsContentProps) {
 	const [activeTab, setActiveTab] = useState<TabId>("general");
 	const [settings, setSettings] = useState(initialSettings);
 	const { emit } = useMutationEvents();
@@ -126,7 +132,11 @@ export function SettingsContent({ initialSettings, user, githubProfile }: Settin
 			{/* Content — only this area scrolls */}
 			<div className="flex-1 min-h-0 overflow-y-auto border border-t-0 border-border mx-6 mb-6">
 				{activeTab === "general" && (
-					<GeneralTab settings={settings} onUpdate={handleUpdate} />
+					<GeneralTab
+						settings={settings}
+						onUpdate={handleUpdate}
+						onThemeTransition={onThemeTransition}
+					/>
 				)}
 				{activeTab === "editor" && <EditorTab />}
 				{activeTab === "ai" && (

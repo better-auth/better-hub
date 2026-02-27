@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
@@ -53,11 +54,35 @@ export function SettingsDialog({ open, onOpenChange, user, githubProfile }: Sett
 		gcTime: 15 * 60 * 1000,
 	});
 
+	const [isThemeTransitioning, setIsThemeTransitioning] = useState(false);
+	const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	const onThemeTransition = useCallback(() => {
+		if (transitionTimeoutRef.current) {
+			clearTimeout(transitionTimeoutRef.current);
+		}
+		setIsThemeTransitioning(true);
+		transitionTimeoutRef.current = setTimeout(() => {
+			setIsThemeTransitioning(false);
+		}, 1000);
+	}, []);
+
+	const handleInteractOutside = useCallback(
+		(e: Event) => {
+			if (isThemeTransitioning) {
+				e.preventDefault();
+			}
+		},
+		[isThemeTransitioning],
+	);
+
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
 				className="sm:max-w-2xl p-0 gap-0 overflow-hidden max-h-[85vh] outline-none"
 				showCloseButton={false}
+				onPointerDownOutside={handleInteractOutside}
+				onInteractOutside={handleInteractOutside}
 			>
 				<VisuallyHidden.Root>
 					<DialogTitle>Settings</DialogTitle>
@@ -68,6 +93,7 @@ export function SettingsDialog({ open, onOpenChange, user, githubProfile }: Sett
 							initialSettings={settings}
 							user={user}
 							githubProfile={githubProfile}
+							onThemeTransition={onThemeTransition}
 						/>
 					) : (
 						<div className="flex-1 flex items-center justify-center px-6">
