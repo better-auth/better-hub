@@ -188,9 +188,6 @@ export const hub: ThemeDefinition = {
 			"--contrib-2": "#006d32",
 			"--contrib-3": "#26a641",
 			"--contrib-4": "#39d353",
-			"--radius-sm": "0.0rem",
-			"--radius-md": "0.1rem",
-			"--radius-lg": "0.2rem",
 		},
 	},
 	light: {
@@ -252,9 +249,6 @@ export const hub: ThemeDefinition = {
 			"--contrib-2": "#40c463",
 			"--contrib-3": "#30a14e",
 			"--contrib-4": "#216e39",
-			"--radius-sm": "0.0rem",
-			"--radius-md": "0.25rem",
-			"--radius-lg": "0.4rem",
 		},
 	},
 };
@@ -323,9 +317,6 @@ export const ember: ThemeDefinition = {
 			"--contrib-2": "#92400e",
 			"--contrib-3": "#d97706",
 			"--contrib-4": "#f59e0b",
-			"--radius-sm": "0.375rem",
-			"--radius-md": "0.625rem",
-			"--radius-lg": "1rem",
 		},
 	},
 	light: {
@@ -387,9 +378,6 @@ export const ember: ThemeDefinition = {
 			"--contrib-2": "#fbbf24",
 			"--contrib-3": "#f59e0b",
 			"--contrib-4": "#d97706",
-			"--radius-sm": "0.375rem",
-			"--radius-md": "0.625rem",
-			"--radius-lg": "1rem",
 		},
 	},
 };
@@ -458,9 +446,6 @@ export const zinc: ThemeDefinition = {
 			"--contrib-2": "#006d32",
 			"--contrib-3": "#26a641",
 			"--contrib-4": "#39d353",
-			"--radius-sm": "0.25rem",
-			"--radius-md": "0.5rem",
-			"--radius-lg": "0.75rem",
 		},
 	},
 	light: {
@@ -522,9 +507,6 @@ export const zinc: ThemeDefinition = {
 			"--contrib-2": "#40c463",
 			"--contrib-3": "#30a14e",
 			"--contrib-4": "#216e39",
-			"--radius-sm": "0.25rem",
-			"--radius-md": "0.5rem",
-			"--radius-lg": "0.75rem",
 		},
 	},
 };
@@ -593,9 +575,6 @@ export const arctic: ThemeDefinition = {
 			"--contrib-2": "#0369a1",
 			"--contrib-3": "#0ea5e9",
 			"--contrib-4": "#38bdf8",
-			"--radius-sm": "0.25rem",
-			"--radius-md": "0.5rem",
-			"--radius-lg": "0.75rem",
 		},
 	},
 	light: {
@@ -657,9 +636,6 @@ export const arctic: ThemeDefinition = {
 			"--contrib-2": "#38bdf8",
 			"--contrib-3": "#0ea5e9",
 			"--contrib-4": "#0284c7",
-			"--radius-sm": "0.25rem",
-			"--radius-md": "0.5rem",
-			"--radius-lg": "0.75rem",
 		},
 	},
 };
@@ -728,9 +704,6 @@ export const nordWave: ThemeDefinition = {
 			"--contrib-2": "#4c566a",
 			"--contrib-3": "#81a1c1",
 			"--contrib-4": "#88c0d0",
-			"--radius-sm": "0.25rem",
-			"--radius-md": "0.5rem",
-			"--radius-lg": "0.75rem",
 		},
 	},
 	light: {
@@ -792,9 +765,6 @@ export const nordWave: ThemeDefinition = {
 			"--contrib-2": "#8fbcbb",
 			"--contrib-3": "#88c0d0",
 			"--contrib-4": "#5e81ac",
-			"--radius-sm": "0.25rem",
-			"--radius-md": "0.5rem",
-			"--radius-lg": "0.75rem",
 		},
 	},
 };
@@ -873,9 +843,6 @@ export const vercel: ThemeDefinition = {
 			"--contrib-2": "#006d32",
 			"--contrib-3": "#26a641",
 			"--contrib-4": "#39d353",
-			"--radius-sm": "0.125rem",
-			"--radius-md": "0.375rem",
-			"--radius-lg": "0.5rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -959,9 +926,6 @@ export const vercel: ThemeDefinition = {
 			"--contrib-2": "#40c463",
 			"--contrib-3": "#30a14e",
 			"--contrib-4": "#216e39",
-			"--radius-sm": "0.125rem",
-			"--radius-md": "0.375rem",
-			"--radius-lg": "0.5rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -1052,9 +1016,6 @@ export const rabbit: ThemeDefinition = {
 			"--contrib-2": "#666666",
 			"--contrib-3": "#a7a7a7",
 			"--contrib-4": "#d4d4d4",
-			"--radius-sm": "0.375rem",
-			"--radius-md": "0.75rem",
-			"--radius-lg": "1.25rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -1135,9 +1096,6 @@ export const rabbit: ThemeDefinition = {
 			"--contrib-2": "#a3a3a3",
 			"--contrib-3": "#666666",
 			"--contrib-4": "#404040",
-			"--radius-sm": "0.375rem",
-			"--radius-md": "0.75rem",
-			"--radius-lg": "1.25rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -1271,9 +1229,6 @@ export const supabase: ThemeDefinition = {
 			"--contrib-2": "#2a7d5a",
 			"--contrib-3": "#3ecf8e",
 			"--contrib-4": "#6ee7b7",
-			"--radius-sm": "0.25rem",
-			"--radius-md": "0.5rem",
-			"--radius-lg": "0.75rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -1357,9 +1312,6 @@ export const supabase: ThemeDefinition = {
 			"--contrib-2": "#7dd3a8",
 			"--contrib-3": "#3ecf8e",
 			"--contrib-4": "#15593b",
-			"--radius-sm": "0.25rem",
-			"--radius-md": "0.5rem",
-			"--radius-lg": "0.75rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -1470,9 +1422,6 @@ export const tailwind: ThemeDefinition = {
 			"--contrib-2": "#0369a1",
 			"--contrib-3": "#0ea5e9",
 			"--contrib-4": "#38bdf8",
-			"--radius-sm": "0.25rem",
-			"--radius-md": "0.5rem",
-			"--radius-lg": "0.75rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -1556,9 +1505,6 @@ export const tailwind: ThemeDefinition = {
 			"--contrib-2": "#7dd3fc",
 			"--contrib-3": "#38bdf8",
 			"--contrib-4": "#0ea5e9",
-			"--radius-sm": "0.25rem",
-			"--radius-md": "0.5rem",
-			"--radius-lg": "0.75rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -1670,9 +1616,6 @@ export const mintlify: ThemeDefinition = {
 			"--contrib-2": "#2f7368",
 			"--contrib-3": "#3fa08e",
 			"--contrib-4": "#4ec9b0",
-			"--radius-sm": "0.25rem",
-			"--radius-md": "0.5rem",
-			"--radius-lg": "0.75rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -1756,9 +1699,6 @@ export const mintlify: ThemeDefinition = {
 			"--contrib-2": "#66cdb3",
 			"--contrib-3": "#0d9373",
 			"--contrib-4": "#0a7a5f",
-			"--radius-sm": "0.25rem",
-			"--radius-md": "0.5rem",
-			"--radius-lg": "0.75rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -1850,9 +1790,6 @@ export const prisma: ThemeDefinition = {
 			"--contrib-2": "#2a7a74",
 			"--contrib-3": "#4ab0a8",
 			"--contrib-4": "#71E8DF",
-			"--radius-sm": "0.125rem",
-			"--radius-md": "0.375rem",
-			"--radius-lg": "0.5rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -1936,9 +1873,6 @@ export const prisma: ThemeDefinition = {
 			"--contrib-2": "#4FD1C5",
 			"--contrib-3": "#16A394",
 			"--contrib-4": "#0d7d72",
-			"--radius-sm": "0.125rem",
-			"--radius-md": "0.375rem",
-			"--radius-lg": "0.5rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -2029,9 +1963,6 @@ export const elevenlabs: ThemeDefinition = {
 			"--contrib-2": "#5a5aaf",
 			"--contrib-3": "#7a7adf",
 			"--contrib-4": "#8F8FFF",
-			"--radius-sm": "0.375rem",
-			"--radius-md": "0.75rem",
-			"--radius-lg": "1.25rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -2115,9 +2046,6 @@ export const elevenlabs: ThemeDefinition = {
 			"--contrib-2": "#9a9aff",
 			"--contrib-3": "#6f6fff",
 			"--contrib-4": "#4c3fff",
-			"--radius-sm": "0.375rem",
-			"--radius-md": "0.75rem",
-			"--radius-lg": "1.25rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -2208,9 +2136,6 @@ export const resend: ThemeDefinition = {
 			"--contrib-2": "#666666",
 			"--contrib-3": "#a7a7a7",
 			"--contrib-4": "#d4d4d4",
-			"--radius-sm": "0.125rem",
-			"--radius-md": "0.375rem",
-			"--radius-lg": "0.5rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -2291,9 +2216,6 @@ export const resend: ThemeDefinition = {
 			"--contrib-2": "#a3a3a3",
 			"--contrib-3": "#666666",
 			"--contrib-4": "#404040",
-			"--radius-sm": "0.125rem",
-			"--radius-md": "0.375rem",
-			"--radius-lg": "0.5rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -2381,9 +2303,6 @@ export const triggerdev: ThemeDefinition = {
 			"--contrib-2": "#5c5090",
 			"--contrib-3": "#7b6ac0",
 			"--contrib-4": "#9684FF",
-			"--radius-sm": "0.25rem",
-			"--radius-md": "0.5rem",
-			"--radius-lg": "0.75rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -2462,9 +2381,6 @@ export const triggerdev: ThemeDefinition = {
 			"--contrib-2": "#9a8aff",
 			"--contrib-3": "#7060ff",
 			"--contrib-4": "#5C40FF",
-			"--radius-sm": "0.25rem",
-			"--radius-md": "0.5rem",
-			"--radius-lg": "0.75rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -2550,9 +2466,6 @@ export const nuxt: ThemeDefinition = {
 			"--contrib-2": "#0d8c52",
 			"--contrib-3": "#00b86a",
 			"--contrib-4": "#00DC82",
-			"--radius-sm": "0.25rem",
-			"--radius-md": "0.5rem",
-			"--radius-lg": "0.75rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -2636,9 +2549,6 @@ export const nuxt: ThemeDefinition = {
 			"--contrib-2": "#4ADE80",
 			"--contrib-3": "#00b368",
 			"--contrib-4": "#047857",
-			"--radius-sm": "0.25rem",
-			"--radius-md": "0.5rem",
-			"--radius-lg": "0.75rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -2729,9 +2639,6 @@ export const browserbase: ThemeDefinition = {
 			"--contrib-2": "#993300",
 			"--contrib-3": "#CC3D00",
 			"--contrib-4": "#FF4500",
-			"--radius-sm": "0.25rem",
-			"--radius-md": "0.5rem",
-			"--radius-lg": "0.75rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -2815,9 +2722,6 @@ export const browserbase: ThemeDefinition = {
 			"--contrib-2": "#FF9966",
 			"--contrib-3": "#FF6B35",
 			"--contrib-4": "#FF4500",
-			"--radius-sm": "0.25rem",
-			"--radius-md": "0.5rem",
-			"--radius-lg": "0.75rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -2930,9 +2834,6 @@ export const cloudflare: ThemeDefinition = {
 			"--contrib-2": "#B46015",
 			"--contrib-3": "#E0751A",
 			"--contrib-4": "#F6821F",
-			"--radius-sm": "0.125rem",
-			"--radius-md": "0.375rem",
-			"--radius-lg": "0.5rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -3016,9 +2917,6 @@ export const cloudflare: ThemeDefinition = {
 			"--contrib-2": "#FAAF6B",
 			"--contrib-3": "#F89640",
 			"--contrib-4": "#F6821F",
-			"--radius-sm": "0.125rem",
-			"--radius-md": "0.375rem",
-			"--radius-lg": "0.5rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -3117,9 +3015,6 @@ export const stripe: ThemeDefinition = {
 			"--contrib-2": "#3d4db0",
 			"--contrib-3": "#5054d4",
 			"--contrib-4": "#635BFF",
-			"--radius-sm": "0.125rem",
-			"--radius-md": "0.375rem",
-			"--radius-lg": "0.5rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -3203,9 +3098,6 @@ export const stripe: ThemeDefinition = {
 			"--contrib-2": "#A8A4FF",
 			"--contrib-3": "#7C78FF",
 			"--contrib-4": "#635BFF",
-			"--radius-sm": "0.125rem",
-			"--radius-md": "0.375rem",
-			"--radius-lg": "0.5rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -3297,9 +3189,6 @@ export const bitmap: ThemeDefinition = {
 			"--contrib-2": "#A62828",
 			"--contrib-3": "#D42A30",
 			"--contrib-4": "#E42B37",
-			"--radius-sm": "0.125rem",
-			"--radius-md": "0.25rem",
-			"--radius-lg": "0.375rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -3383,9 +3272,6 @@ export const bitmap: ThemeDefinition = {
 			"--contrib-2": "#FF7878",
 			"--contrib-3": "#E84040",
 			"--contrib-4": "#C90028",
-			"--radius-sm": "0.125rem",
-			"--radius-md": "0.25rem",
-			"--radius-lg": "0.375rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -3477,9 +3363,6 @@ export const noir: ThemeDefinition = {
 			"--contrib-2": "#6a6a6a",
 			"--contrib-3": "#8a8a8a",
 			"--contrib-4": "#a7a7a7",
-			"--radius-sm": "0rem",
-			"--radius-md": "0rem",
-			"--radius-lg": "0rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -3563,9 +3446,6 @@ export const noir: ThemeDefinition = {
 			"--contrib-2": "#909090",
 			"--contrib-3": "#707070",
 			"--contrib-4": "#666666",
-			"--radius-sm": "0rem",
-			"--radius-md": "0rem",
-			"--radius-lg": "0rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -4004,9 +3884,6 @@ export const forest: ThemeDefinition = {
 			"--contrib-2": "#4A6850",
 			"--contrib-3": "#5A7860",
 			"--contrib-4": "#6B8F71",
-			"--radius-sm": "0.375rem",
-			"--radius-md": "0.625rem",
-			"--radius-lg": "1rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -4090,9 +3967,6 @@ export const forest: ThemeDefinition = {
 			"--contrib-2": "#88C078",
 			"--contrib-3": "#60A050",
 			"--contrib-4": "#4B8042",
-			"--radius-sm": "0.375rem",
-			"--radius-md": "0.625rem",
-			"--radius-lg": "1rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -4183,9 +4057,6 @@ export const vesper: ThemeDefinition = {
 			"--contrib-2": "#6B5030",
 			"--contrib-3": "#A07040",
 			"--contrib-4": "#FFC799",
-			"--radius-sm": "0.25rem",
-			"--radius-md": "0.5rem",
-			"--radius-lg": "0.75rem",
 		},
 		syntax: convertToShikiTheme(
 			{
@@ -4269,9 +4140,6 @@ export const vesper: ThemeDefinition = {
 			"--contrib-2": "#FFCC99",
 			"--contrib-3": "#F0A060",
 			"--contrib-4": "#D98A4B",
-			"--radius-sm": "0.25rem",
-			"--radius-md": "0.5rem",
-			"--radius-lg": "0.75rem",
 		},
 		syntax: convertToShikiTheme(
 			{

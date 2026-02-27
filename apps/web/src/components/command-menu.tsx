@@ -35,6 +35,7 @@ import {
 	Code,
 	Eye,
 	Pin,
+	Square,
 } from "lucide-react";
 import { formatForDisplay } from "@tanstack/react-hotkeys";
 import { signOut } from "@/lib/auth-client";
@@ -43,6 +44,7 @@ import { getLanguageColor } from "@/lib/github-utils";
 import { useGlobalChatOptional } from "@/components/shared/global-chat-provider";
 import { getRecentViews, type RecentViewItem } from "@/lib/recent-views";
 import { useColorTheme } from "@/components/theme/theme-provider";
+import { BORDER_RADIUS_PRESETS, type BorderRadiusPreset } from "@/lib/themes/border-radius";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { useMutationSubscription } from "@/hooks/use-mutation-subscription";
 import type { MutationEvent } from "@/lib/mutation-events";
@@ -102,7 +104,15 @@ function matchRepoFromPathname(pathname: string): [string, string] | null {
 	return [segments[0], segments[1]];
 }
 
-type Mode = "commands" | "search" | "theme" | "accounts" | "settings" | "model" | "files";
+type Mode =
+	| "commands"
+	| "search"
+	| "theme"
+	| "radius"
+	| "accounts"
+	| "settings"
+	| "model"
+	| "files";
 
 export function CommandMenu() {
 	const [open, setOpen] = useState(false);
@@ -119,8 +129,10 @@ export function CommandMenu() {
 	const {
 		themeId: currentThemeId,
 		mode: currentMode,
+		borderRadius: currentBorderRadius,
 		setTheme: setColorTheme,
 		toggleMode,
+		setBorderRadius,
 		themes: colorThemes,
 	} = useColorTheme();
 	const { emit } = useMutationEvents();
@@ -785,6 +797,22 @@ export function CommandMenu() {
 				keepOpen: true,
 			},
 			{
+				name: "Set Border Radius",
+				description: "Adjust corner rounding",
+				keywords: [
+					"radius",
+					"rounded",
+					"corners",
+					"square",
+					"sharp",
+					"soft",
+					"rounding",
+				],
+				action: () => switchMode("radius"),
+				icon: Square,
+				keepOpen: true,
+			},
+			{
 				name: "Account Settings",
 				description: "Profile, accounts & sign out",
 				keywords: [
@@ -1131,6 +1159,32 @@ export function CommandMenu() {
 		}));
 	}, [regularThemes, brandedThemes, setColorTheme]);
 
+	// --- Radius mode items ---
+	const RADIUS_OPTIONS: { id: BorderRadiusPreset; label: string; description: string }[] = [
+		{ id: "none", label: "None", description: "Sharp corners" },
+		{ id: "small", label: "Small", description: "Subtle rounding" },
+		{ id: "medium", label: "Medium", description: "Balanced corners" },
+		{ id: "large", label: "Large", description: "Soft & rounded" },
+	];
+
+	const filteredRadiusOptions = useMemo(() => {
+		if (!search.trim()) return RADIUS_OPTIONS;
+		const s = search.toLowerCase();
+		return RADIUS_OPTIONS.filter(
+			(r) =>
+				r.label.toLowerCase().includes(s) ||
+				r.description.toLowerCase().includes(s),
+		);
+	}, [search]);
+
+	const radiusItems = useMemo(() => {
+		return filteredRadiusOptions.map((r) => ({
+			id: `radius-${r.id}`,
+			action: () => setBorderRadius(r.id),
+			keepOpen: true,
+		}));
+	}, [filteredRadiusOptions, setBorderRadius]);
+
 	// --- Accounts mode items ---
 	const handleSwitchAccount = useCallback(
 		async (accountId: string | null) => {
@@ -1269,6 +1323,11 @@ export function CommandMenu() {
 	const settingsItems = useMemo(() => {
 		const items: { id: string; action: () => void; keepOpen: boolean }[] = [
 			{ id: "settings-theme", action: () => switchMode("theme"), keepOpen: true },
+			{
+				id: "settings-radius",
+				action: () => switchMode("radius"),
+				keepOpen: true,
+			},
 			{ id: "settings-model", action: () => switchMode("model"), keepOpen: true },
 			{
 				id: "settings-accounts",
@@ -1340,13 +1399,15 @@ export function CommandMenu() {
 				? searchItems
 				: mode === "theme"
 					? themeItems
-					: mode === "accounts"
-						? accountItems
-						: mode === "settings"
-							? settingsItems
-							: mode === "model"
-								? modelItems
-								: fileItems;
+					: mode === "radius"
+						? radiusItems
+						: mode === "accounts"
+							? accountItems
+							: mode === "settings"
+								? settingsItems
+								: mode === "model"
+									? modelItems
+									: fileItems;
 
 	useEffect(() => {
 		setSelectedIndex(0);
@@ -1381,12 +1442,13 @@ export function CommandMenu() {
 
 	const handleKeyDown = useCallback(
 		(e: React.KeyboardEvent) => {
-			// Tab cycles modes: commands → search → theme → accounts → settings → commands
+			// Tab cycles modes: commands → search → theme → radius → accounts → settings → commands
 			if (e.key === "Tab") {
 				e.preventDefault();
 				if (mode === "commands") switchMode("search");
 				else if (mode === "search") switchMode("theme");
-				else if (mode === "theme") switchMode("accounts");
+				else if (mode === "theme") switchMode("radius");
+				else if (mode === "radius") switchMode("accounts");
 				else if (mode === "accounts") switchMode("settings");
 				else switchMode("commands");
 				return;
@@ -1484,6 +1546,8 @@ export function CommandMenu() {
 									<FileText className="size-4 text-muted-foreground/50 shrink-0" />
 								) : mode === "theme" ? (
 									<Palette className="size-4 text-muted-foreground/50 shrink-0" />
+								) : mode === "radius" ? (
+									<Square className="size-4 text-muted-foreground/50 shrink-0" />
 								) : mode === "accounts" ? (
 									<Users className="size-4 text-muted-foreground/50 shrink-0" />
 								) : mode === "settings" ? (
@@ -1513,15 +1577,18 @@ export function CommandMenu() {
 													  "theme"
 													? "Search themes..."
 													: mode ===
-														  "accounts"
-														? "Filter accounts..."
+														  "radius"
+														? "Select border radius..."
 														: mode ===
-															  "settings"
-															? "Configuration..."
+															  "accounts"
+															? "Filter accounts..."
 															: mode ===
-																  "model"
-																? "Search models..."
-																: "Type a command..."
+																  "settings"
+																? "Configuration..."
+																: mode ===
+																	  "model"
+																	? "Search models..."
+																	: "Type a command..."
 									}
 									className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground py-3 text-sm outline-none"
 								/>
@@ -2230,6 +2297,84 @@ export function CommandMenu() {
 												</div>
 											)}
 									</>
+								) : mode === "radius" ? (
+									/* Border Radius mode */
+									<>
+										<CommandGroup title="Border Radius">
+											{filteredRadiusOptions.map(
+												(
+													option,
+												) => {
+													const idx =
+														getNextIndex();
+													const isActive =
+														currentBorderRadius ===
+														option.id;
+													const presetValues =
+														BORDER_RADIUS_PRESETS[
+															option
+																.id
+														];
+													return (
+														<CommandItemButton
+															key={
+																option.id
+															}
+															index={
+																idx
+															}
+															selected={
+																selectedIndex ===
+																idx
+															}
+															onClick={() =>
+																setBorderRadius(
+																	option.id,
+																)
+															}
+														>
+															<span
+																className="w-6 h-6 border border-border/60 bg-muted/30 shrink-0"
+																style={{
+																	borderRadius:
+																		presetValues[
+																			"--radius-md"
+																		],
+																}}
+															/>
+															<span className="text-[13px] text-foreground flex-1">
+																{
+																	option.label
+																}
+															</span>
+															<span className="text-[11px] text-muted-foreground hidden sm:block">
+																{
+																	option.description
+																}
+															</span>
+															{isActive && (
+																<Check className="size-3.5 text-success shrink-0" />
+															)}
+														</CommandItemButton>
+													);
+												},
+											)}
+										</CommandGroup>
+										{hasQuery &&
+											filteredRadiusOptions.length ===
+												0 && (
+												<div className="py-8 text-center text-sm text-muted-foreground/70">
+													No
+													options
+													match
+													&quot;
+													{
+														search
+													}
+													&quot;
+												</div>
+											)}
+									</>
 								) : mode === "accounts" ? (
 									/* Accounts mode */
 									<>
@@ -2726,6 +2871,48 @@ export function CommandMenu() {
 															)
 																?.name ??
 																"Theme"}
+														</span>
+														<ChevronRight className="size-3 text-muted-foreground/30 shrink-0" />
+													</CommandItemButton>
+												);
+											})()}
+											{(() => {
+												const idx =
+													getNextIndex();
+												const radiusLabel =
+													currentBorderRadius
+														.charAt(
+															0,
+														)
+														.toUpperCase() +
+													currentBorderRadius.slice(
+														1,
+													);
+												return (
+													<CommandItemButton
+														key="settings-radius"
+														index={
+															idx
+														}
+														selected={
+															selectedIndex ===
+															idx
+														}
+														onClick={() =>
+															switchMode(
+																"radius",
+															)
+														}
+													>
+														<Square className="size-3.5 text-muted-foreground/50 shrink-0" />
+														<span className="text-[13px] text-foreground flex-1">
+															Border
+															Radius
+														</span>
+														<span className="text-[11px] text-muted-foreground hidden sm:block">
+															{
+																radiusLabel
+															}
 														</span>
 														<ChevronRight className="size-3 text-muted-foreground/30 shrink-0" />
 													</CommandItemButton>
