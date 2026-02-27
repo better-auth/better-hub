@@ -1110,7 +1110,7 @@ export function CommandMenu() {
 
 		for (const theme of colorThemes) {
 			if (!filterFn(theme)) continue;
-			if (theme.icon && theme.id !== "better-auth") {
+			if (theme.icon) {
 				branded.push(theme);
 			} else {
 				regular.push(theme);
@@ -2142,7 +2142,7 @@ export function CommandMenu() {
 										)}
 										{brandedThemes.length >
 											0 && (
-											<CommandGroup title="Partner Themes">
+											<CommandGroup title="Brands">
 												{brandedThemes.map(
 													(
 														theme,
