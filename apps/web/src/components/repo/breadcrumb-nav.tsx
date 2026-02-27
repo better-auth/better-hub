@@ -27,7 +27,7 @@ export function BreadcrumbNav({ owner, repo, currentRef, path, isFile }: Breadcr
 	return (
 		<nav className="flex items-center gap-1 text-xs font-mono overflow-x-auto">
 			<Link
-				href={`/${owner}/${repo}`}
+				href={`/${owner}/${repo}/code`}
 				className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
 			>
 				{repo}
