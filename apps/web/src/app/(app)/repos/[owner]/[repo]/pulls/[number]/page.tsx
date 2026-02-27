@@ -9,6 +9,7 @@ import {
 	fetchCheckStatusForRef,
 	getCachedCheckStatus,
 	getAuthorDossier,
+	isBranchBehindBase,
 	type CheckStatus,
 	type AuthorDossierResult,
 	getCrossReferences,
@@ -161,6 +162,7 @@ export default async function PRDetailPage({
 		checkStatus: checkStatusResult,
 		prPinned,
 		authorDossier,
+		branchBehindBase,
 	} = await all({
 		checkStatus: async () => {
 			if (!isOpen) return undefined;
@@ -192,6 +194,17 @@ export default async function PRDetailPage({
 			pr.user?.login
 				? getAuthorDossier(owner, repo, pr.user.login).catch(() => null)
 				: Promise.resolve(null),
+		branchBehindBase: () =>
+			isOpen
+				? isBranchBehindBase(
+						owner,
+						repo,
+						pr.base.ref,
+						pr.head.ref,
+						(pr as { head_repo_owner?: string | null })
+							.head_repo_owner,
+					)
+				: Promise.resolve(false),
 	});
 
 	const checkStatus = checkStatusResult as CheckStatus | undefined;
@@ -552,6 +565,10 @@ export default async function PRDetailPage({
 												pr
 													.user
 													.login
+										}
+										branchBehindBase={
+											branchBehindBase ??
+											false
 										}
 									/>
 								</div>

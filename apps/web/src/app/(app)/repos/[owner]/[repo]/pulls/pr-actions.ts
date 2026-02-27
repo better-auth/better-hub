@@ -21,6 +21,7 @@ const PR_ACTION_SCOPES: Record<string, PRMutationScope[]> = {
 	convertToDraft: ["detail", "list", "layout"],
 	rename: ["detail", "list"],
 	updateBase: ["detail", "list"],
+	updateBranch: ["detail", "list"],
 	review: ["detail"],
 	comment: ["detail"],
 	deleteComment: ["detail"],
@@ -175,6 +176,23 @@ export async function reopenPullRequest(owner: string, repo: string, pullNumber:
 		return { success: true };
 	} catch (e: unknown) {
 		return { error: getErrorMessage(e) || "Failed to reopen" };
+	}
+}
+
+export async function updatePRBranch(owner: string, repo: string, pullNumber: number) {
+	const octokit = await getOctokit();
+	if (!octokit) return { error: "Not authenticated" };
+
+	try {
+		await octokit.pulls.updateBranch({
+			owner,
+			repo,
+			pull_number: pullNumber,
+		});
+		await revalidateAfterPRMutation(owner, repo, pullNumber, "updateBranch");
+		return { success: true };
+	} catch (e: unknown) {
+		return { error: getErrorMessage(e) || "Failed to update branch" };
 	}
 }
 

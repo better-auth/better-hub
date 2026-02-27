@@ -12,6 +12,7 @@ import {
 	Check,
 	Ghost,
 	Sparkles,
+	GitBranch,
 	FilePenLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,10 +25,12 @@ import {
 	DialogDescription,
 	DialogFooter,
 } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
 	mergePullRequest,
 	closePullRequest,
 	reopenPullRequest,
+	updatePRBranch,
 	convertPRToDraft,
 	type MergeMethod,
 } from "@/app/(app)/repos/[owner]/[repo]/pulls/pr-actions";
@@ -53,6 +56,7 @@ interface PRMergePanelProps {
 	canWrite?: boolean;
 	canTriage?: boolean;
 	isAuthor?: boolean;
+	branchBehindBase?: boolean;
 }
 
 const mergeMethodLabels: Record<MergeMethod, { short: string; description: string }> = {
@@ -89,7 +93,11 @@ export function PRMergePanel({
 	canWrite = true,
 	canTriage = true,
 	isAuthor = false,
+	branchBehindBase = false,
 }: PRMergePanelProps) {
+	const hasPermission = canTriage || isAuthor;
+	const showUpdateBranch = hasPermission && (branchBehindBase || mergeable === false);
+	const updateBranchDisabled = mergeable === false;
 	const canConvertToDraft = (canWrite || isAuthor) && !draft;
 	const availableMethods: MergeMethod[] = [
 		...(allowSquashMerge ? ["squash" as const] : []),
@@ -108,7 +116,7 @@ export function PRMergePanel({
 	const [commitMessage, setCommitMessage] = useState("");
 	const [isPending, startTransition] = useTransition();
 	const [pendingAction, setPendingAction] = useState<
-		"merge" | "close" | "reopen" | "draft" | null
+		"merge" | "close" | "reopen" | "draft" | "updateBranch" | null
 	>(null);
 	const [result, setResult] = useState<{ type: "success" | "error"; message: string } | null>(
 		null,
@@ -255,6 +263,21 @@ export function PRMergePanel({
 			} else {
 				setResult({ type: "success", message: "Reopened" });
 				emit({ type: "pr:reopened", owner, repo, number: pullNumber });
+				invalidatePRQueries();
+				router.refresh();
+			}
+		});
+	};
+
+	const handleUpdateBranch = () => {
+		setResult(null);
+		setPendingAction("updateBranch");
+		startTransition(async () => {
+			const res = await updatePRBranch(owner, repo, pullNumber);
+			if (res.error) {
+				setResult({ type: "error", message: res.error });
+			} else {
+				setResult({ type: "success", message: "Branch updated" });
 				invalidatePRQueries();
 				router.refresh();
 			}
@@ -500,6 +523,66 @@ export function PRMergePanel({
 						)}
 					</div>
 				)}
+
+				{/* Convert to draft */}
+				{canConvertToDraft && (
+					<button
+						onClick={handleConvertToDraft}
+						disabled={isPending}
+						className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+					>
+						{isPending && pendingAction === "draft" ? (
+							<Loader2 className="w-3 h-3 animate-spin" />
+						) : (
+							<FilePenLine className="w-3 h-3" />
+						)}
+						Convert to draft
+					</button>
+				)}
+
+				{showUpdateBranch &&
+					(updateBranchDisabled ? (
+						<Tooltip delayDuration={0}>
+							<TooltipTrigger asChild>
+								<span className="inline-flex">
+									<button
+										disabled
+										className={cn(
+											"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border transition-colors cursor-not-allowed",
+											"border-amber-500/40 text-amber-600 dark:text-amber-400 opacity-70",
+										)}
+									>
+										<GitBranch className="w-3 h-3" />
+										Update branch
+									</button>
+								</span>
+							</TooltipTrigger>
+							<TooltipContent
+								side="bottom"
+								className="text-xs font-mono max-w-[240px]"
+							>
+								Update branch is unavailable while
+								there are merge conflicts.
+							</TooltipContent>
+						</Tooltip>
+					) : (
+						<button
+							onClick={handleUpdateBranch}
+							disabled={isPending}
+							title="Merge the latest changes from the base branch into this branch"
+							className={cn(
+								"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
+							)}
+						>
+							{isPending &&
+							pendingAction === "updateBranch" ? (
+								<Loader2 className="w-3 h-3 animate-spin" />
+							) : (
+								<GitBranch className="w-3 h-3" />
+							)}
+							Update branch
+						</button>
+					))}
 
 				{/* Convert to draft */}
 				{canConvertToDraft && (

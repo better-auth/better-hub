@@ -777,6 +777,30 @@ async function fetchPullRequestFromGitHub(
 	return data;
 }
 
+export async function isBranchBehindBase(
+	owner: string,
+	repo: string,
+	baseRef: string,
+	headRef: string,
+	headOwner?: string | null,
+): Promise<boolean> {
+	const octokit = await getOctokit();
+	if (!octokit) return false;
+	try {
+		const headPart =
+			headOwner && headOwner !== owner ? `${headOwner}:${headRef}` : headRef;
+		const basehead = `${headPart}...${baseRef}`;
+		const { data } = await octokit.repos.compareCommitsWithBasehead({
+			owner,
+			repo,
+			basehead,
+		});
+		return (data.behind_by ?? 0) > 0;
+	} catch {
+		return false;
+	}
+}
+
 async function fetchPullRequestFilesFromGitHub(
 	octokit: Octokit,
 	owner: string,
@@ -2463,6 +2487,7 @@ export interface PRBundleData {
 		changed_files: number;
 		user: { login: string; avatar_url: string; type?: string } | null;
 		head: { ref: string; sha: string };
+		head_repo_owner?: string | null;
 		base: { ref: string; sha: string };
 		labels: { name: string; color: string | null; description: string | null }[];
 		reactions: ReactionSummary | undefined;
@@ -2531,6 +2556,7 @@ const PR_BUNDLE_QUERY = `
         author { __typename login avatarUrl }
         headRefName
         headRefOid
+        headRepository { owner { login } }
         baseRefName
         baseRefOid
         labels(first: 20) {
@@ -2761,6 +2787,7 @@ interface GQLPRNode {
 	author: GQLAuthor | null;
 	headRefName: string;
 	headRefOid: string;
+	headRepository?: { owner: { login: string } } | null;
 	baseRefName: string;
 	baseRefOid: string;
 	labels?: { nodes: GQLLabel[] };
@@ -2804,6 +2831,7 @@ function transformGraphQLPRBundle(node: GQLPRNode): PRBundleData {
 				}
 			: null,
 		head: { ref: node.headRefName, sha: node.headRefOid },
+		head_repo_owner: node.headRepository?.owner?.login ?? null,
 		base: { ref: node.baseRefName, sha: node.baseRefOid },
 		labels: (node.labels?.nodes ?? []).map((l) => ({
 			name: l.name,
