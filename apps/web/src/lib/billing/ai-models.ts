@@ -47,20 +47,20 @@ const AI_MODELS = {
 		desc: "Google",
 		pricing: { inputPerM: 1.25, outputPerM: 10 },
 	},
-	"google/gemini-2.5-flash-preview": {
+	"google/gemini-2.5-flash": {
 		label: "Gemini 2.5 Flash",
 		desc: "Google",
-		pricing: { inputPerM: 0.15, outputPerM: 0.6 },
+		pricing: { inputPerM: 0.3, outputPerM: 2.5 },
 	},
-	"deepseek/deepseek-chat-v3": {
-		label: "DeepSeek V3",
+	"deepseek/deepseek-chat-v3.1": {
+		label: "DeepSeek V3.1",
 		desc: "DeepSeek",
-		pricing: { inputPerM: 0.3, outputPerM: 0.88 },
+		pricing: { inputPerM: 0.15, outputPerM: 0.75 },
 	},
 	"meta-llama/llama-4-maverick": {
 		label: "Llama 4 Maverick",
 		desc: "Meta",
-		pricing: { inputPerM: 0.25, outputPerM: 0.85 },
+		pricing: { inputPerM: 0.15, outputPerM: 0.6 },
 	},
 	//
 	// Anthropic models (direct)
