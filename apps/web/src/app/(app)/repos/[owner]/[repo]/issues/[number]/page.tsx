@@ -21,6 +21,7 @@ import { IssueParticipants } from "@/components/issue/issue-participants";
 import { TrackView } from "@/components/shared/track-view";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { inngest } from "@/lib/inngest";
 import { isItemPinned } from "@/lib/pinned-items-store";
 
@@ -44,6 +45,9 @@ export async function generateMetadata({
 
 	if (!issue) {
 		return { title: `Issue #${issueNumber} · ${owner}/${repo}` };
+	}
+	if ((issue as { pull_request?: unknown }).pull_request != null) {
+		redirect(`/${owner}/${repo}/pulls/${issueNumber}`);
 	}
 
 	return {
@@ -83,6 +87,9 @@ export default async function IssueDetailPage({
 				</p>
 			</div>
 		);
+	}
+	if ((issue as { pull_request?: unknown }).pull_request != null) {
+		redirect(`/${owner}/${repo}/pulls/${issueNumber}`);
 	}
 
 	// Start pin check in parallel with markdown rendering

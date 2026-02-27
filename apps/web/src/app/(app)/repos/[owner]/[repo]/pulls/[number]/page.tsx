@@ -6,6 +6,7 @@ import {
 	getAuthenticatedUser,
 	extractRepoPermissions,
 	getOctokit,
+	getIssue,
 	fetchCheckStatusForRef,
 	getCachedCheckStatus,
 	getAuthorDossier,
@@ -14,6 +15,7 @@ import {
 	type AuthorDossierResult,
 	getCrossReferences,
 } from "@/lib/github";
+import { redirect } from "next/navigation";
 import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { extractParticipants } from "@/lib/github-utils";
 import { highlightDiffLines, type SyntaxToken } from "@/lib/shiki";
@@ -58,11 +60,16 @@ export async function generateMetadata({
 	}
 
 	const bundle = await getPullRequestBundle(owner, repo, pullNumber);
-	const ogUrl = ogImageUrl({ type: "pr", owner, repo, number: pullNumber });
 
 	if (!bundle) {
+		const issue = await getIssue(owner, repo, pullNumber);
+		if (issue != null && (issue as { pull_request?: unknown }).pull_request == null) {
+			redirect(`/${owner}/${repo}/issues/${pullNumber}`);
+		}
 		return { title: `PR #${pullNumber} · ${owner}/${repo}` };
 	}
+
+	const ogUrl = ogImageUrl({ type: "pr", owner, repo, number: pullNumber });
 
 	return {
 		title: `${bundle.pr.title} · PR #${pullNumber} · ${owner}/${repo}`,
@@ -109,6 +116,10 @@ export default async function PRDetailPage({
 	});
 
 	if (!bundle) {
+		const issue = await getIssue(owner, repo, pullNumber);
+		if (issue != null && (issue as { pull_request?: unknown }).pull_request == null) {
+			redirect(`/${owner}/${repo}/issues/${pullNumber}`);
+		}
 		return (
 			<div className="py-16 text-center">
 				<p className="text-xs text-muted-foreground font-mono">
