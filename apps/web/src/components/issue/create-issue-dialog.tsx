@@ -36,6 +36,7 @@ import type { IssueTemplate } from "@/app/(app)/repos/[owner]/[repo]/issues/acti
 import {
 	createIssue,
 	ensureForkForIssueImageUpload,
+	triggerForkCreation,
 	type IssueImageUploadContext,
 	getIssueImageUploadContext,
 	getIssueTemplates,
@@ -233,13 +234,26 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 		setIsForking(true);
 		setError(null);
 		try {
-			const result = await ensureForkForIssueImageUpload(owner, repo);
-			uploadContextCache.set(cacheKey, result);
+			// Kick off fork creation and return immediately — GitHub provisions it async.
+			// We open the file picker right away so the user can browse while the fork provisions.
+			// uploadImage will retry on 404 until the fork is ready.
+			const result = await triggerForkCreation(owner, repo);
 			if (result.success) {
+				const forkOwner = result.viewerLogin ?? owner;
+				const forkRepo = result.uploadRepo ?? repo;
+				const ctx: IssueImageUploadContext = {
+					success: true,
+					mode: "fork",
+					viewerLogin: result.viewerLogin,
+					uploadOwner: forkOwner,
+					uploadRepo: forkRepo,
+				};
+				uploadContextCache.set(cacheKey, ctx);
 				setUploadMode("fork");
-				setUploadOwner(result.uploadOwner ?? owner);
-				setUploadRepo(result.uploadRepo ?? repo);
+				setUploadOwner(forkOwner);
+				setUploadRepo(forkRepo);
 				setViewerLogin(result.viewerLogin ?? null);
+				// Open the picker immediately — fork will finish provisioning while user browses.
 				if (openPickerAfter) {
 					requestAnimationFrame(() => fileInputRef.current?.click());
 				}

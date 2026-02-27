@@ -515,12 +515,51 @@ export async function ensureForkForIssueImageUpload(
 	}
 }
 
+// Fire fork creation and return immediately — GitHub provisions the fork async.
+// The client should call uploadImage right after; it will retry on 404 until the fork is ready.
+export async function triggerForkCreation(
+	owner: string,
+	repo: string,
+): Promise<{ success: boolean; viewerLogin?: string; uploadRepo?: string; error?: string }> {
+	const octokit = await getOctokit();
+	if (!octokit) return { success: false, error: "Not authenticated" };
+
+	const viewer = await getAuthenticatedUser();
+	if (!viewer?.login) return { success: false, error: "Not authenticated" };
+
+	try {
+		// Fast path: a same-name repo already exists.
+		const sameNameTarget = await findSameNameUploadTarget(octokit, viewer.login, repo);
+		if (sameNameTarget.uploadRepo) {
+			return {
+				success: true,
+				viewerLogin: viewer.login,
+				uploadRepo: sameNameTarget.uploadRepo,
+			};
+		}
+
+		// Kick off fork creation — do not poll or wait for it to finish.
+		await octokit.repos.createFork({ owner, repo });
+		// GitHub always names the fork after the upstream repo.
+		return { success: true, viewerLogin: viewer.login, uploadRepo: repo };
+	} catch (err: any) {
+		if (err.status === 422) {
+			// A same-name repo already exists (race or missed by fast path) — use it.
+			return { success: true, viewerLogin: viewer.login, uploadRepo: repo };
+		}
+		return { success: false, error: getErrorMessage(err) };
+	}
+}
+
 /**
  * Upload an image to a temporary location in the repository for use in issue/PR bodies.
  * GitHub hosts issue/PR paste images on their own asset storage (user-attachments);
  * we don't have that API, so we commit to the repo in .github-images/.
  * - For issues: upload to default branch (no branch context).
  * - For PRs: pass `branch` (head branch) so the image is part of the PR and merges with it.
+ *
+ * Retries on 404 up to 15 times (1 s apart) so uploads kicked off immediately after
+ * triggerForkCreation succeed once the fork finishes provisioning.
  */
 export async function uploadImage(
 	owner: string,
@@ -533,58 +572,62 @@ export async function uploadImage(
 	if (!octokit) return { success: false, error: "Not authenticated" };
 
 	try {
-		// Read file as base64
 		const bytes = await file.arrayBuffer();
 		const base64Content = Buffer.from(bytes).toString("base64");
 
-		// Generate a unique filename with timestamp
 		const timestamp = Date.now();
 		const randomId = Math.random().toString(36).substring(2, 10);
 		const ext = file.name.split(".").pop()?.toLowerCase() || "png";
 		const filename = `${type}-upload-${timestamp}-${randomId}.${ext}`;
-
-		// Use provided branch (e.g. PR head) or default branch
-		const targetBranch =
-			branch ?? (await octokit.repos.get({ owner, repo })).data.default_branch;
-
-		// Try to create/update the file in a hidden .github-images directory
-		// This follows GitHub's pattern for issue assets
 		const path = `.github-images/${filename}`;
 
-		try {
-			// Create or update file on the target branch
-			await octokit.repos.createOrUpdateFileContents({
-				owner,
-				repo,
-				path,
-				message: `Upload image for ${type}: ${filename}`,
-				content: base64Content,
-				branch: targetBranch,
-			});
+		// 404 means the fork is still provisioning — retry until ready or timeout.
+		for (let attempt = 0; attempt <= 15; attempt++) {
+			try {
+				const targetBranch =
+					branch ??
+					(await octokit.repos.get({ owner, repo })).data
+						.default_branch;
 
-			// Construct the raw GitHub URL for the uploaded image
-			const imageUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${targetBranch}/${path}`;
+				await octokit.repos.createOrUpdateFileContents({
+					owner,
+					repo,
+					path,
+					message: `Upload image for ${type}: ${filename}`,
+					content: base64Content,
+					branch: targetBranch,
+				});
 
-			return { success: true, url: imageUrl };
-		} catch (error) {
-			// If the file already exists (rare but possible), try to get it
-			if (
-				typeof error === "object" &&
-				error !== null &&
-				"status" in error &&
-				error.status === 422
-			) {
-				// File might already exist, construct URL anyway
-				const imageUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${targetBranch}/${path}`;
-				return { success: true, url: imageUrl };
+				return {
+					success: true,
+					url: `https://raw.githubusercontent.com/${owner}/${repo}/${targetBranch}/${path}`,
+				};
+			} catch (err: any) {
+				if (err.status === 422) {
+					// File already exists — construct the URL without a branch re-fetch.
+					const fallbackBranch = branch ?? "main";
+					return {
+						success: true,
+						url: `https://raw.githubusercontent.com/${owner}/${repo}/${fallbackBranch}/${path}`,
+					};
+				}
+				if (err.status === 404 && attempt < 15) {
+					// Fork not ready yet — wait and retry.
+					await sleep(1000);
+					continue;
+				}
+				throw err;
 			}
-			throw error;
 		}
+
+		return {
+			success: false,
+			error: "Repository not available after waiting. Please try again.",
+		};
 	} catch (err: unknown) {
 		const message = getErrorMessage(err);
-		// Check if it's a permission error - users without write access can't upload this way
 		if (typeof err === "object" && err !== null && "status" in err) {
-			if (err.status === 403 || err.status === 404) {
+			if ((err as any).status === 403) {
 				return {
 					success: false,
 					error: "You don't have permission to upload images to this repository. Please drag and drop images directly into the GitHub text editor instead.",
