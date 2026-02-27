@@ -13,6 +13,10 @@ import { resolveProfileTab } from "@/lib/utils";
 import { UserProfileContent } from "@/components/users/user-profile-content";
 import { ExternalLink, User } from "lucide-react";
 
+function settledValue<T>(result: PromiseSettledResult<T>, fallback: T): T {
+	return result.status === "fulfilled" ? result.value : fallback;
+}
+
 function UnknownUserPage({ username }: { username: string }) {
 	const githubUrl = `https://github.com/${encodeURIComponent(username)}`;
 
@@ -110,12 +114,11 @@ export default async function UserProfilePage({
 			getUserFollowing(resolvedLogin, 100),
 		]);
 
-		reposData = reposResult.status === "fulfilled" ? reposResult.value : [];
-		orgsData = orgsResult.status === "fulfilled" ? orgsResult.value : [];
-		contributionData =
-			contributionResult.status === "fulfilled" ? contributionResult.value : null;
-		followersData = followersResult.status === "fulfilled" ? followersResult.value : [];
-		followingData = followingResult.status === "fulfilled" ? followingResult.value : [];
+		reposData = settledValue(reposResult, []);
+		orgsData = settledValue(orgsResult, []);
+		contributionData = settledValue(contributionResult, null);
+		followersData = settledValue(followersResult, []);
+		followingData = settledValue(followingResult, []);
 
 		// Fetch top repos from orgs if org fetch succeeded
 		if (isStandardUser && orgsData.length > 0) {

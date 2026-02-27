@@ -237,7 +237,7 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 											</Link>
 											<Link
 												href={`/users/${gh.login}?tab=following`}
-												aria-label="View people I follow"
+												aria-label="View my following"
 												className="text-[10px] text-muted-foreground font-mono hover:text-foreground transition-colors"
 											>
 												<span className="text-foreground/80 font-medium">

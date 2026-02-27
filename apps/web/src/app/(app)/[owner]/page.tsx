@@ -16,6 +16,10 @@ import { resolveProfileTab } from "@/lib/utils";
 import { OrgDetailContent } from "@/components/orgs/org-detail-content";
 import { UserProfileContent } from "@/components/users/user-profile-content";
 
+function settledValue<T>(result: PromiseSettledResult<T>, fallback: T): T {
+	return result.status === "fulfilled" ? result.value : fallback;
+}
+
 export async function generateMetadata({
 	params,
 }: {
@@ -71,9 +75,15 @@ export default async function OwnerPage({
 	const actorType = (actorData as { type?: string }).type;
 	if (actorType === "Organization") {
 		const orgData = await getOrg(owner).catch(() => null);
-		if (!orgData) {
-			notFound();
-		}
+		const orgLike = orgData ?? actorData;
+		const orgDescription =
+			"description" in orgLike && typeof orgLike.description === "string"
+				? orgLike.description
+				: null;
+		const orgBio =
+			"bio" in orgLike && typeof orgLike.bio === "string" ? orgLike.bio : null;
+		const orgBlog =
+			"blog" in orgLike && typeof orgLike.blog === "string" ? orgLike.blog : null;
 
 		if (tab === "followers" || tab === "following") {
 			redirect(`/${owner}`);
@@ -87,19 +97,19 @@ export default async function OwnerPage({
 		return (
 			<OrgDetailContent
 				org={{
-					login: orgData.login,
-					name: orgData.name ?? null,
-					avatar_url: orgData.avatar_url,
+					login: orgLike.login,
+					name: orgLike.name ?? null,
+					avatar_url: orgLike.avatar_url,
 					html_url:
-						orgData.html_url ??
-						`https://github.com/${orgData.login}`,
-					description: orgData.description ?? null,
-					blog: orgData.blog || null,
-					location: orgData.location || null,
-					public_repos: orgData.public_repos,
-					followers: orgData.followers,
-					following: orgData.following,
-					created_at: orgData.created_at,
+						orgLike.html_url ??
+						`https://github.com/${orgLike.login}`,
+					description: orgDescription ?? orgBio,
+					blog: orgBlog,
+					location: orgLike.location || null,
+					public_repos: orgLike.public_repos ?? 0,
+					followers: orgLike.followers ?? 0,
+					following: orgLike.following ?? 0,
+					created_at: orgLike.created_at,
 				}}
 				repos={reposData.map((repo) => ({
 					id: repo.id,
@@ -153,12 +163,11 @@ export default async function OwnerPage({
 			getUserFollowing(userData.login, 100),
 		]);
 
-		reposData = reposResult.status === "fulfilled" ? reposResult.value : [];
-		orgsData = orgsResult.status === "fulfilled" ? orgsResult.value : [];
-		contributionData =
-			contributionResult.status === "fulfilled" ? contributionResult.value : null;
-		followersData = followersResult.status === "fulfilled" ? followersResult.value : [];
-		followingData = followingResult.status === "fulfilled" ? followingResult.value : [];
+		reposData = settledValue(reposResult, []);
+		orgsData = settledValue(orgsResult, []);
+		contributionData = settledValue(contributionResult, null);
+		followersData = settledValue(followersResult, []);
+		followingData = settledValue(followingResult, []);
 
 		if (isStandardUser && orgsData.length > 0) {
 			orgTopRepos = await getUserOrgTopRepos(orgsData.map((o) => o.login)).catch(
