@@ -6228,3 +6228,35 @@ export async function getAuthorDossier(
 		return null;
 	}
 }
+
+export interface ForkSyncStatus {
+	behind: number;
+}
+
+export async function getForkSyncStatus(
+	owner: string,
+	repo: string,
+	defaultBranch: string,
+): Promise<ForkSyncStatus | null> {
+	const octokit = await getOctokit();
+	if (!octokit) return null;
+
+	try {
+		const { data: repoData } = await octokit.repos.get({ owner, repo });
+		if (!repoData.parent) return null;
+
+		const parentOwner = repoData.parent.owner.login;
+
+		// Compare fork against upstream: how many commits is the fork behind?
+		const { data: comparison } = await octokit.repos.compareCommits({
+			owner,
+			repo,
+			base: defaultBranch,
+			head: `${parentOwner}:${defaultBranch}`,
+		});
+
+		return { behind: comparison.ahead_by ?? 0 };
+	} catch {
+		return null;
+	}
+}
