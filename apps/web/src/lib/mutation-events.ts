@@ -137,6 +137,11 @@ export type GitHubAccountAddedEvent = { type: "github-account:added" };
 export type GitHubAccountRemovedEvent = { type: "github-account:removed" };
 export type GitHubAccountSwitchedEvent = { type: "github-account:switched" };
 
+// ── Notification Events ──────────────────────────────────────
+
+export type NotificationReadEvent = { type: "notification:read"; id: string };
+export type NotificationAllReadEvent = { type: "notification:all-read"; ids: string[] };
+
 // ── Discriminated Union ───────────────────────────────────────
 
 export type MutationEvent =
@@ -175,7 +180,9 @@ export type MutationEvent =
 	| SettingsUpdatedEvent
 	| GitHubAccountAddedEvent
 	| GitHubAccountRemovedEvent
-	| GitHubAccountSwitchedEvent;
+	| GitHubAccountSwitchedEvent
+	| NotificationReadEvent
+	| NotificationAllReadEvent;
 
 export type MutationEventType = MutationEvent["type"];
 
