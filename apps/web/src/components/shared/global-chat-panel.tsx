@@ -6,6 +6,7 @@ import { X, Code2, ChevronRight, Ghost, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AIChat } from "@/components/shared/ai-chat";
 import { useGlobalChat, type InlineContext } from "@/components/shared/global-chat-provider";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import {
 	searchRepoFiles,
 	fetchFileContentForContext,
@@ -177,6 +178,7 @@ export function GlobalChatPanel() {
 	const prevContextKeyRef = useRef<string | null>(null);
 	const pathname = usePathname();
 	const searchParams = useSearchParams();
+	const isMobile = useIsMobile();
 
 	// Defer rendering until after hydration — this panel starts hidden (translate-x-full)
 	// and depends on client-only state (chat history, persisted context), so SSR is pointless
@@ -697,7 +699,10 @@ export function GlobalChatPanel() {
 									hashMentionPrFiles={
 										mentionableFiles
 									}
-									autoFocus={isActive}
+									autoFocus={
+										isActive &&
+										!isMobile
+									}
 									historyItems={ghostHistory}
 									onLoadHistory={
 										handleLoadHistory
