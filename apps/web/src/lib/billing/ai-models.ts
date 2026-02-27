@@ -1,8 +1,6 @@
 // Centralised AI model registry — single source of truth for pricing + UI metadata.
 
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { OPENROUTER_MODELS } from "./openrouter-models.generated";
-import { getUserSettings } from "../user-settings-store";
 
 export interface ModelPricing {
 	inputPerM: number;
@@ -53,28 +51,6 @@ export interface CostDetails {
 
 export function hasModelPricing(model: string): model is PricedModelId {
 	return model in AI_MODELS;
-}
-
-// ─── Internal model helper ──────────────────────────────────────────────────
-
-const INTERNAL_MODEL_ID: AIModelId = "anthropic/claude-haiku-4.5";
-
-export async function getInternalModel(userId: string) {
-	const settings = await getUserSettings(userId);
-	const isCustomApiKey = !!(settings.useOwnApiKey && settings.openrouterApiKey);
-	const apiKey = isCustomApiKey
-		? settings.openrouterApiKey
-		: (process.env.OPEN_ROUTER_API_KEY ?? "");
-
-	if (!apiKey) {
-		throw new Error("No OpenRouter API key configured.");
-	}
-
-	return {
-		model: createOpenRouter({ apiKey })(INTERNAL_MODEL_ID),
-		modelId: INTERNAL_MODEL_ID,
-		isCustomApiKey,
-	} as const;
 }
 
 export function calculateCostUsd(model: PricedModelId, usage: UsageDetails): CostDetails {

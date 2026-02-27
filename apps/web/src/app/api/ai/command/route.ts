@@ -3,7 +3,7 @@ import { convertToModelMessages, stepCountIs, streamText, tool } from "ai";
 import { z } from "zod";
 import { getOctokitFromSession } from "@/lib/ai-auth";
 import { auth } from "@/lib/auth";
-import { getInternalModel } from "@/lib/billing/ai-models";
+import { getInternalModel } from "@/lib/billing/ai-models.server";
 import { headers } from "next/headers";
 import { checkUsageLimit } from "@/lib/billing/usage-limit";
 import { getBillingErrorCode } from "@/lib/billing/config";
