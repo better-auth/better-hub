@@ -8,8 +8,8 @@
 		"start": "next start",
 		"postinstall": "prisma generate",
 		"typecheck": "tsc --noEmit",
-		"sync:models": "node --experimental-strip-types scripts/sync-model-pricing.mts",
-		"sync:models:check": "node --experimental-strip-types scripts/sync-model-pricing.mts --check"
+		"generate:models": "node --experimental-strip-types scripts/generate-openrouter-models.mts",
+		"generate:models:check": "node --experimental-strip-types scripts/generate-openrouter-models.mts --check"
 	},
 	"dependencies": {
 		"@ai-sdk/anthropic": "^3.0.44",
