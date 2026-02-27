@@ -3305,6 +3305,7 @@ export interface DiscussionCategory {
 	id: string;
 	name: string;
 	emoji: string;
+	emojiHTML?: string | null;
 	description: string;
 	isAnswerable: boolean;
 }
@@ -3316,7 +3317,7 @@ export interface RepoDiscussionNode {
 	createdAt: string;
 	updatedAt: string;
 	author: { login: string; avatar_url: string } | null;
-	category: { name: string; emoji: string; isAnswerable: boolean };
+	category: { name: string; emoji: string; emojiHTML?: string | null; isAnswerable: boolean };
 	commentsCount: number;
 	upvoteCount: number;
 	isAnswered: boolean;
@@ -3364,7 +3365,7 @@ export interface DiscussionDetail {
 	createdAt: string;
 	updatedAt: string;
 	author: { login: string; avatar_url: string } | null;
-	category: { name: string; emoji: string; isAnswerable: boolean };
+	category: { name: string; emoji: string; emojiHTML?: string | null; isAnswerable: boolean };
 	commentsCount: number;
 	upvoteCount: number;
 	isAnswered: boolean;
@@ -3391,7 +3392,7 @@ const DISCUSSIONS_PAGE_GRAPHQL = `
 					createdAt
 					updatedAt
 					author { login avatarUrl }
-					category { name emoji isAnswerable }
+					category { name emoji emojiHTML isAnswerable }
 					comments { totalCount }
 					upvoteCount
 					isAnswered
@@ -3404,6 +3405,7 @@ const DISCUSSIONS_PAGE_GRAPHQL = `
 					id
 					name
 					emoji
+					emojiHTML
 					description
 					isAnswerable
 				}
@@ -3423,7 +3425,7 @@ const DISCUSSION_DETAIL_GRAPHQL = `
 				createdAt
 				updatedAt
 				author { __typename login avatarUrl }
-				category { name emoji isAnswerable }
+				category { name emoji emojiHTML isAnswerable }
 				comments(first: 50) {
 					totalCount
 					nodes {
@@ -3479,7 +3481,7 @@ interface GQLDiscussionNode {
 	createdAt: string;
 	updatedAt: string;
 	author: { login: string; avatarUrl: string } | null;
-	category: { name: string; emoji: string; isAnswerable: boolean };
+	category: { name: string; emoji: string; emojiHTML?: string | null; isAnswerable: boolean };
 	comments?: { totalCount: number };
 	upvoteCount: number;
 	isAnswered: boolean;
@@ -3526,7 +3528,12 @@ function mapGQLDiscussionNode(node: GQLDiscussionNode): RepoDiscussionNode {
 		createdAt: node.createdAt,
 		updatedAt: node.updatedAt,
 		author: mapGQLAuthor(node.author),
-		category: node.category,
+		category: {
+			name: node.category.name,
+			emoji: node.category.emoji,
+			emojiHTML: node.category.emojiHTML ?? null,
+			isAnswerable: node.category.isAnswerable,
+		},
 		commentsCount: node.comments?.totalCount ?? 0,
 		upvoteCount: node.upvoteCount,
 		isAnswered: node.isAnswered,
@@ -3600,12 +3607,14 @@ async function fetchRepoDiscussionsPageGraphQL(
 				id: string;
 				name: string;
 				emoji: string;
+				emojiHTML?: string | null;
 				description: string;
 				isAnswerable: boolean;
 			}) => ({
 				id: c.id,
 				name: c.name,
 				emoji: c.emoji,
+				emojiHTML: c.emojiHTML ?? null,
 				description: c.description,
 				isAnswerable: c.isAnswerable,
 			}),
@@ -3649,7 +3658,12 @@ async function fetchDiscussionDetailGraphQL(
 		createdAt: d.createdAt,
 		updatedAt: d.updatedAt,
 		author: mapGQLAuthor(d.author),
-		category: d.category,
+		category: {
+			name: d.category.name,
+			emoji: d.category.emoji,
+			emojiHTML: d.category.emojiHTML ?? null,
+			isAnswerable: d.category.isAnswerable,
+		},
 		commentsCount: d.comments?.totalCount ?? 0,
 		upvoteCount: d.upvoteCount,
 		isAnswered: d.isAnswered,
@@ -3670,7 +3684,7 @@ async function fetchDiscussionDetailGraphQL(
 // ── Discussion exported functions ──
 
 function buildRepoDiscussionsCacheKey(owner: string, repo: string): string {
-	return `repo_discussions:${normalizeRepoKey(owner, repo)}`;
+	return `repo_discussions:v2:${normalizeRepoKey(owner, repo)}`;
 }
 
 export async function getRepoDiscussionsPage(
