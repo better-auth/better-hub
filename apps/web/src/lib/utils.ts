@@ -95,6 +95,14 @@ export function safeRedirect(url: string | undefined, fallback = "/dashboard"): 
 	return trimmed;
 }
 
+export type ProfileTab = "repos" | "followers" | "following";
+
+export function resolveProfileTab(tab: string | undefined): ProfileTab {
+	if (tab === "followers") return "followers";
+	if (tab === "following") return "following";
+	return "repos";
+}
+
 export function formatDurationDelta(deltaSeconds: number): { text: string; className: string } {
 	if (deltaSeconds === 0) return { text: "", className: "" };
 	const abs = Math.abs(deltaSeconds);

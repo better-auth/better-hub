@@ -86,6 +86,8 @@ type GitDataSyncJobType =
 	| "user_profile"
 	| "user_public_repos"
 	| "user_public_orgs"
+	| "user_followers"
+	| "user_following"
 	| "repo_workflows"
 	| "repo_workflow_runs"
 	| "repo_nav_counts"
@@ -118,6 +120,8 @@ const SHAREABLE_CACHE_TYPES: ReadonlySet<string> = new Set([
 	"user_profile",
 	"user_public_repos",
 	"user_public_orgs",
+	"user_followers",
+	"user_following",
 	"org",
 	"org_repos",
 	"org_members",
@@ -417,6 +421,14 @@ function buildUserPublicReposCacheKey(username: string, perPage: number): string
 
 function buildUserPublicOrgsCacheKey(username: string): string {
 	return `user_public_orgs:${username.toLowerCase()}`;
+}
+
+function buildUserFollowersCacheKey(username: string, perPage: number): string {
+	return `user_followers:${username.toLowerCase()}:${perPage}`;
+}
+
+function buildUserFollowingCacheKey(username: string, perPage: number): string {
+	return `user_following:${username.toLowerCase()}:${perPage}`;
 }
 
 function buildRepoWorkflowsCacheKey(owner: string, repo: string): string {
@@ -1467,6 +1479,40 @@ async function processGitDataSyncJob(
 				authCtx.userId,
 				buildUserPublicOrgsCacheKey(payload.username),
 				"user_public_orgs",
+				data,
+			);
+			return;
+		}
+		case "user_followers": {
+			if (!payload.username) return;
+			const perPage = payload.perPage ?? 100;
+			const data = await fetchUserFollowersFromGitHub(
+				authCtx.octokit,
+				authCtx.token,
+				payload.username,
+				perPage,
+			);
+			await upsertCacheWithShared(
+				authCtx.userId,
+				buildUserFollowersCacheKey(payload.username, perPage),
+				"user_followers",
+				data,
+			);
+			return;
+		}
+		case "user_following": {
+			if (!payload.username) return;
+			const perPage = payload.perPage ?? 100;
+			const data = await fetchUserFollowingFromGitHub(
+				authCtx.octokit,
+				authCtx.token,
+				payload.username,
+				perPage,
+			);
+			await upsertCacheWithShared(
+				authCtx.userId,
+				buildUserFollowingCacheKey(payload.username, perPage),
+				"user_following",
 				data,
 			);
 			return;
@@ -5347,6 +5393,323 @@ export async function getUserPublicOrgs(username: string) {
 		jobType: "user_public_orgs",
 		jobPayload: { username },
 		fetchRemote: (octokit) => fetchUserPublicOrgsFromGitHub(octokit, username),
+	});
+}
+
+export interface UserFollow {
+	login: string;
+	avatar_url: string;
+	html_url: string;
+	name?: string | null;
+	bio?: string | null;
+	company?: string | null;
+	location?: string | null;
+	type?: string;
+	site_admin?: boolean;
+}
+
+async function fetchUserFollowsFromGitHubGraphQL(
+	username: string,
+	kind: "followers" | "following",
+	first: number,
+	tokenOverride?: string | null,
+): Promise<UserFollow[] | null> {
+	try {
+		const token = tokenOverride ?? (await getGitHubToken());
+		if (!token) return null;
+
+		const connectionField = kind === "followers" ? "followers" : "following";
+		const query = `
+			query($login: String!, $first: Int!) {
+				user(login: $login) {
+					${connectionField}(first: $first) {
+						nodes {
+							login
+							avatarUrl
+							url
+							name
+							bio
+							company
+							location
+							__typename
+						}
+					}
+				}
+			}
+		`;
+		const response = await fetch("https://api.github.com/graphql", {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ query, variables: { login: username, first } }),
+			signal: AbortSignal.timeout(8_000),
+		});
+		if (!response.ok) return null;
+		const json = (await response.json()) as {
+			data?: {
+				user?: {
+					followers?: { nodes?: Array<Record<string, unknown>> };
+					following?: { nodes?: Array<Record<string, unknown>> };
+				};
+			};
+		};
+		const nodes =
+			kind === "followers"
+				? (json.data?.user?.followers?.nodes ?? [])
+				: (json.data?.user?.following?.nodes ?? []);
+		if (nodes.length === 0 && !json.data?.user) return null;
+		return nodes
+			.filter((n) => typeof n.login === "string")
+			.map((n) => ({
+				login: String(n.login),
+				avatar_url: String(n.avatarUrl ?? ""),
+				html_url: String(n.url ?? `https://github.com/${String(n.login)}`),
+				name: typeof n.name === "string" ? n.name : null,
+				bio: typeof n.bio === "string" ? n.bio : null,
+				company: typeof n.company === "string" ? n.company : null,
+				location: typeof n.location === "string" ? n.location : null,
+				type:
+					n.__typename === "Bot"
+						? "Bot"
+						: n.__typename === "Organization"
+							? "Organization"
+							: "User",
+				site_admin: false,
+			}));
+	} catch {
+		return null;
+	}
+}
+
+async function fetchUserFollowsFromPublicRest(
+	username: string,
+	kind: "followers" | "following",
+	perPage: number,
+): Promise<UserFollow[] | null> {
+	try {
+		const endpoint = kind === "followers" ? "followers" : "following";
+		const response = await fetch(
+			`https://api.github.com/users/${encodeURIComponent(username)}/${endpoint}?per_page=${perPage}`,
+			{
+				signal: AbortSignal.timeout(8_000),
+				headers: {
+					Accept: "application/vnd.github+json",
+				},
+			},
+		);
+		if (!response.ok) return null;
+		const data = (await response.json()) as Array<Record<string, unknown>>;
+		if (!Array.isArray(data)) return null;
+		return data
+			.filter((u) => typeof u.login === "string")
+			.map((u) => ({
+				login: String(u.login),
+				avatar_url: String(u.avatar_url ?? ""),
+				html_url: String(
+					u.html_url ?? `https://github.com/${String(u.login)}`,
+				),
+				type: typeof u.type === "string" ? u.type : undefined,
+				site_admin:
+					typeof u.site_admin === "boolean" ? u.site_admin : false,
+			}));
+	} catch {
+		return null;
+	}
+}
+
+async function enrichUserFollowsWithPublicProfiles(
+	items: UserFollow[],
+	limit = 100,
+	tokenOverride?: string | null,
+): Promise<UserFollow[]> {
+	if (items.length === 0) return items;
+
+	const token = tokenOverride ?? (await getGitHubToken());
+	const enrichSlice = items.slice(0, Math.min(items.length, limit));
+
+	if (token) {
+		const enriched = await enrichViaGraphQL(token, enrichSlice);
+		if (enriched) return mergeEnrichedDetails(items, enriched);
+	}
+
+	return items;
+}
+
+async function fetchUserFollowersFromGitHub(
+	octokit: Octokit | null,
+	token: string | null,
+	username: string,
+	perPage: number,
+): Promise<UserFollow[]> {
+	const gql = await fetchUserFollowsFromGitHubGraphQL(username, "followers", perPage, token);
+	if (gql) return gql;
+	const publicFollowers = await fetchUserFollowsFromPublicRest(
+		username,
+		"followers",
+		perPage,
+	);
+	if (publicFollowers) {
+		return enrichUserFollowsWithPublicProfiles(publicFollowers, perPage, token);
+	}
+	if (!octokit) return [];
+	try {
+		const { data } = await octokit.users.listFollowersForUser({
+			username,
+			per_page: perPage,
+		});
+		const mapped = data.map((u) => ({
+			login: u.login,
+			avatar_url: u.avatar_url,
+			html_url: u.html_url,
+			type: u.type,
+			site_admin: u.site_admin,
+		}));
+		return enrichUserFollowsWithPublicProfiles(mapped, perPage, token);
+	} catch {
+		return [];
+	}
+}
+
+async function fetchUserFollowingFromGitHub(
+	octokit: Octokit | null,
+	token: string | null,
+	username: string,
+	perPage: number,
+): Promise<UserFollow[]> {
+	const gql = await fetchUserFollowsFromGitHubGraphQL(username, "following", perPage, token);
+	if (gql) return gql;
+	const publicFollowing = await fetchUserFollowsFromPublicRest(
+		username,
+		"following",
+		perPage,
+	);
+	if (publicFollowing) {
+		return enrichUserFollowsWithPublicProfiles(publicFollowing, perPage, token);
+	}
+	if (!octokit) return [];
+	try {
+		const { data } = await octokit.users.listFollowingForUser({
+			username,
+			per_page: perPage,
+		});
+		const mapped = data.map((u) => ({
+			login: u.login,
+			avatar_url: u.avatar_url,
+			html_url: u.html_url,
+			type: u.type,
+			site_admin: u.site_admin,
+		}));
+		return enrichUserFollowsWithPublicProfiles(mapped, perPage, token);
+	} catch {
+		return [];
+	}
+}
+
+async function enrichViaGraphQL(
+	token: string,
+	slice: UserFollow[],
+): Promise<Map<string, Partial<UserFollow> & { login: string }> | null> {
+	try {
+		const aliases = slice.map(
+			(_u, i) =>
+				`u${i}: user(login: $login${i}) { login name bio company location __typename }`,
+		);
+		const variableDefinitions = slice.map((_u, i) => `$login${i}: String!`).join(", ");
+		const variables = Object.fromEntries(slice.map((u, i) => [`login${i}`, u.login]));
+		const query =
+			variableDefinitions.length > 0
+				? `query (${variableDefinitions}) { ${aliases.join("\n")} }`
+				: `query { ${aliases.join("\n")} }`;
+		const response = await fetch("https://api.github.com/graphql", {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ query, variables }),
+			signal: AbortSignal.timeout(10_000),
+		});
+		if (!response.ok) return null;
+		const json = (await response.json()) as {
+			data?: Record<string, Record<string, unknown> | null>;
+		};
+		if (!json.data) return null;
+		const map = new Map<string, Partial<UserFollow> & { login: string }>();
+		for (const value of Object.values(json.data)) {
+			if (!value || typeof value.login !== "string") continue;
+			map.set(value.login.toLowerCase(), {
+				login: String(value.login),
+				name: typeof value.name === "string" ? value.name : null,
+				bio: typeof value.bio === "string" ? value.bio : null,
+				company: typeof value.company === "string" ? value.company : null,
+				location:
+					typeof value.location === "string" ? value.location : null,
+				type:
+					value.__typename === "Bot"
+						? "Bot"
+						: value.__typename === "Organization"
+							? "Organization"
+							: "User",
+			});
+		}
+		return map;
+	} catch {
+		return null;
+	}
+}
+
+function mergeEnrichedDetails(
+	items: UserFollow[],
+	detailByLogin: Map<string, Partial<UserFollow> & { login: string }>,
+): UserFollow[] {
+	return items.map((item) => {
+		const detail = detailByLogin.get(item.login.toLowerCase());
+		if (!detail) return item;
+		return {
+			...item,
+			name: detail.name ?? item.name ?? null,
+			bio: detail.bio ?? item.bio ?? null,
+			company: detail.company ?? item.company ?? null,
+			location: detail.location ?? item.location ?? null,
+			type: detail.type ?? item.type,
+			site_admin: item.site_admin,
+		};
+	});
+}
+
+export async function getUserFollowers(username: string, perPage = 100): Promise<UserFollow[]> {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx) {
+		return fetchUserFollowersFromGitHub(null, null, username, perPage);
+	}
+	return readLocalFirstGitData({
+		authCtx,
+		cacheKey: buildUserFollowersCacheKey(username, perPage),
+		cacheType: "user_followers",
+		fallback: [],
+		jobType: "user_followers",
+		jobPayload: { username, perPage },
+		fetchRemote: (octokit) =>
+			fetchUserFollowersFromGitHub(octokit, authCtx.token, username, perPage),
+	});
+}
+
+export async function getUserFollowing(username: string, perPage = 100): Promise<UserFollow[]> {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx) {
+		return fetchUserFollowingFromGitHub(null, null, username, perPage);
+	}
+	return readLocalFirstGitData({
+		authCtx,
+		cacheKey: buildUserFollowingCacheKey(username, perPage),
+		cacheType: "user_following",
+		fallback: [],
+		jobType: "user_following",
+		jobPayload: { username, perPage },
+		fetchRemote: (octokit) =>
+			fetchUserFollowingFromGitHub(octokit, authCtx.token, username, perPage),
 	});
 }
 
