@@ -106,14 +106,16 @@ export async function POST(req: Request) {
 			prompt: `File: ${filename}\n\nDiff:\n${diff}`,
 		});
 
-		logTokenUsage({
-			userId: session.user.id,
-			provider: "openrouter",
-			modelId,
-			taskType: "commit",
-			usage,
-			isCustomApiKey,
-		}).catch((e) => console.error("[billing] logTokenUsage failed:", e));
+		waitUntil(
+			logTokenUsage({
+				userId: session.user.id,
+				provider: "openrouter",
+				modelId,
+				taskType: "commit",
+				usage,
+				isCustomApiKey,
+			}).catch((e) => console.error("[billing] logTokenUsage failed:", e)),
+		);
 
 		return Response.json({ message: text.trim() });
 	} catch (e: unknown) {
