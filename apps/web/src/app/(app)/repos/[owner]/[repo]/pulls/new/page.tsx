@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef, useMemo, useEffect } from "react";
+import { useState, useTransition, useRef, useMemo, useEffect, useCallback } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -25,6 +25,7 @@ import {
 	Minus,
 	GitCommitHorizontal,
 	GitCommit,
+	Image as ImageIcon,
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -39,6 +40,7 @@ import {
 	type BranchInfo,
 } from "./actions";
 import type { SyntaxToken } from "@/lib/shiki";
+import { uploadImage } from "@/app/(app)/repos/[owner]/[repo]/issues/actions";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { PRDiffList } from "@/components/pr/pr-diff-list";
 import {
@@ -302,6 +304,96 @@ export default function NewPullRequestPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [isPending, startTransition] = useTransition();
 	const { emit } = useMutationEvents();
+
+	const [uploadingImage, setUploadingImage] = useState(false);
+	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	const handleImageUpload = useCallback(
+		async (file: File) => {
+			if (!file.type.startsWith("image/")) return;
+			if (file.size > 10 * 1024 * 1024) {
+				setError("Image file is too large (max 10MB)");
+				return;
+			}
+			setUploadingImage(true);
+			setError(null);
+			try {
+				const result = await uploadImage(
+					owner,
+					repo,
+					file,
+					"pull",
+					head || undefined,
+				);
+				if (result.success && result.url) {
+					const ta = textareaRef.current;
+					const md = `\n![${file.name}](${result.url})\n`;
+					if (ta) {
+						const start = ta.selectionStart;
+						setBody(
+							(prev) =>
+								prev.slice(0, start) +
+								md +
+								prev.slice(ta.selectionEnd),
+						);
+						requestAnimationFrame(() => {
+							ta.focus();
+							const pos = start + md.length;
+							ta.setSelectionRange(pos, pos);
+						});
+					} else {
+						setBody((prev) => prev + md);
+					}
+				} else {
+					setError(result.error || "Failed to upload image");
+				}
+			} catch {
+				setError("Failed to upload image");
+			} finally {
+				setUploadingImage(false);
+				if (fileInputRef.current) fileInputRef.current.value = "";
+			}
+		},
+		[owner, repo, head],
+	);
+
+	const handleDragOver = useCallback((e: React.DragEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+	}, []);
+
+	const handleDrop = useCallback(
+		(e: React.DragEvent) => {
+			e.preventDefault();
+			e.stopPropagation();
+			const files = e.dataTransfer.files;
+			if (files) {
+				for (const file of files) {
+					if (file.type.startsWith("image/")) {
+						handleImageUpload(file);
+						break;
+					}
+				}
+			}
+		},
+		[handleImageUpload],
+	);
+
+	const handlePaste = useCallback(
+		(e: React.ClipboardEvent) => {
+			const items = e.clipboardData?.items;
+			if (!items) return;
+			for (const item of items) {
+				if (item.type.startsWith("image/")) {
+					e.preventDefault();
+					const file = item.getAsFile();
+					if (file) handleImageUpload(file);
+					break;
+				}
+			}
+		},
+		[handleImageUpload],
+	);
 
 	useEffect(() => {
 		const headFromUrl = searchParams.get("head");
@@ -609,36 +701,92 @@ export default function NewPullRequestPage() {
 												</button>
 											),
 										)}
+										<button
+											onClick={() =>
+												fileInputRef.current?.click()
+											}
+											className="p-1 text-muted-foreground/35 hover:text-muted-foreground transition-colors cursor-pointer rounded"
+											title="Upload image"
+											type="button"
+											disabled={
+												uploadingImage
+											}
+										>
+											{uploadingImage ? (
+												<Loader2 className="w-3.5 h-3.5 animate-spin" />
+											) : (
+												<ImageIcon className="w-3.5 h-3.5" />
+											)}
+										</button>
 									</div>
 								)}
 							</div>
 
-							<div className="rounded-lg border border-border/50 dark:border-white/6 overflow-hidden bg-muted/15 dark:bg-white/[0.01] focus-within:border-foreground/15 transition-colors">
+							<div
+								onDragOver={handleDragOver}
+								onDrop={handleDrop}
+								className="relative rounded-lg border border-border/50 dark:border-white/6 overflow-hidden bg-muted/15 dark:bg-white/[0.01] focus-within:border-foreground/15 transition-colors"
+							>
+								<input
+									type="file"
+									ref={fileInputRef}
+									onChange={(e) => {
+										const files =
+											e.target
+												.files;
+										if (files?.[0])
+											handleImageUpload(
+												files[0],
+											);
+									}}
+									accept="image/*"
+									className="hidden"
+								/>
 								{bodyTab === "write" ? (
-									<textarea
-										ref={textareaRef}
-										value={body}
-										onChange={(e) =>
-											setBody(
-												e
-													.target
-													.value,
-											)
-										}
-										placeholder="Describe your changes... (Markdown supported)"
-										className="w-full min-h-[160px] bg-transparent px-3 py-2.5 text-[13px] leading-relaxed placeholder:text-muted-foreground/25 focus:outline-none resize-y font-mono"
-										onKeyDown={(e) => {
-											if (
-												e.key ===
-													"Enter" &&
-												(e.metaKey ||
-													e.ctrlKey)
-											) {
-												e.preventDefault();
-												handleSubmit();
+									<>
+										<textarea
+											ref={
+												textareaRef
 											}
-										}}
-									/>
+											value={body}
+											onChange={(
+												e,
+											) =>
+												setBody(
+													e
+														.target
+														.value,
+												)
+											}
+											onPaste={
+												handlePaste
+											}
+											placeholder="Describe your changes... (Markdown supported)"
+											className="w-full min-h-[160px] bg-transparent px-3 py-2.5 text-[13px] leading-relaxed placeholder:text-muted-foreground/25 focus:outline-none resize-y font-mono"
+											onKeyDown={(
+												e,
+											) => {
+												if (
+													e.key ===
+														"Enter" &&
+													(e.metaKey ||
+														e.ctrlKey)
+												) {
+													e.preventDefault();
+													handleSubmit();
+												}
+											}}
+										/>
+										{uploadingImage && (
+											<div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+												<div className="flex items-center gap-2 text-sm text-muted-foreground">
+													<Loader2 className="w-4 h-4 animate-spin" />
+													Uploading
+													image...
+												</div>
+											</div>
+										)}
+									</>
 								) : (
 									<div className="min-h-[160px] px-3 py-2.5">
 										{body.trim() ? (
@@ -658,6 +806,12 @@ export default function NewPullRequestPage() {
 										)}
 									</div>
 								)}
+							</div>
+							<div className="flex items-center mt-1">
+								<span className="text-[10px] text-muted-foreground/40">
+									Drag & drop, paste, or click
+									the image button to upload
+								</span>
 							</div>
 						</div>
 					</div>
