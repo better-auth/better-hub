@@ -14,6 +14,7 @@ const settingsUpdateSchema = z
 		displayName: z.string().max(100).optional(),
 		theme: z.enum(["light", "dark", "system"]).optional(),
 		colorTheme: z.string().max(50).optional(),
+		colorMode: z.enum(["light", "dark"]).optional(),
 		ghostModel: z.string().max(100).optional(),
 		useOwnApiKey: z.boolean().optional(),
 		openrouterApiKey: z.string().max(500).nullable().optional(),

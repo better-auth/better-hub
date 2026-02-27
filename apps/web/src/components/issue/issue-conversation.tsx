@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";
 import { EditableIssueDescription } from "@/components/issue/editable-issue-description";
+import { ReactiveCodeBlocks } from "@/components/shared/reactive-code-blocks";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { BotActivityGroup } from "@/components/pr/bot-activity-group";
@@ -312,10 +313,12 @@ function ThreadEntry({
 
 	const renderedBody = entry.bodyHtml ? (
 		<MarkdownCopyHandler>
-			<div
-				className="ghmd"
-				dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
-			/>
+			<ReactiveCodeBlocks>
+				<div
+					className="ghmd"
+					dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
+				/>
+			</ReactiveCodeBlocks>
 		</MarkdownCopyHandler>
 	) : null;
 
@@ -561,10 +564,12 @@ function ThreadComment({
 
 	const renderedBody = entry.bodyHtml ? (
 		<MarkdownCopyHandler>
-			<div
-				className="ghmd ghmd-sm"
-				dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
-			/>
+			<ReactiveCodeBlocks>
+				<div
+					className="ghmd ghmd-sm"
+					dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
+				/>
+			</ReactiveCodeBlocks>
 		</MarkdownCopyHandler>
 	) : null;
 

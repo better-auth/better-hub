@@ -233,7 +233,7 @@ body {
 	font-size: var(--code-font-size, 13px);
 	line-height: 20px;
 	--cv-gutter-w: 3ch;
-	background: var(--code-theme-bg, var(--code-bg));
+	background: var(--code-bg);
 }
 
 .code-content pre {
@@ -334,7 +334,7 @@ tr.diff-search-match-active > td {
 
 /* Shiki dual-theme (defaultColor: false) */
 .code-content .shiki {
-	background-color: var(--code-theme-bg, var(--code-bg)) !important;
+	background-color: var(--code-bg) !important;
 }
 :root:where(.dark) .code-content .shiki span {
 	color: var(--shiki-dark) !important;
@@ -499,7 +499,7 @@ tr.diff-search-match-active > td {
 	margin-top: 0;
 	margin-bottom: 1em;
 	font-family: var(--code-font-override, var(--font-code)), ui-monospace, monospace;
-	background-color: var(--code-theme-bg, var(--code-block-bg));
+	background-color: var(--code-block-bg);
 }
 
 /* Shiki dual-theme support (defaultColor: false) */
@@ -508,7 +508,7 @@ tr.diff-search-match-active > td {
 	font-family: var(--code-font-override, var(--font-code)), ui-monospace, monospace;
 }
 .ghmd .shiki {
-	background-color: var(--code-theme-bg, var(--code-block-bg)) !important;
+	background-color: var(--code-block-bg) !important;
 }
 :root:where(.dark) .ghmd .shiki span {
 	color: var(--shiki-dark) !important;
@@ -520,7 +520,7 @@ tr.diff-search-match-active > td {
 }
 /* Override shiki's inline bg in markdown context */
 .ghmd pre.shiki {
-	background-color: var(--code-theme-bg, var(--code-block-bg)) !important;
+	background-color: var(--code-block-bg) !important;
 }
 
 /* Code block wrapper with copy button */
@@ -542,7 +542,7 @@ tr.diff-search-match-active > td {
 	justify-content: center;
 	border-radius: 4px;
 	border: 1px solid var(--border);
-	background: var(--code-theme-bg, var(--code-block-bg));
+	background: var(--code-block-bg);
 	color: var(--muted-foreground);
 	cursor: pointer;
 	opacity: 0;
@@ -686,6 +686,12 @@ tr.diff-search-match-active > td {
 }
 
 /* Lists */
+.ghmd ul {
+	list-style-type: disc;
+}
+.ghmd ol {
+	list-style-type: decimal;
+}
 .ghmd ul,
 .ghmd ol {
 	margin-top: 0;
@@ -704,6 +710,12 @@ tr.diff-search-match-active > td {
 .ghmd ol ul {
 	margin-top: 0;
 	margin-bottom: 0;
+}
+.ghmd ul ul {
+	list-style-type: circle;
+}
+.ghmd ol ol {
+	list-style-type: lower-alpha;
 }
 
 /* Task lists */

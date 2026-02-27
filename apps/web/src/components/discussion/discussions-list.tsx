@@ -7,6 +7,7 @@ import { MessageCircle, CheckCircle2, ArrowUp, MessageSquare, Loader2 } from "lu
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { LabelBadge } from "@/components/shared/label-badge";
+import { GitHubEmoji } from "@/components/shared/github-emoji";
 import { loadMoreDiscussions } from "@/app/(app)/repos/[owner]/[repo]/discussions/actions";
 import type { RepoDiscussionNode, DiscussionCategory } from "@/lib/github";
 import { CreateDiscussionDialog } from "@/components/discussion/create-discussion-dialog";
@@ -145,7 +146,8 @@ export function DiscussionsList({
 									: "border-border/60 text-muted-foreground/60 hover:text-foreground hover:border-foreground/20",
 							)}
 						>
-							{cat.emoji} {cat.name}
+							<GitHubEmoji emojiHTML={cat.emojiHTML} />{" "}
+							{cat.name}
 						</button>
 					))}
 				</div>
@@ -273,7 +275,8 @@ function DiscussionRow({
 					</span>
 					{/* Category pill */}
 					<span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full border border-border/60 text-muted-foreground/60 whitespace-nowrap">
-						{d.category.emoji} {d.category.name}
+						<GitHubEmoji emojiHTML={d.category.emojiHTML} />{" "}
+						{d.category.name}
 					</span>
 					{d.isAnswered && (
 						<span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-success/10 text-success whitespace-nowrap">

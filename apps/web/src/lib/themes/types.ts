@@ -57,14 +57,53 @@ export interface ThemeColors {
 	"--contrib-4": string;
 }
 
-export interface ThemeDefinition {
-	id: string;
+export interface ShikiThemeInput {
+	foreground: string;
+	constant?: string;
+	string?: string;
+	comment?: string;
+	keyword?: string;
+	parameter?: string;
+	function?: string;
+	stringExpression?: string;
+	punctuation?: string;
+	link?: string;
+	number?: string;
+	property?: string;
+	objectLiteral?: string;
+	highlight?: string;
+	highlightHover?: string;
+	highlightBorder?: string;
+	diffDeleted?: string;
+	diffInserted?: string;
+}
+
+export interface ShikiTheme {
 	name: string;
-	description: string;
-	mode: "dark" | "light";
+	type: "light" | "dark";
+	colors: Record<string, string>;
+	tokenColors: Array<{
+		scope: string | string[];
+		settings: { foreground?: string; fontStyle?: string };
+	}>;
+}
+
+export interface ThemeVariant {
 	/** Accent color for preview dot */
 	accentPreview: string;
 	/** Background color for preview dot */
 	bgPreview: string;
 	colors: ThemeColors;
+	/** Optional syntax highlighting theme for code blocks (matches variant mode) */
+	syntax?: ShikiTheme;
+}
+
+export interface ThemeDefinition {
+	id: string;
+	name: string;
+	description: string;
+	dark: ThemeVariant;
+	light: ThemeVariant;
+	/** Optional custom icon to display in theme switcher instead of color preview circles */
+	icon?: React.ComponentType<{ className?: string }>;
 }

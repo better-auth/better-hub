@@ -8,19 +8,21 @@ import { useColorTheme } from "./theme-provider";
  * Renders nothing — just a side-effect component.
  */
 export function ThemeSync() {
-	const { colorTheme } = useColorTheme();
-	const prevRef = useRef(colorTheme);
+	const { themeId, mode } = useColorTheme();
+	const prevThemeRef = useRef(themeId);
+	const prevModeRef = useRef(mode);
 
 	useEffect(() => {
-		if (colorTheme === prevRef.current) return;
-		prevRef.current = colorTheme;
+		if (themeId === prevThemeRef.current && mode === prevModeRef.current) return;
+		prevThemeRef.current = themeId;
+		prevModeRef.current = mode;
 
 		fetch("/api/user-settings", {
 			method: "PATCH",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ colorTheme }),
+			body: JSON.stringify({ colorTheme: themeId, colorMode: mode }),
 		}).catch(() => {});
-	}, [colorTheme]);
+	}, [themeId, mode]);
 
 	return null;
 }
