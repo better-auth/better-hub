@@ -280,7 +280,7 @@ export function CheckStatusBadge({
 			{open && (
 				<div
 					className={cn(
-						"absolute z-50 top-full mt-1.5 w-80 border border-border bg-background shadow-lg",
+						"absolute z-50 top-full mt-1.5 w-80 border border-border bg-background shadow-lg rounded-md",
 						align === "right" ? "right-0" : "left-0",
 					)}
 					onClick={(e) => e.stopPropagation()}

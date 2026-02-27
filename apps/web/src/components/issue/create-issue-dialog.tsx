@@ -56,11 +56,14 @@ interface RepoLabel {
 const cache = new Map<string, { templates: IssueTemplate[]; labels: RepoLabel[] }>();
 const uploadContextCache = new Map<string, IssueImageUploadContext>();
 
+const DRAFT_PREFIX = "better-hub:draft:issue:";
+
 export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string }) {
 	const router = useRouter();
 	const pathname = usePathname();
 	const searchParams = useSearchParams();
 	const cacheKey = `${owner}/${repo}`;
+	const draftKey = `${DRAFT_PREFIX}${cacheKey}`;
 	const cached = cache.get(cacheKey);
 	const cachedUploadContext = uploadContextCache.get(cacheKey);
 
@@ -104,10 +107,28 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 	const dropZoneRef = useRef<HTMLDivElement>(null);
 
 	const handleOpen = useCallback(() => {
-		// Reset everything fresh
-		userTouchedForm.current = false;
-		setTitle("");
-		setBody("");
+		// Restore draft from localStorage if present
+		let draft: { title: string; body: string } | null = null;
+		try {
+			const raw =
+				typeof window !== "undefined"
+					? localStorage.getItem(draftKey)
+					: null;
+			if (raw) draft = JSON.parse(raw) as { title: string; body: string };
+		} catch {
+			/* ignore */
+		}
+
+		if (draft?.title || draft?.body) {
+			userTouchedForm.current = true;
+			setTitle(draft.title ?? "");
+			setBody(draft.body ?? "");
+			setStep("form");
+		} else {
+			userTouchedForm.current = false;
+			setTitle("");
+			setBody("");
+		}
 		setSelectedLabels([]);
 		setShowLabelPicker(false);
 		setLabelSearch("");
@@ -132,7 +153,7 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 			setTemplates(cached.templates);
 			setRepoLabels(cached.labels);
 			setStep("templates");
-		} else {
+		} else if (!draft?.title && !draft?.body) {
 			setStep("form");
 		}
 
@@ -301,6 +322,19 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 		fileInputRef.current?.click();
 	}, [isUploadContextLoading, isUploadContextReady, startForkChoice, uploadMode]);
 
+	// Persist draft to localStorage when title/body change (debounced)
+	useEffect(() => {
+		if (!open || (!title && !body)) return;
+		const t = setTimeout(() => {
+			try {
+				localStorage.setItem(draftKey, JSON.stringify({ title, body }));
+			} catch {
+				/* ignore */
+			}
+		}, 500);
+		return () => clearTimeout(t);
+	}, [open, title, body, draftKey]);
+
 	const handleClose = useCallback(() => {
 		cancelForkChoice();
 		setIsDialogInitializing(false);
@@ -354,6 +388,11 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 				[],
 			);
 			if (result.success && result.number) {
+				try {
+					localStorage.removeItem(draftKey);
+				} catch {
+					/* ignore */
+				}
 				emit({ type: "issue:created", owner, repo, number: result.number });
 				setOpen(false);
 				router.push(`/${owner}/${repo}/issues/${result.number}`);
@@ -552,7 +591,7 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 		<>
 			<button
 				onClick={handleOpen}
-				className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-foreground hover:bg-foreground/90 text-background transition-colors cursor-pointer rounded-md"
+				className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary hover:bg-primary/90 text-background transition-colors cursor-pointer rounded-md"
 			>
 				<Plus className="w-3 h-3" />
 				New issue

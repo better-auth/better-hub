@@ -1,9 +1,10 @@
 import { CheckCircle2, MessageCircle, Tag, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GitHubEmoji } from "@/components/shared/github-emoji";
 import { TimeAgo } from "@/components/ui/time-ago";
 
 interface DiscussionSidebarProps {
-	category: { name: string; emoji: string; isAnswerable: boolean };
+	category: { name: string; emoji: string; emojiHTML?: string | null; isAnswerable: boolean };
 	labels: Array<{ name?: string; color?: string }>;
 	isAnswered: boolean;
 	answerChosenAt: string | null;
@@ -38,7 +39,8 @@ export function DiscussionSidebar({
 					</span>
 				</SectionHeading>
 				<span className="text-xs font-mono text-foreground/70 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-border/60">
-					{category.emoji} {category.name}
+					<GitHubEmoji emojiHTML={category.emojiHTML} />{" "}
+					{category.name}
 				</span>
 				{category.isAnswerable && (
 					<p className="text-[10px] text-muted-foreground/40 mt-1">

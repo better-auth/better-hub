@@ -147,7 +147,7 @@ export function PeopleList({ owner, repo, people, onInvite }: PeopleListProps) {
 							setInviteError("");
 							setInviteRole("member");
 						}}
-						className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono bg-foreground text-background rounded-md hover:bg-foreground/90 transition-colors cursor-pointer"
+						className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono bg-primary text-background rounded-md hover:bg-primary/90 transition-colors cursor-pointer"
 					>
 						<UserPlus className="w-3 h-3" />
 						Add member

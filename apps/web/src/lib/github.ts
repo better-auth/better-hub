@@ -2585,6 +2585,7 @@ export interface PRBundleData {
 		user: { login: string; avatar_url: string; type?: string } | null;
 		head: { ref: string; sha: string };
 		head_repo_owner?: string | null;
+		head_repo_name?: string | null;
 		base: { ref: string; sha: string };
 		labels: { name: string; color: string | null; description: string | null }[];
 		reactions: ReactionSummary | undefined;
@@ -2653,7 +2654,7 @@ const PR_BUNDLE_QUERY = `
         author { __typename login avatarUrl }
         headRefName
         headRefOid
-        headRepository { owner { login } }
+        headRepository { name owner { login } }
         baseRefName
         baseRefOid
         labels(first: 20) {
@@ -2884,7 +2885,7 @@ interface GQLPRNode {
 	author: GQLAuthor | null;
 	headRefName: string;
 	headRefOid: string;
-	headRepository?: { owner: { login: string } } | null;
+	headRepository?: { name: string; owner: { login: string } } | null;
 	baseRefName: string;
 	baseRefOid: string;
 	labels?: { nodes: GQLLabel[] };
@@ -2929,6 +2930,7 @@ function transformGraphQLPRBundle(node: GQLPRNode): PRBundleData {
 			: null,
 		head: { ref: node.headRefName, sha: node.headRefOid },
 		head_repo_owner: node.headRepository?.owner?.login ?? null,
+		head_repo_name: node.headRepository?.name ?? null,
 		base: { ref: node.baseRefName, sha: node.baseRefOid },
 		labels: (node.labels?.nodes ?? []).map((l) => ({
 			name: l.name,
@@ -3305,6 +3307,7 @@ export interface DiscussionCategory {
 	id: string;
 	name: string;
 	emoji: string;
+	emojiHTML?: string | null;
 	description: string;
 	isAnswerable: boolean;
 }
@@ -3316,7 +3319,7 @@ export interface RepoDiscussionNode {
 	createdAt: string;
 	updatedAt: string;
 	author: { login: string; avatar_url: string } | null;
-	category: { name: string; emoji: string; isAnswerable: boolean };
+	category: { name: string; emoji: string; emojiHTML?: string | null; isAnswerable: boolean };
 	commentsCount: number;
 	upvoteCount: number;
 	isAnswered: boolean;
@@ -3364,7 +3367,7 @@ export interface DiscussionDetail {
 	createdAt: string;
 	updatedAt: string;
 	author: { login: string; avatar_url: string } | null;
-	category: { name: string; emoji: string; isAnswerable: boolean };
+	category: { name: string; emoji: string; emojiHTML?: string | null; isAnswerable: boolean };
 	commentsCount: number;
 	upvoteCount: number;
 	isAnswered: boolean;
@@ -3391,7 +3394,7 @@ const DISCUSSIONS_PAGE_GRAPHQL = `
 					createdAt
 					updatedAt
 					author { login avatarUrl }
-					category { name emoji isAnswerable }
+					category { name emoji emojiHTML isAnswerable }
 					comments { totalCount }
 					upvoteCount
 					isAnswered
@@ -3404,6 +3407,7 @@ const DISCUSSIONS_PAGE_GRAPHQL = `
 					id
 					name
 					emoji
+					emojiHTML
 					description
 					isAnswerable
 				}
@@ -3423,7 +3427,7 @@ const DISCUSSION_DETAIL_GRAPHQL = `
 				createdAt
 				updatedAt
 				author { __typename login avatarUrl }
-				category { name emoji isAnswerable }
+				category { name emoji emojiHTML isAnswerable }
 				comments(first: 50) {
 					totalCount
 					nodes {
@@ -3479,7 +3483,7 @@ interface GQLDiscussionNode {
 	createdAt: string;
 	updatedAt: string;
 	author: { login: string; avatarUrl: string } | null;
-	category: { name: string; emoji: string; isAnswerable: boolean };
+	category: { name: string; emoji: string; emojiHTML?: string | null; isAnswerable: boolean };
 	comments?: { totalCount: number };
 	upvoteCount: number;
 	isAnswered: boolean;
@@ -3526,7 +3530,12 @@ function mapGQLDiscussionNode(node: GQLDiscussionNode): RepoDiscussionNode {
 		createdAt: node.createdAt,
 		updatedAt: node.updatedAt,
 		author: mapGQLAuthor(node.author),
-		category: node.category,
+		category: {
+			name: node.category.name,
+			emoji: node.category.emoji,
+			emojiHTML: node.category.emojiHTML ?? null,
+			isAnswerable: node.category.isAnswerable,
+		},
 		commentsCount: node.comments?.totalCount ?? 0,
 		upvoteCount: node.upvoteCount,
 		isAnswered: node.isAnswered,
@@ -3600,12 +3609,14 @@ async function fetchRepoDiscussionsPageGraphQL(
 				id: string;
 				name: string;
 				emoji: string;
+				emojiHTML?: string | null;
 				description: string;
 				isAnswerable: boolean;
 			}) => ({
 				id: c.id,
 				name: c.name,
 				emoji: c.emoji,
+				emojiHTML: c.emojiHTML ?? null,
 				description: c.description,
 				isAnswerable: c.isAnswerable,
 			}),
@@ -3649,7 +3660,12 @@ async function fetchDiscussionDetailGraphQL(
 		createdAt: d.createdAt,
 		updatedAt: d.updatedAt,
 		author: mapGQLAuthor(d.author),
-		category: d.category,
+		category: {
+			name: d.category.name,
+			emoji: d.category.emoji,
+			emojiHTML: d.category.emojiHTML ?? null,
+			isAnswerable: d.category.isAnswerable,
+		},
 		commentsCount: d.comments?.totalCount ?? 0,
 		upvoteCount: d.upvoteCount,
 		isAnswered: d.isAnswered,
@@ -3670,7 +3686,7 @@ async function fetchDiscussionDetailGraphQL(
 // ── Discussion exported functions ──
 
 function buildRepoDiscussionsCacheKey(owner: string, repo: string): string {
-	return `repo_discussions:${normalizeRepoKey(owner, repo)}`;
+	return `repo_discussions:v2:${normalizeRepoKey(owner, repo)}`;
 }
 
 export async function getRepoDiscussionsPage(
@@ -4105,6 +4121,9 @@ export async function invalidateIssueCache(owner: string, repo: string, issueNum
 	await deleteGithubCacheByPrefix(authCtx.userId, `issue:${key}:${issueNumber}`);
 	await deleteGithubCacheByPrefix(authCtx.userId, `issue_comments:${key}:${issueNumber}`);
 	await deleteGithubCacheByPrefix(authCtx.userId, `repo_issues:${key}`);
+	// Also invalidate shared cache so other users see fresh data
+	await deleteSharedCacheByPrefix(`issue:${key}:${issueNumber}`);
+	await deleteSharedCacheByPrefix(`issue_comments:${key}:${issueNumber}`);
 	// Also invalidate nav counts so issue count updates immediately
 	const navCountsKey = buildRepoNavCountsCacheKey(owner, repo);
 	await deleteGithubCacheByPrefix(authCtx.userId, navCountsKey);

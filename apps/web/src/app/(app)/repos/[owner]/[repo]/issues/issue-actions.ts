@@ -47,6 +47,32 @@ export async function addIssueComment(
 	}
 }
 
+export async function updateIssueComment(
+	owner: string,
+	repo: string,
+	issueNumber: number,
+	commentId: number,
+	body: string,
+) {
+	const octokit = await getOctokit();
+	if (!octokit) return { error: "Not authenticated" };
+
+	try {
+		await octokit.issues.updateComment({
+			owner,
+			repo,
+			comment_id: commentId,
+			body,
+		});
+		await invalidateIssueCache(owner, repo, issueNumber);
+		invalidateRepoCache(owner, repo);
+		revalidatePath(`/repos/${owner}/${repo}/issues/${issueNumber}`);
+		return { success: true };
+	} catch (e: unknown) {
+		return { error: getErrorMessage(e) };
+	}
+}
+
 export async function deleteIssueComment(
 	owner: string,
 	repo: string,
@@ -102,6 +128,34 @@ export async function closeIssue(
 		revalidatePath(`/repos/${owner}/${repo}/issues/${issueNumber}`);
 		revalidatePath(`/repos/${owner}/${repo}/issues`);
 		revalidatePath(`/repos/${owner}/${repo}`, "layout");
+		return { success: true };
+	} catch (e: unknown) {
+		return { error: getErrorMessage(e) };
+	}
+}
+
+export async function updateIssue(
+	owner: string,
+	repo: string,
+	issueNumber: number,
+	title: string,
+	body: string,
+) {
+	const octokit = await getOctokit();
+	if (!octokit) return { error: "Not authenticated" };
+
+	try {
+		await octokit.issues.update({
+			owner,
+			repo,
+			issue_number: issueNumber,
+			title,
+			body,
+		});
+		await invalidateIssueCache(owner, repo, issueNumber);
+		invalidateRepoCache(owner, repo);
+		revalidatePath(`/repos/${owner}/${repo}/issues/${issueNumber}`);
+		revalidatePath(`/repos/${owner}/${repo}/issues`);
 		return { success: true };
 	} catch (e: unknown) {
 		return { error: getErrorMessage(e) };

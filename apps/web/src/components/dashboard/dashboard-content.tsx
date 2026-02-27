@@ -122,10 +122,12 @@ export function DashboardContent({
 		<div className="flex flex-col flex-1 min-h-0 w-full">
 			{/* Header */}
 			<div className="shrink-0 pb-3">
-				<h1 className="text-sm font-medium" suppressHydrationWarning>
-					{greeting
-						? `${greeting}, ${user.name || user.login}`
-						: `${user.name || user.login}`}
+				<h1
+					className="text-sm font-medium text-primary"
+					suppressHydrationWarning
+				>
+					{greeting && `${greeting}, `}
+					<b>{user.name || user.login}</b>
 				</h1>
 				<p
 					className="text-[11px] text-muted-foreground font-mono"
@@ -294,7 +296,7 @@ function WorkTabs({
 	return (
 		<div
 			id="work-tabs"
-			className="flex-1 min-h-0 flex flex-col border border-border overflow-y-auto"
+			className="flex-1 min-h-0 flex flex-col border border-border overflow-y-auto rounded-md"
 		>
 			{/* Activity marquee */}
 			<Suspense fallback={<ActivityMarqueeSkeleton />}>
@@ -528,7 +530,7 @@ function ReposTabs({
 	}, [dragIndex, dragOverIndex]);
 
 	return (
-		<section className="flex-1 border border-border flex flex-col min-h-0">
+		<section className="flex-1 border border-border flex flex-col min-h-0 rounded-md">
 			<div className="shrink-0 flex items-center border-b border-border overflow-x-auto no-scrollbar">
 				{pinnedRepos.length > 0 && (
 					<button
@@ -653,9 +655,11 @@ function Stat({
 				<div className="flex items-center gap-1.5">
 					<span
 						className={cn(
-							accent
-								? "text-foreground/60"
-								: "text-muted-foreground",
+							active
+								? "text-primary"
+								: accent
+									? "text-foreground/60"
+									: "text-muted-foreground",
 						)}
 					>
 						{icon}
@@ -664,7 +668,7 @@ function Stat({
 						className={cn(
 							"text-[10px] font-mono uppercase tracking-wider",
 							active
-								? "text-foreground"
+								? "text-primary"
 								: "text-muted-foreground/60",
 						)}
 					>
@@ -675,15 +679,24 @@ function Stat({
 					<span
 						className={cn(
 							"text-lg font-medium tabular-nums tracking-tight",
-							accent
-								? "text-foreground"
-								: "text-foreground/60",
+							active
+								? "text-primary"
+								: accent
+									? "text-foreground"
+									: "text-foreground/60",
 						)}
 					>
 						{value}
 					</span>
 					{accent && value > 0 && (
-						<span className="w-1.5 h-1.5 rounded-full bg-foreground/40" />
+						<span
+							className={cn(
+								"w-1.5 h-1.5 rounded-full",
+								active
+									? "bg-primary"
+									: "bg-foreground/40",
+							)}
+						/>
 					)}
 				</div>
 			</div>
