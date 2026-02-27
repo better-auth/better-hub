@@ -96,9 +96,6 @@ export function PRMergePanel({
 	branchBehindBase = false,
 }: PRMergePanelProps) {
 	const hasPermission = canTriage || isAuthor;
-	const showUpdateBranch = hasPermission && (branchBehindBase || mergeable === false);
-	const updateBranchDisabled = mergeable === false;
-	const canConvertToDraft = (canWrite || isAuthor) && !draft;
 	const availableMethods: MergeMethod[] = [
 		...(allowSquashMerge ? ["squash" as const] : []),
 		...(allowMergeCommit ? ["merge" as const] : []),
@@ -124,6 +121,12 @@ export function PRMergePanel({
 	const [isMerged, setIsMerged] = useState(false);
 	const [isGenerating, setIsGenerating] = useState(false);
 	const dropdownRef = useRef<HTMLDivElement>(null);
+
+	const isOpen = state === "open" && !merged && !isMerged;
+	const showUpdateBranch =
+		isOpen && hasPermission && (branchBehindBase || mergeable === false);
+	const updateBranchDisabled = mergeable === false;
+	const canConvertToDraft = isOpen && (canWrite || isAuthor) && !draft;
 
 	useClickOutside(
 		dropdownRef,
@@ -585,7 +588,7 @@ export function PRMergePanel({
 				)}
 
 				{/* Close button */}
-				{(canTriage || isAuthor) && (
+				{isOpen && (canTriage || isAuthor) && (
 					<button
 						onClick={handleClose}
 						disabled={isPending}
