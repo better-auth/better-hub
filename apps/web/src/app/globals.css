@@ -63,10 +63,10 @@
 	--color-alert-important: var(--alert-important);
 	--font-sans: var(--font-geist-sans);
 	--font-mono: var(--font-geist-mono);
-	--radius-sm: calc(var(--radius) - 4px);
-	--radius-md: calc(var(--radius) - 2px);
-	--radius-lg: var(--radius);
-	--radius-xl: calc(var(--radius) + 4px);
+	--radius-sm: var(--radius-sm);
+	--radius-md: var(--radius-md);
+	--radius-lg: var(--radius-lg);
+	--radius-xl: calc(var(--radius-lg) + 0.25rem);
 	--shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.09);
 	--shadow-xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.09);
 	--shadow-sm: 0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 1px 2px -1px hsl(0 0% 0% / 0.18);
@@ -85,7 +85,9 @@
 
 /* Default theme: Midnight (dark) */
 :root {
-	--radius: 0.2rem;
+	--radius-sm: 0.25rem;
+	--radius-md: 0.5rem;
+	--radius-lg: 0.75rem;
 	--background: #030304;
 	--foreground: #fafafa;
 	--card: #111113;

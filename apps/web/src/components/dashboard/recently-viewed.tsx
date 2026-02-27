@@ -32,7 +32,7 @@ export function RecentlyViewed() {
 	if (views.length === 0) return null;
 
 	return (
-		<section className="flex-1 min-h-0 flex flex-col border border-border">
+		<section className="flex-1 min-h-0 flex flex-col border border-border rounded-md">
 			<div className="shrink-0 flex items-center gap-2 px-3 py-1.5 border-b border-border">
 				<History className="w-3 h-3 text-muted-foreground/50" />
 				<h2 className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">

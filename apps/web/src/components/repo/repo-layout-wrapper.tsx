@@ -196,7 +196,9 @@ export function RepoLayoutWrapper({
 				className="flex-1 min-w-0 flex flex-col min-h-0"
 				style={
 					{
-						"--repo-pr": collapsed ? "0.5rem" : "1rem",
+						"--repo-pr": collapsed
+							? "calc(var(--spacing) * 4)"
+							: "1rem",
 					} as React.CSSProperties
 				}
 			>
