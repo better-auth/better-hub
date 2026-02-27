@@ -1,8 +1,9 @@
-import { getRepoPageData, getRepoTree, prefetchPRData } from "@/lib/github";
+import { getRepoPageData, getRepoTree, prefetchPRData, getForkSyncStatus } from "@/lib/github";
 import { countPromptRequests } from "@/lib/prompt-request-store";
 import { buildFileTree, type FileTreeNode } from "@/lib/file-tree";
 import { RepoSidebar } from "@/components/repo/repo-sidebar";
 import { RepoNav } from "@/components/repo/repo-nav";
+import { ForkSyncButton } from "@/components/repo/fork-sync-button";
 import { CodeContentWrapper } from "@/components/repo/code-content-wrapper";
 import { RepoLayoutWrapper } from "@/components/repo/repo-layout-wrapper";
 import { ChatPageActivator } from "@/components/shared/chat-page-activator";
@@ -130,6 +131,11 @@ export default async function RepoLayout({
 		!!viewerLogin &&
 		repoData.owner.login.toLowerCase() === viewerLogin.toLowerCase();
 
+	// Fetch fork sync status in parallel (only for own forks)
+	const forkSyncPromise = isViewingOwnFork
+		? getForkSyncStatus(owner, repoName, repoData.default_branch)
+		: Promise.resolve(null);
+
 	waitUntil(prefetchPRData(owner, repoName, { prefetchIssues: !repoData.private }));
 
 	const [cachedTree, cachedContributors, cachedLanguages, cachedBranches, cachedTags] =
@@ -165,6 +171,8 @@ export default async function RepoLayout({
 	const showPeopleTab = repoData.owner.type === "Organization" && viewerIsOrgMember;
 
 	const parent = repoData.parent;
+
+	const forkSyncStatus = await forkSyncPromise;
 
 	return (
 		<div className="-mx-4 flex-1 min-h-0 flex flex-col">
@@ -211,6 +219,8 @@ export default async function RepoLayout({
 						isStarred={viewerHasStarred}
 						disableForkButton={isViewingOwnFork}
 						latestCommit={latestCommit}
+						isOwnFork={isViewingOwnFork}
+						forkSyncStatus={forkSyncStatus}
 					/>
 				}
 			>
@@ -218,6 +228,19 @@ export default async function RepoLayout({
 					className="shrink-0 pl-4"
 					style={{ paddingRight: "var(--repo-pr, 1rem)" }}
 				>
+					{isViewingOwnFork && forkSyncStatus && (
+						<div className="lg:hidden pb-2">
+							<ForkSyncButton
+								owner={owner}
+								repo={repoName}
+								defaultBranch={
+									repoData.default_branch
+								}
+								behind={forkSyncStatus.behind}
+								parentFullName={parent?.full_name}
+							/>
+						</div>
+					)}
 					<RepoNav
 						owner={owner}
 						repo={repoName}
