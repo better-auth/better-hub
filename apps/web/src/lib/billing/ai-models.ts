@@ -110,8 +110,9 @@ export interface CostDetails {
 }
 
 // Fixed costs for non-AI components (USD)
+// Currently disabled, only AI model usage is billed
 export const FIXED_COSTS = {
-	sandbox: 0.05, // E2B sandbox session
+	sandbox: 0, // E2B sandbox session
 } as const;
 
 export function hasModelPricing(model: string): model is PricedModelId {
