@@ -320,7 +320,7 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 										Preferences
 									</DropdownMenuLabel>
 									<DropdownMenuItem
-										onClick={() =>
+										onSelect={() =>
 											setSettingsOpen(
 												true,
 											)
