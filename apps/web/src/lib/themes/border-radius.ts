@@ -1,4 +1,4 @@
-export type BorderRadiusPreset = "none" | "small" | "medium" | "large";
+export type BorderRadiusPreset = "default" | "small" | "medium" | "large";
 
 export interface BorderRadiusValues {
 	"--radius-sm": string;
@@ -7,10 +7,10 @@ export interface BorderRadiusValues {
 }
 
 export const BORDER_RADIUS_PRESETS: Record<BorderRadiusPreset, BorderRadiusValues> = {
-	none: {
-		"--radius-sm": "0rem",
-		"--radius-md": "0rem",
-		"--radius-lg": "0.12rem",
+	default: {
+		"--radius-sm": "0.05rem",
+		"--radius-md": "0.125rem",
+		"--radius-lg": "0.25rem",
 	},
 	small: {
 		"--radius-sm": "0.125rem",
@@ -30,7 +30,7 @@ export const BORDER_RADIUS_PRESETS: Record<BorderRadiusPreset, BorderRadiusValue
 };
 
 export const BORDER_RADIUS_STORAGE_KEY = "border-radius";
-export const DEFAULT_BORDER_RADIUS: BorderRadiusPreset = "none";
+export const DEFAULT_BORDER_RADIUS: BorderRadiusPreset = "default";
 
 export function getBorderRadiusPreset(): BorderRadiusPreset {
 	if (typeof window === "undefined") {
@@ -39,7 +39,7 @@ export function getBorderRadiusPreset(): BorderRadiusPreset {
 	const stored = localStorage.getItem(BORDER_RADIUS_STORAGE_KEY);
 	if (
 		stored &&
-		(stored === "none" ||
+		(stored === "default" ||
 			stored === "small" ||
 			stored === "medium" ||
 			stored === "large")

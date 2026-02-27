@@ -425,7 +425,7 @@ export function IssuesList({
 							placeholder="Search issues..."
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							className="w-full h-8 bg-transparent border border-border rounded-lg pl-9 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground/20 transition-colors"
+							className="w-full h-8 bg-transparent border border-border rounded-sm pl-9 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground/20 transition-colors"
 							aria-label="Search issues"
 						/>
 					</div>
@@ -441,7 +441,7 @@ export function IssuesList({
 							)
 						}
 						className={cn(
-							"flex items-center gap-1.5 h-8 px-3 rounded-lg border text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
+							"flex items-center gap-1.5 h-8 px-3 rounded-sm border text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
 							sort !== "updated"
 								? "border-foreground/20 bg-muted/50 dark:bg-white/4 text-foreground"
 								: "border-border text-muted-foreground/60 hover:text-foreground hover:bg-muted/40 dark:hover:bg-white/3",
@@ -455,7 +455,7 @@ export function IssuesList({
 						<button
 							onClick={() => setFiltersOpen((v) => !v)}
 							className={cn(
-								"flex items-center gap-1.5 h-8 px-3 rounded-lg border text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
+								"flex items-center gap-1.5 h-8 px-3 rounded-sm border text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
 								filtersOpen || activeFilterCount > 0
 									? "border-foreground/20 bg-muted/50 dark:bg-white/4 text-foreground"
 									: "border-border text-muted-foreground/60 hover:text-foreground hover:bg-muted/40 dark:hover:bg-white/3",
@@ -515,7 +515,7 @@ export function IssuesList({
 														)
 													}
 													className={cn(
-														"px-2.5 py-1 text-[10px] font-mono rounded-md transition-colors cursor-pointer",
+														"px-2.5 py-1 text-[10px] font-mono rounded-sm transition-colors cursor-pointer",
 														activityFilter ===
 															value
 															? "bg-foreground/8 text-foreground"
@@ -572,7 +572,7 @@ export function IssuesList({
 														)
 													}
 													className={cn(
-														"px-2.5 py-1 text-[10px] font-mono rounded-md transition-colors cursor-pointer",
+														"px-2.5 py-1 text-[10px] font-mono rounded-sm transition-colors cursor-pointer",
 														assigneeFilter ===
 															value
 															? "bg-foreground/8 text-foreground"
@@ -764,7 +764,7 @@ export function IssuesList({
 																)
 															}
 															className={cn(
-																"flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-mono rounded-md transition-colors cursor-pointer",
+																"flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-mono rounded-sm transition-colors cursor-pointer",
 																selectedLabel ===
 																	label.name
 																	? "bg-foreground/8 text-foreground"
@@ -817,7 +817,7 @@ export function IssuesList({
 																)
 															}
 															className={cn(
-																"px-2.5 py-1 text-[10px] font-mono rounded-md transition-colors cursor-pointer",
+																"px-2.5 py-1 text-[10px] font-mono rounded-sm transition-colors cursor-pointer",
 																selectedMilestone ===
 																	ms
 																	? "bg-foreground/8 text-foreground"
@@ -882,7 +882,7 @@ export function IssuesList({
 										"Ghost will analyze the repo, make changes, and open a PR with the full conversation.",
 								});
 							}}
-							className="flex items-center gap-1.5 h-8 px-3 rounded-lg border text-xs font-medium transition-colors cursor-pointer border-border text-muted-foreground/70 hover:text-foreground hover:bg-muted/40 dark:hover:bg-white/3"
+							className="flex items-center gap-1.5 h-8 px-3 rounded-sm border text-xs font-medium transition-colors cursor-pointer border-border text-muted-foreground/70 hover:text-foreground hover:bg-muted/40 dark:hover:bg-white/3"
 						>
 							<Zap className="w-3 h-3" />
 							Run with Ghost

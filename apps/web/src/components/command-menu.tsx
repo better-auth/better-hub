@@ -1123,7 +1123,7 @@ export function CommandMenu() {
 
 	// --- Radius mode items ---
 	const RADIUS_OPTIONS: { id: BorderRadiusPreset; label: string; description: string }[] = [
-		{ id: "none", label: "None", description: "Sharp corners" },
+		{ id: "default", label: "Default", description: "Sharp corners" },
 		{ id: "small", label: "Small", description: "Subtle rounding" },
 		{ id: "medium", label: "Medium", description: "Balanced corners" },
 		{ id: "large", label: "Large", description: "Soft & rounded" },
