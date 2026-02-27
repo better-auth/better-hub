@@ -2585,6 +2585,7 @@ export interface PRBundleData {
 		user: { login: string; avatar_url: string; type?: string } | null;
 		head: { ref: string; sha: string };
 		head_repo_owner?: string | null;
+		head_repo_name?: string | null;
 		base: { ref: string; sha: string };
 		labels: { name: string; color: string | null; description: string | null }[];
 		reactions: ReactionSummary | undefined;
@@ -2653,7 +2654,7 @@ const PR_BUNDLE_QUERY = `
         author { __typename login avatarUrl }
         headRefName
         headRefOid
-        headRepository { owner { login } }
+        headRepository { name owner { login } }
         baseRefName
         baseRefOid
         labels(first: 20) {
@@ -2884,7 +2885,7 @@ interface GQLPRNode {
 	author: GQLAuthor | null;
 	headRefName: string;
 	headRefOid: string;
-	headRepository?: { owner: { login: string } } | null;
+	headRepository?: { name: string; owner: { login: string } } | null;
 	baseRefName: string;
 	baseRefOid: string;
 	labels?: { nodes: GQLLabel[] };
@@ -2929,6 +2930,7 @@ function transformGraphQLPRBundle(node: GQLPRNode): PRBundleData {
 			: null,
 		head: { ref: node.headRefName, sha: node.headRefOid },
 		head_repo_owner: node.headRepository?.owner?.login ?? null,
+		head_repo_name: node.headRepository?.name ?? null,
 		base: { ref: node.baseRefName, sha: node.baseRefOid },
 		labels: (node.labels?.nodes ?? []).map((l) => ({
 			name: l.name,

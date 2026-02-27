@@ -13,6 +13,7 @@ import { EditablePRTitle } from "@/components/pr/editable-pr-title";
 import { EditableBaseBranch } from "@/components/pr/editable-base-branch";
 import { PRStatusIndicator } from "@/components/pr/pr-status-indicator";
 import { UserTooltip } from "@/components/shared/user-tooltip";
+import { buildPrHeadBranchTreeHref } from "@/lib/github-utils";
 
 interface PRHeaderProps {
 	title: string;
@@ -33,6 +34,8 @@ interface PRHeaderProps {
 	actions?: React.ReactNode;
 	owner: string;
 	repo: string;
+	headRepoOwner?: string | null;
+	headRepoName?: string | null;
 	canEdit?: boolean;
 	isPinned?: boolean;
 	crossRefs?: CrossReference[];
@@ -57,10 +60,20 @@ export function PRHeader({
 	actions,
 	owner,
 	repo,
+	headRepoOwner,
+	headRepoName,
 	canEdit = false,
 	isPinned = false,
 	crossRefs,
 }: PRHeaderProps) {
+	const headBranchHref = buildPrHeadBranchTreeHref({
+		baseOwner: owner,
+		baseRepo: repo,
+		headBranch,
+		headRepoOwner,
+		headRepoName,
+	});
+
 	return (
 		<div className="pb-3 mb-0">
 			{/* Title + actions */}
@@ -119,7 +132,7 @@ export function PRHeader({
 				<span className="flex items-center gap-1 font-mono text-muted-foreground/60 text-[10px]">
 					<GitBranch className="w-3 h-3" />
 					<Link
-						href={`/${owner}/${repo}/tree/${headBranch}`}
+						href={headBranchHref}
 						className="hover:text-info transition-colors hover:underline"
 					>
 						{headBranch}
