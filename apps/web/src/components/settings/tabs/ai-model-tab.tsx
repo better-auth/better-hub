@@ -29,7 +29,7 @@ export function AIModelTab({ settings, onUpdate }: AIModelTabProps) {
 		setTesting(true);
 		setTestResult(null);
 		try {
-			const res = await fetch("https://openrouter.ai/api/v1/models", {
+			const res = await fetch("https://openrouter.ai/api/v1/auth/key", {
 				headers: { Authorization: `Bearer ${apiKey.trim()}` },
 			});
 			setTestResult(res.ok ? "success" : "error");
