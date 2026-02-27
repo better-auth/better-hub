@@ -22,6 +22,7 @@ import { checkUsageLimit } from "@/lib/billing/usage-limit";
 import { getBillingErrorCode } from "@/lib/billing/config";
 import { logTokenUsage, logFixedCostUsage } from "@/lib/billing/token-usage";
 import { hasModelPricing } from "@/lib/billing/ai-models";
+import { waitUntil } from "@vercel/functions";
 import {
 	invalidateIssueCache,
 	invalidatePullRequestCache,
@@ -2743,8 +2744,14 @@ The sandbox has git, node, npm, python, and common dev tools.
 					};
 				}
 
-				logFixedCostUsage({ userId, taskType: "sandbox" }).catch((e) =>
-					console.error("[billing] logFixedCostUsage failed:", e),
+				waitUntil(
+					logFixedCostUsage({ userId, taskType: "sandbox" }).catch(
+						(e) =>
+							console.error(
+								"[billing] logFixedCostUsage failed:",
+								e,
+							),
+					),
 				);
 
 				try {
@@ -3424,21 +3431,24 @@ export async function POST(req: Request) {
 			onError() {},
 		});
 
-		// Fire-and-forget token usage logging
 		if (userId) {
-			Promise.resolve(result.usage)
-				.then((usage) =>
-					logTokenUsage({
-						userId,
-						provider: "openrouter",
-						modelId,
-						taskType: "ghost",
-						usage,
-						isCustomApiKey,
-						conversationId: conversationId ?? undefined,
-					}),
-				)
-				.catch((e) => console.error("[billing] logTokenUsage failed:", e));
+			waitUntil(
+				Promise.resolve(result.usage)
+					.then((usage) =>
+						logTokenUsage({
+							userId,
+							provider: "openrouter",
+							modelId,
+							taskType: "ghost",
+							usage,
+							isCustomApiKey,
+							conversationId: conversationId ?? undefined,
+						}),
+					)
+					.catch((e) =>
+						console.error("[billing] logTokenUsage failed:", e),
+					),
+			);
 		}
 
 		if (conversationId) {

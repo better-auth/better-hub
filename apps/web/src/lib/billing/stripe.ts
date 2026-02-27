@@ -11,7 +11,15 @@ export async function reportUsageToStripe(
 	createdAt?: Date,
 ): Promise<void> {
 	const units = Math.round(costUsd * COST_TO_UNITS);
-	if (units <= 0) return;
+	if (units <= 0) {
+		// Amount too small for a whole unit
+		// Mark as reported so retry job skips it.
+		await prisma.usageLog.update({
+			where: { id: usageLogId },
+			data: { stripeReported: true },
+		});
+		return;
+	}
 
 	const user = await prisma.user.findUnique({
 		where: { id: userId },

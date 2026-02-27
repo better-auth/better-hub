@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { checkUsageLimit } from "@/lib/billing/usage-limit";
 import { getBillingErrorCode } from "@/lib/billing/config";
 import { logTokenUsage } from "@/lib/billing/token-usage";
+import { waitUntil } from "@vercel/functions";
 
 export async function POST(req: Request) {
 	const session = await auth.api.getSession({ headers: await headers() });
@@ -45,14 +46,16 @@ Only output the improved prompt, nothing else. Do not wrap it in quotes or add m
 			prompt,
 		});
 
-		logTokenUsage({
-			userId: session.user.id,
-			provider: "openrouter",
-			modelId,
-			taskType: "rewrite-prompt",
-			usage,
-			isCustomApiKey,
-		}).catch((e) => console.error("[billing] logTokenUsage failed:", e));
+		waitUntil(
+			logTokenUsage({
+				userId: session.user.id,
+				provider: "openrouter",
+				modelId,
+				taskType: "rewrite-prompt",
+				usage,
+				isCustomApiKey,
+			}).catch((e) => console.error("[billing] logTokenUsage failed:", e)),
+		);
 
 		return Response.json({ text: text.trim() });
 	} catch (e: unknown) {

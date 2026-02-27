@@ -5,23 +5,29 @@ import { WELCOME_CREDIT_TYPE, WELCOME_CREDIT_USD, WELCOME_CREDIT_EXPIRY_DAYS } f
 export async function grantSignupCredits(userId: string): Promise<void> {
 	if (WELCOME_CREDIT_USD <= 0) return;
 
-	const existing = await prisma.creditLedger.findFirst({
-		where: { userId, type: WELCOME_CREDIT_TYPE },
-		select: { id: true },
-	});
-	if (existing) return;
+	await prisma.$transaction(
+		async (tx) => {
+			const existing = await tx.creditLedger.findFirst({
+				where: { userId, type: WELCOME_CREDIT_TYPE },
+				select: { id: true },
+			});
+			if (existing) return;
 
-	const expiresAt = new Date(Date.now() + WELCOME_CREDIT_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
-
-	await prisma.creditLedger.create({
-		data: {
-			userId,
-			amount: WELCOME_CREDIT_USD,
-			type: WELCOME_CREDIT_TYPE,
-			description: "Welcome credit on signup",
-			expiresAt,
+			const expiresAt = new Date(
+				Date.now() + WELCOME_CREDIT_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
+			);
+			await tx.creditLedger.create({
+				data: {
+					userId,
+					amount: WELCOME_CREDIT_USD,
+					type: WELCOME_CREDIT_TYPE,
+					description: "Welcome credit on signup",
+					expiresAt,
+				},
+			});
 		},
-	});
+		{ isolationLevel: "Serializable" },
+	);
 }
 
 export interface CreditBalance {

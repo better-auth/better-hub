@@ -56,18 +56,23 @@ export function hasModelPricing(model: string): model is PricedModelId {
 export function calculateCostUsd(model: PricedModelId, usage: UsageDetails): CostDetails {
 	const pricing: ModelPricing = AI_MODELS[model].pricing;
 
-	const inputCost = (usage.input * pricing.inputPerM) / 1_000_000;
+	// usage.input = prompt_tokens = noCache + cacheRead (cacheWrite is separate).
+	// Subtract only cacheRead to avoid double-charging it at full rate.
+	const cacheRead = usage.cacheRead ?? 0;
+	const cacheWrite = usage.cacheWrite ?? 0;
+	const nonCacheInput = Math.max(0, usage.input - cacheRead);
+
+	const inputCost = (nonCacheInput * pricing.inputPerM) / 1_000_000;
 	const outputCost = (usage.output * pricing.outputPerM) / 1_000_000;
 
 	const cacheReadCost =
-		pricing.cacheReadMultiplier && usage.cacheRead
-			? (usage.cacheRead * pricing.inputPerM * pricing.cacheReadMultiplier) /
-				1_000_000
+		pricing.cacheReadMultiplier && cacheRead > 0
+			? (cacheRead * pricing.inputPerM * pricing.cacheReadMultiplier) / 1_000_000
 			: 0;
 
 	const cacheWriteCost =
-		pricing.cacheWriteMultiplier && usage.cacheWrite
-			? (usage.cacheWrite * pricing.inputPerM * pricing.cacheWriteMultiplier) /
+		pricing.cacheWriteMultiplier && cacheWrite > 0
+			? (cacheWrite * pricing.inputPerM * pricing.cacheWriteMultiplier) /
 				1_000_000
 			: 0;
 

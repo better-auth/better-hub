@@ -8,6 +8,7 @@ import { headers } from "next/headers";
 import { checkUsageLimit } from "@/lib/billing/usage-limit";
 import { getBillingErrorCode } from "@/lib/billing/config";
 import { logTokenUsage } from "@/lib/billing/token-usage";
+import { waitUntil } from "@vercel/functions";
 
 export const maxDuration = 60;
 
@@ -666,19 +667,20 @@ ${pageContextPrompt}`,
 		stopWhen: stepCountIs(3),
 	});
 
-	// Fire-and-forget token usage logging
-	Promise.resolve(result.usage)
-		.then((usage) =>
-			logTokenUsage({
-				userId,
-				provider: "openrouter",
-				modelId,
-				taskType: "command",
-				usage,
-				isCustomApiKey,
-			}),
-		)
-		.catch((e) => console.error("[billing] logTokenUsage failed:", e));
+	waitUntil(
+		Promise.resolve(result.usage)
+			.then((usage) =>
+				logTokenUsage({
+					userId,
+					provider: "openrouter",
+					modelId,
+					taskType: "command",
+					usage,
+					isCustomApiKey,
+				}),
+			)
+			.catch((e) => console.error("[billing] logTokenUsage failed:", e)),
+	);
 
 	return result.toUIMessageStreamResponse();
 }

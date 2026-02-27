@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { checkUsageLimit } from "@/lib/billing/usage-limit";
 import { getBillingErrorCode } from "@/lib/billing/config";
 import { logTokenUsage } from "@/lib/billing/token-usage";
+import { waitUntil } from "@vercel/functions";
 
 export async function POST(req: Request) {
 	const session = await auth.api.getSession({ headers: await headers() });
@@ -44,14 +45,18 @@ export async function POST(req: Request) {
 				prompt: `PR #${prNumber}: ${prTitle}\n\n${prBody ? `Description:\n${prBody}\n\n` : ""}Commits:\n${commitList}`,
 			});
 
-			logTokenUsage({
-				userId: session.user.id,
-				provider: "openrouter",
-				modelId,
-				taskType: "commit",
-				usage,
-				isCustomApiKey,
-			}).catch((e) => console.error("[billing] logTokenUsage failed:", e));
+			waitUntil(
+				logTokenUsage({
+					userId: session.user.id,
+					provider: "openrouter",
+					modelId,
+					taskType: "commit",
+					usage,
+					isCustomApiKey,
+				}).catch((e) =>
+					console.error("[billing] logTokenUsage failed:", e),
+				),
+			);
 
 			const lines = text.trim().split("\n");
 			const title = lines[0] || `${prTitle} (#${prNumber})`;
