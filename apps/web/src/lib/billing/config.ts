@@ -37,6 +37,10 @@ export const MIN_CAP_USD = 0.01;
 
 // ── Stripe ──
 
+/**
+ * 1 USD = 10,000 units.
+ * Stripe meter price must be set to $0.0001 per unit.
+ */
 export const COST_TO_UNITS = 10_000;
 export const STRIPE_MAX_EVENT_AGE_DAYS = 35;
 
