@@ -20,8 +20,8 @@ export function getBillingErrorCode(result: {
 // ── Welcome Credit ──
 
 export const WELCOME_CREDIT_TYPE = "welcome_credit";
-export const WELCOME_CREDIT_USD = 1;
-export const WELCOME_CREDIT_EXPIRY_DAYS = 90;
+export const WELCOME_CREDIT_USD = 10;
+export const WELCOME_CREDIT_EXPIRY_DAYS = 30;
 
 // ── Spending Limit ──
 
