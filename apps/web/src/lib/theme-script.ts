@@ -1,4 +1,4 @@
-import type { ThemeDefinition, ThemeVariant } from "./themes/types";
+import type { ThemeDefinition } from "./themes/types";
 
 interface ThemeScriptData {
 	dark: { colors: Record<string, string> };
@@ -19,8 +19,8 @@ export function generateThemeScript(themes: ThemeDefinition[]): string {
 	}
 
 	const legacyMap: Record<string, { themeId: string; mode: string }> = {
-		midnight: { themeId: "hub", mode: "dark" },
-		"hub-light": { themeId: "hub", mode: "light" },
+		midnight: { themeId: "better-auth", mode: "dark" },
+		"hub-light": { themeId: "better-auth", mode: "light" },
 		"hub-dark": { themeId: "zinc", mode: "dark" },
 		dawn: { themeId: "ember", mode: "light" },
 	};

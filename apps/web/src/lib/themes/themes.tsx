@@ -86,7 +86,7 @@ function convertToShikiTheme(input: ShikiThemeInput, mode: "light" | "dark" = "d
 }
 
 // Hub theme: midnight (dark) + hubLight (light)
-export const hub: ThemeDefinition = {
+export const betterAuthTheme: ThemeDefinition = {
 	id: "better-auth",
 	name: "Better Auth",
 	description: "The Better Auth theme",
