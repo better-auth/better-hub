@@ -704,7 +704,7 @@ function Stat({
 	);
 
 	const className = cn(
-		"stat-card isolate relative overflow-hidden rounded-lg px-3 py-3 text-left w-full",
+		"stat-card isolate relative overflow-hidden rounded-md px-3 py-3 text-left w-full",
 		"bg-gradient-to-br from-black/[0.02] via-black/[0.01] to-transparent dark:from-white/[0.04] dark:via-white/[0.02] dark:to-transparent",
 		"transition-all duration-150 cursor-pointer",
 		"hover:border-black/[0.08] dark:hover:border-white/[0.12]",
