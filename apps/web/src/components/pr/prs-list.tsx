@@ -623,7 +623,7 @@ export function PRsList({
 
 					<Link
 						href={`/repos/${owner}/${repo}/pulls/new`}
-						className="flex ms-auto items-center gap-1.5 px-3 py-1.5 text-xs bg-foreground hover:bg-foreground/90 text-background transition-colors cursor-pointer rounded-md"
+						className="flex ms-auto items-center gap-1.5 px-3 py-1.5 text-xs bg-primary hover:bg-primary/90 text-background transition-colors cursor-pointer rounded-md"
 					>
 						<Plus className="w-3 h-3" />
 						New PR
