@@ -162,6 +162,9 @@ export function CommandMenu() {
 	const [fileTreeLoading, setFileTreeLoading] = useState(false);
 	const fileTreeRepoRef = useRef<string>("");
 
+	// Track previous mode to detect when entering theme mode
+	const prevModeRef = useRef<Mode>("commands");
+
 	const MODELS = useMemo(
 		() => [
 			{
@@ -1348,6 +1351,22 @@ export function CommandMenu() {
 	useEffect(() => {
 		setSelectedIndex(0);
 	}, [allItems.length, search]);
+
+	// Auto-select and scroll to current theme when entering theme mode
+	useEffect(() => {
+		const enteredThemeMode = mode === "theme" && prevModeRef.current !== "theme";
+		prevModeRef.current = mode;
+
+		if (enteredThemeMode && !search.trim()) {
+			const allThemes = [...regularThemes, ...brandedThemes];
+			const currentThemeIndex = allThemes.findIndex(
+				(t) => t.id === currentThemeId,
+			);
+			if (currentThemeIndex !== -1) {
+				setSelectedIndex(currentThemeIndex);
+			}
+		}
+	}, [mode, search, regularThemes, brandedThemes, currentThemeId]);
 
 	useEffect(() => {
 		if (!listRef.current) return;

@@ -61,6 +61,7 @@ import { ClientMarkdown } from "@/components/shared/client-markdown";
 import { CheckStatusBadge } from "@/components/pr/check-status-badge";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { UserTooltip } from "@/components/shared/user-tooltip";
+import { getDiffPreferences, setSplitView, setWordWrap } from "@/lib/diff-preferences";
 
 interface DiffFile {
 	filename: string;
@@ -158,8 +159,8 @@ export function PRDiffViewer({
 		}
 		return 0;
 	});
-	const [wordWrap, setWordWrap] = useState(true);
-	const [splitView, setSplitView] = useState(false);
+	const [wordWrap, setWordWrapState] = useState(() => getDiffPreferences().wordWrap);
+	const [splitView, setSplitViewState] = useState(() => getDiffPreferences().splitView);
 	const [sidebarWidth, setSidebarWidth] = useState(220);
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 	const [isDragging, setIsDragging] = useState(false);
@@ -543,8 +544,18 @@ export function PRDiffViewer({
 						total={files.length}
 						wordWrap={wordWrap}
 						splitView={splitView}
-						onToggleWrap={() => setWordWrap((w) => !w)}
-						onToggleSplit={() => setSplitView((s) => !s)}
+						onToggleWrap={() => {
+							setWordWrapState((w) => {
+								setWordWrap(!w);
+								return !w;
+							});
+						}}
+						onToggleSplit={() => {
+							setSplitViewState((s) => {
+								setSplitView(!s);
+								return !s;
+							});
+						}}
 						sidebarCollapsed={sidebarCollapsed}
 						onToggleSidebar={() =>
 							setSidebarCollapsed((c) => !c)

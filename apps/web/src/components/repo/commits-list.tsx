@@ -136,7 +136,7 @@ function BranchPicker({
 							setSearch("");
 						}}
 					/>
-					<div className="absolute top-full left-0 mt-1 z-50 w-72 border border-border bg-card shadow-lg">
+					<div className="absolute top-full left-0 mt-1 z-50 w-72 border border-border bg-card shadow-lg rounded-md">
 						<div className="p-2 border-b border-border">
 							<div className="relative">
 								<Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground/50" />

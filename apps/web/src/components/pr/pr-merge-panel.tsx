@@ -329,7 +329,7 @@ export function PRMergePanel({
 				<button
 					onClick={handleReopen}
 					disabled={isPending}
-					className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+					className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
 				>
 					{isPending && pendingAction === "reopen" ? (
 						<Loader2 className="w-3 h-3 animate-spin" />
@@ -365,7 +365,7 @@ export function PRMergePanel({
 					<div ref={dropdownRef} className="relative">
 						<div
 							className={cn(
-								"flex items-center divide-x",
+								"flex items-center divide-x rounded overflow-hidden",
 								mergeable === false
 									? "border border-amber-500/40 divide-amber-500/20"
 									: "border border-foreground/80 divide-foreground/20",
@@ -535,7 +535,7 @@ export function PRMergePanel({
 									<button
 										disabled
 										className={cn(
-											"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border transition-colors cursor-not-allowed",
+											"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border rounded transition-colors cursor-not-allowed",
 											"border-amber-500/40 text-amber-600 dark:text-amber-400 opacity-70",
 										)}
 									>
@@ -558,7 +558,7 @@ export function PRMergePanel({
 							disabled={isPending}
 							title="Merge the latest changes from the base branch into this branch"
 							className={cn(
-								"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
+								"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
 							)}
 						>
 							{isPending &&
@@ -576,7 +576,7 @@ export function PRMergePanel({
 					<button
 						onClick={handleConvertToDraft}
 						disabled={isPending}
-						className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+						className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						{isPending && pendingAction === "draft" ? (
 							<Loader2 className="w-3 h-3 animate-spin" />
@@ -592,7 +592,7 @@ export function PRMergePanel({
 					<button
 						onClick={handleClose}
 						disabled={isPending}
-						className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-red-300/40 dark:border-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+						className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-red-300/40 dark:border-red-500/20 rounded text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						{isPending && pendingAction === "close" ? (
 							<Loader2 className="w-3 h-3 animate-spin" />
@@ -704,7 +704,7 @@ export function PRMergePanel({
 					<DialogFooter>
 						<button
 							onClick={() => setSquashDialogOpen(false)}
-							className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer"
+							className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer"
 						>
 							Cancel
 						</button>
@@ -716,7 +716,7 @@ export function PRMergePanel({
 								mergeable === false
 							}
 							className={cn(
-								"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
+								"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
 								mergeable === false
 									? "bg-amber-500/80 text-background border border-amber-500/40 cursor-not-allowed"
 									: "bg-foreground text-background hover:bg-foreground/90 border border-foreground/80 cursor-pointer",

@@ -26,7 +26,7 @@ const nextConfig: NextConfig = {
 	serverExternalPackages: ["@prisma/client"],
 	experimental: {
 		staleTimes: {
-			dynamic: 0,
+			dynamic: 300,
 			static: 180,
 		},
 	},
