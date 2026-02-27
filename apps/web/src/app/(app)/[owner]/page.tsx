@@ -20,39 +20,49 @@ export async function generateMetadata({
 }): Promise<Metadata> {
 	const { owner } = await params;
 	const ogUrl = ogImageUrl({ type: "owner", owner });
-	const orgData = await getOrg(owner).catch(() => null);
-	if (orgData) {
-		return {
-			title: orgData.name || orgData.login,
-			description:
-				orgData.description ||
-				`${orgData.name || orgData.login} on Better Hub`,
-			openGraph: { title: orgData.name || orgData.login, ...ogImages(ogUrl) },
-			twitter: { card: "summary_large_image", ...ogImages(ogUrl) },
-		};
-	}
 	const userData = await getUser(owner).catch(() => null);
-	if (userData) {
-		const displayName = userData.name
-			? `${userData.name} (${userData.login})`
-			: userData.login;
+	if (!userData) {
+		return { title: owner };
+	}
+
+	const actorType = (userData as { type?: string }).type;
+	if (actorType === "Organization") {
+		const orgData = await getOrg(owner).catch(() => null);
+		const title = orgData?.name || orgData?.login || userData.name || userData.login;
+		const description =
+			orgData?.description || userData.bio || `${title} on Better Hub`;
 		return {
-			title: displayName,
-			description: userData.bio || `${displayName} on Better Hub`,
-			openGraph: { title: displayName, ...ogImages(ogUrl) },
+			title,
+			description,
+			openGraph: { title, ...ogImages(ogUrl) },
 			twitter: { card: "summary_large_image", ...ogImages(ogUrl) },
 		};
 	}
-	return { title: owner };
+
+	const displayName = userData.name ? `${userData.name} (${userData.login})` : userData.login;
+	return {
+		title: displayName,
+		description: userData.bio || `${displayName} on Better Hub`,
+		openGraph: { title: displayName, ...ogImages(ogUrl) },
+		twitter: { card: "summary_large_image", ...ogImages(ogUrl) },
+	};
 }
 
 export default async function OwnerPage({ params }: { params: Promise<{ owner: string }> }) {
 	const { owner } = await params;
 
-	// Try org first — GitHub orgs return from getOrg, users don't
-	const orgData = await getOrg(owner).catch(() => null);
+	// Resolve actor first to avoid noisy /orgs/:user 404 calls for user handles.
+	const actorData = await getUser(owner).catch(() => null);
+	if (!actorData) {
+		notFound();
+	}
 
-	if (orgData) {
+	const actorType = (actorData as { type?: string }).type;
+	if (actorType === "Organization") {
+		const orgData = await getOrg(owner).catch(() => null);
+		if (!orgData) {
+			notFound();
+		}
 		const reposData = await getOrgRepos(owner, {
 			perPage: 100,
 			sort: "updated",
@@ -96,11 +106,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 	}
 
 	// Fall back to user profile
-	const userData = await getUser(owner).catch(() => null);
-
-	if (!userData) {
-		notFound();
-	}
+	const userData = actorData;
 
 	const isBot = (userData as { type?: string }).type === "Bot";
 

@@ -169,7 +169,8 @@ model UserSettings {
   userId           String  @id
   displayName      String?
   theme            String  @default("system")
-  colorTheme       String  @default("midnight")
+  colorTheme       String  @default("hub")
+  colorMode        String  @default("dark")
   ghostModel       String  @default("auto")
   useOwnApiKey     Boolean @default(false)
   openrouterApiKey String?

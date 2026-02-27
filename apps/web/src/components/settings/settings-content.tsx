@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Settings, Bot, CreditCard, User, Code2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GeneralTab } from "./tabs/general-tab";
@@ -32,17 +32,47 @@ export function SettingsContent({ initialSettings, user, githubProfile }: Settin
 	const [activeTab, setActiveTab] = useState<TabId>("general");
 	const [settings, setSettings] = useState(initialSettings);
 	const { emit } = useMutationEvents();
+	const updateSeqRef = useRef(0);
 
 	async function handleUpdate(updates: Partial<UserSettings>) {
+		const prev = settings;
+		// Don't optimistically expose raw API keys — server returns masked
+		const safeUpdates = { ...updates };
+		if (
+			"openrouterApiKey" in safeUpdates &&
+			typeof safeUpdates.openrouterApiKey === "string"
+		) {
+			delete safeUpdates.openrouterApiKey;
+		}
+		if ("githubPat" in safeUpdates && typeof safeUpdates.githubPat === "string") {
+			delete safeUpdates.githubPat;
+		}
+		if (Object.keys(safeUpdates).length > 0) {
+			setSettings((s) => ({ ...s, ...safeUpdates }));
+			emit({ type: "settings:updated" });
+		}
+
+		const seq = ++updateSeqRef.current;
 		const res = await fetch("/api/user-settings", {
 			method: "PATCH",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(updates),
 		});
+
+		if (seq !== updateSeqRef.current) return;
+
 		if (res.ok) {
 			const updated = await res.json();
 			setSettings(updated);
 			emit({ type: "settings:updated" });
+		} else {
+			const refetch = await fetch("/api/user-settings");
+			if (refetch.ok) {
+				const restored = await refetch.json();
+				setSettings(restored);
+			} else {
+				setSettings(prev);
+			}
 		}
 	}
 

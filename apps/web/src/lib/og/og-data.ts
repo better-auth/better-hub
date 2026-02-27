@@ -1,7 +1,5 @@
-import { getSharedCacheEntry } from "../github-sync-store";
-
 // Lightweight data fetching for OG images.
-// Tries shared Redis cache first, falls back to unauthenticated GitHub REST API.
+// SECURITY: Only returns data for PUBLIC repositories to prevent leaking private repo data.
 
 const GITHUB_API = "https://api.github.com";
 
@@ -29,8 +27,9 @@ async function ghFetch<T>(path: string): Promise<T | null> {
 	}
 }
 
-function normalizeRepoKey(owner: string, repo: string): string {
-	return `${owner.toLowerCase()}/${repo.toLowerCase()}`;
+async function isRepoPublic(owner: string, repo: string): Promise<boolean> {
+	const data = await ghFetch<{ private?: boolean }>(`/repos/${owner}/${repo}`);
+	return data !== null && data.private !== true;
 }
 
 // ── Types (minimal, OG-relevant only) ──
@@ -87,29 +86,10 @@ export interface OGOrgData {
 // ── Fetchers ──
 
 export async function getOGRepo(owner: string, repo: string): Promise<OGRepoData | null> {
-	// Try shared cache
-	const cacheKey = `repo:${normalizeRepoKey(owner, repo)}`;
-	const cached = await getSharedCacheEntry<Record<string, unknown>>(cacheKey).catch(
-		() => null,
+	const data = await ghFetch<Record<string, unknown> & { private?: boolean }>(
+		`/repos/${owner}/${repo}`,
 	);
-	if (cached?.data) {
-		const d = cached.data;
-		return {
-			full_name: (d.full_name as string) || `${owner}/${repo}`,
-			description: (d.description as string) ?? null,
-			language: (d.language as string) ?? null,
-			stargazers_count: (d.stargazers_count as number) ?? 0,
-			forks_count: (d.forks_count as number) ?? 0,
-			owner_avatar:
-				((d.owner as Record<string, unknown>)?.avatar_url as string) || "",
-			owner_login:
-				((d.owner as Record<string, unknown>)?.login as string) || owner,
-		};
-	}
-
-	// Fall back to GitHub API
-	const data = await ghFetch<Record<string, unknown>>(`/repos/${owner}/${repo}`);
-	if (!data) return null;
+	if (!data || data.private === true) return null;
 	return {
 		full_name: (data.full_name as string) || `${owner}/${repo}`,
 		description: (data.description as string) ?? null,
@@ -126,21 +106,8 @@ export async function getOGIssue(
 	repo: string,
 	number: number,
 ): Promise<OGIssueData | null> {
-	const cacheKey = `issue:${normalizeRepoKey(owner, repo)}:${number}`;
-	const cached = await getSharedCacheEntry<Record<string, unknown>>(cacheKey).catch(
-		() => null,
-	);
-	if (cached?.data) {
-		const d = cached.data;
-		return {
-			title: (d.title as string) || "",
-			number: (d.number as number) || number,
-			state: (d.state as string) || "open",
-			author: ((d.user as Record<string, unknown>)?.login as string) || "",
-			author_avatar:
-				((d.user as Record<string, unknown>)?.avatar_url as string) || "",
-			repo: `${owner}/${repo}`,
-		};
+	if (!(await isRepoPublic(owner, repo))) {
+		return null;
 	}
 
 	const data = await ghFetch<Record<string, unknown>>(
@@ -162,24 +129,8 @@ export async function getOGPullRequest(
 	repo: string,
 	number: number,
 ): Promise<OGPullRequestData | null> {
-	const cacheKey = `pull_request:${normalizeRepoKey(owner, repo)}:${number}`;
-	const cached = await getSharedCacheEntry<Record<string, unknown>>(cacheKey).catch(
-		() => null,
-	);
-	if (cached?.data) {
-		const d = cached.data;
-		return {
-			title: (d.title as string) || "",
-			number: (d.number as number) || number,
-			state: (d.state as string) || "open",
-			merged: !!(d.merged_at ?? d.merged),
-			additions: (d.additions as number) ?? 0,
-			deletions: (d.deletions as number) ?? 0,
-			author: ((d.user as Record<string, unknown>)?.login as string) || "",
-			author_avatar:
-				((d.user as Record<string, unknown>)?.avatar_url as string) || "",
-			repo: `${owner}/${repo}`,
-		};
+	if (!(await isRepoPublic(owner, repo))) {
+		return null;
 	}
 
 	const data = await ghFetch<Record<string, unknown>>(
@@ -200,22 +151,6 @@ export async function getOGPullRequest(
 }
 
 export async function getOGUser(username: string): Promise<OGUserData | null> {
-	const cacheKey = `user_profile:${username.toLowerCase()}`;
-	const cached = await getSharedCacheEntry<Record<string, unknown>>(cacheKey).catch(
-		() => null,
-	);
-	if (cached?.data) {
-		const d = cached.data;
-		return {
-			login: (d.login as string) || username,
-			name: (d.name as string) ?? null,
-			avatar_url: (d.avatar_url as string) || "",
-			bio: (d.bio as string) ?? null,
-			public_repos: (d.public_repos as number) ?? 0,
-			followers: (d.followers as number) ?? 0,
-		};
-	}
-
 	const data = await ghFetch<Record<string, unknown>>(`/users/${username}`);
 	if (!data) return null;
 	return {
@@ -229,22 +164,6 @@ export async function getOGUser(username: string): Promise<OGUserData | null> {
 }
 
 export async function getOGOrg(org: string): Promise<OGOrgData | null> {
-	const cacheKey = `org:${org.toLowerCase()}`;
-	const cached = await getSharedCacheEntry<Record<string, unknown>>(cacheKey).catch(
-		() => null,
-	);
-	if (cached?.data) {
-		const d = cached.data;
-		return {
-			login: (d.login as string) || org,
-			name: (d.name as string) ?? null,
-			avatar_url: (d.avatar_url as string) || "",
-			description: (d.description as string) ?? null,
-			public_repos: (d.public_repos as number) ?? 0,
-			followers: (d.followers as number) ?? 0,
-		};
-	}
-
 	const data = await ghFetch<Record<string, unknown>>(`/orgs/${org}`);
 	if (!data) return null;
 	return {
