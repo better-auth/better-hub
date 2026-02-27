@@ -34,6 +34,7 @@ import { toInternalUrl, getLanguageColor } from "@/lib/github-utils";
 import { RecentlyViewed } from "./recently-viewed";
 import { CreateRepoDialog } from "@/components/repo/create-repo-dialog";
 import { markNotificationDone } from "@/app/(app)/repos/actions";
+import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import {
 	getPinnedRepos,
 	togglePinRepo,
@@ -104,6 +105,7 @@ export function DashboardContent({
 		"tab",
 		parseAsStringLiteral(tabKeys).withDefault("reviews"),
 	);
+	const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
 
 	const handleStatClick = useCallback(
 		(tab: TabKey) => {
@@ -120,10 +122,12 @@ export function DashboardContent({
 		<div className="flex flex-col flex-1 min-h-0 w-full">
 			{/* Header */}
 			<div className="shrink-0 pb-3">
-				<h1 className="text-sm font-medium" suppressHydrationWarning>
-					{greeting
-						? `${greeting}, ${user.name || user.login}`
-						: `${user.name || user.login}`}
+				<h1
+					className="text-sm font-medium text-primary"
+					suppressHydrationWarning
+				>
+					{greeting && `${greeting}, `}
+					<b>{user.name || user.login}</b>
 				</h1>
 				<p
 					className="text-[11px] text-muted-foreground font-mono"
@@ -172,12 +176,16 @@ export function DashboardContent({
 							label="Notifs"
 							value={
 								notifications.filter(
-									(n) => n.unread,
+									(n) =>
+										n.unread &&
+										!doneIds.has(n.id),
 								).length
 							}
 							accent={
 								notifications.filter(
-									(n) => n.unread,
+									(n) =>
+										n.unread &&
+										!doneIds.has(n.id),
 								).length > 0
 							}
 							active={activeTab === "notifs"}
@@ -194,6 +202,8 @@ export function DashboardContent({
 						hasWork={hasWork}
 						activeTab={activeTab}
 						activity={activity ?? []}
+						doneIds={doneIds}
+						setDoneIds={setDoneIds}
 					/>
 				</div>
 
@@ -257,6 +267,8 @@ function WorkTabs({
 	hasWork,
 	activeTab,
 	activity,
+	doneIds,
+	setDoneIds,
 }: {
 	reviewRequests: SearchResult<IssueItem>;
 	myOpenPRs: SearchResult<IssueItem>;
@@ -265,8 +277,9 @@ function WorkTabs({
 	hasWork: boolean;
 	activeTab: TabKey;
 	activity: Array<ActivityEvent>;
+	doneIds: Set<string>;
+	setDoneIds: React.Dispatch<React.SetStateAction<Set<string>>>;
 }) {
-	const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
 	const visibleNotifs = notifications.filter((n) => !doneIds.has(n.id));
 
 	if (!hasWork && activeTab !== "notifs") {
@@ -283,7 +296,7 @@ function WorkTabs({
 	return (
 		<div
 			id="work-tabs"
-			className="flex-1 min-h-0 flex flex-col border border-border overflow-y-auto"
+			className="flex-1 min-h-0 flex flex-col border border-border overflow-y-auto rounded-md"
 		>
 			{/* Activity marquee */}
 			<Suspense fallback={<ActivityMarqueeSkeleton />}>
@@ -378,6 +391,7 @@ function NotificationRow({
 	notif: NotificationItem;
 	onDone: (id: string) => void;
 }) {
+	const { emit } = useMutationEvents();
 	const href = getNotificationHref(notif);
 	const repo = notif.repository.full_name;
 	const [marking, startMarking] = useTransition();
@@ -430,7 +444,13 @@ function NotificationRow({
 				onClick={() => {
 					startMarking(async () => {
 						const res = await markNotificationDone(notif.id);
-						if (res.success) onDone(notif.id);
+						if (res.success) {
+							onDone(notif.id);
+							emit({
+								type: "notification:read",
+								id: notif.id,
+							});
+						}
 					});
 				}}
 				className="shrink-0 p-1 text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:text-foreground/70 transition-all cursor-pointer disabled:opacity-100"
@@ -510,7 +530,7 @@ function ReposTabs({
 	}, [dragIndex, dragOverIndex]);
 
 	return (
-		<section className="flex-1 border border-border flex flex-col min-h-0">
+		<section className="flex-1 border border-border flex flex-col min-h-0 rounded-md">
 			<div className="shrink-0 flex items-center border-b border-border overflow-x-auto no-scrollbar">
 				{pinnedRepos.length > 0 && (
 					<button
@@ -635,9 +655,11 @@ function Stat({
 				<div className="flex items-center gap-1.5">
 					<span
 						className={cn(
-							accent
-								? "text-foreground/60"
-								: "text-muted-foreground",
+							active
+								? "text-primary"
+								: accent
+									? "text-foreground/60"
+									: "text-muted-foreground",
 						)}
 					>
 						{icon}
@@ -646,7 +668,7 @@ function Stat({
 						className={cn(
 							"text-[10px] font-mono uppercase tracking-wider",
 							active
-								? "text-foreground"
+								? "text-primary"
 								: "text-muted-foreground/60",
 						)}
 					>
@@ -657,15 +679,24 @@ function Stat({
 					<span
 						className={cn(
 							"text-lg font-medium tabular-nums tracking-tight",
-							accent
-								? "text-foreground"
-								: "text-foreground/60",
+							active
+								? "text-primary"
+								: accent
+									? "text-foreground"
+									: "text-foreground/60",
 						)}
 					>
 						{value}
 					</span>
 					{accent && value > 0 && (
-						<span className="w-1.5 h-1.5 rounded-full bg-foreground/40" />
+						<span
+							className={cn(
+								"w-1.5 h-1.5 rounded-full",
+								active
+									? "bg-primary"
+									: "bg-foreground/40",
+							)}
+						/>
 					)}
 				</div>
 			</div>

@@ -7,7 +7,7 @@ import {
 import { PromptDetail } from "@/components/prompt-request/prompt-detail";
 import { notFound } from "next/navigation";
 import { getServerSession } from "@/lib/auth";
-import { getOctokit, extractRepoPermissions } from "@/lib/github";
+import { getOctokit, extractRepoPermissions, getRepo } from "@/lib/github";
 
 export async function generateMetadata({
 	params,
@@ -15,6 +15,14 @@ export async function generateMetadata({
 	params: Promise<{ owner: string; repo: string; id: string }>;
 }): Promise<Metadata> {
 	const { owner, repo, id } = await params;
+
+	const repoData = await getRepo(owner, repo);
+	const isPrivate = !repoData || repoData.private === true;
+
+	if (isPrivate) {
+		return { title: `Prompt · ${owner}/${repo}` };
+	}
+
 	const promptRequest = await getPromptRequest(id);
 	if (!promptRequest) {
 		return { title: `Prompt · ${owner}/${repo}` };

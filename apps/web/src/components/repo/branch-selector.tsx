@@ -62,7 +62,7 @@ export function BranchSelector({
 		<div className="relative">
 			<button
 				onClick={() => setOpen(!open)}
-				className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono border border-border hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer"
+				className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono border border-border hover:bg-muted/60 dark:hover:bg-white/3 transition-colors rounded-sm cursor-pointer"
 			>
 				<GitBranch className="w-3 h-3 text-muted-foreground/70" />
 				<span className="max-w-[120px] truncate">{currentRef}</span>
@@ -78,7 +78,7 @@ export function BranchSelector({
 							setSearch("");
 						}}
 					/>
-					<div className="absolute top-full left-0 mt-1 z-50 w-72 border border-border bg-card shadow-lg">
+					<div className="absolute top-full left-0 mt-1 z-50 w-72 border border-border bg-card shadow-lg rounded-md">
 						<div className="p-2 border-b border-border">
 							<div className="relative">
 								<Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground/50" />

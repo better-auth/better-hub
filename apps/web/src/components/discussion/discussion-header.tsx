@@ -2,12 +2,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { MessageCircle, CheckCircle2, ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GitHubEmoji } from "@/components/shared/github-emoji";
 import { TimeAgo } from "@/components/ui/time-ago";
 
 interface DiscussionHeaderProps {
 	title: string;
 	number: number;
-	category: { name: string; emoji: string; isAnswerable: boolean };
+	category: { name: string; emoji: string; emojiHTML?: string | null; isAnswerable: boolean };
 	isAnswered: boolean;
 	upvoteCount: number;
 	author: { login: string; avatar_url: string } | null;
@@ -38,7 +39,8 @@ export function DiscussionHeader({
 			<div className="flex items-center gap-3 flex-wrap">
 				{/* Category pill */}
 				<span className="text-[11px] font-mono px-2 py-0.5 rounded-full border border-border/60 text-muted-foreground/70">
-					{category.emoji} {category.name}
+					<GitHubEmoji emojiHTML={category.emojiHTML} />{" "}
+					{category.name}
 				</span>
 
 				{/* Answered badge */}

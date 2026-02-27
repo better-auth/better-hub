@@ -71,23 +71,37 @@ export function parseRefAndPath(
 	pathSegments: string[],
 	branchNames: string[],
 ): { ref: string; path: string } {
+	// Decode URI-encoded segments (Next.js may keep [ ] encoded); fall back to raw segment when encoding is malformed.
+	const decodedPathSegments = pathSegments.map((s) => {
+		try {
+			return decodeURIComponent(s);
+		} catch {
+			return s;
+		}
+	});
 	// Sort branches by length (longest first) for greedy matching
 	const sorted = [...branchNames].sort((a, b) => b.length - a.length);
-	const joined = pathSegments.join("/");
 
 	for (const branch of sorted) {
 		const branchParts = branch.split("/");
-		if (pathSegments.length >= branchParts.length) {
-			const candidate = pathSegments.slice(0, branchParts.length).join("/");
+		if (decodedPathSegments.length >= branchParts.length) {
+			const candidate = decodedPathSegments
+				.slice(0, branchParts.length)
+				.join("/");
 			if (candidate === branch) {
-				const remaining = pathSegments.slice(branchParts.length).join("/");
+				const remaining = decodedPathSegments
+					.slice(branchParts.length)
+					.join("/");
 				return { ref: branch, path: remaining };
 			}
 		}
 	}
 
 	// Default: first segment is the ref
-	return { ref: pathSegments[0] || "main", path: pathSegments.slice(1).join("/") };
+	return {
+		ref: decodedPathSegments[0] || "main",
+		path: decodedPathSegments.slice(1).join("/"),
+	};
 }
 
 export function toInternalUrl(htmlUrl: string): string {
@@ -96,9 +110,12 @@ export function toInternalUrl(htmlUrl: string): string {
 
 	if (parsed.type === "user") return `/users/${parsed.owner}`;
 
-	const { owner, repo, type, number, path } = parsed;
-	const base = `/${owner}/${repo}`;
+	const base = `/${parsed.owner}/${parsed.repo}`;
 
+	if (parsed.type === "download")
+		return `${base}/releases/download/${encodeURIComponent(parsed.tag)}/${parsed.filename}`;
+
+	const { type, number, path } = parsed;
 	if (type === "pull") return `${base}/pulls/${number}`;
 	if (type === "issue") return `${base}/issues/${number}`;
 	if (type === "tree" && path) return `${base}/tree/${path}`;
@@ -108,6 +125,24 @@ export function toInternalUrl(htmlUrl: string): string {
 	if (type === "repo") return base;
 
 	return htmlUrl;
+}
+
+export function buildPrHeadBranchTreeHref({
+	baseOwner,
+	baseRepo,
+	headBranch,
+	headRepoOwner,
+	headRepoName,
+}: {
+	baseOwner: string;
+	baseRepo: string;
+	headBranch: string;
+	headRepoOwner?: string | null;
+	headRepoName?: string | null;
+}): string {
+	const targetOwner = headRepoOwner || baseOwner;
+	const targetRepo = headRepoName || baseRepo;
+	return `/${targetOwner}/${targetRepo}/tree/${headBranch}`;
 }
 
 /**
@@ -166,6 +201,13 @@ type ParsedGitHubUrl =
 	  }
 	| {
 			owner: string;
+			repo: string;
+			type: "download";
+			tag: string;
+			filename: string;
+	  }
+	| {
+			owner: string;
 			type: "user";
 	  };
 
@@ -212,6 +254,14 @@ export function parseGitHubUrl(htmlUrl: string): ParsedGitHubUrl | null {
 			return { owner, repo, type: "commits" };
 		if (rest[0] === "commit" && rest[1])
 			return { owner, repo, type: "commit", path: rest[1] };
+		if (rest[0] === "releases" && rest[1] === "download" && rest[2] && rest[3])
+			return {
+				owner,
+				repo,
+				type: "download",
+				tag: rest[2],
+				filename: rest.slice(3).join("/"),
+			};
 
 		return { owner, repo, type: "repo" };
 	} catch {
