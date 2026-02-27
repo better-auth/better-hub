@@ -81,6 +81,10 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 	const [uploadingImages, setUploadingImages] = useState(false);
 	const [isForking, setIsForking] = useState(false);
 	const [showForkChoice, setShowForkChoice] = useState(false);
+	const [isUploadContextLoading, setIsUploadContextLoading] = useState(!cachedUploadContext);
+	const [isUploadContextReady, setIsUploadContextReady] = useState(
+		cachedUploadContext?.success ?? false,
+	);
 	const [uploadMode, setUploadMode] = useState<IssueImageUploadMode>(
 		cachedUploadContext?.mode ?? "repo",
 	);
@@ -111,6 +115,8 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 		setUploadingImages(false);
 		setIsForking(false);
 		setShowForkChoice(false);
+		setIsUploadContextLoading(!cachedUploadContext);
+		setIsUploadContextReady(cachedUploadContext?.success ?? false);
 		setUploadMode(cachedUploadContext?.mode ?? "repo");
 		setUploadOwner(cachedUploadContext?.uploadOwner ?? owner);
 		setUploadRepo(cachedUploadContext?.uploadRepo ?? repo);
@@ -181,6 +187,7 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 				if (id !== openId.current) return;
 				uploadContextCache.set(cacheKey, uploadContext);
 				if (uploadContext.success) {
+					setIsUploadContextReady(true);
 					setUploadMode(uploadContext.mode ?? "repo");
 					setUploadOwner(uploadContext.uploadOwner ?? owner);
 					setUploadRepo(uploadContext.uploadRepo ?? repo);
@@ -189,15 +196,21 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 						setShowForkChoice(false);
 					}
 				} else if (uploadContext.error) {
+					setIsUploadContextReady(false);
 					setError(uploadContext.error);
 				}
 			})
 			.catch((err: unknown) => {
 				if (id !== openId.current) return;
+				setIsUploadContextReady(false);
 				setError(getErrorMessage(err));
+			})
+			.finally(() => {
+				if (id !== openId.current) return;
+				setIsUploadContextLoading(false);
 			});
 
-		Promise.allSettled([templatesPromise, uploadContextPromise]).finally(() => {
+		Promise.allSettled([templatesPromise]).finally(() => {
 			if (id !== openId.current) return;
 			setIsDialogInitializing(false);
 			if (!userTouchedForm.current) {
@@ -256,13 +269,23 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 	}, [cancelForkChoice]);
 
 	const onImageButtonClick = useCallback(() => {
+		if (isUploadContextLoading) {
+			setError("Preparing image uploads. Please wait a moment.");
+			return;
+		}
+		if (!isUploadContextReady) {
+			setError(
+				"Unable to verify image upload access right now. Please try again.",
+			);
+			return;
+		}
 		if (uploadMode === "needs_fork" || uploadMode === "name_taken") {
 			setError(null);
 			startForkChoice();
 			return;
 		}
 		fileInputRef.current?.click();
-	}, [startForkChoice, uploadMode]);
+	}, [isUploadContextLoading, isUploadContextReady, startForkChoice, uploadMode]);
 
 	const handleClose = useCallback(() => {
 		cancelForkChoice();
@@ -328,6 +351,18 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 
 	// Handle image upload and insert markdown
 	const handleImageUpload = async (file: File) => {
+		if (isUploadContextLoading) {
+			setError("Preparing image uploads. Please wait a moment.");
+			return;
+		}
+
+		if (!isUploadContextReady) {
+			setError(
+				"Unable to verify image upload access right now. Please try again.",
+			);
+			return;
+		}
+
 		if (uploadMode === "needs_fork" || uploadMode === "name_taken") {
 			setError(
 				uploadMode === "name_taken"
@@ -762,11 +797,14 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 												type="button"
 												disabled={
 													uploadingImages ||
-													isForking
+													isForking ||
+													isUploadContextLoading ||
+													!isUploadContextReady
 												}
 											>
 												{uploadingImages ||
-												isForking ? (
+												isForking ||
+												isUploadContextLoading ? (
 													<Loader2 className="w-3.5 h-3.5 animate-spin" />
 												) : (
 													<Image className="w-3.5 h-3.5" />
@@ -870,64 +908,97 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 
 								{/* Upload hint */}
 								<div className="flex items-center justify-between mt-1">
-									{uploadMode === "repo" && (
-										<span className="text-[10px] text-muted-foreground/40">
-											Drag & drop,
-											paste, or
-											click the
-											image button
-											to upload
-											images
-										</span>
-									)}
-									{uploadMode === "fork" && (
-										<span className="text-[10px] text-muted-foreground/40">
-											Images
-											upload to{" "}
-											{
-												uploadOwner
-											}
-											/
-											{uploadRepo}
-											. Issue will
-											still be
-											created in{" "}
-											{owner}/
-											{repo}.
-										</span>
-									)}
-									{uploadMode ===
-										"needs_fork" && (
-										<div className="flex items-center gap-2">
+									{!isUploadContextLoading &&
+										uploadMode ===
+											"repo" && (
 											<span className="text-[10px] text-muted-foreground/40">
-												Click
+												Drag
+												&
+												drop,
+												paste,
+												or
+												click
 												the
 												image
 												button
 												to
-												fork
-												this
-												repo
-												or
-												enter
-												an
-												image
-												URL.
+												upload
+												images
 											</span>
-										</div>
+										)}
+									{isUploadContextLoading && (
+										<span className="text-[10px] text-muted-foreground/40 flex items-center gap-1.5">
+											<Loader2 className="w-3 h-3 animate-spin" />
+											Preparing
+											image
+											uploads...
+										</span>
 									)}
-									{uploadMode ===
-										"name_taken" && (
-										<div className="flex items-center gap-2">
-											<span className="text-[10px] text-destructive/60">
-												Fork
-												name
-												is
-												not
-												available.
+									{!isUploadContextLoading &&
+										uploadMode ===
+											"fork" && (
+											<span className="text-[10px] text-muted-foreground/40">
+												Images
+												upload
+												to{" "}
+												{
+													uploadOwner
+												}
+												/
+												{
+													uploadRepo
+												}
+												.
+												Issue
+												will
+												still
+												be
+												created
+												in{" "}
+												{
+													owner
+												}
+												/
+												{
+													repo
+												}
+												.
 											</span>
-										</div>
-									)}
+										)}
+									{!isUploadContextLoading &&
+										uploadMode ===
+											"needs_fork" && (
+											<div className="flex items-center gap-2">
+												<span className="text-[10px] text-muted-foreground/40">
+													Click
+													the
+													image
+													button
+													to
+													fork
+													this
+													repo
+													or
+													enter
+													an
+													image
+													URL.
+												</span>
+											</div>
+										)}
+									{!isUploadContextLoading &&
+										uploadMode ===
+											"name_taken" && (
+											<div className="flex items-center gap-2">
+												<span className="text-[10px] text-destructive/60">
+													Fork
+													name
+													is
+													not
+													available.
+												</span>
+											</div>
+										)}
 								</div>
 							</div>
 

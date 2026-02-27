@@ -272,20 +272,6 @@ async function findUserForkUploadTarget(
 
 	const normalizedViewer = viewerLogin.toLowerCase();
 
-	// Prefer an existing same-name repo in the viewer account.
-	try {
-		const { data: sameNameRepo } = await octokit.repos.get({
-			owner: viewerLogin,
-			repo: upstreamRepo,
-		});
-
-		if (sameNameRepo?.name) {
-			return { uploadRepo: sameNameRepo.name };
-		}
-	} catch {
-		// Continue with fork discovery.
-	}
-
 	// Main fork detection path: find any upstream fork owned by the viewer.
 	try {
 		const forks = await octokit.paginate(octokit.repos.listForks, {
@@ -328,6 +314,29 @@ async function findUserForkUploadTarget(
 	return {};
 }
 
+async function findSameNameUploadTarget(
+	octokit: Awaited<ReturnType<typeof getOctokit>>,
+	viewerLogin: string,
+	repo: string,
+): Promise<{ uploadRepo?: string }> {
+	if (!octokit) return {};
+
+	try {
+		const { data: sameNameRepo } = await octokit.repos.get({
+			owner: viewerLogin,
+			repo,
+		});
+
+		if (sameNameRepo?.name) {
+			return { uploadRepo: sameNameRepo.name };
+		}
+	} catch {
+		// Continue with fallback discovery.
+	}
+
+	return {};
+}
+
 export async function getIssueImageUploadContext(
 	owner: string,
 	repo: string,
@@ -336,9 +345,19 @@ export async function getIssueImageUploadContext(
 	if (!octokit) return { success: false, error: "Not authenticated" };
 
 	try {
-		const [viewer, { data: repoData }] = await Promise.all([
-			getAuthenticatedUser(),
-			octokit.repos.get({ owner, repo }),
+		const viewerPromise = getAuthenticatedUser();
+		const repoDataPromise = octokit.repos.get({ owner, repo });
+		const sameNameTargetPromise: Promise<{ uploadRepo?: string }> = viewerPromise.then(
+			(viewer) =>
+				viewer?.login
+					? findSameNameUploadTarget(octokit, viewer.login, repo)
+					: {},
+		);
+
+		const [viewer, { data: repoData }, sameNameTarget] = await Promise.all([
+			viewerPromise,
+			repoDataPromise,
+			sameNameTargetPromise,
 		]);
 
 		if (!viewer?.login) return { success: false, error: "Not authenticated" };
@@ -360,22 +379,20 @@ export async function getIssueImageUploadContext(
 			};
 		}
 
-		const forkTarget = await findUserForkUploadTarget(
-			octokit,
-			viewer.login,
-			owner,
-			repo,
-		);
-		if (forkTarget.uploadRepo) {
+		if (sameNameTarget.uploadRepo) {
 			return {
 				success: true,
 				mode: "fork",
 				viewerLogin: viewer.login,
 				uploadOwner: viewer.login,
-				uploadRepo: forkTarget.uploadRepo,
+				uploadRepo: sameNameTarget.uploadRepo,
 			};
 		}
 
+		// Skip the expensive paginated fork search here — it paginates through all
+		// upstream forks (potentially thousands) and all user repos. That discovery
+		// only matters when the user actually tries to upload, so defer it to
+		// ensureForkForIssueImageUpload which runs on-demand.
 		return {
 			success: true,
 			mode: "needs_fork",
@@ -411,6 +428,17 @@ export async function ensureForkForIssueImageUpload(
 				viewerLogin: viewer.login,
 				uploadOwner: owner,
 				uploadRepo: repo,
+			};
+		}
+
+		const sameNameTarget = await findSameNameUploadTarget(octokit, viewer.login, repo);
+		if (sameNameTarget.uploadRepo) {
+			return {
+				success: true,
+				mode: "fork",
+				viewerLogin: viewer.login,
+				uploadOwner: viewer.login,
+				uploadRepo: sameNameTarget.uploadRepo,
 			};
 		}
 
