@@ -1758,6 +1758,7 @@ export const mintlify: ThemeDefinition = {
 	},
 };
 
+/*
 // Prisma theme: teal and indigo accents
 export const prisma: ThemeDefinition = {
 	id: "prisma",
@@ -2779,6 +2780,7 @@ export const browserbase: ThemeDefinition = {
 		),
 	},
 };
+*/
 
 // Cloudflare theme: Edge computing platform
 export const cloudflare: ThemeDefinition = {
@@ -3299,6 +3301,7 @@ export const stripe: ThemeDefinition = {
 	},
 };
 
+/*
 // Bitmap theme: Bold red aesthetic
 export const bitmap: ThemeDefinition = {
 	id: "bitmap",
@@ -3471,6 +3474,7 @@ export const bitmap: ThemeDefinition = {
 		),
 	},
 };
+*/
 
 // Noir theme: Monochrome grayscale
 export const noir: ThemeDefinition = {
@@ -3645,6 +3649,7 @@ export const noir: ThemeDefinition = {
 	},
 };
 
+/*
 // Ice theme: Cool cyan aesthetic
 export const ice: ThemeDefinition = {
 	id: "ice",
@@ -3990,6 +3995,7 @@ export const sand: ThemeDefinition = {
 		),
 	},
 };
+*/
 
 // Forest theme: Natural green aesthetic
 export const forest: ThemeDefinition = {
@@ -4164,6 +4170,7 @@ export const forest: ThemeDefinition = {
 	},
 };
 
+/*
 // Mono theme: Minimalist monochrome (similar to Noir but different gradient)
 export const mono: ThemeDefinition = {
 	id: "mono",
@@ -5893,6 +5900,7 @@ export const firecrawl: ThemeDefinition = {
 		),
 	},
 };
+*/
 
 // Legacy ID mapping for migration
 export const LEGACY_THEME_MAP: Record<string, { themeId: string; mode: "dark" | "light" }> = {
