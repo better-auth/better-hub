@@ -1,70 +1,22 @@
 // Centralised AI model registry — single source of truth for pricing + UI metadata.
 
-interface ModelPricing {
+import { OPENROUTER_MODELS } from "./openrouter-models.generated";
+
+export interface ModelPricing {
 	inputPerM: number;
 	outputPerM: number;
 	cacheReadMultiplier?: number;
 	cacheWriteMultiplier?: number;
 }
 
-interface ModelDef {
+export interface ModelDef {
 	label: string;
 	desc: string;
 	pricing: ModelPricing;
 }
 
-const AI_MODELS = {
-	//
-	// OpenRouter models
-	//
-	"moonshotai/kimi-k2.5": {
-		label: "Kimi K2.5",
-		desc: "Moonshot AI",
-		pricing: { inputPerM: 0.45, outputPerM: 2.2 },
-	},
-	"anthropic/claude-sonnet-4": {
-		label: "Claude Sonnet 4",
-		desc: "Anthropic",
-		pricing: { inputPerM: 3, outputPerM: 15 },
-	},
-	"anthropic/claude-opus-4": {
-		label: "Claude Opus 4",
-		desc: "Anthropic",
-		pricing: { inputPerM: 15, outputPerM: 75 },
-	},
-	"openai/gpt-4.1": {
-		label: "GPT-4.1",
-		desc: "OpenAI",
-		pricing: { inputPerM: 2, outputPerM: 8 },
-	},
-	"openai/o3-mini": {
-		label: "o3-mini",
-		desc: "OpenAI",
-		pricing: { inputPerM: 1.1, outputPerM: 4.4 },
-	},
-	"google/gemini-2.5-pro-preview": {
-		label: "Gemini 2.5 Pro",
-		desc: "Google",
-		pricing: { inputPerM: 1.25, outputPerM: 10 },
-	},
-	"google/gemini-2.5-flash": {
-		label: "Gemini 2.5 Flash",
-		desc: "Google",
-		pricing: { inputPerM: 0.3, outputPerM: 2.5 },
-	},
-	"deepseek/deepseek-chat-v3.1": {
-		label: "DeepSeek V3.1",
-		desc: "DeepSeek",
-		pricing: { inputPerM: 0.15, outputPerM: 0.75 },
-	},
-	"meta-llama/llama-4-maverick": {
-		label: "Llama 4 Maverick",
-		desc: "Meta",
-		pricing: { inputPerM: 0.15, outputPerM: 0.6 },
-	},
-	//
-	// Anthropic models (direct)
-	//
+// Anthropic models called directly (not via OpenRouter)
+const DIRECT_MODELS = {
 	"claude-haiku-4-5-20251001": {
 		label: "Claude Haiku",
 		desc: "Anthropic",
@@ -75,6 +27,11 @@ const AI_MODELS = {
 			cacheWriteMultiplier: 1.25,
 		},
 	},
+} as const satisfies Record<string, ModelDef>;
+
+const AI_MODELS = {
+	...OPENROUTER_MODELS,
+	...DIRECT_MODELS,
 } as const satisfies Record<string, ModelDef>;
 
 export type AIModelId = keyof typeof AI_MODELS;
