@@ -13,16 +13,28 @@ import {
 	DEFAULT_MODE,
 	type ThemeDefinition,
 } from "@/lib/themes";
+import {
+	applyBorderRadius,
+	getBorderRadiusPreset,
+	setBorderRadiusCookie,
+	BORDER_RADIUS_STORAGE_KEY,
+	DEFAULT_BORDER_RADIUS,
+	type BorderRadiusPreset,
+} from "@/lib/themes/border-radius";
 
 interface ColorThemeContext {
 	/** Currently active theme id */
 	themeId: string;
 	/** Current mode (dark/light) */
 	mode: "dark" | "light";
+	/** Current border radius preset */
+	borderRadius: BorderRadiusPreset;
 	/** Set a specific theme */
 	setTheme: (id: string) => void;
 	/** Toggle between dark and light mode */
 	toggleMode: (e?: { clientX: number; clientY: number }) => void;
+	/** Set border radius preset */
+	setBorderRadius: (preset: BorderRadiusPreset) => void;
 	/** All themes */
 	themes: ThemeDefinition[];
 }
@@ -85,6 +97,8 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 	const { setTheme: setNextTheme } = useTheme();
 	const [themeId, setThemeIdState] = useState(DEFAULT_THEME_ID);
 	const [mode, setModeState] = useState<"dark" | "light">(DEFAULT_MODE);
+	const [borderRadius, setBorderRadiusState] =
+		useState<BorderRadiusPreset>(DEFAULT_BORDER_RADIUS);
 	const syncedToDb = useRef(false);
 
 	const themes = listThemes();
@@ -97,6 +111,11 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 		applyTheme(prefs.themeId, prefs.mode);
 		setThemeCookies(prefs.themeId, prefs.mode);
 		setNextTheme(prefs.mode);
+
+		const radiusPreset = getBorderRadiusPreset();
+		setBorderRadiusState(radiusPreset);
+		applyBorderRadius(radiusPreset);
+		setBorderRadiusCookie(radiusPreset);
 	}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
 	useEffect(() => {
@@ -184,13 +203,28 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 		[mode, themeId, applyWithTransition, setNextTheme],
 	);
 
+	const setBorderRadiusCallback = useCallback((preset: BorderRadiusPreset) => {
+		localStorage.setItem(BORDER_RADIUS_STORAGE_KEY, preset);
+		setBorderRadiusState(preset);
+		applyBorderRadius(preset);
+		setBorderRadiusCookie(preset);
+
+		fetch("/api/user-settings", {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ borderRadius: preset }),
+		}).catch(() => {});
+	}, []);
+
 	return (
 		<Ctx.Provider
 			value={{
 				themeId,
 				mode,
+				borderRadius,
 				setTheme,
 				toggleMode,
+				setBorderRadius: setBorderRadiusCallback,
 				themes,
 			}}
 		>

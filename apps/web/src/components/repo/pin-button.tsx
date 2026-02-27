@@ -52,7 +52,7 @@ export function PinButton({
 		<button
 			onClick={toggle}
 			className={cn(
-				"flex items-center justify-center gap-1.5 text-[11px] font-mono py-1.5 transition-colors cursor-pointer",
+				"flex items-center justify-center gap-1.5 text-[11px] font-mono py-1.5 rounded-md transition-colors cursor-pointer",
 				isPinned
 					? "border border-foreground/30 text-foreground hover:bg-foreground/10"
 					: "text-muted-foreground hover:text-foreground hover:border-border",

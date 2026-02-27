@@ -263,6 +263,42 @@ body {
 	padding-right: 16px;
 	position: relative;
 }
+
+/* Syntax Highlighting Preview (Settings) */
+.codeblock-preview {
+	width: 100%;
+	display: flex;
+	font-size: 13px;
+	font-family: var(--code-font-override, var(--font-code)), ui-monospace, monospace;
+	background: var(--code-bg);
+	border-radius: var(--radius-md);
+}
+.codeblock-preview .gutter {
+	color: var(--line-gutter);
+	min-width: 2.5ch;
+	text-align: right;
+	user-select: none;
+	padding-right: 0.75rem;
+	padding-left: 0.25rem;
+	padding-top: 0.5rem;
+	padding-bottom: 0.5rem;
+}
+.codeblock-preview .gutter div {
+	height: 20px;
+	line-height: 20px;
+}
+.codeblock-preview .code {
+	flex: 1 1 0%;
+	min-width: 0;
+	padding-top: 0.5rem;
+	padding-bottom: 0.5rem;
+}
+.codeblock-preview .code div {
+	min-height: 20px;
+	line-height: 20px;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
 .code-content .line:hover {
 	background: rgba(128, 128, 128, 0.06);
 }
