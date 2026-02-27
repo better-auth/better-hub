@@ -4119,6 +4119,9 @@ export async function invalidateIssueCache(owner: string, repo: string, issueNum
 	await deleteGithubCacheByPrefix(authCtx.userId, `issue:${key}:${issueNumber}`);
 	await deleteGithubCacheByPrefix(authCtx.userId, `issue_comments:${key}:${issueNumber}`);
 	await deleteGithubCacheByPrefix(authCtx.userId, `repo_issues:${key}`);
+	// Also invalidate shared cache so other users see fresh data
+	await deleteSharedCacheByPrefix(`issue:${key}:${issueNumber}`);
+	await deleteSharedCacheByPrefix(`issue_comments:${key}:${issueNumber}`);
 	// Also invalidate nav counts so issue count updates immediately
 	const navCountsKey = buildRepoNavCountsCacheKey(owner, repo);
 	await deleteGithubCacheByPrefix(authCtx.userId, navCountsKey);
