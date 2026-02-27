@@ -222,7 +222,7 @@ export function PromptList({ owner, repo, promptRequests }: PromptListProps) {
 
 					<button
 						onClick={() => setSuggestDialogOpen(true)}
-						className="ml-auto flex items-center gap-1.5 h-8 px-3 text-xs font-medium bg-foreground text-background rounded-lg hover:bg-foreground/90 transition-colors cursor-pointer"
+						className="ml-auto flex items-center gap-1.5 h-8 px-3 text-xs font-medium bg-primary text-background rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
 					>
 						<Sparkles className="w-3 h-3" />
 						Suggest Prompt

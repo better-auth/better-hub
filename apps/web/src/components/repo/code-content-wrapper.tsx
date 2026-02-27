@@ -354,7 +354,10 @@ export function CodeContentWrapper({
 											: "pt-3",
 									),
 					)}
-					style={{ paddingRight: "var(--repo-pr, 1rem)" }}
+					style={{
+						paddingRight:
+							"var(--repo-pr, calc(var(--spacing) * 4))",
+					}}
 				>
 					{children}
 				</div>
