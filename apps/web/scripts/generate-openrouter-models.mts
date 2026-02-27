@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
  * 100 = pass-through
  * 120 = +20%.
  */
-const COST_MULTIPLIER = 100;
+const COST_MULTIPLIER = 140;
 
 /**
  * Models we use through OpenRouter.

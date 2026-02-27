@@ -7,46 +7,46 @@ export const OPENROUTER_MODELS = {
 	"moonshotai/kimi-k2.5": {
 		label: "Kimi K2.5",
 		desc: "Moonshot AI",
-		pricing: { inputPerM: 0.45, outputPerM: 2.2 },
+		pricing: { inputPerM: 0.63, outputPerM: 3.08 },
 	},
 	"anthropic/claude-sonnet-4": {
 		label: "Claude Sonnet 4",
 		desc: "Anthropic",
-		pricing: { inputPerM: 3, outputPerM: 15 },
+		pricing: { inputPerM: 4.2, outputPerM: 21 },
 	},
 	"anthropic/claude-opus-4": {
 		label: "Claude Opus 4",
 		desc: "Anthropic",
-		pricing: { inputPerM: 15, outputPerM: 75 },
+		pricing: { inputPerM: 21, outputPerM: 105 },
 	},
 	"openai/gpt-4.1": {
 		label: "GPT-4.1",
 		desc: "OpenAI",
-		pricing: { inputPerM: 2, outputPerM: 8 },
+		pricing: { inputPerM: 2.8, outputPerM: 11.2 },
 	},
 	"openai/o3-mini": {
 		label: "o3-mini",
 		desc: "OpenAI",
-		pricing: { inputPerM: 1.1, outputPerM: 4.4 },
+		pricing: { inputPerM: 1.54, outputPerM: 6.16 },
 	},
 	"google/gemini-2.5-pro-preview": {
 		label: "Gemini 2.5 Pro",
 		desc: "Google",
-		pricing: { inputPerM: 1.25, outputPerM: 10 },
+		pricing: { inputPerM: 1.75, outputPerM: 14 },
 	},
 	"google/gemini-2.5-flash": {
 		label: "Gemini 2.5 Flash",
 		desc: "Google",
-		pricing: { inputPerM: 0.3, outputPerM: 2.5 },
+		pricing: { inputPerM: 0.42, outputPerM: 3.5 },
 	},
 	"deepseek/deepseek-chat-v3.1": {
 		label: "DeepSeek V3.1",
 		desc: "DeepSeek",
-		pricing: { inputPerM: 0.15, outputPerM: 0.75 },
+		pricing: { inputPerM: 0.21, outputPerM: 1.05 },
 	},
 	"meta-llama/llama-4-maverick": {
 		label: "Llama 4 Maverick",
 		desc: "Meta",
-		pricing: { inputPerM: 0.15, outputPerM: 0.6 },
+		pricing: { inputPerM: 0.21, outputPerM: 0.84 },
 	},
 } as const satisfies Record<string, ModelDef>;
