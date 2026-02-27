@@ -5,6 +5,7 @@ import { Bug, ExternalLink, FileText, KeyRound, ShieldAlert } from "lucide-react
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
+import { ReactiveCodeBlocks } from "@/components/shared/reactive-code-blocks";
 
 interface Advisory {
 	ghsaId: string;
@@ -587,10 +588,14 @@ function PolicySection({
 			{/* Scrollable content */}
 			{policyHtml ? (
 				<div className="overflow-y-auto min-h-0 flex-1 px-4 py-4">
-					<div
-						className="ghmd"
-						dangerouslySetInnerHTML={{ __html: policyHtml }}
-					/>
+					<ReactiveCodeBlocks>
+						<div
+							className="ghmd"
+							dangerouslySetInnerHTML={{
+								__html: policyHtml,
+							}}
+						/>
+					</ReactiveCodeBlocks>
 				</div>
 			) : (
 				<div className="px-4 py-16 text-center">

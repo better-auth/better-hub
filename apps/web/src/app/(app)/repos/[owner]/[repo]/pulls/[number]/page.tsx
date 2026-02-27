@@ -6,13 +6,16 @@ import {
 	getAuthenticatedUser,
 	extractRepoPermissions,
 	getOctokit,
+	getIssue,
 	fetchCheckStatusForRef,
 	getCachedCheckStatus,
 	getAuthorDossier,
+	isBranchBehindBase,
 	type CheckStatus,
 	type AuthorDossierResult,
 	getCrossReferences,
 } from "@/lib/github";
+import { redirect } from "next/navigation";
 import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { extractParticipants } from "@/lib/github-utils";
 import { highlightDiffLines, type SyntaxToken } from "@/lib/shiki";
@@ -57,11 +60,16 @@ export async function generateMetadata({
 	}
 
 	const bundle = await getPullRequestBundle(owner, repo, pullNumber);
-	const ogUrl = ogImageUrl({ type: "pr", owner, repo, number: pullNumber });
 
 	if (!bundle) {
+		const issue = await getIssue(owner, repo, pullNumber);
+		if (issue != null && (issue as { pull_request?: unknown }).pull_request == null) {
+			redirect(`/${owner}/${repo}/issues/${pullNumber}`);
+		}
 		return { title: `PR #${pullNumber} · ${owner}/${repo}` };
 	}
+
+	const ogUrl = ogImageUrl({ type: "pr", owner, repo, number: pullNumber });
 
 	return {
 		title: `${bundle.pr.title} · PR #${pullNumber} · ${owner}/${repo}`,
@@ -108,6 +116,10 @@ export default async function PRDetailPage({
 	});
 
 	if (!bundle) {
+		const issue = await getIssue(owner, repo, pullNumber);
+		if (issue != null && (issue as { pull_request?: unknown }).pull_request == null) {
+			redirect(`/${owner}/${repo}/issues/${pullNumber}`);
+		}
 		return (
 			<div className="py-16 text-center">
 				<p className="text-xs text-muted-foreground font-mono">
@@ -161,6 +173,7 @@ export default async function PRDetailPage({
 		checkStatus: checkStatusResult,
 		prPinned,
 		authorDossier,
+		branchBehindBase,
 	} = await all({
 		checkStatus: async () => {
 			if (!isOpen) return undefined;
@@ -192,6 +205,17 @@ export default async function PRDetailPage({
 			pr.user?.login
 				? getAuthorDossier(owner, repo, pr.user.login).catch(() => null)
 				: Promise.resolve(null),
+		branchBehindBase: () =>
+			isOpen
+				? isBranchBehindBase(
+						owner,
+						repo,
+						pr.base.ref,
+						pr.head.ref,
+						(pr as { head_repo_owner?: string | null })
+							.head_repo_owner,
+					)
+				: Promise.resolve(false),
 	});
 
 	const checkStatus = checkStatusResult as CheckStatus | undefined;
@@ -534,9 +558,28 @@ export default async function PRDetailPage({
 										baseBranch={
 											pr.base.ref
 										}
+										draft={
+											pr.draft ??
+											false
+										}
 										canWrite={canWrite}
 										canTriage={
 											canTriage
+										}
+										isAuthor={
+											currentUser?.login !=
+												null &&
+											pr.user
+												?.login !=
+												null &&
+											currentUser.login ===
+												pr
+													.user
+													.login
+										}
+										branchBehindBase={
+											branchBehindBase ??
+											false
 										}
 									/>
 								</div>

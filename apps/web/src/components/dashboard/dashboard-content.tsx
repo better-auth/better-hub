@@ -34,6 +34,7 @@ import { toInternalUrl, getLanguageColor } from "@/lib/github-utils";
 import { RecentlyViewed } from "./recently-viewed";
 import { CreateRepoDialog } from "@/components/repo/create-repo-dialog";
 import { markNotificationDone } from "@/app/(app)/repos/actions";
+import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import {
 	getPinnedRepos,
 	togglePinRepo,
@@ -104,6 +105,7 @@ export function DashboardContent({
 		"tab",
 		parseAsStringLiteral(tabKeys).withDefault("reviews"),
 	);
+	const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
 
 	const handleStatClick = useCallback(
 		(tab: TabKey) => {
@@ -172,12 +174,16 @@ export function DashboardContent({
 							label="Notifs"
 							value={
 								notifications.filter(
-									(n) => n.unread,
+									(n) =>
+										n.unread &&
+										!doneIds.has(n.id),
 								).length
 							}
 							accent={
 								notifications.filter(
-									(n) => n.unread,
+									(n) =>
+										n.unread &&
+										!doneIds.has(n.id),
 								).length > 0
 							}
 							active={activeTab === "notifs"}
@@ -194,6 +200,8 @@ export function DashboardContent({
 						hasWork={hasWork}
 						activeTab={activeTab}
 						activity={activity ?? []}
+						doneIds={doneIds}
+						setDoneIds={setDoneIds}
 					/>
 				</div>
 
@@ -257,6 +265,8 @@ function WorkTabs({
 	hasWork,
 	activeTab,
 	activity,
+	doneIds,
+	setDoneIds,
 }: {
 	reviewRequests: SearchResult<IssueItem>;
 	myOpenPRs: SearchResult<IssueItem>;
@@ -265,8 +275,9 @@ function WorkTabs({
 	hasWork: boolean;
 	activeTab: TabKey;
 	activity: Array<ActivityEvent>;
+	doneIds: Set<string>;
+	setDoneIds: React.Dispatch<React.SetStateAction<Set<string>>>;
 }) {
-	const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
 	const visibleNotifs = notifications.filter((n) => !doneIds.has(n.id));
 
 	if (!hasWork && activeTab !== "notifs") {
@@ -378,6 +389,7 @@ function NotificationRow({
 	notif: NotificationItem;
 	onDone: (id: string) => void;
 }) {
+	const { emit } = useMutationEvents();
 	const href = getNotificationHref(notif);
 	const repo = notif.repository.full_name;
 	const [marking, startMarking] = useTransition();
@@ -430,7 +442,13 @@ function NotificationRow({
 				onClick={() => {
 					startMarking(async () => {
 						const res = await markNotificationDone(notif.id);
-						if (res.success) onDone(notif.id);
+						if (res.success) {
+							onDone(notif.id);
+							emit({
+								type: "notification:read",
+								id: notif.id,
+							});
+						}
 					});
 				}}
 				className="shrink-0 p-1 text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:text-foreground/70 transition-all cursor-pointer disabled:opacity-100"

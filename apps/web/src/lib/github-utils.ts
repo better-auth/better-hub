@@ -96,9 +96,12 @@ export function toInternalUrl(htmlUrl: string): string {
 
 	if (parsed.type === "user") return `/users/${parsed.owner}`;
 
-	const { owner, repo, type, number, path } = parsed;
-	const base = `/${owner}/${repo}`;
+	const base = `/${parsed.owner}/${parsed.repo}`;
 
+	if (parsed.type === "download")
+		return `${base}/releases/download/${encodeURIComponent(parsed.tag)}/${parsed.filename}`;
+
+	const { type, number, path } = parsed;
 	if (type === "pull") return `${base}/pulls/${number}`;
 	if (type === "issue") return `${base}/issues/${number}`;
 	if (type === "tree" && path) return `${base}/tree/${path}`;
@@ -166,6 +169,13 @@ type ParsedGitHubUrl =
 	  }
 	| {
 			owner: string;
+			repo: string;
+			type: "download";
+			tag: string;
+			filename: string;
+	  }
+	| {
+			owner: string;
 			type: "user";
 	  };
 
@@ -212,6 +222,14 @@ export function parseGitHubUrl(htmlUrl: string): ParsedGitHubUrl | null {
 			return { owner, repo, type: "commits" };
 		if (rest[0] === "commit" && rest[1])
 			return { owner, repo, type: "commit", path: rest[1] };
+		if (rest[0] === "releases" && rest[1] === "download" && rest[2] && rest[3])
+			return {
+				owner,
+				repo,
+				type: "download",
+				tag: rest[2],
+				filename: rest.slice(3).join("/"),
+			};
 
 		return { owner, repo, type: "repo" };
 	} catch {
