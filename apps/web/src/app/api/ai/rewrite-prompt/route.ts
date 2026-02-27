@@ -1,7 +1,7 @@
-import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
 import { auth } from "@/lib/auth";
 import { getErrorMessage } from "@/lib/utils";
+import { getInternalModel } from "@/lib/billing/ai-models";
 import { headers } from "next/headers";
 import { checkUsageLimit } from "@/lib/billing/usage-limit";
 import { getBillingErrorCode } from "@/lib/billing/config";
@@ -28,9 +28,11 @@ export async function POST(req: Request) {
 		return Response.json({ error: "Missing fields" }, { status: 400 });
 	}
 
+	const { model, modelId, isCustomApiKey } = await getInternalModel(session.user.id);
+
 	try {
 		const { text, usage } = await generateText({
-			model: anthropic("claude-haiku-4-5-20251001"),
+			model,
 			system: `You are a prompt engineer helping users write clear, actionable prompts for AI coding tools. The prompt is for the repository ${owner}/${repo}.
 
 Rewrite the user's prompt to be:
@@ -45,11 +47,11 @@ Only output the improved prompt, nothing else. Do not wrap it in quotes or add m
 
 		logTokenUsage({
 			userId: session.user.id,
-			provider: "anthropic",
-			modelId: "anthropic/claude-haiku-4.5",
+			provider: "openrouter",
+			modelId,
 			taskType: "rewrite-prompt",
 			usage,
-			isCustomApiKey: false,
+			isCustomApiKey,
 		}).catch((e) => console.error("[billing] logTokenUsage failed:", e));
 
 		return Response.json({ text: text.trim() });

@@ -1,7 +1,7 @@
-import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
 import { auth } from "@/lib/auth";
 import { getErrorMessage } from "@/lib/utils";
+import { getInternalModel } from "@/lib/billing/ai-models";
 import { headers } from "next/headers";
 import { checkUsageLimit } from "@/lib/billing/usage-limit";
 import { getBillingErrorCode } from "@/lib/billing/config";
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 	}
 
 	const body = await req.json();
-	const model = anthropic("claude-haiku-4-5-20251001");
+	const { model, modelId, isCustomApiKey } = await getInternalModel(session.user.id);
 
 	if (body.mode === "squash") {
 		const { prTitle, prBody, prNumber, commits } = body;
@@ -46,11 +46,11 @@ export async function POST(req: Request) {
 
 			logTokenUsage({
 				userId: session.user.id,
-				provider: "anthropic",
-				modelId: "anthropic/claude-haiku-4.5",
+				provider: "openrouter",
+				modelId,
 				taskType: "commit",
 				usage,
-				isCustomApiKey: false,
+				isCustomApiKey,
 			}).catch((e) => console.error("[billing] logTokenUsage failed:", e));
 
 			const lines = text.trim().split("\n");
@@ -107,7 +107,7 @@ export async function POST(req: Request) {
 			modelId: "anthropic/claude-haiku-4.5",
 			taskType: "commit",
 			usage,
-			isCustomApiKey: false,
+			isCustomApiKey,
 		}).catch((e) => console.error("[billing] logTokenUsage failed:", e));
 
 		return Response.json({ message: text.trim() });

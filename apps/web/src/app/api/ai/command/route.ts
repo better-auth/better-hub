@@ -1,9 +1,9 @@
-import { anthropic } from "@ai-sdk/anthropic";
 import type { UIMessage } from "ai";
 import { convertToModelMessages, stepCountIs, streamText, tool } from "ai";
 import { z } from "zod";
 import { getOctokitFromSession } from "@/lib/ai-auth";
 import { auth } from "@/lib/auth";
+import { getInternalModel } from "@/lib/billing/ai-models";
 import { headers } from "next/headers";
 import { checkUsageLimit } from "@/lib/billing/usage-limit";
 import { getBillingErrorCode } from "@/lib/billing/config";
@@ -49,6 +49,8 @@ export async function POST(req: Request) {
 			headers: { "Content-Type": "application/json" },
 		});
 	}
+
+	const { model, modelId, isCustomApiKey } = await getInternalModel(userId);
 
 	// Get authenticated user info
 	let currentUser: { login: string } | null = null;
@@ -96,7 +98,7 @@ export async function POST(req: Request) {
 	}
 
 	const result = streamText({
-		model: anthropic("claude-haiku-4-5-20251001"),
+		model,
 		system: `You are an AI assistant built into a GitHub client app's command palette (Cmd+K). You help users perform GitHub actions and navigate the app through natural language.
 
 ${currentUser ? `Authenticated GitHub user: ${currentUser.login}` : ""}
@@ -670,11 +672,11 @@ ${pageContextPrompt}`,
 		.then((usage) =>
 			logTokenUsage({
 				userId,
-				provider: "anthropic",
-				modelId: "anthropic/claude-haiku-4.5",
+				provider: "openrouter",
+				modelId,
 				taskType: "command",
 				usage,
-				isCustomApiKey: false,
+				isCustomApiKey,
 			}),
 		)
 		.catch((e) => console.error("[billing] logTokenUsage failed:", e));
