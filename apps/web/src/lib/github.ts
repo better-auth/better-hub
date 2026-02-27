@@ -60,6 +60,7 @@ type GitDataSyncJobType =
 	| "repo_tree"
 	| "repo_branches"
 	| "repo_tags"
+	| "repo_releases"
 	| "file_content"
 	| "repo_readme"
 	| "authenticated_user"
@@ -93,13 +94,14 @@ type GitDataSyncJobType =
 	| "pr_bundle"
 	| "repo_discussions";
 
+// SECURITY: Only cache types that are safe to share across users belong here.
+// Any data from repos (issues, PRs, code, branches, etc.) is excluded because
+// private-repo data fetched by one authorized user would leak to others via
+// the shared cache, bypassing GitHub permission checks.
 const SHAREABLE_CACHE_TYPES: ReadonlySet<string> = new Set([
-	"repo_contents",
-	"repo_tree",
 	"repo_branches",
 	"repo_tags",
-	"file_content",
-	"repo_readme",
+	"repo_releases",
 	"repo_issues",
 	"repo_pull_requests",
 	"issue",
@@ -120,8 +122,6 @@ const SHAREABLE_CACHE_TYPES: ReadonlySet<string> = new Set([
 	"org_repos",
 	"org_members",
 	"trending_repos",
-	"pr_bundle",
-	"person_repo_activity",
 ]);
 
 function isShareableCacheType(jobType: string): boolean {
@@ -306,6 +306,10 @@ function buildRepoBranchesCacheKey(owner: string, repo: string): string {
 
 function buildRepoTagsCacheKey(owner: string, repo: string): string {
 	return `repo_tags:${normalizeRepoKey(owner, repo)}`;
+}
+
+function buildRepoReleasesCacheKey(owner: string, repo: string): string {
+	return `repo_releases:${normalizeRepoKey(owner, repo)}`;
 }
 
 function buildFileContentCacheKey(owner: string, repo: string, path: string, ref?: string): string {
@@ -563,6 +567,15 @@ async function fetchRepoTagsFromGitHub(octokit: Octokit, owner: string, repo: st
 	return data;
 }
 
+async function fetchRepoReleasesFromGitHub(octokit: Octokit, owner: string, repo: string) {
+	const { data } = await octokit.repos.listReleases({
+		owner,
+		repo,
+		per_page: 100,
+	});
+	return data;
+}
+
 async function fetchFileContentFromGitHub(
 	octokit: Octokit,
 	owner: string,
@@ -794,6 +807,30 @@ async function fetchPullRequestFromGitHub(
 	return data;
 }
 
+export async function isBranchBehindBase(
+	owner: string,
+	repo: string,
+	baseRef: string,
+	headRef: string,
+	headOwner?: string | null,
+): Promise<boolean> {
+	const octokit = await getOctokit();
+	if (!octokit) return false;
+	try {
+		const headPart =
+			headOwner && headOwner !== owner ? `${headOwner}:${headRef}` : headRef;
+		const basehead = `${headPart}...${baseRef}`;
+		const { data } = await octokit.repos.compareCommitsWithBasehead({
+			owner,
+			repo,
+			basehead,
+		});
+		return (data.behind_by ?? 0) > 0;
+	} catch {
+		return false;
+	}
+}
+
 async function fetchPullRequestFilesFromGitHub(
 	octokit: Octokit,
 	owner: string,
@@ -942,7 +979,85 @@ async function fetchUserProfileFromGitHub(octokit: Octokit, username: string) {
 	return null;
 }
 
-async function fetchUserPublicReposFromGitHub(octokit: Octokit, username: string, perPage: number) {
+async function enrichMissingRepoLanguagesFromGraphQL<
+	T extends {
+		language?: string | null;
+		name: string;
+		owner?: { login?: string | null } | null;
+	},
+>(token: string, repos: T[]): Promise<T[]> {
+	const missing = repos
+		.map((repo, index) => ({ repo, index }))
+		.filter(
+			({ repo }) =>
+				!repo.language &&
+				typeof repo.name === "string" &&
+				typeof repo.owner?.login === "string",
+		)
+		.slice(0, 50);
+	if (missing.length === 0) return repos;
+
+	const aliases = missing.map(
+		(_item, i) =>
+			`r${i}: repository(owner: $owner${i}, name: $name${i}) { primaryLanguage { name } }`,
+	);
+	const variableDefinitions = missing
+		.flatMap((_item, i) => [`$owner${i}: String!`, `$name${i}: String!`])
+		.join(", ");
+	const variables = Object.fromEntries(
+		missing.flatMap(({ repo }, i) => [
+			[`owner${i}`, String(repo.owner?.login)],
+			[`name${i}`, repo.name],
+		]),
+	);
+	const query = `query(${variableDefinitions}) { ${aliases.join("\n")} }`;
+
+	try {
+		const response = await fetch("https://api.github.com/graphql", {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ query, variables }),
+			signal: AbortSignal.timeout(8_000),
+		});
+		if (!response.ok) return repos;
+		const json = (await response.json()) as {
+			data?: Record<
+				string,
+				{ primaryLanguage?: { name?: string | null } } | null
+			>;
+		};
+		if (!json.data) return repos;
+
+		const languageByIndex = new Map<number, string>();
+		for (let i = 0; i < missing.length; i++) {
+			const lang = json.data[`r${i}`]?.primaryLanguage?.name;
+			if (typeof lang === "string" && lang.trim()) {
+				languageByIndex.set(missing[i].index, lang);
+			}
+		}
+
+		if (languageByIndex.size === 0) return repos;
+		return repos.map((repo, idx) =>
+			languageByIndex.has(idx)
+				? { ...repo, language: languageByIndex.get(idx) ?? repo.language }
+				: repo,
+		);
+	} catch {
+		return repos;
+	}
+}
+
+type UserPublicRepo = Awaited<ReturnType<Octokit["repos"]["listForUser"]>>["data"][number];
+
+async function fetchUserPublicReposFromGitHub(
+	octokit: Octokit,
+	username: string,
+	perPage: number,
+	token?: string | null,
+): Promise<UserPublicRepo[]> {
 	// Fetch recently-updated repos for the listing + top-starred repos via
 	// search API for accurate profile scoring (listForUser can't sort by stars).
 	const half = Math.ceil(perPage / 2);
@@ -957,10 +1072,13 @@ async function fetchUserPublicReposFromGitHub(octokit: Octokit, username: string
 			})
 			.catch(() => null),
 	]);
-	if (!topStarred) return byUpdated.data;
+	if (!topStarred) {
+		if (!token) return byUpdated.data;
+		return enrichMissingRepoLanguagesFromGraphQL(token, byUpdated.data);
+	}
 	// Merge and deduplicate — recently-updated first, then top-starred fills gaps
 	const seen = new Set<number>();
-	const merged = [];
+	const merged: UserPublicRepo[] = [];
 	for (const repo of byUpdated.data) {
 		seen.add(repo.id);
 		merged.push(repo);
@@ -971,7 +1089,8 @@ async function fetchUserPublicReposFromGitHub(octokit: Octokit, username: string
 			merged.push(repo as (typeof byUpdated.data)[number]);
 		}
 	}
-	return merged;
+	if (!token) return merged;
+	return enrichMissingRepoLanguagesFromGraphQL(token, merged);
 }
 
 async function fetchUserPublicOrgsFromGitHub(octokit: Octokit, username: string) {
@@ -1328,6 +1447,7 @@ async function processGitDataSyncJob(
 				authCtx.octokit,
 				payload.username,
 				perPage,
+				authCtx.token,
 			);
 			await upsertCacheWithShared(
 				authCtx.userId,
@@ -1437,6 +1557,20 @@ async function processGitDataSyncJob(
 				authCtx.userId,
 				buildRepoTagsCacheKey(owner, repo),
 				"repo_tags",
+				data,
+			);
+			return;
+		}
+		case "repo_releases": {
+			const data = await fetchRepoReleasesFromGitHub(
+				authCtx.octokit,
+				owner,
+				repo,
+			);
+			await upsertCacheWithShared(
+				authCtx.userId,
+				buildRepoReleasesCacheKey(owner, repo),
+				"repo_releases",
 				data,
 			);
 			return;
@@ -2144,6 +2278,59 @@ export async function getRepoTags(owner: string, repo: string) {
 	});
 }
 
+export async function getRepoReleases(owner: string, repo: string) {
+	const authCtx = await getGitHubAuthContext();
+	const cacheKey = buildRepoReleasesCacheKey(owner, repo);
+
+	return readLocalFirstGitData({
+		authCtx,
+		cacheKey,
+		cacheType: "repo_releases",
+		fallback: [],
+		jobType: "repo_releases",
+		jobPayload: { owner, repo },
+		fetchRemote: (octokit) => fetchRepoReleasesFromGitHub(octokit, owner, repo),
+	});
+}
+
+export async function getRepoReleasesPage(owner: string, repo: string, page: number) {
+	const octokit = await getOctokit();
+	if (!octokit) return [];
+	try {
+		const { data } = await octokit.repos.listReleases({
+			owner,
+			repo,
+			per_page: 100,
+			page,
+		});
+		return data;
+	} catch {
+		return [];
+	}
+}
+
+export async function getRepoTagsPage(owner: string, repo: string, page: number) {
+	const octokit = await getOctokit();
+	if (!octokit) return [];
+	try {
+		const { data } = await octokit.repos.listTags({ owner, repo, per_page: 100, page });
+		return data;
+	} catch {
+		return [];
+	}
+}
+
+export async function getRepoReleaseByTag(owner: string, repo: string, tag: string) {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx?.octokit) return null;
+	try {
+		const { data } = await authCtx.octokit.repos.getReleaseByTag({ owner, repo, tag });
+		return data;
+	} catch {
+		return null;
+	}
+}
+
 export async function getFileContent(owner: string, repo: string, path: string, ref?: string) {
 	const authCtx = await getGitHubAuthContext();
 	const normalizedRef = normalizeRef(ref);
@@ -2397,6 +2584,7 @@ export interface PRBundleData {
 		changed_files: number;
 		user: { login: string; avatar_url: string; type?: string } | null;
 		head: { ref: string; sha: string };
+		head_repo_owner?: string | null;
 		base: { ref: string; sha: string };
 		labels: { name: string; color: string | null; description: string | null }[];
 		reactions: ReactionSummary | undefined;
@@ -2465,6 +2653,7 @@ const PR_BUNDLE_QUERY = `
         author { __typename login avatarUrl }
         headRefName
         headRefOid
+        headRepository { owner { login } }
         baseRefName
         baseRefOid
         labels(first: 20) {
@@ -2695,6 +2884,7 @@ interface GQLPRNode {
 	author: GQLAuthor | null;
 	headRefName: string;
 	headRefOid: string;
+	headRepository?: { owner: { login: string } } | null;
 	baseRefName: string;
 	baseRefOid: string;
 	labels?: { nodes: GQLLabel[] };
@@ -2738,6 +2928,7 @@ function transformGraphQLPRBundle(node: GQLPRNode): PRBundleData {
 				}
 			: null,
 		head: { ref: node.headRefName, sha: node.headRefOid },
+		head_repo_owner: node.headRepository?.owner?.login ?? null,
 		base: { ref: node.baseRefName, sha: node.baseRefOid },
 		labels: (node.labels?.nodes ?? []).map((l) => ({
 			name: l.name,
@@ -2957,6 +3148,7 @@ export interface CrossReference {
 	html_url: string;
 	repoOwner: string;
 	repoName: string;
+	created_at: string;
 }
 
 /**
@@ -2984,26 +3176,26 @@ export async function getCrossReferences(
 
 		for (const event of events) {
 			if (event.event !== "cross-referenced") continue;
-			const source = (
-				event as {
-					source?: {
-						issue?: {
-							pull_request?: {
-								merged_at?: string | null;
-							};
-							repository?: { full_name?: string };
-							number: number;
-							title: string;
-							state: string;
-							user?: {
-								login: string;
-								avatar_url: string;
-							} | null;
-							html_url: string;
+			const typedEvent = event as {
+				created_at?: string;
+				source?: {
+					issue?: {
+						pull_request?: {
+							merged_at?: string | null;
 						};
+						repository?: { full_name?: string };
+						number: number;
+						title: string;
+						state: string;
+						user?: {
+							login: string;
+							avatar_url: string;
+						} | null;
+						html_url: string;
 					};
-				}
-			).source?.issue;
+				};
+			};
+			const source = typedEvent.source?.issue;
 			if (!source) continue;
 
 			const repoFullName = source.repository?.full_name;
@@ -3032,6 +3224,7 @@ export async function getCrossReferences(
 				html_url: source.html_url,
 				repoOwner: refOwner,
 				repoName: refName,
+				created_at: typedEvent.created_at ?? "",
 			});
 		}
 
@@ -5116,7 +5309,12 @@ export async function getUserPublicRepos(username: string, perPage = 30) {
 		jobType: "user_public_repos",
 		jobPayload: { username, perPage },
 		fetchRemote: (octokit) =>
-			fetchUserPublicReposFromGitHub(octokit, username, perPage),
+			fetchUserPublicReposFromGitHub(
+				octokit,
+				username,
+				perPage,
+				authCtx?.token ?? null,
+			),
 	});
 }
 

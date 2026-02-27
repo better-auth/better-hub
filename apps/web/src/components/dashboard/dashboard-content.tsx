@@ -2,7 +2,7 @@
 
 import { noSSR } from "foxact/no-ssr";
 import { Suspense, useEffect, useState, useCallback, useTransition, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useQueryState, parseAsStringLiteral } from "nuqs";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -34,6 +34,7 @@ import { toInternalUrl, getLanguageColor } from "@/lib/github-utils";
 import { RecentlyViewed } from "./recently-viewed";
 import { CreateRepoDialog } from "@/components/repo/create-repo-dialog";
 import { markNotificationDone } from "@/app/(app)/repos/actions";
+import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import {
 	getPinnedRepos,
 	togglePinRepo,
@@ -50,6 +51,9 @@ import type {
 	GitHubUser,
 	SearchResult,
 } from "@/lib/github-types";
+
+const tabKeys = ["reviews", "prs", "issues", "notifs"] as const;
+type TabKey = (typeof tabKeys)[number];
 
 interface DashboardContentProps {
 	user: GitHubUser;
@@ -77,48 +81,51 @@ export function DashboardContent({
 	activity,
 	trending,
 }: DashboardContentProps) {
-	const greeting = getGreeting();
-	const today = new Date().toLocaleDateString("en-US", {
-		weekday: "long",
-		month: "long",
-		day: "numeric",
-		year: "numeric",
-	});
+	const [greeting, setGreeting] = useState<string>("");
+	const [today, setToday] = useState<string>("");
+
+	useEffect(() => {
+		setGreeting(getGreeting());
+		setToday(
+			new Date().toLocaleDateString("en-US", {
+				weekday: "long",
+				month: "long",
+				day: "numeric",
+				year: "numeric",
+			}),
+		);
+	}, []);
 
 	const hasWork =
 		reviewRequests.items.length > 0 ||
 		myOpenPRs.items.length > 0 ||
 		myIssues.items.length > 0;
 
-	const searchParams = useSearchParams();
-	const tabParam = searchParams.get("tab");
-	const validTabs: TabKey[] = ["reviews", "prs", "issues", "notifs"];
-	const initialTab: TabKey = validTabs.includes(tabParam as TabKey)
-		? (tabParam as TabKey)
-		: "reviews";
-	const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
+	const [activeTab, setActiveTab] = useQueryState(
+		"tab",
+		parseAsStringLiteral(tabKeys).withDefault("reviews"),
+	);
+	const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
 
-	const handleStatClick = useCallback((tab: TabKey) => {
-		setActiveTab(tab);
-		const url = new URL(window.location.href);
-		if (tab === "reviews") {
-			url.searchParams.delete("tab");
-		} else {
-			url.searchParams.set("tab", tab);
-		}
-		window.history.replaceState(null, "", url.toString());
-		document.getElementById("work-tabs")?.scrollIntoView({
-			behavior: "smooth",
-			block: "nearest",
-		});
-	}, []);
+	const handleStatClick = useCallback(
+		(tab: TabKey) => {
+			setActiveTab(tab);
+			document.getElementById("work-tabs")?.scrollIntoView({
+				behavior: "smooth",
+				block: "nearest",
+			});
+		},
+		[setActiveTab],
+	);
 
 	return (
 		<div className="flex flex-col flex-1 min-h-0 w-full">
 			{/* Header */}
 			<div className="shrink-0 pb-3">
 				<h1 className="text-sm font-medium" suppressHydrationWarning>
-					{greeting}, {user.name || user.login}
+					{greeting
+						? `${greeting}, ${user.name || user.login}`
+						: `${user.name || user.login}`}
 				</h1>
 				<p
 					className="text-[11px] text-muted-foreground font-mono"
@@ -167,12 +174,16 @@ export function DashboardContent({
 							label="Notifs"
 							value={
 								notifications.filter(
-									(n) => n.unread,
+									(n) =>
+										n.unread &&
+										!doneIds.has(n.id),
 								).length
 							}
 							accent={
 								notifications.filter(
-									(n) => n.unread,
+									(n) =>
+										n.unread &&
+										!doneIds.has(n.id),
 								).length > 0
 							}
 							active={activeTab === "notifs"}
@@ -189,6 +200,8 @@ export function DashboardContent({
 						hasWork={hasWork}
 						activeTab={activeTab}
 						activity={activity ?? []}
+						doneIds={doneIds}
+						setDoneIds={setDoneIds}
 					/>
 				</div>
 
@@ -243,7 +256,6 @@ function ExtensionBanner() {
 		</div>
 	);
 }
-type TabKey = "reviews" | "prs" | "issues" | "notifs";
 
 function WorkTabs({
 	reviewRequests,
@@ -253,6 +265,8 @@ function WorkTabs({
 	hasWork,
 	activeTab,
 	activity,
+	doneIds,
+	setDoneIds,
 }: {
 	reviewRequests: SearchResult<IssueItem>;
 	myOpenPRs: SearchResult<IssueItem>;
@@ -261,8 +275,9 @@ function WorkTabs({
 	hasWork: boolean;
 	activeTab: TabKey;
 	activity: Array<ActivityEvent>;
+	doneIds: Set<string>;
+	setDoneIds: React.Dispatch<React.SetStateAction<Set<string>>>;
 }) {
-	const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
 	const visibleNotifs = notifications.filter((n) => !doneIds.has(n.id));
 
 	if (!hasWork && activeTab !== "notifs") {
@@ -374,6 +389,7 @@ function NotificationRow({
 	notif: NotificationItem;
 	onDone: (id: string) => void;
 }) {
+	const { emit } = useMutationEvents();
 	const href = getNotificationHref(notif);
 	const repo = notif.repository.full_name;
 	const [marking, startMarking] = useTransition();
@@ -426,7 +442,13 @@ function NotificationRow({
 				onClick={() => {
 					startMarking(async () => {
 						const res = await markNotificationDone(notif.id);
-						if (res.success) onDone(notif.id);
+						if (res.success) {
+							onDone(notif.id);
+							emit({
+								type: "notification:read",
+								id: notif.id,
+							});
+						}
 					});
 				}}
 				className="shrink-0 p-1 text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:text-foreground/70 transition-all cursor-pointer disabled:opacity-100"

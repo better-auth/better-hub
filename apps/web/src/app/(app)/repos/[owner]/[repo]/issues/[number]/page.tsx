@@ -5,7 +5,9 @@ import {
 	getRepo,
 	getCrossReferences,
 	getAuthenticatedUser,
+	extractRepoPermissions,
 } from "@/lib/github";
+import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { extractParticipants } from "@/lib/github-utils";
 import { renderMarkdownToHtml } from "@/components/shared/markdown-renderer";
 import { IssueHeader } from "@/components/issue/issue-header";
@@ -19,6 +21,7 @@ import { IssueParticipants } from "@/components/issue/issue-participants";
 import { TrackView } from "@/components/shared/track-view";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { inngest } from "@/lib/inngest";
 import { isItemPinned } from "@/lib/pinned-items-store";
 
@@ -29,14 +32,31 @@ export async function generateMetadata({
 }): Promise<Metadata> {
 	const { owner, repo, number: numStr } = await params;
 	const issueNumber = parseInt(numStr, 10);
+
+	const repoData = await getRepo(owner, repo);
+	const isPrivate = !repoData || repoData.private === true;
+
+	if (isPrivate) {
+		return { title: `Issue #${issueNumber} · ${owner}/${repo}` };
+	}
+
 	const issue = await getIssue(owner, repo, issueNumber);
+	const ogUrl = ogImageUrl({ type: "issue", owner, repo, number: issueNumber });
 
 	if (!issue) {
 		return { title: `Issue #${issueNumber} · ${owner}/${repo}` };
 	}
+	if ((issue as { pull_request?: unknown }).pull_request != null) {
+		redirect(`/${owner}/${repo}/pulls/${issueNumber}`);
+	}
 
 	return {
 		title: `${issue.title} · Issue #${issueNumber} · ${owner}/${repo}`,
+		description: issue.body
+			? issue.body.slice(0, 200)
+			: `Issue #${issueNumber} on ${owner}/${repo}`,
+		openGraph: { title: `${issue.title} · Issue #${issueNumber}`, ...ogImages(ogUrl) },
+		twitter: { card: "summary_large_image", ...ogImages(ogUrl) },
 	};
 }
 
@@ -67,6 +87,9 @@ export default async function IssueDetailPage({
 				</p>
 			</div>
 		);
+	}
+	if ((issue as { pull_request?: unknown }).pull_request != null) {
+		redirect(`/${owner}/${repo}/pulls/${issueNumber}`);
 	}
 
 	// Start pin check in parallel with markdown rendering
@@ -142,6 +165,16 @@ export default async function IssueDetailPage({
 		reactions:
 			(issue as { reactions?: Record<string, unknown> }).reactions ?? undefined,
 	};
+	const permissions = extractRepoPermissions(repoData ?? {});
+	const canTriage =
+		permissions.push || permissions.admin || permissions.maintain || permissions.triage;
+	const isAuthor =
+		(currentUser as { login?: string } | null)?.login != null &&
+		issue.user?.login != null &&
+		(currentUser as { login?: string }).login === issue.user.login;
+	const canClose = canTriage || isAuthor;
+	const canReopen = canTriage;
+
 	// Extract participants
 	const participants = extractParticipants([
 		issue.user ? { login: issue.user.login, avatar_url: issue.user.avatar_url } : null,
@@ -200,6 +233,8 @@ export default async function IssueDetailPage({
 						repo={repo}
 						issueNumber={issueNumber}
 						issueState={issue.state}
+						canClose={canClose}
+						canReopen={canReopen}
 						userAvatarUrl={
 							(
 								currentUser as {

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
+import { useQueryState, parseAsString, parseAsStringLiteral } from "nuqs";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -14,6 +15,7 @@ import {
 	PenLine,
 	UserCheck,
 	AtSign,
+	Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
@@ -21,8 +23,11 @@ import { toInternalUrl } from "@/lib/github-utils";
 import { CopyLinkButton } from "@/components/shared/copy-link-button";
 import type { IssueItem } from "@/lib/github-types";
 
-type TabType = "review" | "created" | "assigned" | "mentioned";
-type SortType = "updated" | "newest" | "oldest";
+const prTabTypes = ["review", "created", "assigned", "mentioned"] as const;
+type TabType = (typeof prTabTypes)[number];
+
+const prSortTypes = ["updated", "newest", "oldest"] as const;
+type SortType = (typeof prSortTypes)[number];
 
 const sortLabels: Record<SortType, string> = {
 	updated: "Updated",
@@ -42,17 +47,25 @@ export function PRsContent({
 	reviewRequested,
 	assigned,
 	mentioned,
+	// involved,
 	username,
 }: {
 	created: { items: IssueItem[]; total_count: number };
 	reviewRequested: { items: IssueItem[]; total_count: number };
 	assigned: { items: IssueItem[]; total_count: number };
 	mentioned: { items: IssueItem[]; total_count: number };
+	// involved: { items: IssueItem[]; total_count: number };
 	username: string;
 }) {
-	const [tab, setTab] = useState<TabType>("review");
-	const [search, setSearch] = useState("");
-	const [sort, setSort] = useState<SortType>("updated");
+	const [tab, setTab] = useQueryState(
+		"tab",
+		parseAsStringLiteral(prTabTypes).withDefault("review"),
+	);
+	const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
+	const [sort, setSort] = useQueryState(
+		"sort",
+		parseAsStringLiteral(prSortTypes).withDefault("updated"),
+	);
 
 	const tabItems: { key: TabType; label: string; icon: React.ReactNode; count: number }[] = [
 		{
@@ -79,6 +92,12 @@ export function PRsContent({
 			icon: <AtSign className="w-3 h-3" />,
 			count: mentioned.total_count,
 		},
+		// {
+		// 	key: "involved",
+		// 	label: "Involved",
+		// 	icon: <Users className="w-3 h-3" />,
+		// 	count: involved.total_count,
+		// },
 	];
 
 	const rawItems = {
@@ -86,6 +105,7 @@ export function PRsContent({
 		created: created.items,
 		assigned: assigned.items,
 		mentioned: mentioned.items,
+		// involved: involved.items,
 	}[tab];
 
 	const filtered = useMemo(() => {
@@ -93,15 +113,21 @@ export function PRsContent({
 
 		if (search) {
 			const q = search.toLowerCase();
-			list = list.filter(
-				(pr) =>
+			list = list.filter((pr) => {
+				const repo = extractRepoName(pr.repository_url);
+				const labelNames = pr.labels
+					.filter((label) => label.name)
+					.map((label) => label.name?.toLowerCase());
+
+				return (
 					pr.number.toString().includes(q) ||
+					`${repo}#${pr.number}`.toLowerCase().includes(q) ||
 					pr.title.toLowerCase().includes(q) ||
 					pr.user?.login.toLowerCase().includes(q) ||
-					extractRepoName(pr.repository_url)
-						.toLowerCase()
-						.includes(q),
-			);
+					repo.toLowerCase().includes(q) ||
+					labelNames.some((labelName) => labelName?.includes(q))
+				);
+			});
 		}
 
 		return [...list].sort((a, b) => {
@@ -192,7 +218,7 @@ export function PRsContent({
 								{t.count}
 							</span>
 							{tab === t.key && (
-								<span className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground" />
+								<span className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground" />
 							)}
 						</button>
 					))}

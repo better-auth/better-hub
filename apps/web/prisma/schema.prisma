@@ -169,7 +169,8 @@ model UserSettings {
   userId           String  @id
   displayName      String?
   theme            String  @default("system")
-  colorTheme       String  @default("midnight")
+  colorTheme       String  @default("hub")
+  colorMode        String  @default("dark")
   ghostModel       String  @default("auto")
   useOwnApiKey     Boolean @default(false)
   openrouterApiKey String?
@@ -238,6 +239,9 @@ model PinnedItem {
 model PromptRequest {
   id             String  @id
   userId         String
+  userLogin      String?
+  userName       String?
+  userAvatarUrl  String?
   owner          String
   repo           String
   title          String
@@ -257,6 +261,7 @@ model PromptRequestComment {
   id              String @id
   promptRequestId String
   userId          String
+  userLogin       String?
   userName        String
   userAvatarUrl   String
   body            String
@@ -266,4 +271,20 @@ model PromptRequestComment {
   @@index([promptRequestId, createdAt])
   @@index([userId])
   @@map("prompt_request_comments")
+}
+
+model PromptRequestReaction {
+  id              String @id
+  promptRequestId String
+  userId          String
+  userLogin       String?
+  userName        String
+  userAvatarUrl   String
+  content         String
+  createdAt       String
+
+  @@unique([promptRequestId, userId, content])
+  @@index([promptRequestId])
+  @@index([userId])
+  @@map("prompt_request_reactions")
 }

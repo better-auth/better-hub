@@ -35,7 +35,9 @@ import type {
 	PromptRequest,
 	PromptRequestStatus,
 	PromptRequestComment,
+	PromptRequestReaction,
 } from "@/lib/prompt-request-store";
+import { PromptReactionDisplay } from "./prompt-reaction-display";
 
 const statusColors: Record<PromptRequestStatus, string> = {
 	open: "bg-green-500/15 text-green-400",
@@ -54,7 +56,8 @@ interface PromptDetailProps {
 	repo: string;
 	promptRequest: PromptRequest;
 	comments: PromptRequestComment[];
-	currentUser: { id: string; name: string; image: string } | null;
+	reactions: PromptRequestReaction[];
+	currentUser: { id: string; login: string | null; name: string; image: string } | null;
 	canManage: boolean;
 	isMaintainer: boolean;
 }
@@ -64,6 +67,7 @@ export function PromptDetail({
 	repo,
 	promptRequest,
 	comments,
+	reactions,
 	currentUser,
 	canManage,
 	isMaintainer,
@@ -101,6 +105,7 @@ export function PromptDetail({
 			id: `optimistic-${Date.now()}`,
 			promptRequestId: promptRequest.id,
 			userId: currentUser.id,
+			userLogin: currentUser.login,
 			userName: currentUser.name,
 			userAvatarUrl: currentUser.image,
 			body,
@@ -276,6 +281,13 @@ export function PromptDetail({
 						<ClientMarkdown content={promptRequest.body} />
 					</div>
 
+					{/* Reactions */}
+					<PromptReactionDisplay
+						promptRequestId={promptRequest.id}
+						reactions={reactions}
+						currentUserId={currentUser?.id ?? null}
+					/>
+
 					{/* Inline actions */}
 					<div className="flex items-center gap-1.5">
 						{isMaintainer && isOpen && (
@@ -437,11 +449,22 @@ export function PromptDetail({
 												) : (
 													<div className="w-[18px] h-[18px] rounded-full bg-muted" />
 												)}
-												<span className="text-[11px] font-medium text-foreground">
-													{
-														comment.userName
-													}
-												</span>
+												{comment.userLogin ? (
+													<Link
+														href={`/users/${comment.userLogin}`}
+														className="text-[11px] font-medium text-foreground hover:underline"
+													>
+														{
+															comment.userName
+														}
+													</Link>
+												) : (
+													<span className="text-[11px] font-medium text-foreground">
+														{
+															comment.userName
+														}
+													</span>
+												)}
 												<span className="text-[10px] text-muted-foreground/40 font-mono">
 													<TimeAgo
 														date={
@@ -527,6 +550,47 @@ export function PromptDetail({
 
 				{/* Right — Metadata sidebar */}
 				<div className="hidden md:block w-56 shrink-0 space-y-4">
+					{/* Author */}
+					<div className="space-y-1.5">
+						<p className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-wider">
+							Author
+						</p>
+						<div className="flex items-center gap-2">
+							{promptRequest.userAvatarUrl ? (
+								<Image
+									src={
+										promptRequest.userAvatarUrl
+									}
+									alt={
+										promptRequest.userName ??
+										"User"
+									}
+									width={20}
+									height={20}
+									className="rounded-full"
+								/>
+							) : (
+								<div className="w-5 h-5 rounded-full bg-muted" />
+							)}
+							{promptRequest.userLogin ? (
+								<Link
+									href={`/users/${promptRequest.userLogin}`}
+									className="text-[11px] font-medium text-foreground hover:underline"
+								>
+									{promptRequest.userName ??
+										promptRequest.userLogin}
+								</Link>
+							) : (
+								<span className="text-[11px] font-medium text-muted-foreground/60">
+									{promptRequest.userName ??
+										"Unknown"}
+								</span>
+							)}
+						</div>
+					</div>
+
+					<div className="h-px bg-border/30" />
+
 					{/* Status */}
 					<div className="space-y-1.5">
 						<p className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-wider">

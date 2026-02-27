@@ -60,6 +60,7 @@ import type { ReviewThread, CheckStatus } from "@/lib/github";
 import { ClientMarkdown } from "@/components/shared/client-markdown";
 import { CheckStatusBadge } from "@/components/pr/check-status-badge";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
+import { UserTooltip } from "@/components/shared/user-tooltip";
 
 interface DiffFile {
 	filename: string;
@@ -3286,13 +3287,24 @@ function InlineCommentDisplay({
 					)}
 				/>
 				{comment.user ? (
-					<Link
-						href={`/users/${comment.user.login}`}
-						className="text-xs font-medium text-foreground/70 hover:text-foreground hover:underline transition-colors"
-						onClick={(e) => e.stopPropagation()}
-					>
-						{comment.user.login}
-					</Link>
+					<UserTooltip username={comment.user.login}>
+						<Link
+							href={`/users/${comment.user.login}`}
+							className="flex items-center gap-1.5 text-xs font-medium text-foreground/70 hover:text-foreground transition-colors"
+							onClick={(e) => e.stopPropagation()}
+						>
+							<Image
+								src={comment.user.avatar_url}
+								alt={comment.user.login}
+								width={16}
+								height={16}
+								className="rounded-full"
+							/>
+							<span className="hover:underline">
+								{comment.user.login}
+							</span>
+						</Link>
+					</UserTooltip>
 				) : (
 					<span className="text-xs font-medium text-foreground/70">
 						ghost

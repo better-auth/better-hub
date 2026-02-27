@@ -6,6 +6,7 @@ import {
 	getUserOrgTopRepos,
 	getContributionData,
 } from "@/lib/github";
+import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { UserProfileContent } from "@/components/users/user-profile-content";
 import { ExternalLink, User } from "lucide-react";
 
@@ -26,6 +27,7 @@ function UnknownUserPage({ username }: { username: string }) {
 			</div>
 			<a
 				href={githubUrl}
+				data-no-github-intercept
 				target="_blank"
 				rel="noopener noreferrer"
 				className="flex items-center gap-1.5 text-[11px] font-mono px-3 py-1.5 border border-border text-muted-foreground hover:text-foreground hover:border-border transition-colors"
@@ -44,10 +46,18 @@ export async function generateMetadata({
 }): Promise<Metadata> {
 	const { username } = await params;
 	const userData = await getUser(username).catch(() => null);
+	const ogUrl = ogImageUrl({ type: "user", username });
+
 	if (!userData) {
 		return { title: username };
 	}
-	return { title: userData.name ? `${userData.name} (${userData.login})` : userData.login };
+	const displayName = userData.name ? `${userData.name} (${userData.login})` : userData.login;
+	return {
+		title: displayName,
+		description: userData.bio || `${displayName} on Better Hub`,
+		openGraph: { title: displayName, ...ogImages(ogUrl) },
+		twitter: { card: "summary_large_image", ...ogImages(ogUrl) },
+	};
 }
 
 export default async function UserProfilePage({

@@ -14,6 +14,7 @@ import {
 	FileCode2,
 	X,
 	Loader2,
+	Plus,
 } from "lucide-react";
 import type { CheckStatus, PRPageResult } from "@/lib/github";
 import { CheckStatusBadge } from "@/components/pr/check-status-badge";
@@ -32,6 +33,8 @@ import { useMutationSubscription } from "@/hooks/use-mutation-subscription";
 import { isRepoEvent, type MutationEvent } from "@/lib/mutation-events";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerInitialData } from "@/hooks/use-server-initial-data";
+import { UserTooltip } from "@/components/shared/user-tooltip";
+import { buttonVariants } from "../ui/button";
 
 interface PRUser {
 	login: string;
@@ -617,6 +620,14 @@ export function PRsList({
 						show={activeFilterCount > 0}
 						onClear={clearAllFilters}
 					/>
+
+					<Link
+						href={`/repos/${owner}/${repo}/pulls/new`}
+						className="flex ms-auto items-center gap-1.5 px-3 py-1.5 text-xs bg-foreground hover:bg-foreground/90 text-background transition-colors cursor-pointer rounded-md"
+					>
+						<Plus className="w-3 h-3" />
+						New PR
+					</Link>
 				</div>
 
 				{/* Advanced filters panel */}
@@ -1116,25 +1127,34 @@ export function PRsList({
 													(
 														r,
 													) => (
-														<Image
+														<UserTooltip
 															key={
 																r.login
 															}
-															src={
-																r.avatar_url
-															}
-															alt={
+															username={
 																r.login
 															}
-															width={
-																16
-															}
-															height={
-																16
-															}
-															className="rounded-full border border-border"
-															title={`Review requested: ${r.login}`}
-														/>
+														>
+															<Link
+																href={`/users/${r.login}`}
+															>
+																<Image
+																	src={
+																		r.avatar_url
+																	}
+																	alt={
+																		r.login
+																	}
+																	width={
+																		16
+																	}
+																	height={
+																		16
+																	}
+																	className="rounded-full border border-border hover:ring-2 hover:ring-primary/50 transition-all"
+																/>
+															</Link>
+														</UserTooltip>
 													),
 												)}
 										</span>
@@ -1143,40 +1163,51 @@ export function PRsList({
 
 								<div className="flex items-center gap-2 sm:gap-3 mt-1 flex-wrap">
 									{pr.user && (
-										<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
-											<Image
-												src={
-													pr
-														.user
-														.avatar_url
-												}
-												alt={
-													pr
-														.user
-														.login
-												}
-												width={
-													14
-												}
-												height={
-													14
-												}
-												className="rounded-full"
-											/>
-											<span
-												className={cn(
-													"font-mono text-[10px]",
-													isCurrentUserAuthor &&
-														"text-warning font-semibold",
-												)}
+										<UserTooltip
+											username={
+												pr
+													.user
+													.login
+											}
+										>
+											<Link
+												href={`/users/${pr.user.login}`}
+												className="flex items-center gap-1 text-[11px] text-muted-foreground/60 hover:text-foreground transition-colors"
 											>
-												{
-													pr
-														.user
-														.login
-												}
-											</span>
-										</span>
+												<Image
+													src={
+														pr
+															.user
+															.avatar_url
+													}
+													alt={
+														pr
+															.user
+															.login
+													}
+													width={
+														14
+													}
+													height={
+														14
+													}
+													className="rounded-full"
+												/>
+												<span
+													className={cn(
+														"font-mono text-[10px] hover:underline",
+														isCurrentUserAuthor &&
+															"text-warning font-semibold",
+													)}
+												>
+													{
+														pr
+															.user
+															.login
+													}
+												</span>
+											</Link>
+										</UserTooltip>
 									)}
 									{pr.base?.ref &&
 										pr.head?.ref && (
@@ -1265,25 +1296,34 @@ export function PRsList({
 													(
 														a,
 													) => (
-														<Image
+														<UserTooltip
 															key={
 																a.login
 															}
-															src={
-																a.avatar_url
-															}
-															alt={
+															username={
 																a.login
 															}
-															width={
-																16
-															}
-															height={
-																16
-															}
-															className="rounded-full border border-border"
-															title={`Assignee: ${a.login}`}
-														/>
+														>
+															<Link
+																href={`/users/${a.login}`}
+															>
+																<Image
+																	src={
+																		a.avatar_url
+																	}
+																	alt={
+																		a.login
+																	}
+																	width={
+																		16
+																	}
+																	height={
+																		16
+																	}
+																	className="rounded-full border border-border hover:ring-2 hover:ring-primary/50 transition-all"
+																/>
+															</Link>
+														</UserTooltip>
 													),
 												)}
 										</span>

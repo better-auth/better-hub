@@ -6,6 +6,7 @@ import { TimeAgo } from "@/components/ui/time-ago";
 import { CopyLinkButton } from "@/components/shared/copy-link-button";
 import { PinButton } from "@/components/shared/pin-button";
 import type { CrossReference } from "@/lib/github";
+import { UserTooltip } from "@/components/shared/user-tooltip";
 
 interface IssueHeaderProps {
 	title: string;
@@ -62,21 +63,23 @@ export function IssueHeader({
 				</span>
 				{author && (
 					<span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-						<Link
-							href={`/users/${author.login}`}
-							className="flex items-center gap-1.5 hover:text-foreground transition-colors"
-						>
-							<Image
-								src={author.avatar_url}
-								alt={author.login}
-								width={16}
-								height={16}
-								className="rounded-full"
-							/>
-							<span className="font-mono">
-								{author.login}
-							</span>
-						</Link>
+						<UserTooltip username={author.login}>
+							<Link
+								href={`/users/${author.login}`}
+								className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+							>
+								<Image
+									src={author.avatar_url}
+									alt={author.login}
+									width={16}
+									height={16}
+									className="rounded-full"
+								/>
+								<span className="font-mono hover:underline">
+									{author.login}
+								</span>
+							</Link>
+						</UserTooltip>
 						<span className="text-muted-foreground/50">
 							opened <TimeAgo date={createdAt} />
 						</span>

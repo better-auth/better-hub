@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useQueryState, parseAsString, parseAsInteger, parseAsStringLiteral } from "nuqs";
 import {
 	Search,
 	Loader2,
@@ -17,7 +18,8 @@ import {
 import { cn } from "@/lib/utils";
 import { getLanguageColor } from "@/lib/github-utils";
 
-type SearchCategory = "code" | "repos" | "issues" | "prs" | "users";
+const searchCategories = ["code", "repos", "issues", "prs", "users"] as const;
+type SearchCategory = (typeof searchCategories)[number];
 
 const categories: { key: SearchCategory; label: string; icon: typeof Code }[] = [
 	{ key: "code", label: "Code", icon: Code },
@@ -494,10 +496,16 @@ export function SearchContent({
 	initialPage: number;
 	initialType?: SearchCategory;
 }) {
-	const [query, setQuery] = useState(initialQuery);
-	const [language, setLanguage] = useState(initialLanguage);
-	const [page, setPage] = useState(initialPage);
-	const [category, setCategory] = useState<SearchCategory>(initialType);
+	const [query, setQuery] = useQueryState("q", parseAsString.withDefault(initialQuery));
+	const [language, setLanguage] = useQueryState(
+		"lang",
+		parseAsString.withDefault(initialLanguage),
+	);
+	const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(initialPage));
+	const [category, setCategory] = useQueryState(
+		"type",
+		parseAsStringLiteral(searchCategories).withDefault(initialType),
+	);
 	const [results, setResults] = useState<SearchResponse | null>(null);
 	const [loading, setLoading] = useState(false);
 	const abortRef = useRef<AbortController | null>(null);
@@ -551,16 +559,6 @@ export function SearchContent({
 		[perPage],
 	);
 
-	const updateUrl = useCallback((q: string, lang: string, p: number, cat: SearchCategory) => {
-		const params = new URLSearchParams();
-		if (q) params.set("q", q);
-		if (cat !== "code") params.set("type", cat);
-		if (lang && (cat === "code" || cat === "repos")) params.set("lang", lang);
-		if (p > 1) params.set("page", String(p));
-		const search = params.toString();
-		window.history.replaceState(null, "", search ? `?${search}` : "/search");
-	}, []);
-
 	// Initial search
 	useEffect(() => {
 		if (initialQuery) {
@@ -574,10 +572,8 @@ export function SearchContent({
 		if (debounceRef.current) clearTimeout(debounceRef.current);
 
 		debounceRef.current = setTimeout(() => {
-			const newPage = 1;
-			setPage(newPage);
-			updateUrl(query, language, newPage, category);
-			doSearch(query, language, newPage, category);
+			setPage(1);
+			doSearch(query, language, 1, category);
 		}, 300);
 
 		return () => {
@@ -590,12 +586,10 @@ export function SearchContent({
 		(lang: string) => {
 			const newLang = language === lang ? "" : lang;
 			setLanguage(newLang);
-			const newPage = 1;
-			setPage(newPage);
-			updateUrl(query, newLang, newPage, category);
-			doSearch(query, newLang, newPage, category);
+			setPage(1);
+			doSearch(query, newLang, 1, category);
 		},
-		[language, query, category, doSearch, updateUrl],
+		[language, query, category, doSearch, setLanguage, setPage],
 	);
 
 	const handleCategoryChange = useCallback(
@@ -603,20 +597,18 @@ export function SearchContent({
 			setCategory(cat);
 			setPage(1);
 			setResults(null);
-			updateUrl(query, language, 1, cat);
 			doSearch(query, language, 1, cat);
 		},
-		[query, language, doSearch, updateUrl],
+		[query, language, doSearch, setCategory, setPage],
 	);
 
 	const handlePageChange = useCallback(
 		(newPage: number) => {
 			setPage(newPage);
-			updateUrl(query, language, newPage, category);
 			doSearch(query, language, newPage, category);
 			window.scrollTo({ top: 0, behavior: "smooth" });
 		},
-		[query, language, category, doSearch, updateUrl],
+		[query, language, category, doSearch, setPage],
 	);
 
 	const totalPages = results ? Math.ceil(Math.min(results.total_count, 1000) / perPage) : 0;

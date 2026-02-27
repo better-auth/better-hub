@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useQueryState, parseAsStringLiteral } from "nuqs";
 import Image from "next/image";
 import Link from "next/link";
 import { Star, GitFork, Flame } from "lucide-react";
@@ -8,7 +8,8 @@ import { cn, formatNumber } from "@/lib/utils";
 import { getLanguageColor } from "@/lib/github-utils";
 import type { TrendingRepoItem } from "@/lib/github-types";
 
-type Period = "daily" | "weekly" | "monthly";
+const periods = ["daily", "weekly", "monthly"] as const;
+type Period = (typeof periods)[number];
 
 interface TrendingContentProps {
 	weekly: TrendingRepoItem[];
@@ -17,11 +18,14 @@ interface TrendingContentProps {
 }
 
 export function TrendingContent({ weekly, daily, monthly }: TrendingContentProps) {
-	const [period, setPeriod] = useState<Period>("weekly");
+	const [period, setPeriod] = useQueryState(
+		"period",
+		parseAsStringLiteral(periods).withDefault("weekly"),
+	);
 
 	const repos = period === "daily" ? daily : period === "monthly" ? monthly : weekly;
 
-	const periods: { key: Period; label: string }[] = [
+	const periodOptions: { key: Period; label: string }[] = [
 		{ key: "daily", label: "Today" },
 		{ key: "weekly", label: "This week" },
 		{ key: "monthly", label: "This month" },
@@ -33,7 +37,7 @@ export function TrendingContent({ weekly, daily, monthly }: TrendingContentProps
 				<Flame className="w-4 h-4 text-orange-500/70" />
 				<h1 className="text-sm font-medium">Trending</h1>
 				<div className="flex items-center gap-0.5 ml-auto">
-					{periods.map((p) => (
+					{periodOptions.map((p) => (
 						<button
 							key={p.key}
 							onClick={() => setPeriod(p.key)}

@@ -10,6 +10,7 @@ import { getLanguageFromFilename } from "@/lib/github-utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { ClientMarkdown } from "@/components/shared/client-markdown";
 import { ReactionDisplay, type Reactions } from "@/components/shared/reaction-display";
+import { UserTooltip } from "@/components/shared/user-tooltip";
 
 const reviewStateBadge: Record<string, { label: string; className: string }> = {
 	APPROVED: {
@@ -304,20 +305,24 @@ export function CollapsibleReviewCard({
 						/>
 					)}
 					{user ? (
-						<Link
-							href={`/users/${user.login}`}
-							onClick={(e) => e.stopPropagation()}
-							className="flex items-center gap-2 text-xs font-medium text-foreground/80 hover:text-foreground hover:underline transition-colors"
-						>
-							<Image
-								src={user.avatar_url}
-								alt={user.login}
-								width={16}
-								height={16}
-								className="rounded-full shrink-0"
-							/>
-							{user.login}
-						</Link>
+						<UserTooltip username={user.login}>
+							<Link
+								href={`/users/${user.login}`}
+								onClick={(e) => e.stopPropagation()}
+								className="flex items-center gap-2 text-xs font-medium text-foreground/80 hover:text-foreground transition-colors"
+							>
+								<Image
+									src={user.avatar_url}
+									alt={user.login}
+									width={16}
+									height={16}
+									className="rounded-full shrink-0"
+								/>
+								<span className="hover:underline">
+									{user.login}
+								</span>
+							</Link>
+						</UserTooltip>
 					) : (
 						<>
 							<div className="w-4 h-4 rounded-full bg-muted-foreground shrink-0" />

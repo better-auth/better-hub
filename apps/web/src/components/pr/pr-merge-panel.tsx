@@ -12,6 +12,8 @@ import {
 	Check,
 	Ghost,
 	Sparkles,
+	GitBranch,
+	FilePenLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGlobalChat } from "@/components/shared/global-chat-provider";
@@ -23,10 +25,13 @@ import {
 	DialogDescription,
 	DialogFooter,
 } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
 	mergePullRequest,
 	closePullRequest,
 	reopenPullRequest,
+	updatePRBranch,
+	convertPRToDraft,
 	type MergeMethod,
 } from "@/app/(app)/repos/[owner]/[repo]/pulls/pr-actions";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
@@ -47,8 +52,11 @@ interface PRMergePanelProps {
 	allowRebaseMerge: boolean;
 	headBranch: string;
 	baseBranch: string;
+	draft?: boolean;
 	canWrite?: boolean;
 	canTriage?: boolean;
+	isAuthor?: boolean;
+	branchBehindBase?: boolean;
 }
 
 const mergeMethodLabels: Record<MergeMethod, { short: string; description: string }> = {
@@ -81,9 +89,13 @@ export function PRMergePanel({
 	allowRebaseMerge,
 	headBranch,
 	baseBranch,
+	draft = false,
 	canWrite = true,
 	canTriage = true,
+	isAuthor = false,
+	branchBehindBase = false,
 }: PRMergePanelProps) {
+	const hasPermission = canTriage || isAuthor;
 	const availableMethods: MergeMethod[] = [
 		...(allowSquashMerge ? ["squash" as const] : []),
 		...(allowMergeCommit ? ["merge" as const] : []),
@@ -100,15 +112,21 @@ export function PRMergePanel({
 	const [commitTitle, setCommitTitle] = useState("");
 	const [commitMessage, setCommitMessage] = useState("");
 	const [isPending, startTransition] = useTransition();
-	const [pendingAction, setPendingAction] = useState<"merge" | "close" | "reopen" | null>(
-		null,
-	);
+	const [pendingAction, setPendingAction] = useState<
+		"merge" | "close" | "reopen" | "draft" | "updateBranch" | null
+	>(null);
 	const [result, setResult] = useState<{ type: "success" | "error"; message: string } | null>(
 		null,
 	);
 	const [isMerged, setIsMerged] = useState(false);
 	const [isGenerating, setIsGenerating] = useState(false);
 	const dropdownRef = useRef<HTMLDivElement>(null);
+
+	const isOpen = state === "open" && !merged && !isMerged;
+	const showUpdateBranch =
+		isOpen && hasPermission && (branchBehindBase || mergeable === false);
+	const updateBranchDisabled = mergeable === false;
+	const canConvertToDraft = isOpen && (canWrite || isAuthor) && !draft;
 
 	useClickOutside(
 		dropdownRef,
@@ -254,10 +272,46 @@ export function PRMergePanel({
 		});
 	};
 
+	const handleUpdateBranch = () => {
+		setResult(null);
+		setPendingAction("updateBranch");
+		startTransition(async () => {
+			const res = await updatePRBranch(owner, repo, pullNumber);
+			if (res.error) {
+				setResult({ type: "error", message: res.error });
+			} else {
+				setResult({ type: "success", message: "Branch updated" });
+				invalidatePRQueries();
+				router.refresh();
+			}
+		});
+	};
+
+	const handleConvertToDraft = () => {
+		setResult(null);
+		setPendingAction("draft");
+		startTransition(async () => {
+			const res = await convertPRToDraft(owner, repo, pullNumber);
+			if (res.error) {
+				setResult({ type: "error", message: res.error });
+			} else {
+				setResult({ type: "success", message: "Converted to draft" });
+				emit({
+					type: "pr:converted_to_draft",
+					owner,
+					repo,
+					number: pullNumber,
+				});
+				invalidatePRQueries();
+				router.refresh();
+			}
+		});
+	};
+
 	if (merged || isMerged) return null;
 
 	if (state === "closed") {
-		if (!canTriage) return null;
+		if (!canTriage && !isAuthor) return null;
 		return (
 			<div className="flex items-center gap-2">
 				{result && (
@@ -288,7 +342,7 @@ export function PRMergePanel({
 		);
 	}
 
-	if (!canWrite && !canTriage) return null;
+	if (!canWrite && !canTriage && !isAuthor) return null;
 
 	return (
 		<>
@@ -473,8 +527,68 @@ export function PRMergePanel({
 					</div>
 				)}
 
+				{showUpdateBranch &&
+					(updateBranchDisabled ? (
+						<Tooltip delayDuration={0}>
+							<TooltipTrigger asChild>
+								<span className="inline-flex">
+									<button
+										disabled
+										className={cn(
+											"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border transition-colors cursor-not-allowed",
+											"border-amber-500/40 text-amber-600 dark:text-amber-400 opacity-70",
+										)}
+									>
+										<GitBranch className="w-3 h-3" />
+										Update branch
+									</button>
+								</span>
+							</TooltipTrigger>
+							<TooltipContent
+								side="bottom"
+								className="text-xs font-mono max-w-[240px]"
+							>
+								Update branch is unavailable while
+								there are merge conflicts.
+							</TooltipContent>
+						</Tooltip>
+					) : (
+						<button
+							onClick={handleUpdateBranch}
+							disabled={isPending}
+							title="Merge the latest changes from the base branch into this branch"
+							className={cn(
+								"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
+							)}
+						>
+							{isPending &&
+							pendingAction === "updateBranch" ? (
+								<Loader2 className="w-3 h-3 animate-spin" />
+							) : (
+								<GitBranch className="w-3 h-3" />
+							)}
+							Update branch
+						</button>
+					))}
+
+				{/* Convert to draft */}
+				{canConvertToDraft && (
+					<button
+						onClick={handleConvertToDraft}
+						disabled={isPending}
+						className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+					>
+						{isPending && pendingAction === "draft" ? (
+							<Loader2 className="w-3 h-3 animate-spin" />
+						) : (
+							<FilePenLine className="w-3 h-3" />
+						)}
+						Convert to draft
+					</button>
+				)}
+
 				{/* Close button */}
-				{canTriage && (
+				{isOpen && (canTriage || isAuthor) && (
 					<button
 						onClick={handleClose}
 						disabled={isPending}
