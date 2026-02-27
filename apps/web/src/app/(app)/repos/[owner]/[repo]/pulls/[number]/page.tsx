@@ -459,6 +459,8 @@ export default async function PRDetailPage({
 							createdAt={pr.created_at}
 							baseBranch={pr.base.ref}
 							headBranch={pr.head.ref}
+							headRepoOwner={pr.head_repo_owner}
+							headRepoName={pr.head_repo_name}
 							additions={pr.additions}
 							deletions={pr.deletions}
 							changedFiles={pr.changed_files}

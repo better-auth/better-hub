@@ -113,6 +113,24 @@ export function toInternalUrl(htmlUrl: string): string {
 	return htmlUrl;
 }
 
+export function buildPrHeadBranchTreeHref({
+	baseOwner,
+	baseRepo,
+	headBranch,
+	headRepoOwner,
+	headRepoName,
+}: {
+	baseOwner: string;
+	baseRepo: string;
+	headBranch: string;
+	headRepoOwner?: string | null;
+	headRepoName?: string | null;
+}): string {
+	const targetOwner = headRepoOwner || baseOwner;
+	const targetRepo = headRepoName || baseRepo;
+	return `/${targetOwner}/${targetRepo}/tree/${headBranch}`;
+}
+
 /**
  * Converts a github.com URL to a full app URL using NEXT_PUBLIC_APP_URL.
  * Falls back to toInternalUrl (relative path) if env is not set.
