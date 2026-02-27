@@ -247,6 +247,7 @@ const extensionMap: Record<string, string> = {
 	scss: "scss",
 	less: "less",
 	json: "json",
+	ipynb: "json",
 	yaml: "yaml",
 	yml: "yaml",
 	toml: "toml",

@@ -171,6 +171,7 @@ export function GlobalChatPanel() {
 		switchTab,
 		renameTab,
 		replaceCurrentTab,
+		registerGhostHistoryRefetch,
 	} = useGlobalChat();
 	const [contexts, setContexts] = useState<InlineContext[]>([]);
 	const prevContextKeyRef = useRef<string | null>(null);
@@ -187,7 +188,7 @@ export function GlobalChatPanel() {
 	const [ghostHistory, setGhostHistory] = useState<
 		{ contextKey: string; title: string; updatedAt: string }[]
 	>([]);
-	useEffect(() => {
+	const fetchGhostHistory = useCallback(() => {
 		fetch("/api/ai/chat-history?list=ghost")
 			.then((res) => res.json())
 			.then((data) => {
@@ -209,6 +210,14 @@ export function GlobalChatPanel() {
 			})
 			.catch(() => {});
 	}, []);
+	useEffect(() => {
+		if (!state.isOpen) return;
+		fetchGhostHistory();
+	}, [state.isOpen, fetchGhostHistory]);
+	useEffect(() => {
+		registerGhostHistoryRefetch(fetchGhostHistory);
+		return () => registerGhostHistoryRefetch(null);
+	}, [registerGhostHistoryRefetch, fetchGhostHistory]);
 
 	const handleLoadHistory = useCallback(
 		(contextKey: string, title: string) => {

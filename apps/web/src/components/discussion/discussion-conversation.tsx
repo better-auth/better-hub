@@ -3,6 +3,7 @@ import Image from "next/image";
 import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";
+import { ReactiveCodeBlocks } from "@/components/shared/reactive-code-blocks";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { CollapsibleBody } from "@/components/issue/collapsible-body";
 import { BotActivityGroup } from "@/components/pr/bot-activity-group";
@@ -183,10 +184,12 @@ function DescriptionBlock({ entry }: { entry: DescriptionEntry }) {
 
 	const renderedBody = entry.bodyHtml ? (
 		<MarkdownCopyHandler>
-			<div
-				className="ghmd"
-				dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
-			/>
+			<ReactiveCodeBlocks>
+				<div
+					className="ghmd"
+					dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
+				/>
+			</ReactiveCodeBlocks>
 		</MarkdownCopyHandler>
 	) : null;
 
@@ -254,10 +257,12 @@ function CommentBlock({ comment }: { comment: DiscussionComment }) {
 
 	const renderedBody = comment.bodyHtml ? (
 		<MarkdownCopyHandler>
-			<div
-				className="ghmd"
-				dangerouslySetInnerHTML={{ __html: comment.bodyHtml }}
-			/>
+			<ReactiveCodeBlocks>
+				<div
+					className="ghmd"
+					dangerouslySetInnerHTML={{ __html: comment.bodyHtml }}
+				/>
+			</ReactiveCodeBlocks>
 		</MarkdownCopyHandler>
 	) : null;
 
@@ -346,10 +351,12 @@ function CommentBlock({ comment }: { comment: DiscussionComment }) {
 function ReplyBlock({ reply }: { reply: DiscussionReply }) {
 	const renderedBody = reply.bodyHtml ? (
 		<MarkdownCopyHandler>
-			<div
-				className="ghmd ghmd-sm"
-				dangerouslySetInnerHTML={{ __html: reply.bodyHtml }}
-			/>
+			<ReactiveCodeBlocks>
+				<div
+					className="ghmd ghmd-sm"
+					dangerouslySetInnerHTML={{ __html: reply.bodyHtml }}
+				/>
+			</ReactiveCodeBlocks>
 		</MarkdownCopyHandler>
 	) : null;
 

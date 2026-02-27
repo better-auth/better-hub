@@ -43,8 +43,6 @@ import { getLanguageColor } from "@/lib/github-utils";
 import { useGlobalChatOptional } from "@/components/shared/global-chat-provider";
 import { getRecentViews, type RecentViewItem } from "@/lib/recent-views";
 import { useColorTheme } from "@/components/theme/theme-provider";
-import { useCodeTheme } from "@/components/theme/code-theme-provider";
-import { BUILT_IN_THEMES } from "@/lib/code-themes/built-in";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { useMutationSubscription } from "@/hooks/use-mutation-subscription";
 import type { MutationEvent } from "@/lib/mutation-events";
@@ -104,15 +102,7 @@ function matchRepoFromPathname(pathname: string): [string, string] | null {
 	return [segments[0], segments[1]];
 }
 
-type Mode =
-	| "commands"
-	| "search"
-	| "theme"
-	| "code-theme"
-	| "accounts"
-	| "settings"
-	| "model"
-	| "files";
+type Mode = "commands" | "search" | "theme" | "accounts" | "settings" | "model" | "files";
 
 export function CommandMenu() {
 	const [open, setOpen] = useState(false);
@@ -127,17 +117,12 @@ export function CommandMenu() {
 	const panelRef = useRef<HTMLDivElement>(null);
 	const globalChat = useGlobalChatOptional();
 	const {
-		colorTheme,
-		setColorTheme,
+		themeId: currentThemeId,
+		mode: currentMode,
+		setTheme: setColorTheme,
+		toggleMode,
 		themes: colorThemes,
-		darkThemes: colorDarkThemes,
-		lightThemes: colorLightThemes,
-		darkThemeId,
-		lightThemeId,
-		mode: _colorMode,
 	} = useColorTheme();
-	const { codeThemeDark, codeThemeLight, setCodeThemeDark, setCodeThemeLight } =
-		useCodeTheme();
 	const { emit } = useMutationEvents();
 
 	// Recently viewed
@@ -789,27 +774,11 @@ export function CommandMenu() {
 					"wave",
 					"contrast",
 					"style",
+					"code",
+					"syntax",
 				],
 				action: () => switchMode("theme"),
 				icon: Palette,
-				keepOpen: true,
-			},
-			{
-				name: "Code Theme",
-				description: "Change syntax highlighting",
-				keywords: [
-					"code",
-					"syntax",
-					"editor",
-					"highlight",
-					"dracula",
-					"monokai",
-					"catppuccin",
-					"shiki",
-					"font",
-				],
-				action: () => switchMode("code-theme"),
-				icon: Code,
 				keepOpen: true,
 			},
 			{
@@ -1126,32 +1095,16 @@ export function CommandMenu() {
 	}, [search, topUserRepos, filteredUserRepos, dedupedGithubResults, router]);
 
 	// --- Theme mode items ---
-	const filteredDarkThemes = useMemo(() => {
-		if (mode !== "theme") return colorDarkThemes;
-		if (!search.trim()) return colorDarkThemes;
+	const filteredThemes = useMemo(() => {
+		if (mode !== "theme") return colorThemes;
+		if (!search.trim()) return colorThemes;
 		const s = search.toLowerCase();
-		return colorDarkThemes.filter(
+		return colorThemes.filter(
 			(t) =>
 				t.name.toLowerCase().includes(s) ||
 				t.description.toLowerCase().includes(s),
 		);
-	}, [mode, search, colorDarkThemes]);
-
-	const filteredLightThemes = useMemo(() => {
-		if (mode !== "theme") return colorLightThemes;
-		if (!search.trim()) return colorLightThemes;
-		const s = search.toLowerCase();
-		return colorLightThemes.filter(
-			(t) =>
-				t.name.toLowerCase().includes(s) ||
-				t.description.toLowerCase().includes(s),
-		);
-	}, [mode, search, colorLightThemes]);
-
-	const filteredThemes = useMemo(
-		() => [...filteredDarkThemes, ...filteredLightThemes],
-		[filteredDarkThemes, filteredLightThemes],
-	);
+	}, [mode, search, colorThemes]);
 
 	const themeItems = useMemo(() => {
 		return filteredThemes.map((t) => ({
@@ -1160,27 +1113,6 @@ export function CommandMenu() {
 			keepOpen: true,
 		}));
 	}, [filteredThemes, setColorTheme]);
-
-	// --- Code theme mode items ---
-	const filteredCodeThemes = useMemo(() => {
-		if (mode !== "code-theme") return BUILT_IN_THEMES;
-		if (!search.trim()) return BUILT_IN_THEMES;
-		const s = search.toLowerCase();
-		return BUILT_IN_THEMES.filter(
-			(t) => t.name.toLowerCase().includes(s) || t.id.toLowerCase().includes(s),
-		);
-	}, [mode, search]);
-
-	const codeThemeItems = useMemo(() => {
-		return filteredCodeThemes.map((t) => ({
-			id: `code-theme-${t.id}`,
-			action: () => {
-				if (t.mode === "dark") setCodeThemeDark(t.id);
-				else setCodeThemeLight(t.id);
-			},
-			keepOpen: true,
-		}));
-	}, [filteredCodeThemes, setCodeThemeDark, setCodeThemeLight]);
 
 	// --- Accounts mode items ---
 	const handleSwitchAccount = useCallback(
@@ -1320,11 +1252,6 @@ export function CommandMenu() {
 	const settingsItems = useMemo(() => {
 		const items: { id: string; action: () => void; keepOpen: boolean }[] = [
 			{ id: "settings-theme", action: () => switchMode("theme"), keepOpen: true },
-			{
-				id: "settings-code-theme",
-				action: () => switchMode("code-theme"),
-				keepOpen: true,
-			},
 			{ id: "settings-model", action: () => switchMode("model"), keepOpen: true },
 			{
 				id: "settings-accounts",
@@ -1396,15 +1323,13 @@ export function CommandMenu() {
 				? searchItems
 				: mode === "theme"
 					? themeItems
-					: mode === "code-theme"
-						? codeThemeItems
-						: mode === "accounts"
-							? accountItems
-							: mode === "settings"
-								? settingsItems
-								: mode === "model"
-									? modelItems
-									: fileItems;
+					: mode === "accounts"
+						? accountItems
+						: mode === "settings"
+							? settingsItems
+							: mode === "model"
+								? modelItems
+								: fileItems;
 
 	useEffect(() => {
 		setSelectedIndex(0);
@@ -1445,11 +1370,7 @@ export function CommandMenu() {
 			if (e.key === "Backspace" && mode !== "commands" && !search) {
 				e.preventDefault();
 				// Sub-modes go back to settings, others go to commands
-				switchMode(
-					mode === "model" || mode === "code-theme"
-						? "settings"
-						: "commands",
-				);
+				switchMode(mode === "model" ? "settings" : "commands");
 				return;
 			}
 
@@ -1530,8 +1451,6 @@ export function CommandMenu() {
 									<FileText className="size-4 text-muted-foreground/50 shrink-0" />
 								) : mode === "theme" ? (
 									<Palette className="size-4 text-muted-foreground/50 shrink-0" />
-								) : mode === "code-theme" ? (
-									<Code className="size-4 text-muted-foreground/50 shrink-0" />
 								) : mode === "accounts" ? (
 									<Users className="size-4 text-muted-foreground/50 shrink-0" />
 								) : mode === "settings" ? (
@@ -1561,18 +1480,15 @@ export function CommandMenu() {
 													  "theme"
 													? "Search themes..."
 													: mode ===
-														  "code-theme"
-														? "Search code themes..."
+														  "accounts"
+														? "Filter accounts..."
 														: mode ===
-															  "accounts"
-															? "Filter accounts..."
+															  "settings"
+															? "Configuration..."
 															: mode ===
-																  "settings"
-																? "Configuration..."
-																: mode ===
-																	  "model"
-																	? "Search models..."
-																	: "Type a command..."
+																  "model"
+																? "Search models..."
+																: "Type a command..."
 									}
 									className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground py-3 text-sm outline-none"
 								/>
@@ -2104,18 +2020,53 @@ export function CommandMenu() {
 								) : mode === "theme" ? (
 									/* Theme mode */
 									<>
-										{filteredDarkThemes.length >
+										{/* Mode toggle at the top */}
+										<div className="px-3 py-2 border-b border-border/50">
+											<button
+												type="button"
+												className="flex items-center justify-between w-full px-2 py-1.5 rounded-md hover:bg-muted/50 transition-colors"
+												onClick={() =>
+													toggleMode()
+												}
+											>
+												<span className="flex items-center gap-2 text-sm text-muted-foreground">
+													{currentMode ===
+													"dark" ? (
+														<Moon className="size-3.5" />
+													) : (
+														<Sun className="size-3.5" />
+													)}
+													<span>
+														{currentMode ===
+														"dark"
+															? "Dark"
+															: "Light"}{" "}
+														mode
+													</span>
+												</span>
+												<span className="text-xs text-muted-foreground/60">
+													Click
+													to
+													toggle
+												</span>
+											</button>
+										</div>
+										{filteredThemes.length >
 											0 && (
-											<CommandGroup title="Dark Themes">
-												{filteredDarkThemes.map(
+											<CommandGroup title="Themes">
+												{filteredThemes.map(
 													(
 														theme,
 													) => {
 														const idx =
 															getNextIndex();
 														const isActive =
-															darkThemeId ===
+															currentThemeId ===
 															theme.id;
+														const variant =
+															theme[
+																currentMode
+															];
 														return (
 															<CommandItemButton
 																key={
@@ -2134,87 +2085,28 @@ export function CommandMenu() {
 																	)
 																}
 															>
-																<span className="flex items-center gap-1 shrink-0">
-																	<span
-																		className="w-3 h-3 rounded-full border border-border/40"
-																		style={{
-																			backgroundColor:
-																				theme.bgPreview,
-																		}}
-																	/>
-																	<span
-																		className="w-3 h-3 rounded-full border border-border/40"
-																		style={{
-																			backgroundColor:
-																				theme.accentPreview,
-																		}}
-																	/>
-																</span>
-																<span className="text-[13px] text-foreground flex-1">
-																	{
-																		theme.name
-																	}
-																</span>
-																<span className="text-[11px] text-muted-foreground hidden sm:block">
-																	{
-																		theme.description
-																	}
-																</span>
-																{isActive && (
-																	<Check className="size-3.5 text-success shrink-0" />
+																{theme.icon ? (
+																	<div className="min-w-[28px] flex items-center justify-center">
+																		<theme.icon className="size-4 shrink-0" />
+																	</div>
+																) : (
+																	<span className="flex items-center gap-1 shrink-0">
+																		<span
+																			className="w-3 h-3 rounded-full border border-border/40"
+																			style={{
+																				backgroundColor:
+																					variant.bgPreview,
+																			}}
+																		/>
+																		<span
+																			className="w-3 h-3 rounded-full border border-border/40"
+																			style={{
+																				backgroundColor:
+																					variant.accentPreview,
+																			}}
+																		/>
+																	</span>
 																)}
-															</CommandItemButton>
-														);
-													},
-												)}
-											</CommandGroup>
-										)}
-										{filteredLightThemes.length >
-											0 && (
-											<CommandGroup title="Light Themes">
-												{filteredLightThemes.map(
-													(
-														theme,
-													) => {
-														const idx =
-															getNextIndex();
-														const isActive =
-															lightThemeId ===
-															theme.id;
-														return (
-															<CommandItemButton
-																key={
-																	theme.id
-																}
-																index={
-																	idx
-																}
-																selected={
-																	selectedIndex ===
-																	idx
-																}
-																onClick={() =>
-																	setColorTheme(
-																		theme.id,
-																	)
-																}
-															>
-																<span className="flex items-center gap-1 shrink-0">
-																	<span
-																		className="w-3 h-3 rounded-full border border-border/40"
-																		style={{
-																			backgroundColor:
-																				theme.bgPreview,
-																		}}
-																	/>
-																	<span
-																		className="w-3 h-3 rounded-full border border-border/40"
-																		style={{
-																			backgroundColor:
-																				theme.accentPreview,
-																		}}
-																	/>
-																</span>
 																<span className="text-[13px] text-foreground flex-1">
 																	{
 																		theme.name
@@ -2239,169 +2131,6 @@ export function CommandMenu() {
 												0 && (
 												<div className="py-8 text-center text-sm text-muted-foreground/70">
 													No
-													themes
-													match
-													&quot;
-													{
-														search
-													}
-													&quot;
-												</div>
-											)}
-									</>
-								) : mode === "code-theme" ? (
-									/* Code theme mode */
-									<>
-										{(() => {
-											const darkThemes =
-												filteredCodeThemes.filter(
-													(
-														t,
-													) =>
-														t.mode ===
-														"dark",
-												);
-											const lightThemes =
-												filteredCodeThemes.filter(
-													(
-														t,
-													) =>
-														t.mode ===
-														"light",
-												);
-											return (
-												<>
-													{darkThemes.length >
-														0 && (
-														<CommandGroup title="Dark">
-															{darkThemes.map(
-																(
-																	theme,
-																) => {
-																	const idx =
-																		getNextIndex();
-																	const isActive =
-																		codeThemeDark ===
-																		theme.id;
-																	return (
-																		<CommandItemButton
-																			key={
-																				theme.id
-																			}
-																			index={
-																				idx
-																			}
-																			selected={
-																				selectedIndex ===
-																				idx
-																			}
-																			onClick={() =>
-																				setCodeThemeDark(
-																					theme.id,
-																				)
-																			}
-																		>
-																			<span className="flex items-center gap-1 shrink-0">
-																				<span
-																					className="w-3 h-3 rounded-full border border-border/40"
-																					style={{
-																						backgroundColor:
-																							theme.bgColor,
-																					}}
-																				/>
-																				<span
-																					className="w-3 h-3 rounded-full border border-border/40"
-																					style={{
-																						backgroundColor:
-																							theme.accentColor,
-																					}}
-																				/>
-																			</span>
-																			<span className="text-[13px] text-foreground flex-1">
-																				{
-																					theme.name
-																				}
-																			</span>
-																			<Moon className="size-2.5 text-muted-foreground shrink-0" />
-																			{isActive && (
-																				<Check className="size-3.5 text-success shrink-0" />
-																			)}
-																		</CommandItemButton>
-																	);
-																},
-															)}
-														</CommandGroup>
-													)}
-													{lightThemes.length >
-														0 && (
-														<CommandGroup title="Light">
-															{lightThemes.map(
-																(
-																	theme,
-																) => {
-																	const idx =
-																		getNextIndex();
-																	const isActive =
-																		codeThemeLight ===
-																		theme.id;
-																	return (
-																		<CommandItemButton
-																			key={
-																				theme.id
-																			}
-																			index={
-																				idx
-																			}
-																			selected={
-																				selectedIndex ===
-																				idx
-																			}
-																			onClick={() =>
-																				setCodeThemeLight(
-																					theme.id,
-																				)
-																			}
-																		>
-																			<span className="flex items-center gap-1 shrink-0">
-																				<span
-																					className="w-3 h-3 rounded-full border border-border/40"
-																					style={{
-																						backgroundColor:
-																							theme.bgColor,
-																					}}
-																				/>
-																				<span
-																					className="w-3 h-3 rounded-full border border-border/40"
-																					style={{
-																						backgroundColor:
-																							theme.accentColor,
-																					}}
-																				/>
-																			</span>
-																			<span className="text-[13px] text-foreground flex-1">
-																				{
-																					theme.name
-																				}
-																			</span>
-																			<Sun className="size-2.5 text-muted-foreground shrink-0" />
-																			{isActive && (
-																				<Check className="size-3.5 text-success shrink-0" />
-																			)}
-																		</CommandItemButton>
-																	);
-																},
-															)}
-														</CommandGroup>
-													)}
-												</>
-											);
-										})()}
-										{hasQuery &&
-											filteredCodeThemes.length ===
-												0 && (
-												<div className="py-8 text-center text-sm text-muted-foreground/70">
-													No
-													code
 													themes
 													match
 													&quot;
@@ -2904,50 +2633,10 @@ export function CommandMenu() {
 																	t,
 																) =>
 																	t.id ===
-																	colorTheme,
+																	currentThemeId,
 															)
 																?.name ??
 																"Theme"}
-														</span>
-														<ChevronRight className="size-3 text-muted-foreground/30 shrink-0" />
-													</CommandItemButton>
-												);
-											})()}
-											{(() => {
-												const idx =
-													getNextIndex();
-												const activeDarkTheme =
-													BUILT_IN_THEMES.find(
-														(
-															t,
-														) =>
-															t.id ===
-															codeThemeDark,
-													);
-												return (
-													<CommandItemButton
-														key="settings-code-theme"
-														index={
-															idx
-														}
-														selected={
-															selectedIndex ===
-															idx
-														}
-														onClick={() =>
-															switchMode(
-																"code-theme",
-															)
-														}
-													>
-														<Code className="size-3.5 text-muted-foreground/50 shrink-0" />
-														<span className="text-[13px] text-foreground flex-1">
-															Code
-															Theme
-														</span>
-														<span className="text-[11px] text-muted-foreground hidden sm:block">
-															{activeDarkTheme?.name ??
-																codeThemeDark}
 														</span>
 														<ChevronRight className="size-3 text-muted-foreground/30 shrink-0" />
 													</CommandItemButton>

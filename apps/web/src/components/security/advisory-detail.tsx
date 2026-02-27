@@ -1,10 +1,11 @@
 "use client";
 
-import { ArrowLeft, ExternalLink, ShieldAlert, User } from "lucide-react";
+import { ArrowLeft, ExternalLink, User } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
+import { ReactiveCodeBlocks } from "@/components/shared/reactive-code-blocks";
 import type { SecurityAdvisoryDetail } from "@/lib/github";
 
 function severityColor(severity: string | null): {
@@ -165,12 +166,14 @@ export function AdvisoryDetail({
 							<div className="px-4 py-2.5 border-b border-border text-[11px] font-mono uppercase tracking-wider text-muted-foreground/60">
 								Description
 							</div>
-							<div
-								className="ghmd px-4 py-4"
-								dangerouslySetInnerHTML={{
-									__html: descriptionHtml,
-								}}
-							/>
+							<ReactiveCodeBlocks>
+								<div
+									className="ghmd px-4 py-4"
+									dangerouslySetInnerHTML={{
+										__html: descriptionHtml,
+									}}
+								/>
+							</ReactiveCodeBlocks>
 						</section>
 					) : (
 						<section className="border border-border">

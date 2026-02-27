@@ -1,16 +1,49 @@
-import type { ThemeColors, ThemeDefinition } from "./types";
-import { midnight, hubLight, hubDark, ember, arctic, nordWave, dawn } from "./themes";
+import type { ThemeColors, ThemeDefinition, ThemeVariant, ShikiTheme } from "./types";
+import {
+	arctic,
+	cloudflare,
+	ember,
+	forest,
+	gemini,
+	hub,
+	mintlify,
+	noir,
+	nordWave,
+	openai,
+	rabbit,
+	stripe,
+	supabase,
+	tailwind,
+	vercel,
+	zinc,
+	LEGACY_THEME_MAP,
+} from "./themes";
 
-export type { ThemeColors, ThemeDefinition };
+const themes: ThemeDefinition[] = [
+	hub,
+	vercel,
+	supabase,
+	tailwind,
+	openai,
+	mintlify,
+	cloudflare,
+	gemini,
+	stripe,
+	ember,
+	zinc,
+	arctic,
+	nordWave,
+	rabbit,
+	noir,
+	forest,
+];
+
+export type { ThemeColors, ThemeDefinition, ThemeVariant, ShikiTheme };
 
 export const STORAGE_KEY = "color-theme";
-export const DARK_THEME_KEY = "dark-theme";
-export const LIGHT_THEME_KEY = "light-theme";
-export const DEFAULT_THEME_ID = "midnight";
-export const DARK_THEME_ID = "midnight";
-export const LIGHT_THEME_ID = "hub-light";
-
-const themes: ThemeDefinition[] = [midnight, hubDark, hubLight, ember, arctic, nordWave, dawn];
+export const MODE_KEY = "color-mode";
+export const DEFAULT_THEME_ID = "hub";
+export const DEFAULT_MODE: "dark" | "light" = "dark";
 
 const themeMap = new Map(themes.map((t) => [t.id, t]));
 
@@ -18,35 +51,33 @@ export function listThemes(): ThemeDefinition[] {
 	return themes;
 }
 
-export function listDarkThemes(): ThemeDefinition[] {
-	return themes.filter((t) => t.mode === "dark");
-}
-
-export function listLightThemes(): ThemeDefinition[] {
-	return themes.filter((t) => t.mode === "light");
-}
-
 export function getTheme(id: string): ThemeDefinition | undefined {
 	return themeMap.get(id);
 }
 
-/**
- * Apply a theme by setting CSS custom properties on documentElement.
- * Also syncs the dark/light class to match the theme's mode.
- */
-export function applyTheme(themeId: string): void {
+export function getThemeVariant(id: string, mode: "dark" | "light"): ThemeVariant | undefined {
+	const theme = themeMap.get(id);
+	return theme?.[mode];
+}
+
+export function migrateLegacyThemeId(
+	legacyId: string,
+): { themeId: string; mode: "dark" | "light" } | undefined {
+	return LEGACY_THEME_MAP[legacyId];
+}
+
+export function applyTheme(themeId: string, mode: "dark" | "light"): void {
 	const el = document.documentElement;
 	const theme = getTheme(themeId);
+	const variant = theme?.[mode];
 
-	// Get all CSS var keys from the midnight theme as reference
-	const allKeys = Object.keys(midnight.colors) as (keyof ThemeColors)[];
+	const hubDark = hub.dark;
+	const allKeys = Object.keys(hubDark.colors) as (keyof ThemeColors)[];
 
-	if (!theme || themeId === DEFAULT_THEME_ID) {
-		// Remove all inline overrides — let globals.css take over
+	if (!variant || (themeId === DEFAULT_THEME_ID && mode === DEFAULT_MODE)) {
 		for (const key of allKeys) {
 			el.style.removeProperty(key);
 		}
-		// Still sync the dark/light class for midnight
 		el.classList.add("dark");
 		el.classList.remove("light");
 		el.style.colorScheme = "dark";
@@ -54,11 +85,10 @@ export function applyTheme(themeId: string): void {
 	}
 
 	for (const key of allKeys) {
-		el.style.setProperty(key, theme.colors[key]);
+		el.style.setProperty(key, variant.colors[key]);
 	}
 
-	// Sync the dark/light class immediately alongside CSS vars
-	if (theme.mode === "dark") {
+	if (mode === "dark") {
 		el.classList.add("dark");
 		el.classList.remove("light");
 		el.style.colorScheme = "dark";

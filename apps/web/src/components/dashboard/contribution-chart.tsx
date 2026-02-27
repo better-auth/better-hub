@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface ContributionDay {
 	contributionCount: number;
@@ -40,10 +40,28 @@ const LEVEL_CLASSES = [
 
 const CELL = 10;
 const GAP = 3;
+const MONTH_LABEL_MIN_GAP_PX = 8;
+const MONTH_LABEL_MIN_SPACING_PX = 24 + MONTH_LABEL_MIN_GAP_PX;
+const TOOLTIP_EDGE_PADDING_PX = 8;
+const FALLBACK_TOOLTIP_WIDTH_PX = 120;
+
+function getMonthFromDate(date: string): number {
+	const parts = date.split("-");
+	if (parts.length >= 2) {
+		const month = Number(parts[1]);
+		if (month >= 1 && month <= 12) return month - 1;
+	}
+	const parsed = new Date(date);
+	if (Number.isNaN(parsed.getTime())) return 0;
+	return parsed.getUTCMonth();
+}
 
 export function ContributionChart({ data }: { data: ContributionData }) {
 	const [hovered, setHovered] = useState<ContributionDay | null>(null);
 	const [tooltipX, setTooltipX] = useState(0);
+	const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+	const hoveredCellRef = useRef<HTMLDivElement | null>(null);
+	const tooltipRef = useRef<HTMLDivElement | null>(null);
 
 	const monthPositions = useMemo(() => {
 		const positions: { label: string; col: number }[] = [];
@@ -51,7 +69,7 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 		data.weeks.forEach((week, i) => {
 			const d = week.contributionDays[0];
 			if (d) {
-				const m = new Date(d.date).getMonth();
+				const m = getMonthFromDate(d.date);
 				if (m !== last) {
 					positions.push({ label: MONTHS[m], col: i });
 					last = m;
@@ -60,6 +78,67 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 		});
 		return positions;
 	}, [data.weeks]);
+
+	const visibleMonthPositions = useMemo(() => {
+		const candidates = monthPositions.filter((month, index, all) => {
+			if (index !== 0) return true;
+			const next = all[1];
+			if (!next) return true;
+			const firstLeft = month.col * (CELL + GAP);
+			const nextLeft = next.col * (CELL + GAP);
+			return nextLeft - firstLeft >= MONTH_LABEL_MIN_SPACING_PX;
+		});
+
+		let previousLeft = Number.NEGATIVE_INFINITY;
+		return candidates.filter(({ col }) => {
+			const left = col * (CELL + GAP);
+			if (left - previousLeft < MONTH_LABEL_MIN_SPACING_PX) return false;
+			previousLeft = left;
+			return true;
+		});
+	}, [monthPositions]);
+
+	const updateTooltipPosition = useCallback((cell: HTMLDivElement) => {
+		const parent = scrollContainerRef.current;
+		if (!parent) return;
+
+		const cellRect = cell.getBoundingClientRect();
+		const parentRect = parent.getBoundingClientRect();
+		const rawX = cellRect.left - parentRect.left + CELL / 2;
+		const tooltipWidth = tooltipRef.current?.offsetWidth ?? FALLBACK_TOOLTIP_WIDTH_PX;
+		const tooltipHalf = tooltipWidth / 2;
+		const minX = tooltipHalf + TOOLTIP_EDGE_PADDING_PX;
+		const maxX = parent.clientWidth - tooltipHalf - TOOLTIP_EDGE_PADDING_PX;
+
+		if (minX >= maxX) {
+			setTooltipX(parent.clientWidth / 2);
+			return;
+		}
+
+		setTooltipX(Math.min(Math.max(rawX, minX), maxX));
+	}, []);
+
+	useEffect(() => {
+		if (!hovered || !hoveredCellRef.current) return;
+
+		const update = () => {
+			if (!hoveredCellRef.current) return;
+			updateTooltipPosition(hoveredCellRef.current);
+		};
+
+		update();
+
+		const parent = scrollContainerRef.current;
+		parent?.addEventListener("scroll", update, {
+			passive: true,
+		});
+		window.addEventListener("resize", update);
+
+		return () => {
+			parent?.removeEventListener("scroll", update);
+			window.removeEventListener("resize", update);
+		};
+	}, [hovered, updateTooltipPosition]);
 
 	return (
 		<div className="w-full">
@@ -89,11 +168,11 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 			</div>
 
 			{/* Chart */}
-			<div className="relative overflow-x-auto">
-				{/* Tooltip */}
+			<div className="relative">
 				<div
+					ref={tooltipRef}
 					className={cn(
-						"absolute top-0 z-10 pointer-events-none -translate-x-1/2 transition-all duration-100",
+						"absolute left-0 bottom-full mb-2 z-10 pointer-events-none -translate-x-1/2 transition-all duration-100",
 						hovered
 							? "opacity-100 translate-y-0"
 							: "opacity-0 translate-y-1",
@@ -131,113 +210,103 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 						</div>
 					)}
 				</div>
-
-				<div
-					className="inline-grid pt-0"
-					style={{ gridTemplateColumns: `auto 1fr` }}
-				>
-					{/* Day labels column */}
+				<div className="overflow-x-auto" ref={scrollContainerRef}>
 					<div
-						className="flex flex-col pr-2"
-						style={{ gap: GAP, paddingTop: 16 + GAP }}
+						className="inline-grid pt-0"
+						style={{ gridTemplateColumns: `auto 1fr` }}
 					>
-						{DAYS.map((day, i) => (
-							<div
-								key={day}
-								className="flex items-center justify-end"
-								style={{ height: CELL }}
-							>
-								{SHOW_DAYS.includes(i) && (
-									<span className="text-[9px] font-mono text-muted-foreground/50 leading-none">
-										{day}
-									</span>
-								)}
-							</div>
-						))}
-					</div>
-
-					{/* Grid column */}
-					<div className="overflow-hidden">
-						{/* Month labels — absolutely positioned so they don't clip */}
-						<div className="relative h-4 mb-px">
-							{monthPositions.map((m) => (
-								<span
-									key={`${m.label}-${m.col}`}
-									className="absolute text-[9px] font-mono text-muted-foreground/50 leading-none"
-									style={{
-										left:
-											m.col *
-											(CELL +
-												GAP),
-									}}
-								>
-									{m.label}
-								</span>
-							))}
-						</div>
-
-						{/* Cells */}
-						<div className="flex" style={{ gap: GAP }}>
-							{data.weeks.map((week, wi) => (
+						{/* Day labels column */}
+						<div
+							className="flex flex-col pr-2"
+							style={{ gap: GAP, paddingTop: 16 + GAP }}
+						>
+							{DAYS.map((day, i) => (
 								<div
-									key={wi}
-									className="flex flex-col"
-									style={{ gap: GAP }}
+									key={day}
+									className="flex items-center justify-end"
+									style={{ height: CELL }}
 								>
-									{week.contributionDays.map(
-										(day) => (
-											<div
-												key={
-													day.date
-												}
-												className={cn(
-													"rounded-[2px] transition-all duration-75",
-													LEVEL_CLASSES[
-														getLevel(
-															day.contributionCount,
-														)
-													],
-													"hover:ring-1 hover:ring-foreground/30",
-												)}
-												style={{
-													width: CELL,
-													height: CELL,
-												}}
-												onMouseEnter={(
-													e,
-												) => {
-													setHovered(
-														day,
-													);
-													const rect =
-														e.currentTarget.getBoundingClientRect();
-													const parent =
-														e.currentTarget.closest(
-															".overflow-x-auto",
-														);
-													if (
-														parent
-													) {
-														const parentRect =
-															parent.getBoundingClientRect();
-														setTooltipX(
-															rect.left -
-																parentRect.left +
-																CELL /
-																	2,
-														);
-													}
-												}}
-												onMouseLeave={() =>
-													setHovered(
-														null,
-													)
-												}
-											/>
-										),
+									{SHOW_DAYS.includes(i) && (
+										<span className="text-[9px] font-mono text-muted-foreground/50 leading-none">
+											{day}
+										</span>
 									)}
 								</div>
 							))}
+						</div>
+
+						{/* Grid column */}
+						<div className="overflow-hidden">
+							{/* Month labels — absolutely positioned so they don't clip */}
+							<div className="relative h-4 mb-px">
+								{visibleMonthPositions.map((m) => (
+									<span
+										key={`${m.label}-${m.col}`}
+										className="absolute text-[9px] font-mono text-muted-foreground/50 leading-none"
+										style={{
+											left:
+												m.col *
+												(CELL +
+													GAP),
+										}}
+									>
+										{m.label}
+									</span>
+								))}
+							</div>
+
+							{/* Cells */}
+							<div className="flex" style={{ gap: GAP }}>
+								{data.weeks.map((week, wi) => (
+									<div
+										key={wi}
+										className="flex flex-col"
+										style={{ gap: GAP }}
+									>
+										{week.contributionDays.map(
+											(day) => (
+												<div
+													key={
+														day.date
+													}
+													className={cn(
+														"rounded-[2px] transition-all duration-75",
+														LEVEL_CLASSES[
+															getLevel(
+																day.contributionCount,
+															)
+														],
+														"hover:ring-1 hover:ring-foreground/30",
+													)}
+													style={{
+														width: CELL,
+														height: CELL,
+													}}
+													onMouseEnter={(
+														e,
+													) => {
+														hoveredCellRef.current =
+															e.currentTarget;
+														setHovered(
+															day,
+														);
+														updateTooltipPosition(
+															e.currentTarget,
+														);
+													}}
+													onMouseLeave={() => {
+														hoveredCellRef.current =
+															null;
+														setHovered(
+															null,
+														);
+													}}
+												/>
+											),
+										)}
+									</div>
+								))}
+							</div>
 						</div>
 					</div>
 				</div>
