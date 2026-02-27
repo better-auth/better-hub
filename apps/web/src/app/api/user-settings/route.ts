@@ -30,7 +30,7 @@ const settingsUpdateSchema = z
 export async function GET() {
 	const session = await auth.api.getSession({ headers: await headers() });
 	if (!session?.user?.id) {
-		return new Response("Unauthorized", { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
 	const settings = await getUserSettings(session.user.id);
@@ -45,7 +45,7 @@ export async function GET() {
 export async function PATCH(request: Request) {
 	const session = await auth.api.getSession({ headers: await headers() });
 	if (!session?.user?.id) {
-		return new Response("Unauthorized", { status: 401 });
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
 	const body = await request.json();
