@@ -368,7 +368,9 @@ export function BillingTab({ settings, onNavigate }: BillingTabProps) {
 								Spending Limit
 							</DialogTitle>
 							<DialogDescription className="text-xs font-mono">
-								Set a maximum monthly budget.
+								Set a maximum monthly budget. Usage
+								from the last request can slightly
+								exceed this limit.
 							</DialogDescription>
 						</DialogHeader>
 						<div className="space-y-3 py-2">
