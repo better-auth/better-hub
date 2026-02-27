@@ -174,6 +174,7 @@ export function CommandMenu() {
 	);
 	const [fileTreeLoading, setFileTreeLoading] = useState(false);
 	const fileTreeRepoRef = useRef<string>("");
+	const prevModeRef = useRef(mode);
 
 	const MODELS = SELECTABLE_MODELS;
 
