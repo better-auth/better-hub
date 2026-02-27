@@ -8,6 +8,7 @@
  */
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -99,6 +100,14 @@ interface OpenRouterModel {
 
 async function main() {
 	const checkOnly = process.argv.includes("--check");
+	const previous = existsSync(OUT_PATH) ? readFileSync(OUT_PATH, "utf-8") : null;
+
+	if (checkOnly && previous === null) {
+		console.error(
+			"openrouter-models.generated.ts does not exist. Run pnpm generate:models.",
+		);
+		process.exit(1);
+	}
 
 	// 1. Fetch model list from OpenRouter
 	console.log("Fetching models from OpenRouter…");
@@ -176,28 +185,26 @@ async function main() {
 		``,
 	].join("\n");
 
-	// 4. Check mode — compare and exit
+	// 4. Format content via oxfmt (write to output path, then format in-place)
+	writeFileSync(OUT_PATH, content, "utf-8");
+	execFileSync("pnpm", ["oxfmt", "--write", OUT_PATH], { stdio: "ignore" });
+	const formatted = readFileSync(OUT_PATH, "utf-8");
+
+	// 5. Check mode — compare with previous content
 	if (checkOnly) {
-		if (!existsSync(OUT_PATH)) {
-			console.error(
-				"openrouter-models.generated.ts does not exist. Run pnpm generate:models.",
-			);
-			process.exit(1);
-		}
-		const existing = readFileSync(OUT_PATH, "utf-8");
-		if (existing === content) {
+		if (previous === formatted) {
 			console.log("Model pricing is up to date.");
-			process.exit(0);
 		} else {
+			// Restore original file
+			if (previous !== null) writeFileSync(OUT_PATH, previous, "utf-8");
 			console.error(
 				"Model pricing is out of date. Run pnpm generate:models to update.",
 			);
 			process.exit(1);
 		}
+		return;
 	}
 
-	// 5. Write
-	writeFileSync(OUT_PATH, content, "utf-8");
 	console.log(`Wrote ${OUT_PATH}`);
 }
 
