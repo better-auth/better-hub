@@ -15,6 +15,7 @@ import {
 	supabase,
 	tailwind,
 	vercel,
+	vesper,
 	zinc,
 	LEGACY_THEME_MAP,
 } from "./themes";
@@ -36,6 +37,7 @@ const themes: ThemeDefinition[] = [
 	rabbit,
 	noir,
 	forest,
+	vesper,
 ];
 
 export type { ThemeColors, ThemeDefinition, ThemeVariant, ShikiTheme };
