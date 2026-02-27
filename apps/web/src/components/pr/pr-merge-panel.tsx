@@ -12,6 +12,7 @@ import {
 	Check,
 	Ghost,
 	Sparkles,
+	FilePenLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGlobalChat } from "@/components/shared/global-chat-provider";
@@ -27,6 +28,7 @@ import {
 	mergePullRequest,
 	closePullRequest,
 	reopenPullRequest,
+	convertPRToDraft,
 	type MergeMethod,
 } from "@/app/(app)/repos/[owner]/[repo]/pulls/pr-actions";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
@@ -47,8 +49,10 @@ interface PRMergePanelProps {
 	allowRebaseMerge: boolean;
 	headBranch: string;
 	baseBranch: string;
+	draft?: boolean;
 	canWrite?: boolean;
 	canTriage?: boolean;
+	isAuthor?: boolean;
 }
 
 const mergeMethodLabels: Record<MergeMethod, { short: string; description: string }> = {
@@ -81,9 +85,12 @@ export function PRMergePanel({
 	allowRebaseMerge,
 	headBranch,
 	baseBranch,
+	draft = false,
 	canWrite = true,
 	canTriage = true,
+	isAuthor = false,
 }: PRMergePanelProps) {
+	const canConvertToDraft = (canWrite || isAuthor) && !draft;
 	const availableMethods: MergeMethod[] = [
 		...(allowSquashMerge ? ["squash" as const] : []),
 		...(allowMergeCommit ? ["merge" as const] : []),
@@ -100,9 +107,9 @@ export function PRMergePanel({
 	const [commitTitle, setCommitTitle] = useState("");
 	const [commitMessage, setCommitMessage] = useState("");
 	const [isPending, startTransition] = useTransition();
-	const [pendingAction, setPendingAction] = useState<"merge" | "close" | "reopen" | null>(
-		null,
-	);
+	const [pendingAction, setPendingAction] = useState<
+		"merge" | "close" | "reopen" | "draft" | null
+	>(null);
 	const [result, setResult] = useState<{ type: "success" | "error"; message: string } | null>(
 		null,
 	);
@@ -254,10 +261,31 @@ export function PRMergePanel({
 		});
 	};
 
+	const handleConvertToDraft = () => {
+		setResult(null);
+		setPendingAction("draft");
+		startTransition(async () => {
+			const res = await convertPRToDraft(owner, repo, pullNumber);
+			if (res.error) {
+				setResult({ type: "error", message: res.error });
+			} else {
+				setResult({ type: "success", message: "Converted to draft" });
+				emit({
+					type: "pr:converted_to_draft",
+					owner,
+					repo,
+					number: pullNumber,
+				});
+				invalidatePRQueries();
+				router.refresh();
+			}
+		});
+	};
+
 	if (merged || isMerged) return null;
 
 	if (state === "closed") {
-		if (!canTriage) return null;
+		if (!canTriage && !isAuthor) return null;
 		return (
 			<div className="flex items-center gap-2">
 				{result && (
@@ -288,7 +316,7 @@ export function PRMergePanel({
 		);
 	}
 
-	if (!canWrite && !canTriage) return null;
+	if (!canWrite && !canTriage && !isAuthor) return null;
 
 	return (
 		<>
@@ -473,8 +501,24 @@ export function PRMergePanel({
 					</div>
 				)}
 
+				{/* Convert to draft */}
+				{canConvertToDraft && (
+					<button
+						onClick={handleConvertToDraft}
+						disabled={isPending}
+						className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+					>
+						{isPending && pendingAction === "draft" ? (
+							<Loader2 className="w-3 h-3 animate-spin" />
+						) : (
+							<FilePenLine className="w-3 h-3" />
+						)}
+						Convert to draft
+					</button>
+				)}
+
 				{/* Close button */}
-				{canTriage && (
+				{(canTriage || isAuthor) && (
 					<button
 						onClick={handleClose}
 						disabled={isPending}

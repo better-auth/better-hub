@@ -534,9 +534,24 @@ export default async function PRDetailPage({
 										baseBranch={
 											pr.base.ref
 										}
+										draft={
+											pr.draft ??
+											false
+										}
 										canWrite={canWrite}
 										canTriage={
 											canTriage
+										}
+										isAuthor={
+											currentUser?.login !=
+												null &&
+											pr.user
+												?.login !=
+												null &&
+											currentUser.login ===
+												pr
+													.user
+													.login
 										}
 									/>
 								</div>

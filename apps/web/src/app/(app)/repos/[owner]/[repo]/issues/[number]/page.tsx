@@ -5,6 +5,7 @@ import {
 	getRepo,
 	getCrossReferences,
 	getAuthenticatedUser,
+	extractRepoPermissions,
 } from "@/lib/github";
 import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { extractParticipants } from "@/lib/github-utils";
@@ -157,6 +158,16 @@ export default async function IssueDetailPage({
 		reactions:
 			(issue as { reactions?: Record<string, unknown> }).reactions ?? undefined,
 	};
+	const permissions = extractRepoPermissions(repoData ?? {});
+	const canTriage =
+		permissions.push || permissions.admin || permissions.maintain || permissions.triage;
+	const isAuthor =
+		(currentUser as { login?: string } | null)?.login != null &&
+		issue.user?.login != null &&
+		(currentUser as { login?: string }).login === issue.user.login;
+	const canClose = canTriage || isAuthor;
+	const canReopen = canTriage;
+
 	// Extract participants
 	const participants = extractParticipants([
 		issue.user ? { login: issue.user.login, avatar_url: issue.user.avatar_url } : null,
@@ -215,6 +226,8 @@ export default async function IssueDetailPage({
 						repo={repo}
 						issueNumber={issueNumber}
 						issueState={issue.state}
+						canClose={canClose}
+						canReopen={canReopen}
 						userAvatarUrl={
 							(
 								currentUser as {

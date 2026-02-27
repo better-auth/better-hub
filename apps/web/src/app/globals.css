@@ -686,6 +686,12 @@ tr.diff-search-match-active > td {
 }
 
 /* Lists */
+.ghmd ul {
+	list-style-type: disc;
+}
+.ghmd ol {
+	list-style-type: decimal;
+}
 .ghmd ul,
 .ghmd ol {
 	margin-top: 0;
@@ -704,6 +710,12 @@ tr.diff-search-match-active > td {
 .ghmd ol ul {
 	margin-top: 0;
 	margin-bottom: 0;
+}
+.ghmd ul ul {
+	list-style-type: circle;
+}
+.ghmd ol ol {
+	list-style-type: lower-alpha;
 }
 
 /* Task lists */

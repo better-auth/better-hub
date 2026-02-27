@@ -36,6 +36,8 @@ interface IssueCommentFormProps {
 	repo: string;
 	issueNumber: number;
 	issueState: string;
+	canClose?: boolean;
+	canReopen?: boolean;
 	userAvatarUrl?: string;
 	userName?: string;
 	participants?: Array<{ login: string; avatar_url: string }>;
@@ -46,6 +48,8 @@ export function IssueCommentForm({
 	repo,
 	issueNumber,
 	issueState,
+	canClose = false,
+	canReopen = false,
 	userAvatarUrl,
 	userName,
 	participants,
@@ -221,7 +225,7 @@ export function IssueCommentForm({
 						</div>
 						<div className="flex items-center gap-2">
 							{/* Close / Reopen button */}
-							{isOpen ? (
+							{canClose && isOpen ? (
 								<div
 									className="relative"
 									ref={dropdownRef}
@@ -351,7 +355,7 @@ export function IssueCommentForm({
 										</div>
 									)}
 								</div>
-							) : (
+							) : canReopen && !isOpen ? (
 								<button
 									onClick={handleReopen}
 									disabled={isPending}
@@ -372,7 +376,7 @@ export function IssueCommentForm({
 										? "Reopen with comment"
 										: "Reopen issue"}
 								</button>
-							)}
+							) : null}
 
 							{/* Comment button */}
 							<button

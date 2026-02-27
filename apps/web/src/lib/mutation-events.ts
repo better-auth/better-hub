@@ -3,6 +3,12 @@
 export type PRMergedEvent = { type: "pr:merged"; owner: string; repo: string; number: number };
 export type PRClosedEvent = { type: "pr:closed"; owner: string; repo: string; number: number };
 export type PRReopenedEvent = { type: "pr:reopened"; owner: string; repo: string; number: number };
+export type PRConvertedToDraftEvent = {
+	type: "pr:converted_to_draft";
+	owner: string;
+	repo: string;
+	number: number;
+};
 export type PRCommentedEvent = {
 	type: "pr:commented";
 	owner: string;
@@ -137,6 +143,7 @@ export type MutationEvent =
 	| PRMergedEvent
 	| PRClosedEvent
 	| PRReopenedEvent
+	| PRConvertedToDraftEvent
 	| PRCommentedEvent
 	| PRReviewedEvent
 	| PRRenamedEvent
