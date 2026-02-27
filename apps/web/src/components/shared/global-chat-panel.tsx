@@ -6,6 +6,7 @@ import { X, Code2, ChevronRight, Ghost, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AIChat } from "@/components/shared/ai-chat";
 import { useGlobalChat, type InlineContext } from "@/components/shared/global-chat-provider";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import {
 	searchRepoFiles,
 	fetchFileContentForContext,
@@ -171,11 +172,13 @@ export function GlobalChatPanel() {
 		switchTab,
 		renameTab,
 		replaceCurrentTab,
+		registerGhostHistoryRefetch,
 	} = useGlobalChat();
 	const [contexts, setContexts] = useState<InlineContext[]>([]);
 	const prevContextKeyRef = useRef<string | null>(null);
 	const pathname = usePathname();
 	const searchParams = useSearchParams();
+	const isMobile = useIsMobile();
 
 	// Defer rendering until after hydration — this panel starts hidden (translate-x-full)
 	// and depends on client-only state (chat history, persisted context), so SSR is pointless
@@ -187,7 +190,7 @@ export function GlobalChatPanel() {
 	const [ghostHistory, setGhostHistory] = useState<
 		{ contextKey: string; title: string; updatedAt: string }[]
 	>([]);
-	useEffect(() => {
+	const fetchGhostHistory = useCallback(() => {
 		fetch("/api/ai/chat-history?list=ghost")
 			.then((res) => res.json())
 			.then((data) => {
@@ -209,6 +212,14 @@ export function GlobalChatPanel() {
 			})
 			.catch(() => {});
 	}, []);
+	useEffect(() => {
+		if (!state.isOpen) return;
+		fetchGhostHistory();
+	}, [state.isOpen, fetchGhostHistory]);
+	useEffect(() => {
+		registerGhostHistoryRefetch(fetchGhostHistory);
+		return () => registerGhostHistoryRefetch(null);
+	}, [registerGhostHistoryRefetch, fetchGhostHistory]);
 
 	const handleLoadHistory = useCallback(
 		(contextKey: string, title: string) => {
@@ -688,7 +699,10 @@ export function GlobalChatPanel() {
 									hashMentionPrFiles={
 										mentionableFiles
 									}
-									autoFocus={isActive}
+									autoFocus={
+										isActive &&
+										!isMobile
+									}
 									historyItems={ghostHistory}
 									onLoadHistory={
 										handleLoadHistory

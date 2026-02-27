@@ -6,13 +6,17 @@ import {
 	getAuthenticatedUser,
 	extractRepoPermissions,
 	getOctokit,
+	getIssue,
 	fetchCheckStatusForRef,
 	getCachedCheckStatus,
 	getAuthorDossier,
+	isBranchBehindBase,
 	type CheckStatus,
 	type AuthorDossierResult,
 	getCrossReferences,
 } from "@/lib/github";
+import { redirect } from "next/navigation";
+import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { extractParticipants } from "@/lib/github-utils";
 import { highlightDiffLines, type SyntaxToken } from "@/lib/shiki";
 import { PRHeader } from "@/components/pr/pr-header";
@@ -24,6 +28,7 @@ import {
 	type ReviewCommentEntry,
 	type CommitEntry,
 	type StateChangeEntry,
+	type CrossReferenceEntry,
 } from "@/components/pr/pr-conversation";
 import { PRMergePanel } from "@/components/pr/pr-merge-panel";
 import { PRCommentForm } from "@/components/pr/pr-comment-form";
@@ -46,18 +51,33 @@ export async function generateMetadata({
 }): Promise<Metadata> {
 	const { owner, repo, number: numStr } = await params;
 	const pullNumber = parseInt(numStr, 10);
+
+	const repoData = await getRepo(owner, repo);
+	const isPrivate = !repoData || repoData.private === true;
+
+	if (isPrivate) {
+		return { title: `PR #${pullNumber} · ${owner}/${repo}` };
+	}
+
 	const bundle = await getPullRequestBundle(owner, repo, pullNumber);
 
 	if (!bundle) {
+		const issue = await getIssue(owner, repo, pullNumber);
+		if (issue != null && (issue as { pull_request?: unknown }).pull_request == null) {
+			redirect(`/${owner}/${repo}/issues/${pullNumber}`);
+		}
 		return { title: `PR #${pullNumber} · ${owner}/${repo}` };
 	}
+
+	const ogUrl = ogImageUrl({ type: "pr", owner, repo, number: pullNumber });
 
 	return {
 		title: `${bundle.pr.title} · PR #${pullNumber} · ${owner}/${repo}`,
 		description: bundle.pr.body
 			? bundle.pr.body.slice(0, 200)
 			: `Pull request #${pullNumber} on ${owner}/${repo}`,
-		openGraph: { title: `${bundle.pr.title} · PR #${pullNumber}` },
+		openGraph: { title: `${bundle.pr.title} · PR #${pullNumber}`, ...ogImages(ogUrl) },
+		twitter: { card: "summary_large_image", ...ogImages(ogUrl) },
 	};
 }
 
@@ -96,6 +116,10 @@ export default async function PRDetailPage({
 	});
 
 	if (!bundle) {
+		const issue = await getIssue(owner, repo, pullNumber);
+		if (issue != null && (issue as { pull_request?: unknown }).pull_request == null) {
+			redirect(`/${owner}/${repo}/issues/${pullNumber}`);
+		}
 		return (
 			<div className="py-16 text-center">
 				<p className="text-xs text-muted-foreground font-mono">
@@ -149,6 +173,7 @@ export default async function PRDetailPage({
 		checkStatus: checkStatusResult,
 		prPinned,
 		authorDossier,
+		branchBehindBase,
 	} = await all({
 		checkStatus: async () => {
 			if (!isOpen) return undefined;
@@ -180,6 +205,17 @@ export default async function PRDetailPage({
 			pr.user?.login
 				? getAuthorDossier(owner, repo, pr.user.login).catch(() => null)
 				: Promise.resolve(null),
+		branchBehindBase: () =>
+			isOpen
+				? isBranchBehindBase(
+						owner,
+						repo,
+						pr.base.ref,
+						pr.head.ref,
+						(pr as { head_repo_owner?: string | null })
+							.head_repo_owner,
+					)
+				: Promise.resolve(false),
 	});
 
 	const checkStatus = checkStatusResult as CheckStatus | undefined;
@@ -312,6 +348,23 @@ export default async function PRDetailPage({
 			user: s.actor,
 			created_at: s.created_at,
 			merge_ref_name: s.merge_ref_name,
+		};
+		timeline.push(entry);
+	}
+
+	for (const ref of crossRefs) {
+		const entry: CrossReferenceEntry = {
+			type: "cross_reference",
+			id: `xref-${ref.repoOwner}-${ref.repoName}-${ref.number}`,
+			number: ref.number,
+			title: ref.title,
+			state: ref.state,
+			merged: ref.merged,
+			isPullRequest: ref.isPullRequest,
+			user: ref.user,
+			repoOwner: ref.repoOwner,
+			repoName: ref.repoName,
+			created_at: ref.created_at,
 		};
 		timeline.push(entry);
 	}
@@ -505,9 +558,28 @@ export default async function PRDetailPage({
 										baseBranch={
 											pr.base.ref
 										}
+										draft={
+											pr.draft ??
+											false
+										}
 										canWrite={canWrite}
 										canTriage={
 											canTriage
+										}
+										isAuthor={
+											currentUser?.login !=
+												null &&
+											pr.user
+												?.login !=
+												null &&
+											currentUser.login ===
+												pr
+													.user
+													.login
+										}
+										branchBehindBase={
+											branchBehindBase ??
+											false
 										}
 									/>
 								</div>
