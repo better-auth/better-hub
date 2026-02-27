@@ -23,6 +23,14 @@ export const WELCOME_CREDIT_TYPE = "welcome_credit";
 export const WELCOME_CREDIT_USD = 10;
 export const WELCOME_CREDIT_EXPIRY_DAYS = 30;
 
+// ── Fixed Costs ──
+
+export const FIXED_COSTS = {
+	// E2B sandbox session
+	// Currently disabled, only AI model usage is billed
+	sandbox: 0,
+} as const;
+
 // ── Spending Limit ──
 
 export const MIN_CAP_USD = 0.01;
