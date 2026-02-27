@@ -2,12 +2,11 @@ import type { LanguageModelUsage } from "ai";
 import {
 	calculateCostUsd,
 	hasModelPricing,
-	FIXED_COSTS,
 	type CostDetails,
 	type UsageDetails,
 } from "./ai-models";
 import { getCreditBalance } from "./credit";
-import { ACTIVE_SUBSCRIPTION_STATUSES } from "./config";
+import { ACTIVE_SUBSCRIPTION_STATUSES, FIXED_COSTS } from "./config";
 import { Prisma } from "../../generated/prisma/client";
 import { prisma } from "../db";
 import { reportUsageToStripe } from "./stripe";
