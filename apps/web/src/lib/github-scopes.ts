@@ -22,7 +22,13 @@ export const SCOPE_GROUPS: ScopeGroup[] = [
 		label: "Public repos",
 		description: "Access to public repositories",
 		reason: "Required to browse, view, and interact with public repositories.",
-		scopes: ["public_repo", "repo:status", "repo_deployment"],
+		scopes: [
+			"public_repo",
+			"repo:status",
+			"repo_deployment",
+			// https://github.com/better-auth/better-hub/issues/49
+			"read:org",
+		],
 		required: true,
 	},
 	{
