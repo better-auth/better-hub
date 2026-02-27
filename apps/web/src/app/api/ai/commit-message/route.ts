@@ -103,8 +103,8 @@ export async function POST(req: Request) {
 
 		logTokenUsage({
 			userId: session.user.id,
-			provider: "anthropic",
-			modelId: "anthropic/claude-haiku-4.5",
+			provider: "openrouter",
+			modelId,
 			taskType: "commit",
 			usage,
 			isCustomApiKey,
