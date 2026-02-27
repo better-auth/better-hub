@@ -46,7 +46,7 @@ Only output the improved prompt, nothing else. Do not wrap it in quotes or add m
 		logTokenUsage({
 			userId: session.user.id,
 			provider: "anthropic",
-			modelId: "claude-haiku-4-5-20251001",
+			modelId: "anthropic/claude-haiku-4.5",
 			taskType: "rewrite-prompt",
 			usage,
 			isCustomApiKey: false,

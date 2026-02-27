@@ -15,24 +15,7 @@ export interface ModelDef {
 	pricing: ModelPricing;
 }
 
-// Anthropic models called directly (not via OpenRouter)
-const DIRECT_MODELS = {
-	"claude-haiku-4-5-20251001": {
-		label: "Claude Haiku",
-		desc: "Anthropic",
-		pricing: {
-			inputPerM: 1,
-			outputPerM: 5,
-			cacheReadMultiplier: 0.1,
-			cacheWriteMultiplier: 1.25,
-		},
-	},
-} as const satisfies Record<string, ModelDef>;
-
-const AI_MODELS = {
-	...OPENROUTER_MODELS,
-	...DIRECT_MODELS,
-} as const satisfies Record<string, ModelDef>;
+const AI_MODELS = OPENROUTER_MODELS;
 
 export type AIModelId = keyof typeof AI_MODELS;
 
@@ -42,7 +25,7 @@ export type AIModelId = keyof typeof AI_MODELS;
 export const SELECTABLE_MODELS: readonly { id: AIModelId; label: string; desc: string }[] = (
 	Object.keys(AI_MODELS) as AIModelId[]
 )
-	.filter((id) => !id.startsWith("claude-"))
+	.filter((id) => id !== "anthropic/claude-haiku-4.5")
 	.map((id) => ({ id, label: AI_MODELS[id].label, desc: AI_MODELS[id].desc }));
 
 // ─── Pricing helpers ─────────────────────────────────────────────────────────

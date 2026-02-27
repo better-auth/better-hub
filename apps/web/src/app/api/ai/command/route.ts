@@ -671,7 +671,7 @@ ${pageContextPrompt}`,
 			logTokenUsage({
 				userId,
 				provider: "anthropic",
-				modelId: "claude-haiku-4-5-20251001",
+				modelId: "anthropic/claude-haiku-4.5",
 				taskType: "command",
 				usage,
 				isCustomApiKey: false,

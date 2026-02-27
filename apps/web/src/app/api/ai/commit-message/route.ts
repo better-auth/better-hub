@@ -47,7 +47,7 @@ export async function POST(req: Request) {
 			logTokenUsage({
 				userId: session.user.id,
 				provider: "anthropic",
-				modelId: "claude-haiku-4-5-20251001",
+				modelId: "anthropic/claude-haiku-4.5",
 				taskType: "commit",
 				usage,
 				isCustomApiKey: false,
@@ -104,7 +104,7 @@ export async function POST(req: Request) {
 		logTokenUsage({
 			userId: session.user.id,
 			provider: "anthropic",
-			modelId: "claude-haiku-4-5-20251001",
+			modelId: "anthropic/claude-haiku-4.5",
 			taskType: "commit",
 			usage,
 			isCustomApiKey: false,

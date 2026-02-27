@@ -7,37 +7,57 @@ export const OPENROUTER_MODELS = {
 	"moonshotai/kimi-k2.5": {
 		label: "Kimi K2.5",
 		desc: "Moonshot AI",
-		pricing: { inputPerM: 0.63, outputPerM: 3.08 },
+		pricing: { inputPerM: 0.63, outputPerM: 3.08, cacheReadMultiplier: 0.5 },
 	},
 	"anthropic/claude-sonnet-4": {
 		label: "Claude Sonnet 4",
 		desc: "Anthropic",
-		pricing: { inputPerM: 4.2, outputPerM: 21 },
+		pricing: {
+			inputPerM: 4.2,
+			outputPerM: 21,
+			cacheReadMultiplier: 0.1,
+			cacheWriteMultiplier: 1.25,
+		},
 	},
 	"anthropic/claude-opus-4": {
 		label: "Claude Opus 4",
 		desc: "Anthropic",
-		pricing: { inputPerM: 21, outputPerM: 105 },
+		pricing: {
+			inputPerM: 21,
+			outputPerM: 105,
+			cacheReadMultiplier: 0.1,
+			cacheWriteMultiplier: 1.25,
+		},
 	},
 	"openai/gpt-4.1": {
 		label: "GPT-4.1",
 		desc: "OpenAI",
-		pricing: { inputPerM: 2.8, outputPerM: 11.2 },
+		pricing: { inputPerM: 2.8, outputPerM: 11.2, cacheReadMultiplier: 0.25 },
 	},
 	"openai/o3-mini": {
 		label: "o3-mini",
 		desc: "OpenAI",
-		pricing: { inputPerM: 1.54, outputPerM: 6.16 },
+		pricing: { inputPerM: 1.54, outputPerM: 6.16, cacheReadMultiplier: 0.5 },
 	},
 	"google/gemini-2.5-pro-preview": {
 		label: "Gemini 2.5 Pro",
 		desc: "Google",
-		pricing: { inputPerM: 1.75, outputPerM: 14 },
+		pricing: {
+			inputPerM: 1.75,
+			outputPerM: 14,
+			cacheReadMultiplier: 0.1,
+			cacheWriteMultiplier: 0.3,
+		},
 	},
 	"google/gemini-2.5-flash": {
 		label: "Gemini 2.5 Flash",
 		desc: "Google",
-		pricing: { inputPerM: 0.42, outputPerM: 3.5 },
+		pricing: {
+			inputPerM: 0.42,
+			outputPerM: 3.5,
+			cacheReadMultiplier: 0.1,
+			cacheWriteMultiplier: 0.277778,
+		},
 	},
 	"deepseek/deepseek-chat-v3.1": {
 		label: "DeepSeek V3.1",
@@ -48,5 +68,15 @@ export const OPENROUTER_MODELS = {
 		label: "Llama 4 Maverick",
 		desc: "Meta",
 		pricing: { inputPerM: 0.21, outputPerM: 0.84 },
+	},
+	"anthropic/claude-haiku-4.5": {
+		label: "Claude Haiku",
+		desc: "Anthropic",
+		pricing: {
+			inputPerM: 1.4,
+			outputPerM: 7,
+			cacheReadMultiplier: 0.1,
+			cacheWriteMultiplier: 1.25,
+		},
 	},
 } as const satisfies Record<string, ModelDef>;

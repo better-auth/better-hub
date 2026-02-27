@@ -71,6 +71,11 @@ const MANAGED_MODELS = [
 		label: "Llama 4 Maverick",
 		desc: "Meta",
 	},
+	{
+		id: "anthropic/claude-haiku-4.5",
+		label: "Claude Haiku",
+		desc: "Anthropic",
+	},
 ] as const;
 
 // ── Paths ───────────────────────────────────────────────────────────────────
@@ -82,7 +87,12 @@ const OUT_PATH = resolve(__dirname, "../src/lib/billing/openrouter-models.genera
 
 interface OpenRouterModel {
 	id: string;
-	pricing?: { prompt?: string; completion?: string };
+	pricing?: {
+		prompt?: string;
+		completion?: string;
+		input_cache_read?: string;
+		input_cache_write?: string;
+	};
 }
 
 // ── Main ────────────────────────────────────────────────────────────────────
@@ -115,17 +125,31 @@ async function main() {
 			continue;
 		}
 
-		const inputPerM =
-			(parseFloat(remote.pricing.prompt) * 1_000_000 * COST_MULTIPLIER) / 100;
+		const prompt = parseFloat(remote.pricing.prompt);
+		const inputPerM = (prompt * 1_000_000 * COST_MULTIPLIER) / 100;
 		const outputPerM =
 			(parseFloat(remote.pricing.completion) * 1_000_000 * COST_MULTIPLIER) / 100;
+
+		// Cache multipliers are ratios relative to input price — COST_MULTIPLIER cancels out
+		const cacheRead = remote.pricing.input_cache_read
+			? parseFloat(remote.pricing.input_cache_read) / prompt
+			: undefined;
+		const cacheWrite = remote.pricing.input_cache_write
+			? parseFloat(remote.pricing.input_cache_write) / prompt
+			: undefined;
+
+		let pricingStr = `inputPerM: ${round(inputPerM)}, outputPerM: ${round(outputPerM)}`;
+		if (cacheRead !== undefined)
+			pricingStr += `, cacheReadMultiplier: ${round(cacheRead)}`;
+		if (cacheWrite !== undefined)
+			pricingStr += `, cacheWriteMultiplier: ${round(cacheWrite)}`;
 
 		entries.push(
 			[
 				`\t"${model.id}": {`,
 				`\t\tlabel: "${model.label}",`,
 				`\t\tdesc: "${model.desc}",`,
-				`\t\tpricing: { inputPerM: ${round(inputPerM)}, outputPerM: ${round(outputPerM)} },`,
+				`\t\tpricing: { ${pricingStr} },`,
 				`\t},`,
 			].join("\n"),
 		);
