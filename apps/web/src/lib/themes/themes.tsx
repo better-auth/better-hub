@@ -87,9 +87,48 @@ function convertToShikiTheme(input: ShikiThemeInput, mode: "light" | "dark" = "d
 
 // Hub theme: midnight (dark) + hubLight (light)
 export const hub: ThemeDefinition = {
-	id: "hub",
-	name: "Hub",
-	description: "Clean minimal theme",
+	id: "better-auth",
+	name: "Better Auth",
+	description: "The Better Auth theme",
+	icon: () => (
+		<svg
+			className="w-4"
+			viewBox="0 0 361 259"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg"
+		>
+			<rect width="86.9879" height="259" className="fill-black dark:fill-white" />
+			<rect
+				x="268.575"
+				width="92.4247"
+				height="259"
+				className="fill-black dark:fill-white"
+			/>
+			<rect
+				x="358.281"
+				width="83.4555"
+				height="174.52"
+				transform="rotate(90 358.281 0)"
+				className="fill-black dark:fill-white"
+			/>
+			<rect
+				x="361"
+				y="175.544"
+				width="83.4555"
+				height="177.238"
+				transform="rotate(90 361 175.544)"
+				className="fill-black dark:fill-white"
+			/>
+			<rect
+				x="183.762"
+				y="83.4553"
+				width="92.0888"
+				height="96.7741"
+				transform="rotate(90 183.762 83.4553)"
+				className="fill-black dark:fill-white"
+			/>
+		</svg>
+	),
 	dark: {
 		accentPreview: "#71717a",
 		bgPreview: "#030304",
@@ -734,7 +773,17 @@ export const nordWave: ThemeDefinition = {
 export const vercel: ThemeDefinition = {
 	id: "vercel",
 	name: "Vercel",
-	description: "Vercel-inspired theme",
+	description: "Vercel theme",
+	icon: () => (
+		<svg
+			viewBox="0 0 256 222"
+			className="w-4"
+			xmlns="http://www.w3.org/2000/svg"
+			preserveAspectRatio="xMidYMid"
+		>
+			<path className="fill-black dark:fill-white" d="m128 0 128 221.705H0z" />
+		</svg>
+	),
 	dark: {
 		accentPreview: "#ffffff",
 		bgPreview: "#000000",
@@ -1074,7 +1123,53 @@ export const rabbit: ThemeDefinition = {
 export const supabase: ThemeDefinition = {
 	id: "supabase",
 	name: "Supabase",
-	description: "Emerald green developer theme",
+	description: "Supabase theme",
+	icon: () => (
+		<svg
+			viewBox="0 0 109 113"
+			fill="none"
+			className="w-4"
+			xmlns="http://www.w3.org/2000/svg"
+		>
+			<path
+				d="M63.7076 110.284C60.8481 113.885 55.0502 111.912 54.9813 107.314L53.9738 40.0627L99.1935 40.0627C107.384 40.0627 111.952 49.5228 106.859 55.9374L63.7076 110.284Z"
+				fill="url(#supabase-paint0_linear)"
+			/>
+			<path
+				d="M63.7076 110.284C60.8481 113.885 55.0502 111.912 54.9813 107.314L53.9738 40.0627L99.1935 40.0627C107.384 40.0627 111.952 49.5228 106.859 55.9374L63.7076 110.284Z"
+				fill="url(#supabase-paint1_linear)"
+				fill-opacity="0.2"
+			/>
+			<path
+				d="M45.317 2.07103C48.1765 -1.53037 53.9745 0.442937 54.0434 5.041L54.4849 72.2922H9.83113C1.64038 72.2922 -2.92775 62.8321 2.1655 56.4175L45.317 2.07103Z"
+				fill="#3ECF8E"
+			/>
+			<defs>
+				<linearGradient
+					id="supabase-paint0_linear"
+					x1="53.9738"
+					y1="54.974"
+					x2="94.1635"
+					y2="71.8295"
+					gradientUnits="userSpaceOnUse"
+				>
+					<stop stop-color="#249361" />
+					<stop offset="1" stop-color="#3ECF8E" />
+				</linearGradient>
+				<linearGradient
+					id="supabase-paint1_linear"
+					x1="36.1558"
+					y1="30.578"
+					x2="54.4844"
+					y2="65.0806"
+					gradientUnits="userSpaceOnUse"
+				>
+					<stop />
+					<stop offset="1" stop-opacity="0" />
+				</linearGradient>
+			</defs>
+		</svg>
+	),
 	dark: {
 		accentPreview: "#3ecf8e",
 		bgPreview: "#121212",
@@ -1245,7 +1340,29 @@ export const supabase: ThemeDefinition = {
 export const tailwind: ThemeDefinition = {
 	id: "tailwind",
 	name: "Tailwind",
-	description: "Sky blue utility-first theme",
+	description: "Tailwind CSS theme",
+	icon: () => (
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			fill="none"
+			viewBox="0 0 54 33"
+			className="w-4"
+		>
+			<g clip-path="url(#tailwindcss-a)">
+				<path
+					fill="#38bdf8"
+					fill-rule="evenodd"
+					d="M27 0c-7.2 0-11.7 3.6-13.5 10.8 2.7-3.6 5.85-4.95 9.45-4.05 2.054.513 3.522 2.004 5.147 3.653C30.744 13.09 33.808 16.2 40.5 16.2c7.2 0 11.7-3.6 13.5-10.8-2.7 3.6-5.85 4.95-9.45 4.05-2.054-.513-3.522-2.004-5.147-3.653C36.756 3.11 33.692 0 27 0zM13.5 16.2C6.3 16.2 1.8 19.8 0 27c2.7-3.6 5.85-4.95 9.45-4.05 2.054.514 3.522 2.004 5.147 3.653C17.244 29.29 20.308 32.4 27 32.4c7.2 0 11.7-3.6 13.5-10.8-2.7 3.6-5.85 4.95-9.45 4.05-2.054-.513-3.522-2.004-5.147-3.653C23.256 19.31 20.192 16.2 13.5 16.2z"
+					clip-rule="evenodd"
+				/>
+			</g>
+			<defs>
+				<clipPath id="tailwindcss-a">
+					<path fill="#fff" d="M0 0h54v32.4H0z" />
+				</clipPath>
+			</defs>
+		</svg>
+	),
 	dark: {
 		accentPreview: "#38bdf8",
 		bgPreview: "#030712",
@@ -1418,7 +1535,17 @@ export const tailwind: ThemeDefinition = {
 export const openai: ThemeDefinition = {
 	id: "openai",
 	name: "OpenAI",
-	description: "ChatGPT-inspired theme",
+	description: "OpenAI theme",
+	icon: () => (
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			className="w-4 fill-black dark:fill-white"
+			preserveAspectRatio="xMidYMid"
+			viewBox="0 0 256 260"
+		>
+			<path d="M239.184 106.203a64.716 64.716 0 0 0-5.576-53.103C219.452 28.459 191 15.784 163.213 21.74A65.586 65.586 0 0 0 52.096 45.22a64.716 64.716 0 0 0-43.23 31.36c-14.31 24.602-11.061 55.634 8.033 76.74a64.665 64.665 0 0 0 5.525 53.102c14.174 24.65 42.644 37.324 70.446 31.36a64.72 64.72 0 0 0 48.754 21.744c28.481.025 53.714-18.361 62.414-45.481a64.767 64.767 0 0 0 43.229-31.36c14.137-24.558 10.875-55.423-8.083-76.483Zm-97.56 136.338a48.397 48.397 0 0 1-31.105-11.255l1.535-.87 51.67-29.825a8.595 8.595 0 0 0 4.247-7.367v-72.85l21.845 12.636c.218.111.37.32.409.563v60.367c-.056 26.818-21.783 48.545-48.601 48.601Zm-104.466-44.61a48.345 48.345 0 0 1-5.781-32.589l1.534.921 51.722 29.826a8.339 8.339 0 0 0 8.441 0l63.181-36.425v25.221a.87.87 0 0 1-.358.665l-52.335 30.184c-23.257 13.398-52.97 5.431-66.404-17.803ZM23.549 85.38a48.499 48.499 0 0 1 25.58-21.333v61.39a8.288 8.288 0 0 0 4.195 7.316l62.874 36.272-21.845 12.636a.819.819 0 0 1-.767 0L41.353 151.53c-23.211-13.454-31.171-43.144-17.804-66.405v.256Zm179.466 41.695-63.08-36.63L161.73 77.86a.819.819 0 0 1 .768 0l52.233 30.184a48.6 48.6 0 0 1-7.316 87.635v-61.391a8.544 8.544 0 0 0-4.4-7.213Zm21.742-32.69-1.535-.922-51.619-30.081a8.39 8.39 0 0 0-8.492 0L99.98 99.808V74.587a.716.716 0 0 1 .307-.665l52.233-30.133a48.652 48.652 0 0 1 72.236 50.391v.205ZM88.061 139.097l-21.845-12.585a.87.87 0 0 1-.41-.614V65.685a48.652 48.652 0 0 1 79.757-37.346l-1.535.87-51.67 29.825a8.595 8.595 0 0 0-4.246 7.367l-.051 72.697Zm11.868-25.58 28.138-16.217 28.188 16.218v32.434l-28.086 16.218-28.188-16.218-.052-32.434Z" />
+		</svg>
+	),
 	dark: {
 		accentPreview: "#00A67D",
 		bgPreview: "#000000",
@@ -1589,7 +1716,28 @@ export const openai: ThemeDefinition = {
 export const mintlify: ThemeDefinition = {
 	id: "mintlify",
 	name: "Mintlify",
-	description: "Documentation-focused theme",
+	description: "Mintlify theme",
+	icon: () => (
+		<svg
+			className="w-4"
+			viewBox="0 0 19 19"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg"
+		>
+			<path
+				d="M18.367 7.28888V1.59755C18.367 0.986819 17.8715 0.5 17.2699 0.5H11.5812C10.6877 0.5 9.80295 0.677018 8.98017 1.01336C8.15738 1.35856 7.40539 1.85424 6.77724 2.49152L6.733 2.53578C5.90137 3.37664 5.30862 4.42108 5.00781 5.57174C5.54749 5.43012 6.10483 5.35931 6.6622 5.35046C8.14852 5.33276 9.60831 5.81073 10.7938 6.7047C11.8643 7.50131 12.6783 8.59885 13.1206 9.86458C13.5807 11.148 13.6337 12.5465 13.2887 13.8653C14.43 13.5644 15.4828 12.9714 16.3233 12.1393L16.3675 12.0951C16.9957 11.4667 17.4999 10.7143 17.845 9.89114C18.19 9.06797 18.3581 8.18285 18.3581 7.28888H18.367Z"
+				fill="#18E299"
+			/>
+			<path
+				d="M4.83793 7.193C4.84674 5.44706 5.54303 3.77167 6.76814 2.51953L2.03511 7.25472C2.01749 7.27236 1.99985 7.28117 1.98222 7.29881C0.827615 8.44513 0.131342 9.97945 0.0167623 11.6019C-0.0890033 13.1186 0.307609 14.6176 1.15373 15.8698C1.23444 15.9892 1.45343 16.0285 1.57682 15.9139L4.47656 13.0216C5.38438 12.1134 5.66643 10.7642 5.23455 9.55618C4.96132 8.80666 4.82912 8.00424 4.83793 7.193Z"
+				fill="#0C8C5E"
+			/>
+			<path
+				d="M16.341 12.0938C15.4332 12.9844 14.2962 13.6016 13.0623 13.875C11.8195 14.1483 10.5327 14.0689 9.33405 13.6457C9.33405 13.6457 9.32522 13.6457 9.31641 13.6457C8.10892 13.2136 6.76042 13.4958 5.8526 14.3952L2.95282 17.2875C2.82943 17.4109 2.84706 17.6137 2.99689 17.7107C4.24845 18.5484 5.74683 18.954 7.26281 18.8482C8.88455 18.7336 10.4093 18.037 11.5639 16.8818L11.608 16.8378L16.341 12.1026V12.0938Z"
+				fill="#0C8C5E"
+			/>
+		</svg>
+	),
 	dark: {
 		accentPreview: "#4ec9b0",
 		bgPreview: "#000000",
@@ -2786,12 +2934,33 @@ export const browserbase: ThemeDefinition = {
 export const cloudflare: ThemeDefinition = {
 	id: "cloudflare",
 	name: "Cloudflare",
-	description: "Edge computing platform theme",
+	description: "Cloudflare theme",
+	icon: () => (
+		<svg
+			viewBox="0 0 256 116"
+			xmlns="http://www.w3.org/2000/svg"
+			className="w-4"
+			preserveAspectRatio="xMidYMid"
+		>
+			<path
+				fill="#FFF"
+				d="m202.357 49.394-5.311-2.124C172.085 103.434 72.786 69.289 66.81 85.997c-.996 11.286 54.227 2.146 93.706 4.059 12.039.583 18.076 9.671 12.964 24.484l10.069.031c11.615-36.209 48.683-17.73 50.232-29.68-2.545-7.857-42.601 0-31.425-35.497Z"
+			/>
+			<path
+				fill="#F4811F"
+				d="M176.332 108.348c1.593-5.31 1.062-10.622-1.593-13.809-2.656-3.187-6.374-5.31-11.154-5.842L71.17 87.634c-.531 0-1.062-.53-1.593-.53-.531-.532-.531-1.063 0-1.594.531-1.062 1.062-1.594 2.124-1.594l92.946-1.062c11.154-.53 22.839-9.56 27.087-20.182l5.312-13.809c0-.532.531-1.063 0-1.594C191.203 20.182 166.772 0 138.091 0 111.535 0 88.697 16.995 80.73 40.896c-5.311-3.718-11.684-5.843-19.12-5.31-12.747 1.061-22.838 11.683-24.432 24.43-.531 3.187 0 6.374.532 9.56C16.996 70.107 0 87.103 0 108.348c0 2.124 0 3.718.531 5.842 0 1.063 1.062 1.594 1.594 1.594h170.489c1.062 0 2.125-.53 2.125-1.594l1.593-5.842Z"
+			/>
+			<path
+				fill="#FAAD3F"
+				d="M205.544 48.863h-2.656c-.531 0-1.062.53-1.593 1.062l-3.718 12.747c-1.593 5.31-1.062 10.623 1.594 13.809 2.655 3.187 6.373 5.31 11.153 5.843l19.652 1.062c.53 0 1.062.53 1.593.53.53.532.53 1.063 0 1.594-.531 1.063-1.062 1.594-2.125 1.594l-20.182 1.062c-11.154.53-22.838 9.56-27.087 20.182l-1.063 4.78c-.531.532 0 1.594 1.063 1.594h70.108c1.062 0 1.593-.531 1.593-1.593 1.062-4.25 2.124-9.03 2.124-13.81 0-27.618-22.838-50.456-50.456-50.456"
+			/>
+		</svg>
+	),
 	dark: {
 		accentPreview: "#F6821F",
-		bgPreview: "#1B1B1B",
+		bgPreview: "#181818",
 		colors: {
-			"--background": "#1B1B1B",
+			"--background": "#181818",
 			"--foreground": "#D9D9D9",
 			"--card": "#252525",
 			"--card-foreground": "#D9D9D9",
@@ -2811,7 +2980,7 @@ export const cloudflare: ThemeDefinition = {
 			"--warning": "#F6821F",
 			"--scrollbar-thumb": "#404040",
 			"--scrollbar-thumb-hover": "#555555",
-			"--shader-bg": "#1B1B1B",
+			"--shader-bg": "#181818",
 			"--shader-filter": "none",
 			"--hero-border": "#404040",
 			"--diff-add-bar": "#6CBB5A",
@@ -2819,8 +2988,8 @@ export const cloudflare: ThemeDefinition = {
 			"--diff-mod-bar": "#F6821F",
 			"--link": "#F6821F",
 			"--info": "#F6821F",
-			"--code-bg": "#1B1B1B",
-			"--code-block-bg": "#252525",
+			"--code-bg": "#181818",
+			"--code-block-bg": "#313131",
 			"--inline-code-bg": "rgba(246, 130, 31, 0.12)",
 			"--line-gutter": "#606060",
 			"--line-highlight": "rgba(246, 130, 31, 0.12)",
@@ -2959,7 +3128,225 @@ export const cloudflare: ThemeDefinition = {
 export const gemini: ThemeDefinition = {
 	id: "gemini",
 	name: "Gemini",
-	description: "Google AI platform theme",
+	description: "Google Gemini AI theme",
+	icon: () => (
+		<svg
+			viewBox="0 0 296 298"
+			xmlns="http://www.w3.org/2000/svg"
+			className="w-4"
+			fill="none"
+		>
+			<mask
+				id="gemini-a"
+				width="296"
+				height="298"
+				x="0"
+				y="0"
+				maskUnits="userSpaceOnUse"
+				style={{ maskType: "alpha" }}
+			>
+				<path
+					fill="#3186FF"
+					d="M141.201 4.886c2.282-6.17 11.042-6.071 13.184.148l5.985 17.37a184.004 184.004 0 0 0 111.257 113.049l19.304 6.997c6.143 2.227 6.156 10.91.02 13.155l-19.35 7.082a184.001 184.001 0 0 0-109.495 109.385l-7.573 20.629c-2.241 6.105-10.869 6.121-13.133.025l-7.908-21.296a184 184 0 0 0-109.02-108.658l-19.698-7.239c-6.102-2.243-6.118-10.867-.025-13.132l20.083-7.467A183.998 183.998 0 0 0 133.291 26.28l7.91-21.394Z"
+				/>
+			</mask>
+			<g mask="url(#gemini-a)">
+				<g filter="url(#gemini-b)">
+					<ellipse
+						cx="163"
+						cy="149"
+						fill="#3689FF"
+						rx="196"
+						ry="159"
+					/>
+				</g>
+				<g filter="url(#gemini-c)">
+					<ellipse
+						cx="33.5"
+						cy="142.5"
+						fill="#F6C013"
+						rx="68.5"
+						ry="72.5"
+					/>
+				</g>
+				<g filter="url(#gemini-d)">
+					<ellipse
+						cx="19.5"
+						cy="148.5"
+						fill="#F6C013"
+						rx="68.5"
+						ry="72.5"
+					/>
+				</g>
+				<g filter="url(#gemini-e)">
+					<path
+						fill="#FA4340"
+						d="M194 10.5C172 82.5 65.5 134.333 22.5 135L144-66l50 76.5Z"
+					/>
+				</g>
+				<g filter="url(#gemini-f)">
+					<path
+						fill="#FA4340"
+						d="M190.5-12.5C168.5 59.5 62 111.333 19 112L140.5-89l50 76.5Z"
+					/>
+				</g>
+				<g filter="url(#gemini-g)">
+					<path
+						fill="#14BB69"
+						d="M194.5 279.5C172.5 207.5 66 155.667 23 155l121.5 201 50-76.5Z"
+					/>
+				</g>
+				<g filter="url(#gemini-h)">
+					<path
+						fill="#14BB69"
+						d="M196.5 320.5C174.5 248.5 68 196.667 25 196l121.5 201 50-76.5Z"
+					/>
+				</g>
+			</g>
+			<defs>
+				<filter
+					id="gemini-b"
+					width="464"
+					height="390"
+					x="-69"
+					y="-46"
+					color-interpolation-filters="sRGB"
+					filterUnits="userSpaceOnUse"
+				>
+					<feFlood flood-opacity="0" result="BackgroundImageFix" />
+					<feBlend
+						in="SourceGraphic"
+						in2="BackgroundImageFix"
+						result="shape"
+					/>
+					<feGaussianBlur
+						result="effect1_foregroundBlur_69_17998"
+						stdDeviation="18"
+					/>
+				</filter>
+				<filter
+					id="gemini-c"
+					width="265"
+					height="273"
+					x="-99"
+					y="6"
+					color-interpolation-filters="sRGB"
+					filterUnits="userSpaceOnUse"
+				>
+					<feFlood flood-opacity="0" result="BackgroundImageFix" />
+					<feBlend
+						in="SourceGraphic"
+						in2="BackgroundImageFix"
+						result="shape"
+					/>
+					<feGaussianBlur
+						result="effect1_foregroundBlur_69_17998"
+						stdDeviation="32"
+					/>
+				</filter>
+				<filter
+					id="gemini-d"
+					width="265"
+					height="273"
+					x="-113"
+					y="12"
+					color-interpolation-filters="sRGB"
+					filterUnits="userSpaceOnUse"
+				>
+					<feFlood flood-opacity="0" result="BackgroundImageFix" />
+					<feBlend
+						in="SourceGraphic"
+						in2="BackgroundImageFix"
+						result="shape"
+					/>
+					<feGaussianBlur
+						result="effect1_foregroundBlur_69_17998"
+						stdDeviation="32"
+					/>
+				</filter>
+				<filter
+					id="gemini-e"
+					width="299.5"
+					height="329"
+					x="-41.5"
+					y="-130"
+					color-interpolation-filters="sRGB"
+					filterUnits="userSpaceOnUse"
+				>
+					<feFlood flood-opacity="0" result="BackgroundImageFix" />
+					<feBlend
+						in="SourceGraphic"
+						in2="BackgroundImageFix"
+						result="shape"
+					/>
+					<feGaussianBlur
+						result="effect1_foregroundBlur_69_17998"
+						stdDeviation="32"
+					/>
+				</filter>
+				<filter
+					id="gemini-f"
+					width="299.5"
+					height="329"
+					x="-45"
+					y="-153"
+					color-interpolation-filters="sRGB"
+					filterUnits="userSpaceOnUse"
+				>
+					<feFlood flood-opacity="0" result="BackgroundImageFix" />
+					<feBlend
+						in="SourceGraphic"
+						in2="BackgroundImageFix"
+						result="shape"
+					/>
+					<feGaussianBlur
+						result="effect1_foregroundBlur_69_17998"
+						stdDeviation="32"
+					/>
+				</filter>
+				<filter
+					id="gemini-g"
+					width="299.5"
+					height="329"
+					x="-41"
+					y="91"
+					color-interpolation-filters="sRGB"
+					filterUnits="userSpaceOnUse"
+				>
+					<feFlood flood-opacity="0" result="BackgroundImageFix" />
+					<feBlend
+						in="SourceGraphic"
+						in2="BackgroundImageFix"
+						result="shape"
+					/>
+					<feGaussianBlur
+						result="effect1_foregroundBlur_69_17998"
+						stdDeviation="32"
+					/>
+				</filter>
+				<filter
+					id="gemini-h"
+					width="299.5"
+					height="329"
+					x="-39"
+					y="132"
+					color-interpolation-filters="sRGB"
+					filterUnits="userSpaceOnUse"
+				>
+					<feFlood flood-opacity="0" result="BackgroundImageFix" />
+					<feBlend
+						in="SourceGraphic"
+						in2="BackgroundImageFix"
+						result="shape"
+					/>
+					<feGaussianBlur
+						result="effect1_foregroundBlur_69_17998"
+						stdDeviation="32"
+					/>
+				</filter>
+			</defs>
+		</svg>
+	),
 	dark: {
 		accentPreview: "#5c9dc7",
 		bgPreview: "#16181d",
@@ -3132,7 +3519,15 @@ export const gemini: ThemeDefinition = {
 export const stripe: ThemeDefinition = {
 	id: "stripe",
 	name: "Stripe",
-	description: "Payment platform theme",
+	description: "Stripe theme",
+	icon: () => (
+		<svg xmlns="http://www.w3.org/2000/svg" className="w-4" viewBox="0 0 512 214">
+			<path
+				fill="#635BFF"
+				d="M512 110.08c0-36.409-17.636-65.138-51.342-65.138c-33.85 0-54.33 28.73-54.33 64.854c0 42.808 24.179 64.426 58.88 64.426c16.925 0 29.725-3.84 39.396-9.244v-28.445c-9.67 4.836-20.764 7.823-34.844 7.823c-13.796 0-26.027-4.836-27.591-21.618h69.547c0-1.85.284-9.245.284-12.658m-70.258-13.511c0-16.071 9.814-22.756 18.774-22.756c8.675 0 17.92 6.685 17.92 22.756zm-90.31-51.627c-13.939 0-22.899 6.542-27.876 11.094l-1.85-8.818h-31.288v165.83l35.555-7.537l.143-40.249c5.12 3.698 12.657 8.96 25.173 8.96c25.458 0 48.64-20.48 48.64-65.564c-.142-41.245-23.609-63.716-48.498-63.716m-8.534 97.991c-8.391 0-13.37-2.986-16.782-6.684l-.143-52.765c3.698-4.124 8.818-6.968 16.925-6.968c12.942 0 21.902 14.506 21.902 33.137c0 19.058-8.818 33.28-21.902 33.28M241.493 36.551l35.698-7.68V0l-35.698 7.538zm0 10.809h35.698v124.444h-35.698zm-38.257 10.524L200.96 47.36h-30.72v124.444h35.556V87.467c8.39-10.951 22.613-8.96 27.022-7.396V47.36c-4.551-1.707-21.191-4.836-29.582 10.524m-71.112-41.386l-34.702 7.395l-.142 113.92c0 21.05 15.787 36.551 36.836 36.551c11.662 0 20.195-2.133 24.888-4.693V140.8c-4.55 1.849-27.022 8.391-27.022-12.658V77.653h27.022V47.36h-27.022zM35.982 83.484c0-5.546 4.551-7.68 12.09-7.68c10.808 0 24.461 3.272 35.27 9.103V51.484c-11.804-4.693-23.466-6.542-35.27-6.542C19.2 44.942 0 60.018 0 85.192c0 39.252 54.044 32.995 54.044 49.92c0 6.541-5.688 8.675-13.653 8.675c-11.804 0-26.88-4.836-38.827-11.378v33.849c13.227 5.689 26.596 8.106 38.827 8.106c29.582 0 49.92-14.648 49.92-40.106c-.142-42.382-54.329-34.845-54.329-50.774"
+			/>
+		</svg>
+	),
 	dark: {
 		accentPreview: "#635BFF",
 		bgPreview: "#0a2540",
