@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ShieldAlert } from "lucide-react";
-import { getRepositoryAdvisory } from "@/lib/github";
+import { getRepositoryAdvisory, getRepo } from "@/lib/github";
 import { renderMarkdownToHtml } from "@/components/shared/markdown-renderer";
 import { AdvisoryDetail } from "@/components/security/advisory-detail";
 
@@ -10,6 +10,14 @@ export async function generateMetadata({
 	params: Promise<{ owner: string; repo: string; ghsaId: string }>;
 }): Promise<Metadata> {
 	const { owner, repo, ghsaId } = await params;
+
+	const repoData = await getRepo(owner, repo);
+	const isPrivate = !repoData || repoData.private === true;
+
+	if (isPrivate) {
+		return { title: `Advisory · ${owner}/${repo}` };
+	}
+
 	const advisory = await getRepositoryAdvisory(owner, repo, ghsaId);
 	if (!advisory) {
 		return { title: `Advisory · ${owner}/${repo}` };

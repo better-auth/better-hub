@@ -30,6 +30,7 @@ import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { isRepoEvent, type MutationEvent } from "@/lib/mutation-events";
 import { useReadme } from "@/hooks/use-readme";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";
+import { ReactiveCodeBlocks } from "@/components/shared/reactive-code-blocks";
 import { ReadmeToolbar } from "@/components/repo/readme-toolbar";
 import {
 	fetchReadmeMarkdown,
@@ -1065,12 +1066,14 @@ export function RepoOverview({
 						</div>
 						<div className="px-6 py-5">
 							<MarkdownCopyHandler>
-								<div
-									className="ghmd"
-									dangerouslySetInnerHTML={{
-										__html: readmeHtml,
-									}}
-								/>
+								<ReactiveCodeBlocks>
+									<div
+										className="ghmd"
+										dangerouslySetInnerHTML={{
+											__html: readmeHtml,
+										}}
+									/>
+								</ReactiveCodeBlocks>
 							</MarkdownCopyHandler>
 						</div>
 					</div>
@@ -1194,12 +1197,14 @@ export function RepoOverview({
 					</div>
 					<div className="px-6 py-5">
 						<MarkdownCopyHandler>
-							<div
-								className="ghmd"
-								dangerouslySetInnerHTML={{
-									__html: readmeHtml,
-								}}
-							/>
+							<ReactiveCodeBlocks>
+								<div
+									className="ghmd"
+									dangerouslySetInnerHTML={{
+										__html: readmeHtml,
+									}}
+								/>
+							</ReactiveCodeBlocks>
 						</MarkdownCopyHandler>
 					</div>
 				</div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import Link from "next/link";
 import {
 	LogOut,
@@ -40,6 +40,7 @@ import { TimeAgo } from "@/components/ui/time-ago";
 import { markNotificationDone, markAllNotificationsRead } from "@/app/(app)/repos/actions";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
 import { NavbarGhostButton } from "@/components/shared/floating-ghost-button";
+import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { $Session } from "@/lib/auth";
 import type { NotificationItem } from "@/lib/github-types";
 
@@ -76,12 +77,23 @@ function getNotifHref(notif: NotificationItem): string {
 
 export function AppNavbar({ session, notifications }: AppNavbarProps) {
 	const { mode, toggleMode } = useColorTheme();
+	const { subscribe, emit } = useMutationEvents();
 	const gh = session.githubUser;
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [notifOpen, setNotifOpen] = useState(false);
 	const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
 	const [markingAll, startMarkAll] = useTransition();
 	const [markingId, setMarkingId] = useState<string | null>(null);
+
+	useEffect(() => {
+		return subscribe((event) => {
+			if (event.type === "notification:read") {
+				setDoneIds((prev) => new Set([...prev, event.id]));
+			} else if (event.type === "notification:all-read") {
+				setDoneIds((prev) => new Set([...prev, ...event.ids]));
+			}
+		});
+	}, [subscribe]);
 
 	const visibleNotifs = notifications.filter((n) => !doneIds.has(n.id));
 	const unreadCount = visibleNotifs.filter((n) => n.unread).length;
@@ -425,15 +437,23 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 												if (
 													res.success
 												) {
+													const ids =
+														notifications.map(
+															(
+																n,
+															) =>
+																n.id,
+														);
 													setDoneIds(
 														new Set(
-															notifications.map(
-																(
-																	n,
-																) =>
-																	n.id,
-															),
+															ids,
 														),
+													);
+													emit(
+														{
+															type: "notification:all-read",
+															ids,
+														},
 													);
 												}
 											},
@@ -487,11 +507,54 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 										</span>
 										<Link
 											href={href}
-											onClick={() =>
+											onClick={async () => {
 												setNotifOpen(
 													false,
-												)
-											}
+												);
+												if (
+													notif.unread
+												) {
+													setDoneIds(
+														(
+															prev,
+														) =>
+															new Set(
+																[
+																	...prev,
+																	notif.id,
+																],
+															),
+													);
+													emit(
+														{
+															type: "notification:read",
+															id: notif.id,
+														},
+													);
+													const res =
+														await markNotificationDone(
+															notif.id,
+														);
+													if (
+														!res.success
+													) {
+														setDoneIds(
+															(
+																prev,
+															) => {
+																const next =
+																	new Set(
+																		prev,
+																	);
+																next.delete(
+																	notif.id,
+																);
+																return next;
+															},
+														);
+													}
+												}
+											}}
 											className="flex-1 min-w-0"
 										>
 											<div className="flex items-center gap-1.5">

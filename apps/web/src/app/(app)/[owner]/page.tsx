@@ -23,34 +23,32 @@ export async function generateMetadata({
 }): Promise<Metadata> {
 	const { owner } = await params;
 	const ogUrl = ogImageUrl({ type: "owner", owner });
-	const actorData = await getUser(owner).catch(() => null);
-	if (actorData) {
-		const actorType = (actorData as { type?: string }).type;
-		const displayName =
-			actorType === "Organization"
-				? (actorData.name ?? actorData.login)
-				: actorData.name
-					? `${actorData.name} (${actorData.login})`
-					: actorData.login;
+	const userData = await getUser(owner).catch(() => null);
+	if (!userData) {
+		return { title: owner };
+	}
+
+	const actorType = (userData as { type?: string }).type;
+	if (actorType === "Organization") {
+		const orgData = await getOrg(owner).catch(() => null);
+		const title = orgData?.name || orgData?.login || userData.name || userData.login;
+		const description =
+			orgData?.description || userData.bio || `${title} on Better Hub`;
 		return {
-			title: displayName,
-			description: actorData.bio || `${displayName} on Better Hub`,
-			openGraph: { title: displayName, ...ogImages(ogUrl) },
+			title,
+			description,
+			openGraph: { title, ...ogImages(ogUrl) },
 			twitter: { card: "summary_large_image", ...ogImages(ogUrl) },
 		};
 	}
-	const orgData = await getOrg(owner).catch(() => null);
-	if (orgData) {
-		return {
-			title: orgData.name || orgData.login,
-			description:
-				orgData.description ||
-				`${orgData.name || orgData.login} on Better Hub`,
-			openGraph: { title: orgData.name || orgData.login, ...ogImages(ogUrl) },
-			twitter: { card: "summary_large_image", ...ogImages(ogUrl) },
-		};
-	}
-	return { title: owner };
+
+	const displayName = userData.name ? `${userData.name} (${userData.login})` : userData.login;
+	return {
+		title: displayName,
+		description: userData.bio || `${displayName} on Better Hub`,
+		openGraph: { title: displayName, ...ogImages(ogUrl) },
+		twitter: { card: "summary_large_image", ...ogImages(ogUrl) },
+	};
 }
 
 export default async function OwnerPage({
@@ -64,10 +62,13 @@ export default async function OwnerPage({
 	const rawTab = (await searchParams)?.tab;
 	const tab = resolveProfileTab(rawTab);
 
-	// Resolve actor via /users first to avoid noisy /orgs/* 404s for normal users.
+	// Resolve actor first to avoid noisy /orgs/:user 404 calls for user handles.
 	const actorData = await getUser(owner).catch(() => null);
-	const actorType = (actorData as { type?: string } | null)?.type;
+	if (!actorData) {
+		notFound();
+	}
 
+	const actorType = (actorData as { type?: string }).type;
 	if (actorType === "Organization") {
 		const orgData = await getOrg(owner).catch(() => null);
 		if (!orgData) {
