@@ -869,8 +869,8 @@ export function CommandMenu() {
 					]
 				: []),
 			{
-				name: "Search Repos",
-				description: "Find repositories",
+				name: "Search GitHub",
+				description: "Find repositories and users",
 				keywords: ["find", "lookup", "navigate", "go to", "open repo"],
 				action: () => switchMode("search"),
 				icon: Search,
@@ -1046,8 +1046,8 @@ export function CommandMenu() {
 			// Dashboard / other pages
 			items.push({
 				id: "suggest-search",
-				name: "Search Repos",
-				description: "Find repositories",
+				name: "Search GitHub",
+				description: "Find repositories and users",
 				icon: Search,
 				action: () => switchMode("search"),
 				keepOpen: true,
