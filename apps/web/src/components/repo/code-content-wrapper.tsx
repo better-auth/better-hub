@@ -66,6 +66,7 @@ function CloneDownloadButtons({
 				</button>
 				<a
 					href={zipUrl}
+					data-no-github-intercept
 					className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/5 transition-colors"
 				>
 					<Download className="w-3 h-3" />

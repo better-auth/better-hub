@@ -226,11 +226,11 @@ export function parseGitHubUrl(htmlUrl: string): ParsedGitHubUrl | null {
 		const parts = url.pathname.split("/").filter(Boolean);
 		if (parts.length === 0) return null;
 
+		if (GITHUB_NON_USER_PATHS.has(parts[0].toLowerCase())) return null;
+
 		// Single segment: github.com/username
 		if (parts.length === 1) {
-			const name = parts[0];
-			if (GITHUB_NON_USER_PATHS.has(name.toLowerCase())) return null;
-			return { owner: name, type: "user" };
+			return { owner: parts[0], type: "user" };
 		}
 
 		const [owner, repo, ...rest] = parts;

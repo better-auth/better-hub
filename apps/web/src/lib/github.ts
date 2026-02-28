@@ -837,13 +837,21 @@ async function fetchPullRequestFilesFromGitHub(
 	repo: string,
 	pullNumber: number,
 ) {
-	const { data } = await octokit.pulls.listFiles({
-		owner,
-		repo,
-		pull_number: pullNumber,
-		per_page: 100,
-	});
-	return data;
+	const files: Awaited<ReturnType<typeof octokit.pulls.listFiles>>["data"] = [];
+	let page = 1;
+	while (true) {
+		const { data } = await octokit.pulls.listFiles({
+			owner,
+			repo,
+			pull_number: pullNumber,
+			per_page: 100,
+			page,
+		});
+		files.push(...data);
+		if (data.length < 100) break;
+		page++;
+	}
+	return files;
 }
 
 async function fetchPullRequestCommentsFromGitHub(

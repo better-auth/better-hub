@@ -116,7 +116,7 @@ export function RepoSidebar({
 						alt=""
 						width={160}
 						height={160}
-						className="w-32 aspect-square rounded-sm"
+						className="w-32 aspect-square rounded-lg"
 					/>
 					{description && (
 						<p className="text-xs text-muted-foreground leading-relaxed">

@@ -4716,6 +4716,7 @@ function SidebarCommits({
 						<CheckStatusBadge
 							checkStatus={checkStatus}
 							align="right"
+							usePortal
 							owner={owner}
 							repo={repo}
 						/>
@@ -4796,6 +4797,7 @@ function SidebarCommits({
 														commitCheck
 													}
 													align="right"
+													usePortal
 													owner={
 														owner
 													}

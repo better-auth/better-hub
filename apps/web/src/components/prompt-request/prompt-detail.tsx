@@ -295,7 +295,7 @@ export function PromptDetail({
 								<button
 									onClick={handleRunWithGhost}
 									disabled={isAccepting}
-									className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium bg-foreground text-background rounded-md hover:bg-foreground/90 transition-colors cursor-pointer disabled:opacity-50"
+									className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium bg-foreground text-background rounded-sm hover:bg-foreground/90 transition-colors cursor-pointer disabled:opacity-50"
 								>
 									{isAccepting ? (
 										<Loader2 className="w-3 h-3 animate-spin" />

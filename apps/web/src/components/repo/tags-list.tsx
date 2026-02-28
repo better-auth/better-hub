@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { Tag, Download, ExternalLink, Search, X, Rocket, AlertCircle, Loader2 } from "lucide-react";
+import { Tag, Download, ExternalLink, Rocket, AlertCircle, Loader2 } from "lucide-react";
+import { ListSearchInput } from "@/components/shared/list-controls";
 import { fetchTagsPage } from "@/app/(app)/repos/[owner]/[repo]/tags/actions";
 
 type RepoTag = {
@@ -112,41 +113,29 @@ export function TagsList({
 	}
 
 	return (
-		<div className="px-4 py-4">
-			<div className="flex items-center justify-between gap-3 mb-4">
-				<span className="text-sm text-muted-foreground">
-					{search.trim() ? (
-						<>
-							{filtered.length} of {tags.length}
-							{hasMore ? "+" : ""}{" "}
-							{tags.length === 1 ? "tag" : "tags"}
-						</>
-					) : (
-						<>
-							{tags.length}
-							{hasMore ? "+" : ""}{" "}
-							{tags.length === 1 ? "tag" : "tags"}
-						</>
-					)}
-				</span>
-
-				<div className="relative">
-					<Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50 pointer-events-none" />
-					<input
-						type="text"
-						placeholder="Find a tag…"
+		<div>
+			<div className="sticky top-0 z-10 bg-background pb-3 pt-4 before:content-[''] before:absolute before:left-0 before:right-0 before:bottom-full before:h-8 before:bg-background">
+				<div className="flex items-center gap-2 mb-3 flex-wrap">
+					<ListSearchInput
+						placeholder="Search tags…"
 						value={search}
-						onChange={(e) => setSearch(e.target.value)}
-						className="h-7 pl-8 pr-7 text-xs bg-transparent border border-border/40 rounded-md text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-border/80 transition-colors w-48"
+						onChange={setSearch}
 					/>
-					{search && (
-						<button
-							onClick={() => setSearch("")}
-							className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-						>
-							<X className="w-3 h-3" />
-						</button>
-					)}
+					<span className="text-sm text-muted-foreground shrink-0 ml-auto">
+						{search.trim() ? (
+							<>
+								{filtered.length} of {tags.length}
+								{hasMore ? "+" : ""}{" "}
+								{tags.length === 1 ? "tag" : "tags"}
+							</>
+						) : (
+							<>
+								{tags.length}
+								{hasMore ? "+" : ""}{" "}
+								{tags.length === 1 ? "tag" : "tags"}
+							</>
+						)}
+					</span>
 				</div>
 			</div>
 
