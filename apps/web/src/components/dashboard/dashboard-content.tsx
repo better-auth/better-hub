@@ -700,7 +700,7 @@ function Stat({
 		"hover:border-black/[0.08] dark:hover:border-white/[0.12]",
 		"hover:bg-gradient-to-br hover:from-black/[0.04] hover:via-black/[0.02] dark:hover:from-white/[0.06] dark:hover:via-white/[0.03]",
 		"dark:active:from-white/[0.03] dark:active:via-white/[0.02]",
-		active ? "border border-primary/20!" : "border border-border/50!",
+		active ? "border border-primary/50!" : "border border-border/50!",
 	);
 
 	if (href) {
