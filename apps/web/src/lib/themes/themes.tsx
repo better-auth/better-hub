@@ -5958,10 +5958,10 @@ export const catppuccin: ThemeDefinition = {
 			"--alert-warning": "#f9e2af",
 			"--alert-caution": "#f38ba8",
 			"--contrib-0": "#313244",
-			"--contrib-1": "#1e2b5b",
-			"--contrib-2": "#30418a",
-			"--contrib-3": "#4963c4",
-			"--contrib-4": "#89b4fa",
+			"--contrib-1": "#263c5a",
+			"--contrib-2": "#385984",
+			"--contrib-3": "#6a8eca",
+			"--contrib-4": "#92b3f5",
 		},
 		syntax: convertToShikiTheme(
 			{
