@@ -340,7 +340,7 @@ export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 							</span>
 						</div>
 						<div className="mt-3 space-y-1.5">
-							<div className="rounded-md border border-foreground/15 bg-foreground/[0.06] px-2.5 py-2">
+							<div className="rounded-[2px] border border-foreground/15 bg-foreground/[0.06] px-2.5 py-2">
 								<p className="text-[11px] text-foreground/70">
 									Requesting: {
 										requiredCount
@@ -361,7 +361,7 @@ export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 					<button
 						onClick={handleOAuthSignIn}
 						disabled={loading}
-						className="w-full flex items-center justify-center gap-3 bg-foreground text-background font-medium py-3 px-6 rounded-md text-sm hover:bg-foreground/90 transition-colors cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+						className="w-full flex items-center justify-center gap-3 bg-foreground text-background font-medium py-3 px-6 rounded-[2px] text-sm hover:bg-foreground/90 transition-colors cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
 					>
 						{loading ? (
 							<LoadingSpinner className="w-4 h-4" />
@@ -370,7 +370,7 @@ export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 						)}
 						{loading
 							? "Redirecting..."
-							: `Continue with GitHub (${selectedCount} ${permissionLabel})`}
+							: `Continue with GitHub`}
 						{!loading && (
 							<ArrowRightIcon className="w-3.5 h-3.5 ml-auto" />
 						)}

@@ -55,10 +55,6 @@ export interface ThemeColors {
 	"--contrib-2": string;
 	"--contrib-3": string;
 	"--contrib-4": string;
-	// Border radius
-	"--radius-sm": string;
-	"--radius-md": string;
-	"--radius-lg": string;
 }
 
 export interface ShikiThemeInput {

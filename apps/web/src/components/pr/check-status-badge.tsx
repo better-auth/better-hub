@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
 	CheckCircle2,
@@ -14,7 +15,6 @@ import {
 	ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useClickOutside } from "@/hooks/use-click-outside";
 import type { CheckStatus, CheckRun } from "@/lib/github";
 
 export function CheckIcon({ state, className }: { state: CheckRun["state"]; className?: string }) {
@@ -226,19 +226,25 @@ export function CheckStatusBadge({
 	owner,
 	repo,
 	showChevron,
+	usePortal = false,
+	collisionPadding = 8,
 }: {
 	checkStatus: CheckStatus;
 	align?: "left" | "right";
 	owner?: string;
 	repo?: string;
 	showChevron?: boolean;
+	usePortal?: boolean;
+	collisionPadding?: number;
 }) {
 	const [open, setOpen] = useState(false);
-	const ref = useRef<HTMLDivElement>(null);
-	useClickOutside(
-		ref,
-		useCallback(() => setOpen(false), []),
-	);
+	const rootRef = useRef<HTMLDivElement>(null);
+	const triggerRef = useRef<HTMLButtonElement>(null);
+	const panelRef = useRef<HTMLDivElement>(null);
+	const [panelPosition, setPanelPosition] = useState<{
+		top: number;
+		left: number;
+	} | null>(null);
 
 	const grouped = useMemo(
 		() => groupChecksByProvider(checkStatus.checks),
@@ -252,9 +258,122 @@ export function CheckStatusBadge({
 				? "text-warning"
 				: "text-destructive";
 
+	const updatePanelPosition = useCallback(() => {
+		if (!triggerRef.current) return;
+		const triggerRect = triggerRef.current.getBoundingClientRect();
+		const panelRect = panelRef.current?.getBoundingClientRect();
+		const panelWidth = panelRect?.width || 320;
+		const top = triggerRect.bottom + 6;
+
+		const preferredLeft =
+			align === "right" ? triggerRect.right - panelWidth : triggerRect.left;
+		const flippedLeft =
+			align === "right" ? triggerRect.left : triggerRect.right - panelWidth;
+
+		const minLeft = collisionPadding;
+		const maxLeft = Math.max(
+			collisionPadding,
+			window.innerWidth - panelWidth - collisionPadding,
+		);
+
+		const canUsePreferred = preferredLeft >= minLeft && preferredLeft <= maxLeft;
+		const baseLeft = canUsePreferred ? preferredLeft : flippedLeft;
+		const left = Math.min(Math.max(baseLeft, minLeft), maxLeft);
+
+		setPanelPosition({ top, left });
+	}, [align, collisionPadding]);
+
+	useLayoutEffect(() => {
+		if (!open || !usePortal) return;
+		updatePanelPosition();
+	}, [open, usePortal, updatePanelPosition]);
+
+	useEffect(() => {
+		if (!open || !usePortal) return;
+		const onViewportChange = () => updatePanelPosition();
+		window.addEventListener("resize", onViewportChange);
+		window.addEventListener("scroll", onViewportChange, true);
+		return () => {
+			window.removeEventListener("resize", onViewportChange);
+			window.removeEventListener("scroll", onViewportChange, true);
+		};
+	}, [open, usePortal, updatePanelPosition]);
+
+	useEffect(() => {
+		if (!open) return;
+		const onMouseDown = (event: MouseEvent) => {
+			const target = event.target as Node;
+			if (rootRef.current?.contains(target)) return;
+			if (panelRef.current?.contains(target)) return;
+			setOpen(false);
+		};
+		document.addEventListener("mousedown", onMouseDown);
+		return () => document.removeEventListener("mousedown", onMouseDown);
+	}, [open]);
+
+	const panel = (
+		<div
+			ref={panelRef}
+			className={cn(
+				"z-50 w-80 border border-border bg-background shadow-lg rounded-md",
+				usePortal
+					? "fixed"
+					: cn(
+							"absolute top-full mt-1.5",
+							align === "right" ? "right-0" : "left-0",
+						),
+			)}
+			style={
+				usePortal
+					? panelPosition
+						? {
+								top: panelPosition.top,
+								left: panelPosition.left,
+							}
+						: { top: -9999, left: -9999, visibility: "hidden" }
+					: undefined
+			}
+			onClick={(e) => e.stopPropagation()}
+		>
+			{/* Header */}
+			<div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+				<CheckIcon state={checkStatus.state} className="w-3.5 h-3.5" />
+				<span
+					className={cn(
+						"font-mono text-[11px] font-medium",
+						colorClass,
+					)}
+				>
+					{checkStatus.state === "success"
+						? "All checks passed"
+						: checkStatus.state === "pending"
+							? "Checks in progress"
+							: `${checkStatus.failure} check${checkStatus.failure !== 1 ? "s" : ""} failed`}
+				</span>
+				<span className="ml-auto font-mono text-[10px] text-muted-foreground/70">
+					{checkStatus.success}/{checkStatus.total}
+				</span>
+			</div>
+
+			{/* Grouped check list */}
+			<div className="max-h-80 overflow-y-auto divide-y divide-border/30">
+				{grouped.map((group) => (
+					<ProviderGroup
+						key={group.provider.name}
+						group={group}
+						owner={owner}
+						repo={repo}
+						defaultOpen={group.failed > 0 || group.pending > 0}
+					/>
+				))}
+			</div>
+		</div>
+	);
+
 	return (
-		<div ref={ref} className="relative">
+		<div ref={rootRef} className="relative">
 			<button
+				ref={triggerRef}
 				onClick={(e) => {
 					e.preventDefault();
 					e.stopPropagation();
@@ -277,54 +396,7 @@ export function CheckStatusBadge({
 				)}
 			</button>
 
-			{open && (
-				<div
-					className={cn(
-						"absolute z-50 top-full mt-1.5 w-80 border border-border bg-background shadow-lg rounded-md",
-						align === "right" ? "right-0" : "left-0",
-					)}
-					onClick={(e) => e.stopPropagation()}
-				>
-					{/* Header */}
-					<div className="flex items-center gap-2 px-3 py-2 border-b border-border">
-						<CheckIcon
-							state={checkStatus.state}
-							className="w-3.5 h-3.5"
-						/>
-						<span
-							className={cn(
-								"font-mono text-[11px] font-medium",
-								colorClass,
-							)}
-						>
-							{checkStatus.state === "success"
-								? "All checks passed"
-								: checkStatus.state === "pending"
-									? "Checks in progress"
-									: `${checkStatus.failure} check${checkStatus.failure !== 1 ? "s" : ""} failed`}
-						</span>
-						<span className="ml-auto font-mono text-[10px] text-muted-foreground/70">
-							{checkStatus.success}/{checkStatus.total}
-						</span>
-					</div>
-
-					{/* Grouped check list */}
-					<div className="max-h-80 overflow-y-auto divide-y divide-border/30">
-						{grouped.map((group) => (
-							<ProviderGroup
-								key={group.provider.name}
-								group={group}
-								owner={owner}
-								repo={repo}
-								defaultOpen={
-									group.failed > 0 ||
-									group.pending > 0
-								}
-							/>
-						))}
-					</div>
-				</div>
-			)}
+			{open && (usePortal ? createPortal(panel, document.body) : panel)}
 		</div>
 	);
 }

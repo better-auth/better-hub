@@ -20,6 +20,7 @@ import {
 	Star,
 	Twitter,
 	Users,
+	X,
 } from "lucide-react";
 import { cn, formatNumber } from "@/lib/utils";
 import { getLanguageColor } from "@/lib/github-utils";
@@ -632,9 +633,9 @@ export function UserProfileContent({
 						</button>
 					</div>
 
-					<div className="flex items-center justify-between mb-4">
+					<div className="flex items-start justify-between gap-4 mb-4">
 						{languages.length > 0 && (
-							<div className="flex items-center gap-1.5 flex-wrap flex-1">
+							<div className="flex items-center gap-1.5 flex-wrap flex-1 mt-0.5">
 								{topLanguages.map((lang) => (
 									<button
 										key={lang}
@@ -759,18 +760,21 @@ export function UserProfileContent({
 								)}
 							</div>
 						)}
-						{(search || languageFilter) && (
-							<button
-								onClick={clearRepoFilters}
-								aria-label="Clear repository filters"
-								className="ml-2 text-[11px] text-muted-foreground hover:text-foreground font-mono transition-colors"
-							>
-								Clear
-							</button>
-						)}
-						<span className="text-[11px] text-muted-foreground/30 font-mono shrink-0 ml-auto">
-							{filtered.length}/{repos.length}
-						</span>
+						<div className="flex items-center gap-3 shrink-0 ml-auto pt-1">
+							{(search || languageFilter) && (
+								<button
+									onClick={clearRepoFilters}
+									aria-label="Clear repository filters"
+									className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground font-mono transition-colors"
+								>
+									<X className="w-3 h-3" />
+									Clear
+								</button>
+							)}
+							<span className="text-[11px] text-muted-foreground/30 font-mono tabular-nums">
+								{filtered.length}/{repos.length}
+							</span>
+						</div>
 					</div>
 				</div>
 

@@ -3,6 +3,7 @@ import Image from "next/image";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";
 import { EditableIssueDescription } from "@/components/issue/editable-issue-description";
 import { ReactiveCodeBlocks } from "@/components/shared/reactive-code-blocks";
+import { MarkdownMentionTooltips } from "@/components/shared/markdown-mention-tooltips";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { BotActivityGroup } from "@/components/pr/bot-activity-group";
@@ -114,6 +115,7 @@ export function IssueConversation({
 	issueTitle,
 	currentUserLogin,
 	viewerHasWriteAccess,
+	hasMoreAfter = false,
 }: {
 	entries: IssueTimelineEntry[];
 	owner: string;
@@ -123,13 +125,15 @@ export function IssueConversation({
 	issueTitle?: string;
 	currentUserLogin?: string;
 	viewerHasWriteAccess?: boolean;
+	hasMoreAfter?: boolean;
 }) {
 	const grouped = groupEntries(entries);
+	const showLine = grouped.length > 1 || hasMoreAfter;
 
 	return (
 		<div className="relative">
 			{/* Timeline connector line */}
-			{grouped.length > 1 && (
+			{showLine && (
 				<div className="absolute left-[19px] top-10 bottom-4 w-px bg-border/50" />
 			)}
 
@@ -314,10 +318,12 @@ function ThreadEntry({
 	const renderedBody = entry.bodyHtml ? (
 		<MarkdownCopyHandler>
 			<ReactiveCodeBlocks>
-				<div
-					className="ghmd"
-					dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
-				/>
+				<MarkdownMentionTooltips>
+					<div
+						className="ghmd"
+						dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
+					/>
+				</MarkdownMentionTooltips>
 			</ReactiveCodeBlocks>
 		</MarkdownCopyHandler>
 	) : null;
@@ -565,10 +571,12 @@ function ThreadComment({
 	const renderedBody = entry.bodyHtml ? (
 		<MarkdownCopyHandler>
 			<ReactiveCodeBlocks>
-				<div
-					className="ghmd ghmd-sm"
-					dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
-				/>
+				<MarkdownMentionTooltips>
+					<div
+						className="ghmd ghmd-sm"
+						dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
+					/>
+				</MarkdownMentionTooltips>
 			</ReactiveCodeBlocks>
 		</MarkdownCopyHandler>
 	) : null;

@@ -1,7 +1,8 @@
 "use client";
 
 import { RepoBreadcrumb } from "@/components/repo/repo-breadcrumb";
-import { useState, useCallback, useRef, useTransition } from "react";
+import { useState, useCallback, useRef, useTransition, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { PanelLeft } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { setRepoSidebarState } from "./repo-sidebar-actions";
@@ -29,13 +30,30 @@ export function RepoLayoutWrapper({
 	initialWidth = DEFAULT_WIDTH,
 	ownerType,
 }: RepoLayoutWrapperProps) {
-	const [sidebarWidth, setSidebarWidth] = useState(initialCollapsed ? 0 : initialWidth);
+	const pathname = usePathname();
+	const isPrPage = pathname.includes("/pulls/");
+	const effectiveInitialCollapsed = isPrPage ? true : initialCollapsed;
+
+	const [sidebarWidth, setSidebarWidth] = useState(
+		effectiveInitialCollapsed ? 0 : initialWidth,
+	);
 	const lastOpenWidthRef = useRef(initialWidth);
 	const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
 	const isDraggingRef = useRef(false);
 	const [isDragging, setIsDragging] = useState(false);
 	const [, startTransition] = useTransition();
 	const collapsed = sidebarWidth === 0;
+	const prevIsPrPageRef = useRef(isPrPage);
+
+	useEffect(() => {
+		const wasOnPrPage = prevIsPrPageRef.current;
+		prevIsPrPageRef.current = isPrPage;
+
+		if (isPrPage && !wasOnPrPage && sidebarWidth > 0) {
+			lastOpenWidthRef.current = sidebarWidth;
+			setSidebarWidth(0);
+		}
+	}, [isPrPage, sidebarWidth]);
 
 	const persistState = useCallback((isCollapsed: boolean, width: number) => {
 		startTransition(() => {
