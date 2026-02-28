@@ -3,7 +3,6 @@ import Image from "next/image";
 import { CircleDot, CheckCircle2, GitPullRequest, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
-import { CopyLinkButton } from "@/components/shared/copy-link-button";
 import { PinButton } from "@/components/shared/pin-button";
 import type { CrossReference } from "@/lib/github";
 import { UserTooltip } from "@/components/shared/user-tooltip";
@@ -90,12 +89,6 @@ export function IssueHeader({
 				<span className="text-[11px] text-muted-foreground/50 font-mono">
 					{commentsCount} comment{commentsCount !== 1 ? "s" : ""}
 				</span>
-				<CopyLinkButton
-					owner={owner}
-					repo={repo}
-					number={number}
-					type="issues"
-				/>
 				<PinButton
 					owner={owner}
 					repo={repo}

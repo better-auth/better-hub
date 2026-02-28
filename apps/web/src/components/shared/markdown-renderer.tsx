@@ -60,6 +60,7 @@ import { highlightCode } from "@/lib/shiki";
 import { toInternalUrl } from "@/lib/github-utils";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";
 import { ReactiveCodeBlocks } from "@/components/shared/reactive-code-blocks";
+import { MarkdownMentionTooltips } from "@/components/shared/markdown-mention-tooltips";
 
 interface RepoContext {
 	owner: string;
@@ -500,10 +501,12 @@ export async function MarkdownRenderer({
 	return (
 		<MarkdownCopyHandler>
 			<ReactiveCodeBlocks>
-				<div
-					className={`ghmd ${className || ""}`}
-					dangerouslySetInnerHTML={{ __html: html }}
-				/>
+				<MarkdownMentionTooltips>
+					<div
+						className={`ghmd ${className || ""}`}
+						dangerouslySetInnerHTML={{ __html: html }}
+					/>
+				</MarkdownMentionTooltips>
 			</ReactiveCodeBlocks>
 		</MarkdownCopyHandler>
 	);
