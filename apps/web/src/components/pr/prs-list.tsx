@@ -132,7 +132,7 @@ const sortLabels: Record<SortType, string> = {
 	comments: "Comments",
 };
 
-const sortCycle: SortType[] = ["updated", "newest", "oldest", "comments"];
+const sortCycle: SortType[] = ["newest", "updated", "oldest", "comments"];
 
 type FetchPRPageFn = (
 	owner: string,
@@ -192,7 +192,7 @@ export function PRsList({
 		tabParam === "merged" || tabParam === "closed" ? tabParam : "open";
 	const [state, setState] = useState<TabState>(initialTab);
 	const [search, setSearch] = useState("");
-	const [sort, setSort] = useState<SortType>("updated");
+	const [sort, setSort] = useState<SortType>("newest");
 	const [selectedAuthor, setSelectedAuthor] = useState<string | null>(null);
 	const [authorSearch, setAuthorSearch] = useState("");
 	const [authorDropdownOpen, setAuthorDropdownOpen] = useState(false);
