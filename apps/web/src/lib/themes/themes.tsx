@@ -5903,23 +5903,6 @@ export const catppuccin: ThemeDefinition = {
 	id: "catppuccin",
 	name: "Catppuccin",
 	description: "Soothing pastel theme with teal accent",
-	icon: () => (
-		<svg
-			className="w-4"
-			viewBox="0 0 24 24"
-			fill="none"
-			xmlns="http://www.w3.org/2000/svg"
-		>
-			<circle cx="12" cy="12" r="10" fill="#179299" className="dark:hidden" />
-			<circle
-				cx="12"
-				cy="12"
-				r="10"
-				fill="#94e2d5"
-				className="hidden dark:block"
-			/>
-		</svg>
-	),
 	dark: {
 		accentPreview: "#94e2d5",
 		bgPreview: "#1e1e2e",
