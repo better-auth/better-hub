@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useCallback, useTransition, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -15,8 +16,21 @@ import {
 	X,
 	Loader2,
 	Plus,
+	Eye,
+	ExternalLink,
+	Copy,
+	Hash,
+	XCircle,
+	RotateCcw,
+	User,
+	Maximize2,
+	GitCommitHorizontal,
+	ChevronRight,
+	FileText,
+	Check,
 } from "lucide-react";
 import type { CheckStatus, PRPageResult } from "@/lib/github";
+import type { PRPeekData } from "@/app/(app)/repos/[owner]/[repo]/pulls/actions";
 import { CheckStatusBadge } from "@/components/pr/check-status-badge";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
@@ -34,7 +48,8 @@ import { isRepoEvent, type MutationEvent } from "@/lib/mutation-events";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerInitialData } from "@/hooks/use-server-initial-data";
 import { UserTooltip } from "@/components/shared/user-tooltip";
-import { buttonVariants } from "../ui/button";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { ResizeHandle } from "@/components/ui/resize-handle";
 
 interface PRUser {
 	login: string;
@@ -55,6 +70,8 @@ interface PR {
 	labels: Array<{ name?: string; color?: string }>;
 	merged_at: string | null;
 	head: { ref: string; sha: string };
+	head_repo_owner?: string | null;
+	head_repo_name?: string | null;
 	base: { ref: string };
 	requested_reviewers: PRUser[];
 	assignees: PRUser[];
@@ -120,6 +137,605 @@ function PRCheckStatus({
 	return null;
 }
 
+// Sheet constants
+const DEFAULT_SHEET_WIDTH = 700;
+const MIN_SHEET_WIDTH = 500;
+const MAX_SHEET_WIDTH_RATIO = 0.9;
+const SHEET_WIDTH_COOKIE = "pr_peek_sidebar_width";
+
+function PRContextMenu({
+	x,
+	y,
+	pr,
+	owner,
+	repo,
+	onClose,
+	onPeek,
+	onFilterByAuthor,
+	onClosePR,
+	onReopenPR,
+}: {
+	x: number;
+	y: number;
+	pr: PR;
+	owner: string;
+	repo: string;
+	onClose: () => void;
+	onPeek: () => void;
+	onFilterByAuthor: (login: string) => void;
+	onClosePR?: (
+		owner: string,
+		repo: string,
+		pullNumber: number,
+	) => Promise<{ error?: string; success?: boolean }>;
+	onReopenPR?: (
+		owner: string,
+		repo: string,
+		pullNumber: number,
+	) => Promise<{ error?: string; success?: boolean }>;
+}) {
+	const menuRef = useRef<HTMLDivElement>(null);
+	const [copiedField, setCopiedField] = useState<string | null>(null);
+	const [actionPending, setActionPending] = useState(false);
+
+	useEffect(() => {
+		const handler = (e: MouseEvent) => {
+			if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+				onClose();
+			}
+		};
+		const escHandler = (e: KeyboardEvent) => {
+			if (e.key === "Escape") onClose();
+		};
+		document.addEventListener("mousedown", handler);
+		document.addEventListener("keydown", escHandler);
+		return () => {
+			document.removeEventListener("mousedown", handler);
+			document.removeEventListener("keydown", escHandler);
+		};
+	}, [onClose]);
+
+	const prUrl = `/${owner}/${repo}/pulls/${pr.number}`;
+	const fullUrl = typeof window !== "undefined" ? `${window.location.origin}${prUrl}` : prUrl;
+	const githubUrl = `https://github.com/${owner}/${repo}/pull/${pr.number}`;
+	const isMerged = !!pr.merged_at;
+	const isOpen = pr.state === "open";
+	const isClosed = pr.state === "closed" && !isMerged;
+
+	const copyToClipboard = (text: string, field: string) => {
+		navigator.clipboard.writeText(text);
+		setCopiedField(field);
+		setTimeout(() => setCopiedField(null), 1500);
+	};
+
+	const handleClosePR = async () => {
+		if (!onClosePR || actionPending) return;
+		setActionPending(true);
+		await onClosePR(owner, repo, pr.number);
+		setActionPending(false);
+		onClose();
+	};
+
+	const handleReopenPR = async () => {
+		if (!onReopenPR || actionPending) return;
+		setActionPending(true);
+		await onReopenPR(owner, repo, pr.number);
+		setActionPending(false);
+		onClose();
+	};
+
+	const style: React.CSSProperties = {
+		top: Math.min(y, window.innerHeight - 400),
+		left: Math.min(x, window.innerWidth - 220),
+	};
+
+	const itemClass =
+		"flex items-center gap-2.5 w-full px-3 py-1.5 text-[11px] font-mono text-muted-foreground hover:bg-muted/60 dark:hover:bg-white/[0.04] hover:text-foreground transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed";
+
+	return createPortal(
+		<div
+			ref={menuRef}
+			className="fixed z-9999 w-52 rounded-md border border-border bg-card shadow-xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-100"
+			style={style}
+		>
+			{/* Navigation group */}
+			<div className="py-1">
+				<button
+					className={itemClass}
+					onClick={() => {
+						onPeek();
+						onClose();
+					}}
+				>
+					<Eye className="w-3.5 h-3.5" />
+					Peek PR
+				</button>
+				<Link href={prUrl} className={itemClass} onClick={onClose}>
+					<GitPullRequest className="w-3.5 h-3.5" />
+					Open
+				</Link>
+				<button
+					className={itemClass}
+					onClick={() => {
+						window.open(prUrl, "_blank");
+						onClose();
+					}}
+				>
+					<ExternalLink className="w-3.5 h-3.5" />
+					Open in New Tab
+				</button>
+				<button
+					className={itemClass}
+					onClick={() => {
+						window.open(githubUrl, "_blank");
+						onClose();
+					}}
+				>
+					<ExternalLink className="w-3.5 h-3.5" />
+					Open on GitHub
+				</button>
+			</div>
+
+			<div className="border-t border-border/50" />
+
+			{/* Copy group */}
+			<div className="py-1">
+				<button
+					className={itemClass}
+					onClick={() => copyToClipboard(fullUrl, "link")}
+				>
+					{copiedField === "link" ? (
+						<Check className="w-3.5 h-3.5 text-success" />
+					) : (
+						<Copy className="w-3.5 h-3.5" />
+					)}
+					{copiedField === "link" ? "Copied!" : "Copy Link"}
+				</button>
+				<button
+					className={itemClass}
+					onClick={() => copyToClipboard(`#${pr.number}`, "number")}
+				>
+					{copiedField === "number" ? (
+						<Check className="w-3.5 h-3.5 text-success" />
+					) : (
+						<Hash className="w-3.5 h-3.5" />
+					)}
+					{copiedField === "number"
+						? "Copied!"
+						: `Copy #${pr.number}`}
+				</button>
+				<button
+					className={itemClass}
+					onClick={() =>
+						copyToClipboard(
+							pr.head_repo_owner &&
+								pr.head_repo_owner !== owner
+								? `${pr.head_repo_owner}:${pr.head.ref}`
+								: pr.head.ref,
+							"branch",
+						)
+					}
+				>
+					{copiedField === "branch" ? (
+						<Check className="w-3.5 h-3.5 text-success" />
+					) : (
+						<GitBranch className="w-3.5 h-3.5" />
+					)}
+					{copiedField === "branch" ? "Copied!" : "Copy Branch"}
+				</button>
+			</div>
+
+			{/* Filter group */}
+			{pr.user && (
+				<>
+					<div className="border-t border-border/50" />
+					<div className="py-1">
+						<button
+							className={itemClass}
+							onClick={() => {
+								onFilterByAuthor(pr.user!.login);
+								onClose();
+							}}
+						>
+							<User className="w-3.5 h-3.5" />
+							Filter by {pr.user.login}
+						</button>
+					</div>
+				</>
+			)}
+
+			{/* Action group */}
+			{(isOpen || isClosed) && (onClosePR || onReopenPR) && (
+				<>
+					<div className="border-t border-border/50" />
+					<div className="py-1">
+						{isOpen && onClosePR && (
+							<button
+								className={cn(
+									itemClass,
+									"text-destructive hover:text-destructive",
+								)}
+								onClick={handleClosePR}
+								disabled={actionPending}
+							>
+								{actionPending ? (
+									<Loader2 className="w-3.5 h-3.5 animate-spin" />
+								) : (
+									<XCircle className="w-3.5 h-3.5" />
+								)}
+								Close PR
+							</button>
+						)}
+						{isClosed && onReopenPR && (
+							<button
+								className={cn(
+									itemClass,
+									"text-success hover:text-success",
+								)}
+								onClick={handleReopenPR}
+								disabled={actionPending}
+							>
+								{actionPending ? (
+									<Loader2 className="w-3.5 h-3.5 animate-spin" />
+								) : (
+									<RotateCcw className="w-3.5 h-3.5" />
+								)}
+								Reopen PR
+							</button>
+						)}
+					</div>
+				</>
+			)}
+		</div>,
+		document.body,
+	);
+}
+
+function PRPeekSheet({
+	open,
+	onOpenChange,
+	owner,
+	repo,
+	pr,
+	peekData,
+	isLoading,
+	sheetWidth,
+	isResizing,
+	onResize,
+	onResizeEnd,
+	onResetWidth,
+}: {
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+	owner: string;
+	repo: string;
+	pr: PR | null;
+	peekData: PRPeekData | null;
+	isLoading: boolean;
+	sheetWidth: number | null;
+	isResizing: boolean;
+	onResize: (clientX: number) => void;
+	onResizeEnd: () => void;
+	onResetWidth: () => void;
+}) {
+	const data = peekData;
+	const isMerged = data ? !!data.merged_at : false;
+
+	return (
+		<Sheet open={open} onOpenChange={onOpenChange}>
+			<SheetContent
+				title="PR Preview"
+				side="right"
+				className="p-0 overflow-hidden"
+				showCloseButton={false}
+				style={{
+					width: sheetWidth ?? DEFAULT_SHEET_WIDTH,
+					maxWidth: "90vw",
+					minWidth: `${MIN_SHEET_WIDTH}px`,
+					transition: isResizing ? "none" : "width 0.2s ease-out",
+				}}
+			>
+				<ResizeHandle
+					onResize={onResize}
+					onDragStart={() => {}}
+					onDragEnd={onResizeEnd}
+					onDoubleClick={onResetWidth}
+					className="absolute left-0 inset-y-0 z-20"
+				/>
+				<div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+					{pr && (
+						<Link
+							href={`/${owner}/${repo}/pulls/${pr.number}`}
+							title="Open full page"
+							className="rounded-sm p-1 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+						>
+							<Maximize2 className="h-4 w-4" />
+							<span className="sr-only">
+								Open full page
+							</span>
+						</Link>
+					)}
+					<button
+						onClick={() => onOpenChange(false)}
+						className="rounded-sm p-1 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer"
+					>
+						<X className="h-4 w-4" />
+						<span className="sr-only">Close</span>
+					</button>
+				</div>
+
+				{isLoading ? (
+					<div className="flex items-center justify-center h-full">
+						<Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+					</div>
+				) : data ? (
+					<div className="h-full overflow-y-auto">
+						{/* Header */}
+						<div className="px-6 pt-6 pb-4 border-b border-border">
+							<div className="flex items-start gap-2 pr-16">
+								{isMerged ? (
+									<GitMerge className="w-4 h-4 shrink-0 mt-1 text-alert-important" />
+								) : data.state === "closed" ? (
+									<GitPullRequestClosed className="w-4 h-4 shrink-0 mt-1 text-destructive" />
+								) : (
+									<GitPullRequest
+										className={cn(
+											"w-4 h-4 shrink-0 mt-1",
+											data.draft
+												? "text-muted-foreground/70"
+												: "text-success",
+										)}
+									/>
+								)}
+								<div className="flex-1 min-w-0">
+									<h2 className="text-sm font-medium leading-snug wrap-break-word">
+										{data.title}
+									</h2>
+									<div className="flex items-center gap-2 mt-1.5 flex-wrap">
+										<span
+											className={cn(
+												"text-[9px] font-mono px-1.5 py-0.5 rounded-full",
+												isMerged
+													? "bg-alert-important/10 text-alert-important"
+													: data.state ===
+														  "closed"
+														? "bg-destructive/10 text-destructive"
+														: data.draft
+															? "bg-muted-foreground/10 text-muted-foreground/70"
+															: "bg-success/10 text-success",
+											)}
+										>
+											{isMerged
+												? "Merged"
+												: data.draft
+													? "Draft"
+													: data.state ===
+														  "closed"
+														? "Closed"
+														: "Open"}
+										</span>
+										<span className="text-[11px] font-mono text-muted-foreground/60">
+											#
+											{
+												data.number
+											}
+										</span>
+										{data.user && (
+											<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
+												<Image
+													src={
+														data
+															.user
+															.avatar_url
+													}
+													alt={
+														data
+															.user
+															.login
+													}
+													width={
+														14
+													}
+													height={
+														14
+													}
+													className="rounded-full"
+												/>
+												{
+													data
+														.user
+														.login
+												}
+											</span>
+										)}
+										<span className="flex items-center gap-1 text-[11px] text-muted-foreground/50">
+											<Clock className="w-3 h-3" />
+											<TimeAgo
+												date={
+													data.created_at
+												}
+											/>
+										</span>
+									</div>
+								</div>
+							</div>
+
+							{/* Branch info */}
+							<div className="flex items-center gap-1.5 mt-3 font-mono text-[10px] text-muted-foreground">
+								<GitBranch className="w-3 h-3" />
+								<span className="px-1.5 py-0.5 bg-muted/50 rounded">
+									{data.head_repo_owner &&
+									data.head_repo_owner !==
+										owner ? (
+										<>
+											<span className="text-muted-foreground/40">
+												{
+													data.head_repo_owner
+												}
+												:
+											</span>
+											{
+												data
+													.head
+													.ref
+											}
+										</>
+									) : (
+										data.head.ref
+									)}
+								</span>
+								<span>&rarr;</span>
+								<span className="px-1.5 py-0.5 bg-muted/50 rounded">
+									{data.base.ref}
+								</span>
+							</div>
+
+							{/* Stats row */}
+							<div className="flex items-center gap-3 mt-3">
+								<span className="font-mono text-success text-[10px]">
+									+{data.additions}
+								</span>
+								<span className="font-mono text-destructive text-[10px]">
+									-{data.deletions}
+								</span>
+								<span className="flex items-center gap-1 font-mono text-muted-foreground text-[10px]">
+									<FileCode2 className="w-3 h-3" />
+									{data.changed_files} file
+									{data.changed_files !== 1
+										? "s"
+										: ""}
+								</span>
+								<span className="flex items-center gap-1 font-mono text-muted-foreground text-[10px]">
+									<GitCommitHorizontal className="w-3 h-3" />
+									{data.commitsCount} commit
+									{data.commitsCount !== 1
+										? "s"
+										: ""}
+								</span>
+								{data.commentsCount > 0 && (
+									<span className="flex items-center gap-1 font-mono text-muted-foreground text-[10px]">
+										<MessageSquare className="w-3 h-3" />
+										{data.commentsCount}
+									</span>
+								)}
+							</div>
+
+							{/* Labels */}
+							{data.labels.filter((l) => l.name).length >
+								0 && (
+								<div className="flex items-center gap-1.5 mt-3 flex-wrap">
+									{data.labels
+										.filter(
+											(l) =>
+												l.name,
+										)
+										.map((label) => (
+											<LabelBadge
+												key={
+													label.name
+												}
+												label={
+													label
+												}
+											/>
+										))}
+								</div>
+							)}
+						</div>
+
+						{/* Body */}
+						{data.bodyHtml && (
+							<div className="px-6 py-4 border-b border-border">
+								<div
+									className="ghmd ghmd-sm text-sm"
+									dangerouslySetInnerHTML={{
+										__html: data.bodyHtml,
+									}}
+								/>
+							</div>
+						)}
+
+						{/* Files */}
+						{data.files.length > 0 && (
+							<div className="px-6 py-4">
+								<div className="flex items-center gap-2 mb-3">
+									<FileText className="w-3.5 h-3.5 text-muted-foreground/50" />
+									<span className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground/50">
+										Files Changed (
+										{data.files.length})
+									</span>
+								</div>
+								<div className="space-y-0.5">
+									{data.files.map((file) => (
+										<div
+											key={
+												file.filename
+											}
+											className="flex items-center gap-2 py-1 px-2 rounded hover:bg-muted/30 transition-colors group/file"
+										>
+											<ChevronRight className="w-3 h-3 text-muted-foreground/30 group-hover/file:text-muted-foreground/50 transition-colors" />
+											<span className="flex-1 min-w-0 text-[11px] font-mono text-muted-foreground truncate">
+												{
+													file.filename
+												}
+											</span>
+											<span className="flex items-center gap-1.5 shrink-0">
+												{file.additions >
+													0 && (
+													<span className="font-mono text-success text-[10px]">
+														+
+														{
+															file.additions
+														}
+													</span>
+												)}
+												{file.deletions >
+													0 && (
+													<span className="font-mono text-destructive text-[10px]">
+														-
+														{
+															file.deletions
+														}
+													</span>
+												)}
+												{file.status !==
+													"modified" && (
+													<span
+														className={cn(
+															"text-[9px] font-mono px-1 py-0.5 rounded",
+															file.status ===
+																"added"
+																? "bg-success/10 text-success"
+																: file.status ===
+																	  "removed"
+																	? "bg-destructive/10 text-destructive"
+																	: "bg-muted text-muted-foreground",
+														)}
+													>
+														{
+															file.status
+														}
+													</span>
+												)}
+											</span>
+										</div>
+									))}
+								</div>
+							</div>
+						)}
+					</div>
+				) : (
+					<div className="flex items-center justify-center h-full">
+						<p className="text-sm text-muted-foreground">
+							Pull request not found
+						</p>
+					</div>
+				)}
+			</SheetContent>
+		</Sheet>
+	);
+}
+
 type SortType = "updated" | "newest" | "oldest" | "comments";
 type DraftFilter = "all" | "ready" | "draft";
 type ReviewFilter = "all" | "has_reviewers" | "no_reviewers";
@@ -156,6 +772,9 @@ export function PRsList({
 	onPrefetchPRDetail,
 	onFetchPRPage,
 	currentUserLogin,
+	onFetchPRPeekDetail,
+	onClosePR,
+	onReopenPR,
 }: {
 	owner: string;
 	repo: string;
@@ -184,6 +803,21 @@ export function PRsList({
 	) => Promise<void>;
 	onFetchPRPage?: FetchPRPageFn;
 	currentUserLogin?: string | null;
+	onFetchPRPeekDetail?: (
+		owner: string,
+		repo: string,
+		pullNumber: number,
+	) => Promise<PRPeekData | null>;
+	onClosePR?: (
+		owner: string,
+		repo: string,
+		pullNumber: number,
+	) => Promise<{ error?: string; success?: boolean }>;
+	onReopenPR?: (
+		owner: string,
+		repo: string,
+		pullNumber: number,
+	) => Promise<{ error?: string; success?: boolean }>;
 }) {
 	type TabState = "open" | "merged" | "closed";
 	const searchParams = useSearchParams();
@@ -209,6 +843,94 @@ export function PRsList({
 	const [assigneeFilter, setAssigneeFilter] = useState<AssigneeFilter>("all");
 	const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
 	const [countAdjustments, setCountAdjustments] = useState({ open: 0, merged: 0, closed: 0 });
+
+	// Context menu state
+	const [contextMenu, setContextMenu] = useState<{ x: number; y: number; pr: PR } | null>(
+		null,
+	);
+
+	// Peek sheet state
+	const [peekOpen, setPeekOpen] = useState(false);
+	const [peekPR, setPeekPR] = useState<PR | null>(null);
+	const [peekData, setPeekData] = useState<PRPeekData | null>(null);
+	const [isPeekLoading, setIsPeekLoading] = useState(false);
+	const [peekSheetWidth, setPeekSheetWidth] = useState<number | null>(null);
+	const [isPeekResizing, setIsPeekResizing] = useState(false);
+
+	// Load peek sheet width from cookie
+	useEffect(() => {
+		const match = document.cookie.match(
+			new RegExp(`(?:^|; )${SHEET_WIDTH_COOKIE}=([^;]*)`),
+		);
+		if (match) {
+			const saved = parseInt(match[1], 10);
+			if (!isNaN(saved) && saved >= MIN_SHEET_WIDTH) setPeekSheetWidth(saved);
+		}
+	}, []);
+
+	const savePeekSheetWidthCookie = useCallback((width: number | null) => {
+		if (width === null) {
+			document.cookie = `${SHEET_WIDTH_COOKIE}=;path=/;max-age=0`;
+		} else {
+			document.cookie = `${SHEET_WIDTH_COOKIE}=${width};path=/;max-age=${365 * 24 * 60 * 60};samesite=lax`;
+		}
+	}, []);
+
+	const handlePeekResize = useCallback((clientX: number) => {
+		const newWidth = window.innerWidth - clientX;
+		const maxWidth = window.innerWidth * MAX_SHEET_WIDTH_RATIO;
+		setPeekSheetWidth(Math.max(MIN_SHEET_WIDTH, Math.min(maxWidth, newWidth)));
+		setIsPeekResizing(true);
+	}, []);
+
+	const handlePeekResizeEnd = useCallback(() => {
+		setIsPeekResizing(false);
+		setPeekSheetWidth((w) => {
+			if (w !== null) savePeekSheetWidthCookie(w);
+			return w;
+		});
+	}, [savePeekSheetWidthCookie]);
+
+	const resetPeekSheetWidth = useCallback(() => {
+		setPeekSheetWidth(null);
+		savePeekSheetWidthCookie(null);
+	}, [savePeekSheetWidthCookie]);
+
+	const handlePeek = useCallback(
+		async (pr: PR) => {
+			setPeekPR(pr);
+			setPeekOpen(true);
+			setIsPeekLoading(true);
+			setPeekData(null);
+
+			if (onFetchPRPeekDetail) {
+				const result = await onFetchPRPeekDetail(owner, repo, pr.number);
+				setPeekData(result);
+			}
+			setIsPeekLoading(false);
+		},
+		[owner, repo, onFetchPRPeekDetail],
+	);
+
+	const handleContextMenu = useCallback((e: React.MouseEvent, pr: PR) => {
+		e.preventDefault();
+		setContextMenu({ x: e.clientX, y: e.clientY, pr });
+	}, []);
+
+	const handleContextFilterByAuthor = useCallback(
+		(login: string) => {
+			setSelectedAuthor(login);
+			setAuthorSearch("");
+			setAuthorDropdownOpen(false);
+			if (onAuthorFilter) {
+				startTransition(async () => {
+					const result = await onAuthorFilter(owner, repo, login);
+					setAuthorPRs(result as { open: PR[]; closed: PR[] });
+				});
+			}
+		},
+		[owner, repo, onAuthorFilter, startTransition],
+	);
 
 	type PRPage = { prs: PR[]; pageInfo: { hasNextPage: boolean; endCursor: string | null } };
 
@@ -585,7 +1307,7 @@ export function PRsList({
 					activeQuery.fetchNextPage();
 				}
 			},
-			{ rootMargin: "200px" },
+			{ rootMargin: "1500px" },
 		);
 		observer.observe(sentinel);
 		return () => observer.disconnect();
@@ -1069,6 +1791,9 @@ export function PRsList({
 									pr.user?.login,
 								)
 							}
+							onContextMenu={(e) =>
+								handleContextMenu(e, pr)
+							}
 							className="group flex items-start gap-3 px-4 py-3 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors"
 						>
 							{isMerged ? (
@@ -1221,11 +1946,27 @@ export function PRsList({
 												<span className="mx-0.5">
 													&larr;
 												</span>
-												{
+												{pr.head_repo_owner &&
+												pr.head_repo_owner !==
+													owner ? (
+													<>
+														<span className="text-muted-foreground/40">
+															{
+																pr.head_repo_owner
+															}
+															:
+														</span>
+														{
+															pr
+																.head
+																.ref
+														}
+													</>
+												) : (
 													pr
 														.head
 														.ref
-												}
+												)}
 											</span>
 										)}
 								</div>
@@ -1365,6 +2106,38 @@ export function PRsList({
 					</div>
 				)}
 			</div>
+
+			{/* Context menu */}
+			{contextMenu && (
+				<PRContextMenu
+					x={contextMenu.x}
+					y={contextMenu.y}
+					pr={contextMenu.pr}
+					owner={owner}
+					repo={repo}
+					onClose={() => setContextMenu(null)}
+					onPeek={() => handlePeek(contextMenu.pr)}
+					onFilterByAuthor={handleContextFilterByAuthor}
+					onClosePR={onClosePR}
+					onReopenPR={onReopenPR}
+				/>
+			)}
+
+			{/* Peek sheet */}
+			<PRPeekSheet
+				open={peekOpen}
+				onOpenChange={setPeekOpen}
+				owner={owner}
+				repo={repo}
+				pr={peekPR}
+				peekData={peekData}
+				isLoading={isPeekLoading}
+				sheetWidth={peekSheetWidth}
+				isResizing={isPeekResizing}
+				onResize={handlePeekResize}
+				onResizeEnd={handlePeekResizeEnd}
+				onResetWidth={resetPeekSheetWidth}
+			/>
 		</div>
 	);
 }

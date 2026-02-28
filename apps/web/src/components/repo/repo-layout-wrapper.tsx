@@ -18,7 +18,9 @@ interface RepoLayoutWrapperProps {
 	initialWidth?: number;
 }
 
-const DEFAULT_WIDTH = 260;
+const DEFAULT_WIDTH = 340;
+const MAX_WIDTH = 400;
+const MIN_WIDTH = 200;
 const SNAP_THRESHOLD = 120;
 const SPRING = { type: "spring" as const, stiffness: 500, damping: 35 };
 
@@ -95,7 +97,10 @@ export function RepoLayoutWrapper({
 				if (raw < SNAP_THRESHOLD) {
 					setSidebarWidth(0);
 				} else {
-					const clamped = Math.max(180, Math.min(DEFAULT_WIDTH, raw));
+					const clamped = Math.max(
+						MIN_WIDTH,
+						Math.min(MAX_WIDTH, raw),
+					);
 					setSidebarWidth(clamped);
 					lastOpenWidthRef.current = clamped;
 				}

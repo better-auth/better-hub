@@ -112,15 +112,25 @@ export const getServerSession = cache(async () => {
 		if (!session || !account?.accessToken) {
 			return null;
 		}
-		const githubUser = await getOctokitUser(account.accessToken);
-		if (!githubUser?.data) {
-			return null;
+		let githubUserData: Record<string, unknown> | null = null;
+		try {
+			const githubUser = await getOctokitUser(account.accessToken);
+			githubUserData = githubUser?.data ?? null;
+		} catch {
+			// GitHub API may be rate-limited; don't treat as unauthenticated.
+		}
+		if (!githubUserData) {
+			return {
+				user: session.user,
+				session,
+				githubUser: { accessToken: account.accessToken } as any,
+			};
 		}
 		return {
 			user: session.user,
 			session,
 			githubUser: {
-				...githubUser.data,
+				...githubUserData,
 				accessToken: account.accessToken,
 			},
 		};

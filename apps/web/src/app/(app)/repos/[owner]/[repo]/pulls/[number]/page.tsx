@@ -444,6 +444,8 @@ export default async function PRDetailPage({
 							pullNumber={pullNumber}
 							baseBranch={pr.base.ref}
 							headBranch={pr.head.ref}
+							headRepoOwner={pr.head_repo_owner}
+							headRepoName={pr.head_repo_name}
 						/>
 					) : undefined
 				}

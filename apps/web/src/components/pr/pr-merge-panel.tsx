@@ -119,6 +119,8 @@ export function PRMergePanel({
 	const [result, setResult] = useState<{ type: "success" | "error"; message: string } | null>(
 		null,
 	);
+	const [mergeError, setMergeError] = useState<string | null>(null);
+	const [mergeErrorDialogOpen, setMergeErrorDialogOpen] = useState(false);
 	const [isMerged, setIsMerged] = useState(false);
 	const [isGenerating, setIsGenerating] = useState(false);
 	const [toolsDropdownOpen, setToolsDropdownOpen] = useState(false);
@@ -198,7 +200,7 @@ export function PRMergePanel({
 	};
 
 	useEffect(() => {
-		if (result) {
+		if (result && result.type === "success") {
 			const timer = setTimeout(() => setResult(null), 3000);
 			return () => clearTimeout(timer);
 		}
@@ -211,6 +213,7 @@ export function PRMergePanel({
 
 	const doMerge = (mergeMethod: MergeMethod, title?: string, message?: string) => {
 		setResult(null);
+		setMergeError(null);
 		setPendingAction("merge");
 		startTransition(async () => {
 			const res = await mergePullRequest(
@@ -222,8 +225,12 @@ export function PRMergePanel({
 				message,
 			);
 			if (res.error) {
-				setResult({ type: "error", message: res.error });
+				setMergeError(res.error);
+				if (!squashDialogOpen) {
+					setMergeErrorDialogOpen(true);
+				}
 			} else {
+				setMergeError(null);
 				setResult({ type: "success", message: "Merged" });
 				emit({ type: "pr:merged", owner, repo, number: pullNumber });
 				invalidatePRQueries();
@@ -235,6 +242,7 @@ export function PRMergePanel({
 	};
 
 	const handleMergeClick = () => {
+		setMergeError(null);
 		if (method === "squash") {
 			setCommitTitle(`${prTitle} (#${pullNumber})`);
 			setCommitMessage("");
@@ -381,24 +389,28 @@ export function PRMergePanel({
 						>
 							<button
 								onClick={
-									mergeable === false
+									mergeable === false || draft
 										? undefined
 										: handleMergeClick
 								}
 								disabled={
 									isPending ||
-									mergeable === false
+									mergeable === false ||
+									draft
 								}
 								className={cn(
 									"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider rounded-l-sm transition-colors disabled:cursor-not-allowed",
-									mergeable === false
+									mergeable === false || draft
 										? "bg-amber-500/80 text-background opacity-90"
 										: "bg-foreground text-background hover:bg-foreground/90 cursor-pointer disabled:opacity-50",
 								)}
 								title={
-									mergeable === false
-										? "Resolve conflicts before merging"
-										: undefined
+									draft
+										? "This PR is still a draft"
+										: mergeable ===
+											  false
+											? "Resolve conflicts before merging"
+											: undefined
 								}
 							>
 								{isPending &&
@@ -414,10 +426,13 @@ export function PRMergePanel({
 								) : (
 									<GitMerge className="w-3 h-3" />
 								)}
-								{mergeable === false
-									? "Conflicts"
-									: mergeMethodLabels[method]
-											.short}
+								{draft
+									? "Draft"
+									: mergeable === false
+										? "Conflicts"
+										: mergeMethodLabels[
+												method
+											].short}
 							</button>
 
 							<button
@@ -657,6 +672,49 @@ export function PRMergePanel({
 				)}
 			</div>
 
+			{/* Merge error dialog (for non-squash merges) */}
+			<Dialog
+				open={mergeErrorDialogOpen}
+				onOpenChange={(open) => {
+					setMergeErrorDialogOpen(open);
+					if (!open) setMergeError(null);
+				}}
+			>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle className="flex items-center gap-2 text-sm font-mono text-destructive">
+							<XCircle className="w-4 h-4" />
+							Merge failed
+						</DialogTitle>
+						<DialogDescription className="text-xs text-muted-foreground">
+							{mergeError}
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<button
+							onClick={() => {
+								setMergeErrorDialogOpen(false);
+								setMergeError(null);
+							}}
+							className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer"
+						>
+							Dismiss
+						</button>
+						<button
+							onClick={() => {
+								setMergeErrorDialogOpen(false);
+								setMergeError(null);
+								handleMergeClick();
+							}}
+							className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider bg-foreground text-background hover:bg-foreground/90 border border-foreground/80 rounded transition-colors cursor-pointer"
+						>
+							<RotateCcw className="w-3 h-3" />
+							Retry
+						</button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
 			{/* Squash merge dialog */}
 			<Dialog open={squashDialogOpen} onOpenChange={setSquashDialogOpen}>
 				<DialogContent className="sm:max-w-xl">
@@ -693,6 +751,26 @@ export function PRMergePanel({
 							>
 								<Ghost className="w-3 h-3" />
 								Fix
+							</button>
+						</div>
+					)}
+					{mergeError && (
+						<div className="flex items-start gap-2.5 px-3 py-2.5 border border-destructive/30 bg-destructive/5 rounded-sm">
+							<XCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+							<div className="flex-1 min-w-0">
+								<p className="text-xs font-medium text-destructive">
+									Merge failed
+								</p>
+								<p className="text-[11px] text-muted-foreground mt-0.5">
+									{mergeError}
+								</p>
+							</div>
+							<button
+								type="button"
+								onClick={() => setMergeError(null)}
+								className="p-0.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer rounded-sm shrink-0"
+							>
+								<XCircle className="w-3.5 h-3.5" />
 							</button>
 						</div>
 					)}
@@ -766,11 +844,12 @@ export function PRMergePanel({
 							disabled={
 								isPending ||
 								!commitTitle.trim() ||
-								mergeable === false
+								mergeable === false ||
+								draft
 							}
 							className={cn(
 								"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
-								mergeable === false
+								mergeable === false || draft
 									? "bg-amber-500/80 text-background border border-amber-500/40 cursor-not-allowed"
 									: "bg-foreground text-background hover:bg-foreground/90 border border-foreground/80 cursor-pointer",
 							)}

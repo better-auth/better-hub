@@ -87,7 +87,7 @@ export function RepoBreadcrumb({
 	};
 
 	return (
-		<div className="flex items-center gap-1 text-xs ml-2">
+		<div className="flex items-center gap-1 text-xs">
 			{ownerAvatarUrl && (
 				<Image
 					src={ownerAvatarUrl}

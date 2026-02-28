@@ -478,6 +478,132 @@ export async function unresolveReviewThread(
 	}
 }
 
+async function commitViaGitDataApi(
+	octokit: Awaited<ReturnType<typeof getOctokit>> & {},
+	targetOwner: string,
+	targetRepo: string,
+	headBranch: string,
+	baseBranch: string,
+	baseRepoOwner: string,
+	baseRepoName: string,
+	resolvedFiles: { path: string; content: string }[],
+	commitMessage: string,
+) {
+	const [headRef, baseRef] = await Promise.all([
+		octokit.git.getRef({
+			owner: targetOwner,
+			repo: targetRepo,
+			ref: `heads/${headBranch}`,
+		}),
+		octokit.git.getRef({
+			owner: baseRepoOwner,
+			repo: baseRepoName,
+			ref: `heads/${baseBranch}`,
+		}),
+	]);
+	const headSha = headRef.data.object.sha;
+	const baseSha = baseRef.data.object.sha;
+
+	const { data: headCommit } = await octokit.git.getCommit({
+		owner: targetOwner,
+		repo: targetRepo,
+		commit_sha: headSha,
+	});
+
+	const treeEntries = await Promise.all(
+		resolvedFiles.map(async (file) => {
+			const { data: blob } = await octokit.git.createBlob({
+				owner: targetOwner,
+				repo: targetRepo,
+				content: Buffer.from(file.content).toString("base64"),
+				encoding: "base64",
+			});
+			return {
+				path: file.path,
+				mode: "100644" as const,
+				type: "blob" as const,
+				sha: blob.sha,
+			};
+		}),
+	);
+
+	const { data: newTree } = await octokit.git.createTree({
+		owner: targetOwner,
+		repo: targetRepo,
+		base_tree: headCommit.tree.sha,
+		tree: treeEntries,
+	});
+
+	const user = await getAuthenticatedUser();
+	const { data: mergeCommit } = await octokit.git.createCommit({
+		owner: targetOwner,
+		repo: targetRepo,
+		message: commitMessage,
+		tree: newTree.sha,
+		parents: [headSha, baseSha],
+		...(user
+			? {
+					author: {
+						name:
+							(user as { name?: string; login?: string })
+								.name ||
+							(user as { login?: string }).login ||
+							"User",
+						email:
+							(user as { email?: string }).email ||
+							`${(user as { login?: string }).login}@users.noreply.github.com`,
+						date: new Date().toISOString(),
+					},
+				}
+			: {}),
+	});
+
+	await octokit.git.updateRef({
+		owner: targetOwner,
+		repo: targetRepo,
+		ref: `heads/${headBranch}`,
+		sha: mergeCommit.sha,
+	});
+
+	return mergeCommit.sha;
+}
+
+async function commitViaContentsApi(
+	octokit: Awaited<ReturnType<typeof getOctokit>> & {},
+	targetOwner: string,
+	targetRepo: string,
+	headBranch: string,
+	resolvedFiles: { path: string; content: string }[],
+	commitMessage: string,
+) {
+	for (const file of resolvedFiles) {
+		let fileSha: string | undefined;
+		try {
+			const { data } = await octokit.repos.getContent({
+				owner: targetOwner,
+				repo: targetRepo,
+				path: file.path,
+				ref: headBranch,
+			});
+			if (!Array.isArray(data) && data.type === "file") {
+				fileSha = data.sha;
+			}
+		} catch {
+			// file doesn't exist yet
+		}
+
+		await octokit.repos.createOrUpdateFileContents({
+			owner: targetOwner,
+			repo: targetRepo,
+			path: file.path,
+			message: commitMessage,
+			content: Buffer.from(file.content).toString("base64"),
+			branch: headBranch,
+			...(fileSha ? { sha: fileSha } : {}),
+		});
+	}
+}
+
 export async function commitMergeConflictResolution(
 	owner: string,
 	repo: string,
@@ -486,94 +612,57 @@ export async function commitMergeConflictResolution(
 	baseBranch: string,
 	resolvedFiles: { path: string; content: string }[],
 	commitMessage?: string,
+	headRepoOwner?: string | null,
+	headRepoName?: string | null,
 ) {
 	const octokit = await getOctokit();
 	if (!octokit) return { error: "Not authenticated" };
 
+	const isFork = !!(headRepoOwner && headRepoOwner !== owner);
+	const headOwner = isFork ? headRepoOwner : owner;
+	const headRepo = isFork ? headRepoName || repo : repo;
+	const message = commitMessage || `Merge branch '${baseBranch}' into ${headBranch}`;
+
 	try {
-		// 1. Get HEAD SHAs of both branches
-		const [headRef, baseRef] = await Promise.all([
-			octokit.git.getRef({ owner, repo, ref: `heads/${headBranch}` }),
-			octokit.git.getRef({ owner, repo, ref: `heads/${baseBranch}` }),
-		]);
-		const headSha = headRef.data.object.sha;
-		const baseSha = baseRef.data.object.sha;
-
-		// 2. Get head commit's tree as base
-		const { data: headCommit } = await octokit.git.getCommit({
-			owner,
-			repo,
-			commit_sha: headSha,
-		});
-
-		// 3. Create blobs for resolved files
-		const treeEntries = await Promise.all(
-			resolvedFiles.map(async (file) => {
-				const { data: blob } = await octokit.git.createBlob({
+		if (!isFork) {
+			await commitViaGitDataApi(
+				octokit,
+				owner,
+				repo,
+				headBranch,
+				baseBranch,
+				owner,
+				repo,
+				resolvedFiles,
+				message,
+			);
+		} else {
+			try {
+				await commitViaGitDataApi(
+					octokit,
+					headOwner,
+					headRepo,
+					headBranch,
+					baseBranch,
 					owner,
 					repo,
-					content: Buffer.from(file.content).toString("base64"),
-					encoding: "base64",
-				});
-				return {
-					path: file.path,
-					mode: "100644" as const,
-					type: "blob" as const,
-					sha: blob.sha,
-				};
-			}),
-		);
-
-		// 4. Create new tree based on head's tree
-		const { data: newTree } = await octokit.git.createTree({
-			owner,
-			repo,
-			base_tree: headCommit.tree.sha,
-			tree: treeEntries,
-		});
-
-		// 5. Create merge commit with two parents: [headSha, baseSha]
-		const message = commitMessage || `Merge branch '${baseBranch}' into ${headBranch}`;
-		const user = await getAuthenticatedUser();
-		const { data: mergeCommit } = await octokit.git.createCommit({
-			owner,
-			repo,
-			message,
-			tree: newTree.sha,
-			parents: [headSha, baseSha],
-			...(user
-				? {
-						author: {
-							name:
-								(
-									user as {
-										name?: string;
-										login?: string;
-									}
-								).name ||
-								(user as { login?: string })
-									.login ||
-								"User",
-							email:
-								(user as { email?: string })
-									.email ||
-								`${(user as { login?: string }).login}@users.noreply.github.com`,
-							date: new Date().toISOString(),
-						},
-					}
-				: {}),
-		});
-
-		// 6. Update head branch ref to point to merge commit
-		await octokit.git.updateRef({
-			owner,
-			repo,
-			ref: `heads/${headBranch}`,
-			sha: mergeCommit.sha,
-		});
+					resolvedFiles,
+					message,
+				);
+			} catch {
+				await commitViaContentsApi(
+					octokit,
+					headOwner,
+					headRepo,
+					headBranch,
+					resolvedFiles,
+					message,
+				);
+			}
+		}
 
 		await revalidateAfterPRMutation(owner, repo, pullNumber, "conflictResolution");
-		return { success: true, mergeCommitSha: mergeCommit.sha };
+		return { success: true };
 	} catch (e: unknown) {
 		return { error: getErrorMessage(e) || "Failed to commit merge resolution" };
 	}

@@ -2,7 +2,14 @@ import type { Metadata } from "next";
 import { getRepoPullRequestsWithStats } from "@/lib/github";
 import { getAuthenticatedUser } from "@/lib/github";
 import { PRsList } from "@/components/pr/prs-list";
-import { fetchPRsByAuthor, fetchAllCheckStatuses, prefetchPRDetail, fetchPRPage } from "./actions";
+import {
+	fetchPRsByAuthor,
+	fetchAllCheckStatuses,
+	prefetchPRDetail,
+	fetchPRPage,
+	fetchPRPeekDetail,
+} from "./actions";
+import { closePullRequest, reopenPullRequest } from "./pr-actions";
 
 export async function generateMetadata({
 	params,
@@ -30,7 +37,7 @@ export default async function PullsListPage({
 	} = await getRepoPullRequestsWithStats(owner, repo, "open", {
 		includeCounts: true,
 		previewClosed: 10,
-		perPage: 20,
+		perPage: 30,
 	});
 
 	return (
@@ -69,6 +76,9 @@ export default async function PullsListPage({
 			onPrefetchPRDetail={prefetchPRDetail}
 			onFetchPRPage={fetchPRPage}
 			currentUserLogin={currentUser?.login ?? null}
+			onFetchPRPeekDetail={fetchPRPeekDetail}
+			onClosePR={closePullRequest}
+			onReopenPR={reopenPullRequest}
 		/>
 	);
 }
