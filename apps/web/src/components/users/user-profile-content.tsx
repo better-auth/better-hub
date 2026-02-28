@@ -335,7 +335,7 @@ export function UserProfileContent({
 	return (
 		<div className="flex flex-col lg:flex-row gap-8 flex-1 min-h-0">
 			{/* ── Left sidebar ── */}
-			<aside className="shrink-0 lg:w-[280px] lg:sticky lg:top-4 lg:self-start">
+			<aside className="shrink-0 lg:w-[280px] lg:sticky lg:top-4 lg:self-start pl-4">
 				{/* Avatar + identity */}
 				<div className="flex flex-col items-center lg:items-start">
 					<div className="relative group">

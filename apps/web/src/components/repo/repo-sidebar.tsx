@@ -103,13 +103,14 @@ export function RepoSidebar({
 	return (
 		<>
 			{/* Desktop sidebar */}
-			<aside className="hidden lg:flex w-[260px] shrink-0 overflow-y-auto pt-0 px-4 pb-4 flex-col gap-5">
+			<aside className="hidden lg:flex w-[260px] shrink-0 overflow-y-auto pt-0 pr-2 pl-6 pb-4 flex-col gap-5">
 				{/* Name + Avatar + Description + Badges */}
 				<div className="flex flex-col gap-2">
 					<RepoBreadcrumb
 						owner={owner}
 						repoName={repoName}
 						ownerType={ownerType}
+						ownerAvatarUrl={avatarUrl}
 					/>
 					<Image
 						src={avatarUrl}

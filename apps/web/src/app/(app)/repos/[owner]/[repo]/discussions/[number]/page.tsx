@@ -114,6 +114,10 @@ export default async function DiscussionDetailPage({
 		bodyHtml: descriptionHtml,
 		author: discussion.author,
 		createdAt: discussion.createdAt,
+		discussionId: discussion.id,
+		reactions: discussion.reactions,
+		upvoteCount: discussion.upvoteCount,
+		viewerHasUpvoted: discussion.viewerHasUpvoted,
 	};
 
 	// Extract participants
@@ -144,9 +148,11 @@ export default async function DiscussionDetailPage({
 				<DiscussionHeader
 					title={discussion.title}
 					number={discussion.number}
+					discussionId={discussion.id}
 					category={discussion.category}
 					isAnswered={discussion.isAnswered}
 					upvoteCount={discussion.upvoteCount}
+					viewerHasUpvoted={discussion.viewerHasUpvoted}
 					author={discussion.author}
 					createdAt={discussion.createdAt}
 					commentsCount={discussion.commentsCount}

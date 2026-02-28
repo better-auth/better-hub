@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Lock, Star, Search } from "lucide-react";
@@ -24,9 +25,15 @@ interface RepoBreadcrumbProps {
 	owner: string;
 	repoName: string;
 	ownerType: string;
+	ownerAvatarUrl?: string;
 }
 
-export function RepoBreadcrumb({ owner, repoName, ownerType }: RepoBreadcrumbProps) {
+export function RepoBreadcrumb({
+	owner,
+	repoName,
+	ownerType,
+	ownerAvatarUrl,
+}: RepoBreadcrumbProps) {
 	const router = useRouter();
 	const [repos, setRepos] = useState<OrgRepo[] | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
@@ -80,7 +87,16 @@ export function RepoBreadcrumb({ owner, repoName, ownerType }: RepoBreadcrumbPro
 	};
 
 	return (
-		<div className="flex items-center gap-1 text-xs">
+		<div className="flex items-center gap-1 text-xs ml-2">
+			{ownerAvatarUrl && (
+				<Image
+					src={ownerAvatarUrl}
+					alt={owner}
+					width={16}
+					height={16}
+					className="rounded-sm border border-border"
+				/>
+			)}
 			<Link
 				href={`/${owner}`}
 				className="text-muted-foreground hover:text-foreground transition-colors tracking-tight"
@@ -91,7 +107,10 @@ export function RepoBreadcrumb({ owner, repoName, ownerType }: RepoBreadcrumbPro
 			{isOrg ? (
 				<DropdownMenu onOpenChange={handleOpenChange}>
 					<DropdownMenuTrigger asChild>
-						<button className="flex items-center gap-1 font-medium text-foreground hover:text-foreground/80 transition-colors tracking-tight outline-none">
+						<button
+							suppressHydrationWarning
+							className="flex items-center gap-1 font-medium text-foreground hover:text-foreground/80 transition-colors tracking-tight outline-none"
+						>
 							{repoName}
 							<ChevronDown className="w-3 h-3 mt-0.5 text-muted-foreground/50" />
 						</button>

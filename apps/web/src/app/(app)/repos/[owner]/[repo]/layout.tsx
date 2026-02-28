@@ -180,6 +180,7 @@ export default async function RepoLayout({
 				owner={owner}
 				repo={repoName}
 				ownerType={repoData.owner.type}
+				ownerAvatarUrl={repoData.owner.avatar_url}
 				initialCollapsed={sidebarState?.collapsed}
 				initialWidth={sidebarState?.width}
 				sidebar={

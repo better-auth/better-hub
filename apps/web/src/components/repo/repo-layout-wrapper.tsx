@@ -13,6 +13,7 @@ interface RepoLayoutWrapperProps {
 	owner: string;
 	repo: string;
 	ownerType: string;
+	ownerAvatarUrl?: string;
 	initialCollapsed?: boolean;
 	initialWidth?: number;
 }
@@ -29,6 +30,7 @@ export function RepoLayoutWrapper({
 	initialCollapsed = false,
 	initialWidth = DEFAULT_WIDTH,
 	ownerType,
+	ownerAvatarUrl,
 }: RepoLayoutWrapperProps) {
 	const pathname = usePathname();
 	const isPrPage = pathname.includes("/pulls/");
@@ -221,12 +223,13 @@ export function RepoLayoutWrapper({
 				}
 			>
 				<div
-					className={`hidden lg:flex pl-7 pr-2 pt-3 pb-1 ${collapsed ? "visible" : "invisible"}`}
+					className={`hidden lg:flex pl-4 pr-2 pt-3 pb-1 ${collapsed ? "visible" : "invisible"}`}
 				>
 					<RepoBreadcrumb
 						owner={owner}
 						repoName={repo}
 						ownerType={ownerType}
+						ownerAvatarUrl={ownerAvatarUrl}
 					/>
 				</div>
 				{children}
