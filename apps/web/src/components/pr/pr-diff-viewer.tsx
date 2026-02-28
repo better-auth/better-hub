@@ -4026,14 +4026,14 @@ function SplitDiffTable({
 									)}
 								</tr>
 
-								{/* Inline review comments - left side */}
+								{/* Inline review comments - left side (shown on left half only) */}
 								{leftComments.map((comment) => (
 									<tr
 										key={`lrc-${comment.id}`}
 									>
 										<td
-											colSpan={6}
-											className="p-0"
+											colSpan={3}
+											className="p-0 align-top"
 										>
 											<InlineCommentDisplay
 												comment={
@@ -4059,17 +4059,25 @@ function SplitDiffTable({
 												}
 											/>
 										</td>
+										<td
+											colSpan={3}
+											className="p-0"
+										/>
 									</tr>
 								))}
 
-								{/* Inline review comments - right side */}
+								{/* Inline review comments - right side (shown on right half only) */}
 								{rightComments.map((comment) => (
 									<tr
 										key={`rrc-${comment.id}`}
 									>
 										<td
-											colSpan={6}
+											colSpan={3}
 											className="p-0"
+										/>
+										<td
+											colSpan={3}
+											className="p-0 align-top"
 										>
 											<InlineCommentDisplay
 												comment={
@@ -4103,57 +4111,128 @@ function SplitDiffTable({
 									rightIsCommentForm) &&
 									commentRange && (
 										<tr>
-											<td
-												colSpan={
-													6
-												}
-												className="p-0"
-											>
-												<InlineCommentForm
-													owner={
-														owner!
-													}
-													repo={
-														repo!
-													}
-													pullNumber={
-														pullNumber!
-													}
-													headSha={
-														headSha!
-													}
-													headBranch={
-														headBranch
-													}
-													filename={
-														filename
-													}
-													line={
-														commentRange.endLine
-													}
-													side={
-														commentRange.side
-													}
-													startLine={
-														commentStartLine
-													}
-													selectedLinesContent={
-														selectedLinesContent
-													}
-													selectedCodeForAI={
-														selectedCodeForAI
-													}
-													onClose={
-														onCloseComment
-													}
-													onAddContext={
-														onAddContext
-													}
-													participants={
-														participants
-													}
-												/>
-											</td>
+											{commentRange.side ===
+											"LEFT" ? (
+												<>
+													<td
+														colSpan={
+															3
+														}
+														className="p-0 align-top"
+													>
+														<InlineCommentForm
+															owner={
+																owner!
+															}
+															repo={
+																repo!
+															}
+															pullNumber={
+																pullNumber!
+															}
+															headSha={
+																headSha!
+															}
+															headBranch={
+																headBranch
+															}
+															filename={
+																filename
+															}
+															line={
+																commentRange.endLine
+															}
+															side={
+																commentRange.side
+															}
+															startLine={
+																commentStartLine
+															}
+															selectedLinesContent={
+																selectedLinesContent
+															}
+															selectedCodeForAI={
+																selectedCodeForAI
+															}
+															onClose={
+																onCloseComment
+															}
+															onAddContext={
+																onAddContext
+															}
+															participants={
+																participants
+															}
+														/>
+													</td>
+													<td
+														colSpan={
+															3
+														}
+														className="p-0"
+													/>
+												</>
+											) : (
+												<>
+													<td
+														colSpan={
+															3
+														}
+														className="p-0"
+													/>
+													<td
+														colSpan={
+															3
+														}
+														className="p-0 align-top"
+													>
+														<InlineCommentForm
+															owner={
+																owner!
+															}
+															repo={
+																repo!
+															}
+															pullNumber={
+																pullNumber!
+															}
+															headSha={
+																headSha!
+															}
+															headBranch={
+																headBranch
+															}
+															filename={
+																filename
+															}
+															line={
+																commentRange.endLine
+															}
+															side={
+																commentRange.side
+															}
+															startLine={
+																commentStartLine
+															}
+															selectedLinesContent={
+																selectedLinesContent
+															}
+															selectedCodeForAI={
+																selectedCodeForAI
+															}
+															onClose={
+																onCloseComment
+															}
+															onAddContext={
+																onAddContext
+															}
+															participants={
+																participants
+															}
+														/>
+													</td>
+												</>
+											)}
 										</tr>
 									)}
 							</React.Fragment>
