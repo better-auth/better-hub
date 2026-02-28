@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
 	Plus,
 	Loader2,
@@ -30,13 +30,18 @@ import {
 	DialogTitle,
 	DialogDescription,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+import { cn, getErrorMessage } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import type { IssueTemplate } from "@/app/(app)/repos/[owner]/[repo]/issues/actions";
 import {
 	createIssue,
+	ensureForkForIssueImageUpload,
+	triggerForkCreation,
+	type IssueImageUploadContext,
+	getIssueImageUploadContext,
 	getIssueTemplates,
 	getRepoLabels,
+	type IssueImageUploadMode,
 	uploadImage,
 } from "@/app/(app)/repos/[owner]/[repo]/issues/actions";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
@@ -49,17 +54,22 @@ interface RepoLabel {
 
 // Cache templates & labels per repo so reopening is instant
 const cache = new Map<string, { templates: IssueTemplate[]; labels: RepoLabel[] }>();
+const uploadContextCache = new Map<string, IssueImageUploadContext>();
 
 const DRAFT_PREFIX = "better-hub:draft:issue:";
 
 export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string }) {
 	const router = useRouter();
+	const pathname = usePathname();
+	const searchParams = useSearchParams();
 	const cacheKey = `${owner}/${repo}`;
 	const draftKey = `${DRAFT_PREFIX}${cacheKey}`;
 	const cached = cache.get(cacheKey);
+	const cachedUploadContext = uploadContextCache.get(cacheKey);
 
 	const [open, setOpen] = useState(false);
 	const [step, setStep] = useState<"templates" | "form">("form");
+	const [isDialogInitializing, setIsDialogInitializing] = useState(false);
 	const [templates, setTemplates] = useState<IssueTemplate[]>(cached?.templates ?? []);
 	const [repoLabels, setRepoLabels] = useState<RepoLabel[]>(cached?.labels ?? []);
 
@@ -73,6 +83,20 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 	const [isPending, startTransition] = useTransition();
 	const [bodyTab, setBodyTab] = useState<"write" | "preview">("write");
 	const [uploadingImages, setUploadingImages] = useState(false);
+	const [isForking, setIsForking] = useState(false);
+	const [showForkChoice, setShowForkChoice] = useState(false);
+	const [isUploadContextLoading, setIsUploadContextLoading] = useState(!cachedUploadContext);
+	const [isUploadContextReady, setIsUploadContextReady] = useState(
+		cachedUploadContext?.success ?? false,
+	);
+	const [uploadMode, setUploadMode] = useState<IssueImageUploadMode>(
+		cachedUploadContext?.mode ?? "repo",
+	);
+	const [uploadOwner, setUploadOwner] = useState(cachedUploadContext?.uploadOwner ?? owner);
+	const [uploadRepo, setUploadRepo] = useState(cachedUploadContext?.uploadRepo ?? repo);
+	const [viewerLogin, setViewerLogin] = useState<string | null>(
+		cachedUploadContext?.viewerLogin ?? null,
+	);
 	const { emit } = useMutationEvents();
 
 	// Track whether user has touched the form (to avoid yanking them to templates)
@@ -111,8 +135,21 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 		setError(null);
 		setBodyTab("write");
 		setUploadingImages(false);
+		setIsForking(false);
+		setShowForkChoice(false);
+		setIsUploadContextLoading(!cachedUploadContext);
+		setIsUploadContextReady(cachedUploadContext?.success ?? false);
+		setUploadMode(cachedUploadContext?.mode ?? "repo");
+		setUploadOwner(cachedUploadContext?.uploadOwner ?? owner);
+		setUploadRepo(cachedUploadContext?.uploadRepo ?? repo);
+		setViewerLogin(cachedUploadContext?.viewerLogin ?? null);
 
-		if (!draft?.title && !draft?.body && cached && cached.templates.length > 0) {
+		// Hold body on first load to avoid form flash before template decision.
+		const hasCachedData = Boolean(cached);
+		setIsDialogInitializing(!hasCachedData);
+
+		// Cached templates can open directly to the picker.
+		if (cached && cached.templates.length > 0) {
 			setTemplates(cached.templates);
 			setRepoLabels(cached.labels);
 			setStep("templates");
@@ -121,30 +158,169 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 		}
 
 		setOpen(true);
-	}, [cached, draftKey]);
+	}, [cached, cachedUploadContext, owner, repo]);
 
-	// Fetch templates + labels in background
+	// Fetch templates, labels, and upload context in parallel.
 	useEffect(() => {
 		if (!open) return;
 
 		const id = ++openId.current;
+		const templatesPromise = getIssueTemplates(owner, repo);
+		const labelsPromise = getRepoLabels(owner, repo);
+		const uploadContextPromise = cachedUploadContext
+			? Promise.resolve(cachedUploadContext)
+			: getIssueImageUploadContext(owner, repo);
 
-		Promise.all([getIssueTemplates(owner, repo), getRepoLabels(owner, repo)]).then(
-			([t, l]) => {
-				// Stale check — dialog was closed or reopened since
+		templatesPromise
+			.then((t) => {
 				if (id !== openId.current) return;
-
-				cache.set(cacheKey, { templates: t, labels: l });
+				cache.set(cacheKey, {
+					templates: t,
+					labels: cache.get(cacheKey)?.labels ?? [],
+				});
 				setTemplates(t);
-				setRepoLabels(l);
-
-				// Only switch to template picker if user hasn't started typing
 				if (t.length > 0 && !userTouchedForm.current) {
 					setStep("templates");
+					setIsDialogInitializing(false);
 				}
-			},
-		);
-	}, [open, owner, repo, cacheKey]);
+			})
+			.catch((err: unknown) => {
+				if (id !== openId.current) return;
+				setError(getErrorMessage(err));
+				setStep("form");
+			});
+
+		labelsPromise
+			.then((l) => {
+				if (id !== openId.current) return;
+				cache.set(cacheKey, {
+					templates: cache.get(cacheKey)?.templates ?? [],
+					labels: l,
+				});
+				setRepoLabels(l);
+			})
+			.catch(() => {
+				if (id !== openId.current) return;
+				setRepoLabels([]);
+			});
+
+		uploadContextPromise
+			.then((uploadContext) => {
+				if (id !== openId.current) return;
+				uploadContextCache.set(cacheKey, uploadContext);
+				if (uploadContext.success) {
+					setIsUploadContextReady(true);
+					setUploadMode(uploadContext.mode ?? "repo");
+					setUploadOwner(uploadContext.uploadOwner ?? owner);
+					setUploadRepo(uploadContext.uploadRepo ?? repo);
+					setViewerLogin(uploadContext.viewerLogin ?? null);
+					if (uploadContext.mode !== "needs_fork") {
+						setShowForkChoice(false);
+					}
+				} else if (uploadContext.error) {
+					setIsUploadContextReady(false);
+					setError(uploadContext.error);
+				}
+			})
+			.catch((err: unknown) => {
+				if (id !== openId.current) return;
+				setIsUploadContextReady(false);
+				setError(getErrorMessage(err));
+			})
+			.finally(() => {
+				if (id !== openId.current) return;
+				setIsUploadContextLoading(false);
+			});
+
+		Promise.allSettled([templatesPromise]).finally(() => {
+			if (id !== openId.current) return;
+			setIsDialogInitializing(false);
+			if (!userTouchedForm.current) {
+				const currentTemplates = cache.get(cacheKey)?.templates ?? [];
+				setStep(currentTemplates.length > 0 ? "templates" : "form");
+			}
+		});
+	}, [open, owner, repo, cacheKey, cachedUploadContext]);
+
+	useEffect(() => {
+		const shouldOpen = searchParams.get("new");
+		if (!open && (shouldOpen === "1" || shouldOpen === "true")) {
+			handleOpen();
+		}
+	}, [searchParams, open, handleOpen]);
+
+	const handleForkForUploads = async (openPickerAfter = false) => {
+		if (isForking) return;
+		setShowForkChoice(false);
+		setIsForking(true);
+		setError(null);
+		try {
+			// Kick off fork creation and return immediately — GitHub provisions it async.
+			// We open the file picker right away so the user can browse while the fork provisions.
+			// uploadImage will retry on 404 until the fork is ready.
+			const result = await triggerForkCreation(owner, repo);
+			if (result.success) {
+				const forkOwner = result.viewerLogin ?? owner;
+				const forkRepo = result.uploadRepo ?? repo;
+				const ctx: IssueImageUploadContext = {
+					success: true,
+					mode: "fork",
+					viewerLogin: result.viewerLogin,
+					uploadOwner: forkOwner,
+					uploadRepo: forkRepo,
+				};
+				uploadContextCache.set(cacheKey, ctx);
+				setUploadMode("fork");
+				setUploadOwner(forkOwner);
+				setUploadRepo(forkRepo);
+				setViewerLogin(result.viewerLogin ?? null);
+				// Open the picker immediately — fork will finish provisioning while user browses.
+				if (openPickerAfter) {
+					requestAnimationFrame(() => fileInputRef.current?.click());
+				}
+			} else {
+				setError(
+					result.error ||
+						"Failed to fork repository for image uploads",
+				);
+			}
+		} finally {
+			setIsForking(false);
+		}
+	};
+
+	const startForkChoice = useCallback(() => {
+		if (isForking || showForkChoice) return;
+		setShowForkChoice(true);
+	}, [isForking, showForkChoice]);
+
+	const cancelForkChoice = useCallback(() => {
+		setShowForkChoice(false);
+	}, []);
+
+	const chooseEnterImageUrl = useCallback(() => {
+		cancelForkChoice();
+		textareaRef.current?.focus();
+	}, [cancelForkChoice]);
+
+	const onImageButtonClick = useCallback(() => {
+		if (isUploadContextLoading) {
+			setError("Preparing image uploads. Please wait a moment.");
+			return;
+		}
+		if (!isUploadContextReady) {
+			setError(
+				"Unable to verify image upload access right now. Please try again.",
+			);
+			return;
+		}
+		if (uploadMode === "needs_fork" || uploadMode === "name_taken") {
+			setError(null);
+			startForkChoice();
+			return;
+		}
+		fileInputRef.current?.click();
+	}, [isUploadContextLoading, isUploadContextReady, startForkChoice, uploadMode]);
 
 	// Persist draft to localStorage when title/body change (debounced)
 	useEffect(() => {
@@ -160,8 +336,15 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 	}, [open, title, body, draftKey]);
 
 	const handleClose = useCallback(() => {
+		cancelForkChoice();
+		setIsDialogInitializing(false);
+		const params = new URLSearchParams(searchParams.toString());
+		if (params.has("new")) {
+			params.delete("new");
+			router.replace(params.size ? `${pathname}?${params.toString()}` : pathname);
+		}
 		setOpen(false);
-	}, []);
+	}, [cancelForkChoice, pathname, router, searchParams]);
 
 	const selectTemplate = (template: IssueTemplate) => {
 		setTitle(template.title);
@@ -221,6 +404,28 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 
 	// Handle image upload and insert markdown
 	const handleImageUpload = async (file: File) => {
+		if (isUploadContextLoading) {
+			setError("Preparing image uploads. Please wait a moment.");
+			return;
+		}
+
+		if (!isUploadContextReady) {
+			setError(
+				"Unable to verify image upload access right now. Please try again.",
+			);
+			return;
+		}
+
+		if (uploadMode === "needs_fork" || uploadMode === "name_taken") {
+			setError(
+				uploadMode === "name_taken"
+					? "Fork name is already taken by another repository."
+					: "Upload images with Better Hub by forking this repository or entering an image URL.",
+			);
+			startForkChoice();
+			return;
+		}
+
 		if (!file.type.startsWith("image/")) {
 			setError("Only image files are allowed");
 			return;
@@ -236,7 +441,7 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 		setError(null);
 
 		try {
-			const result = await uploadImage(owner, repo, file);
+			const result = await uploadImage(uploadOwner, uploadRepo, file);
 			if (result.success && result.url) {
 				// Insert markdown image at cursor position
 				const ta = textareaRef.current;
@@ -307,7 +512,7 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 				}
 			}
 		},
-		[body],
+		[body, uploadMode, uploadOwner, uploadRepo, startForkChoice],
 	);
 
 	// Handle paste events
@@ -327,7 +532,7 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 				}
 			}
 		},
-		[body],
+		[body, uploadMode, uploadOwner, uploadRepo, startForkChoice],
 	);
 
 	// Insert markdown formatting around selection or at cursor
@@ -440,7 +645,14 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 						</div>
 					</DialogHeader>
 
-					{step === "templates" ? (
+					{isDialogInitializing ? (
+						<div className="flex-1 min-h-0 flex items-center justify-center px-4 py-8">
+							<div className="flex items-center gap-2 text-xs text-muted-foreground/70">
+								<Loader2 className="w-3.5 h-3.5 animate-spin" />
+								Loading issue options...
+							</div>
+						</div>
+					) : step === "templates" ? (
 						<div className="p-4 space-y-1.5 flex-1 overflow-y-auto">
 							<p className="text-[11px] text-muted-foreground/50 mb-2">
 								Choose a template or start from
@@ -453,7 +665,7 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 									onClick={() =>
 										selectTemplate(t)
 									}
-									className="w-full flex items-start gap-3 px-3 py-2.5 border border-border/50 dark:border-white/6 hover:border-foreground/15 hover:bg-muted/30 dark:hover:bg-white/[0.02] transition-colors cursor-pointer text-left rounded-lg group"
+									className="w-full flex items-start gap-3 px-3 py-2.5 border border-border/50 dark:border-white/6 hover:border-foreground/15 hover:bg-muted/30 dark:hover:bg-white/2 transition-colors cursor-pointer text-left rounded-lg group"
 								>
 									<FileText className="w-3.5 h-3.5 text-muted-foreground group-hover:text-muted-foreground/60 shrink-0 mt-0.5 transition-colors" />
 									<div className="min-w-0 flex-1">
@@ -512,7 +724,7 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 
 							<button
 								onClick={selectBlank}
-								className="w-full flex items-center gap-3 px-3 py-2.5 border border-dashed border-border/60 dark:border-white/8 hover:border-foreground/15 hover:bg-muted/30 dark:hover:bg-white/[0.02] transition-colors cursor-pointer rounded-lg"
+								className="w-full flex items-center gap-3 px-3 py-2.5 border border-dashed border-border/60 dark:border-white/8 hover:border-foreground/15 hover:bg-muted/30 dark:hover:bg-white/2 transition-colors cursor-pointer rounded-lg"
 							>
 								<Plus className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
 								<span className="text-[13px] text-muted-foreground/60">
@@ -521,7 +733,7 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 							</button>
 						</div>
 					) : (
-						<div className="flex flex-col flex-1 min-h-0">
+						<div className="flex flex-col flex-1 min-h-0 relative">
 							{/* Title input — clean, borderless, prominent */}
 							<div className="px-4 pt-3 pb-0 shrink-0">
 								<input
@@ -551,7 +763,7 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 							</div>
 
 							{/* Body editor area */}
-							<div className="flex-1 min-h-0 flex flex-col px-4 pt-2 pb-0">
+							<div className="flex-1 min-h-0 flex flex-col px-4 pt-2 pb-0 relative">
 								{/* Tabs + toolbar row */}
 								<div className="flex items-center gap-0 mb-1.5 shrink-0">
 									<div className="flex items-center gap-0 mr-3">
@@ -619,17 +831,33 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 											)}
 											{/* Image upload button */}
 											<button
-												onClick={() =>
-													fileInputRef.current?.click()
+												onClick={
+													onImageButtonClick
 												}
 												className="p-1 text-muted-foreground/35 hover:text-muted-foreground transition-colors cursor-pointer rounded"
-												title="Upload image"
+												title={
+													uploadMode ===
+													"needs_fork"
+														? "Fork repository to enable image upload"
+														: uploadMode ===
+															  "name_taken"
+															? "Fork name is not available"
+															: uploadMode ===
+																  "fork"
+																? `Upload image to ${uploadOwner}/${uploadRepo}`
+																: "Upload image"
+												}
 												type="button"
 												disabled={
-													uploadingImages
+													uploadingImages ||
+													isForking ||
+													isUploadContextLoading ||
+													!isUploadContextReady
 												}
 											>
-												{uploadingImages ? (
+												{uploadingImages ||
+												isForking ||
+												isUploadContextLoading ? (
 													<Loader2 className="w-3.5 h-3.5 animate-spin" />
 												) : (
 													<Image className="w-3.5 h-3.5" />
@@ -645,7 +873,7 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 									onDragOver={handleDragOver}
 									onDrop={handleDrop}
 									className={cn(
-										"flex-1 min-h-0 rounded-lg border border-border/50 dark:border-white/6 overflow-hidden bg-muted/15 dark:bg-white/[0.01] focus-within:border-foreground/15 transition-colors",
+										"flex-1 min-h-0 rounded-lg border border-border/50 dark:border-white/6 overflow-hidden bg-muted/15 dark:bg-white/1 focus-within:border-foreground/15 transition-colors",
 										bodyTab ===
 											"write" &&
 											"relative",
@@ -733,12 +961,97 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 
 								{/* Upload hint */}
 								<div className="flex items-center justify-between mt-1">
-									<span className="text-[10px] text-muted-foreground/40">
-										Drag & drop, paste,
-										or click the image
-										button to upload
-										images
-									</span>
+									{!isUploadContextLoading &&
+										uploadMode ===
+											"repo" && (
+											<span className="text-[10px] text-muted-foreground/40">
+												Drag
+												&
+												drop,
+												paste,
+												or
+												click
+												the
+												image
+												button
+												to
+												upload
+												images
+											</span>
+										)}
+									{isUploadContextLoading && (
+										<span className="text-[10px] text-muted-foreground/40 flex items-center gap-1.5">
+											<Loader2 className="w-3 h-3 animate-spin" />
+											Preparing
+											image
+											uploads...
+										</span>
+									)}
+									{!isUploadContextLoading &&
+										uploadMode ===
+											"fork" && (
+											<span className="text-[10px] text-muted-foreground/40">
+												Images
+												upload
+												to{" "}
+												{
+													uploadOwner
+												}
+												/
+												{
+													uploadRepo
+												}
+												.
+												Issue
+												will
+												still
+												be
+												created
+												in{" "}
+												{
+													owner
+												}
+												/
+												{
+													repo
+												}
+												.
+											</span>
+										)}
+									{!isUploadContextLoading &&
+										uploadMode ===
+											"needs_fork" && (
+											<div className="flex items-center gap-2">
+												<span className="text-[10px] text-muted-foreground/40">
+													Click
+													the
+													image
+													button
+													to
+													fork
+													this
+													repo
+													or
+													enter
+													an
+													image
+													URL.
+												</span>
+											</div>
+										)}
+									{!isUploadContextLoading &&
+										uploadMode ===
+											"name_taken" && (
+											<div className="flex items-center gap-2">
+												<span className="text-[10px] text-destructive/60">
+													Fork
+													name
+													is
+													not
+													available.
+												</span>
+											</div>
+										)}
 								</div>
 							</div>
 
@@ -992,6 +1305,150 @@ export function CreateIssueDialog({ owner, repo }: { owner: string; repo: string
 									</div>
 								</div>
 							</div>
+
+							{bodyTab === "write" &&
+								(uploadMode === "needs_fork" ||
+									uploadMode ===
+										"name_taken") &&
+								showForkChoice &&
+								!isForking && (
+									<div className="absolute inset-0 z-20 bg-background/55 flex items-center justify-center p-4">
+										<div className="w-full max-w-sm rounded-lg border border-border/50 bg-background shadow-lg overflow-hidden">
+											<div className="px-4 py-3 flex items-start justify-between gap-3 border-b border-border/40">
+												<p className="text-xs font-medium text-balance leading-relaxed">
+													To
+													upload
+													images
+													with
+													Better
+													Hub
+													fork
+													this
+													repository
+													or
+													enter
+													an
+													image
+													URL.
+												</p>
+												<button
+													type="button"
+													onClick={
+														cancelForkChoice
+													}
+													className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-md hover:bg-muted/40"
+												>
+													<X className="w-3.5 h-3.5" />
+												</button>
+											</div>
+
+											<div className="px-4 py-3">
+												{uploadMode ===
+												"name_taken" ? (
+													<div className="space-y-2">
+														<div className="flex items-center gap-2 text-destructive">
+															<AlertCircle className="w-3.5 h-3.5 shrink-0" />
+															<p className="text-[11px] leading-normal font-medium">
+																A
+																repository
+																named{" "}
+																<span className="font-mono">
+																	{viewerLogin ??
+																		"your account"}
+																	/
+																	{
+																		repo
+																	}
+																</span>{" "}
+																already
+																exists
+																but
+																is
+																not
+																a
+																fork
+																of
+																this
+																repository.
+															</p>
+														</div>
+														<p className="text-[10px] text-muted-foreground leading-relaxed">
+															Please
+															rename
+															or
+															delete
+															the
+															existing
+															repository
+															on
+															GitHub
+															to
+															enable
+															image
+															uploads
+															via
+															forking.
+														</p>
+													</div>
+												) : (
+													<>
+														<p className="text-[10px] text-muted-foreground/70 mb-2 font-medium">
+															Fork
+															will
+															be
+															created
+															at
+														</p>
+														<div className="inline-flex items-center px-2 py-1 rounded-md bg-muted/30 border border-border/50 text-[11px] font-mono text-foreground">
+															{viewerLogin ??
+																"your account"}
+															/
+															{
+																repo
+															}
+														</div>
+													</>
+												)}
+											</div>
+
+											<div className="flex justify-end gap-2 px-4 pb-3">
+												<button
+													type="button"
+													onClick={
+														chooseEnterImageUrl
+													}
+													className="px-3 py-1.5 text-[11px] rounded-md border border-border/50 hover:border-foreground/20 hover:bg-muted/40 transition-colors text-muted-foreground hover:text-foreground"
+												>
+													Enter
+													image
+													URL
+												</button>
+												<button
+													type="button"
+													onClick={() =>
+														void handleForkForUploads(
+															true,
+														)
+													}
+													disabled={
+														uploadMode ===
+														"name_taken"
+													}
+													className={cn(
+														"px-3 py-1.5 text-[11px] font-medium rounded-md transition-colors",
+														uploadMode ===
+															"name_taken"
+															? "bg-muted text-muted-foreground/30 cursor-not-allowed border border-border/30"
+															: "bg-foreground text-background hover:bg-foreground/90",
+													)}
+												>
+													Fork
+													repo
+												</button>
+											</div>
+										</div>
+									</div>
+								)}
 						</div>
 					)}
 				</DialogContent>
