@@ -785,6 +785,15 @@ tr.diff-search-match-active > td {
 	box-sizing: content-box;
 	border-style: none;
 }
+.ghmd video,
+.ghmd .ghmd-user-attachment-video {
+	display: block;
+	max-width: 100%;
+	width: auto;
+	height: auto;
+	margin-bottom: 1em;
+	border-radius: 6px;
+}
 /* Badge rows — consecutive image-only paragraphs rendered inline like GitHub */
 .ghmd .ghmd-badges {
 	display: inline;

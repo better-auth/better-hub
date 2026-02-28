@@ -5,6 +5,7 @@ import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import rehypeStringify from "rehype-stringify";
+import { isGitHubUserAttachmentAssetUrl } from "@/lib/github-user-attachments";
 
 /**
  * GitHub-compatible sanitization schema.
@@ -291,6 +292,25 @@ function markBadgeParagraphs(html: string): string {
 	);
 }
 
+/** Render standalone GitHub user-attachment links as inline video players */
+function embedUserAttachmentVideos(html: string): string {
+	return html.replace(
+		/<p>\s*<a\s+[^>]*href="(https:\/\/github\.com\/user-attachments\/assets\/[^"\s]+)"[^>]*>([\s\S]*?)<\/a>\s*<\/p>/gi,
+		(_match, href: string, labelHtml: string) => {
+			const normalizedHref = href.replaceAll("&amp;", "&").trim();
+			const label = labelHtml.replace(/<[^>]+>/g, "").trim();
+			if (
+				!isGitHubUserAttachmentAssetUrl(normalizedHref) ||
+				label !== normalizedHref
+			) {
+				return _match;
+			}
+
+			return `<video class="ghmd-user-attachment-video" controls preload="metadata" src="${normalizedHref}"><a href="${normalizedHref}" target="_blank" rel="noopener noreferrer">${normalizedHref}</a></video>`;
+		},
+	);
+}
+
 interface PkgVariant {
 	label: string;
 	command: string;
@@ -454,6 +474,7 @@ export async function renderMarkdownToHtml(
 	html = processAlerts(html);
 	html = addHeadingAnchors(html);
 	html = markBadgeParagraphs(html);
+	html = embedUserAttachmentVideos(html);
 
 	if (repoContext) {
 		html = resolveUrls(html, repoContext);
