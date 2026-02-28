@@ -171,13 +171,13 @@ export async function highlightCodeClient(
 		return highlighter.codeToHtml(code, {
 			lang: effectiveLang,
 			themes: { light: themes.light, dark: themes.dark },
-			defaultColor: false,
+			defaultColor: "light-dark()",
 		});
 	} catch {
 		return highlighter.codeToHtml(code, {
 			lang: "text",
 			themes: { light: themes.light, dark: themes.dark },
-			defaultColor: false,
+			defaultColor: "light-dark()",
 		});
 	}
 }
