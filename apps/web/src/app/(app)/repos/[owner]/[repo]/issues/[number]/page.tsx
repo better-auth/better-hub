@@ -70,15 +70,15 @@ export default async function IssueDetailPage({
 	const issueNumber = parseInt(numStr, 10);
 
 	const hdrs = await headers();
-	const [issue, rawComments, repoData, crossRefs, timelineEvents, currentUser, session] =
+	const [issue, rawComments, repoData, crossRefs, currentUser, session, timelineEvents] =
 		await Promise.all([
 			getIssue(owner, repo, issueNumber),
 			getIssueComments(owner, repo, issueNumber),
 			getRepo(owner, repo),
 			getCrossReferences(owner, repo, issueNumber),
-			getIssueTimelineEvents(owner, repo, issueNumber),
 			getAuthenticatedUser(),
 			auth.api.getSession({ headers: hdrs }),
+			getIssueTimelineEvents(owner, repo, issueNumber),
 		]);
 	const comments = rawComments as IssueComment[];
 
@@ -235,10 +235,6 @@ export default async function IssueDetailPage({
 						currentUserLogin={currentUserLogin}
 						viewerHasWriteAccess={viewerHasWriteAccess}
 						timelineEvents={timelineEvents}
-						issueStateReason={
-							(issue as { state_reason?: string | null })
-								.state_reason
-						}
 					/>
 				}
 				commentForm={

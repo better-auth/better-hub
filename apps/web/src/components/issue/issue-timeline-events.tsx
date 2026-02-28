@@ -10,14 +10,14 @@ interface IssueTimelineEventsProps {
 	events: IssueTimelineEvent[];
 	owner: string;
 	repo: string;
-	issueStateReason?: string | null;
+	isLastSegment?: boolean;
 }
 
 export function IssueTimelineEvents({
 	events,
 	owner,
 	repo,
-	issueStateReason,
+	isLastSegment = false,
 }: IssueTimelineEventsProps) {
 	if (events.length === 0) return null;
 
@@ -26,17 +26,26 @@ export function IssueTimelineEvents({
 		.map((e) => e.source!);
 
 	return (
-		<div className="space-y-1 py-3 ml-16">
-			{events.map((event) => (
-				<TimelineEventItem
-					key={event.id}
-					event={event}
-					owner={owner}
-					repo={repo}
-					linkedPRs={crossRefPRs}
-					issueStateReason={issueStateReason}
-				/>
-			))}
+		<div className="relative py-1 -mt-2 mb-2">
+			{/* Timeline connector line - extends beyond bounds to connect with adjacent segments */}
+			<div
+				className={cn(
+					"absolute left-[19px] -top-5 w-px bg-border/50",
+					isLastSegment ? "bottom-0" : "-bottom-4",
+				)}
+			/>
+
+			<div className="space-y-1 pl-[52px] py-2">
+				{events.map((event) => (
+					<TimelineEventItem
+						key={event.id}
+						event={event}
+						owner={owner}
+						repo={repo}
+						linkedPRs={crossRefPRs}
+					/>
+				))}
+			</div>
 		</div>
 	);
 }

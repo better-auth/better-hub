@@ -7,6 +7,7 @@ import { Pencil, X, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";
+import { MarkdownMentionTooltips } from "@/components/shared/markdown-mention-tooltips";
 import { CollapsibleBody } from "@/components/issue/collapsible-body";
 import { ReactionDisplay, type Reactions } from "@/components/shared/reaction-display";
 import { UserTooltip } from "@/components/shared/user-tooltip";
@@ -46,10 +47,12 @@ export function EditableIssueDescription({
 
 	const renderedBody = entry.bodyHtml ? (
 		<MarkdownCopyHandler>
-			<div
-				className="ghmd"
-				dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
-			/>
+			<MarkdownMentionTooltips>
+				<div
+					className="ghmd"
+					dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
+				/>
+			</MarkdownMentionTooltips>
 		</MarkdownCopyHandler>
 	) : null;
 
