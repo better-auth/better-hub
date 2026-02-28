@@ -24,10 +24,13 @@ import {
 } from "lucide-react";
 import { cn, formatNumber } from "@/lib/utils";
 import { getLanguageColor } from "@/lib/github-utils";
+import type { ActivityEvent } from "@/lib/github-types";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { ContributionChart } from "@/components/dashboard/contribution-chart";
 import { computeUserProfileScore } from "@/lib/user-profile-score";
 import { UserProfileScoreRing } from "@/components/users/user-profile-score-ring";
+import { UserProfileActivityTimeline } from "@/components/users/user-profile-activity-timeline";
+import { UserProfileActivityTimelineBoundary } from "@/components/users/user-profile-activity-timeline-boundary";
 
 export interface UserProfile {
 	login: string;
@@ -57,6 +60,7 @@ export interface UserRepo {
 	stargazers_count: number;
 	forks_count: number;
 	open_issues_count: number;
+	created_at?: string | null;
 	updated_at: string | null;
 	pushed_at: string | null;
 }
@@ -82,10 +86,8 @@ interface ContributionData {
 }
 
 const filterTypes = ["all", "sources", "forks", "archived"] as const;
-type FilterType = (typeof filterTypes)[number];
 
 const sortTypes = ["updated", "name", "stars"] as const;
-type SortType = (typeof sortTypes)[number];
 
 function formatJoinedDate(value: string | null): string | null {
 	if (!value) return null;
@@ -110,12 +112,14 @@ export function UserProfileContent({
 	repos,
 	orgs,
 	contributions,
+	activityEvents = [],
 	orgTopRepos = [],
 }: {
 	user: UserProfile;
 	repos: UserRepo[];
 	orgs: UserOrg[];
 	contributions: ContributionData | null;
+	activityEvents?: ActivityEvent[];
 	orgTopRepos?: OrgTopRepo[];
 }) {
 	const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
@@ -260,9 +264,10 @@ export function UserProfileContent({
 
 	const clearRepoFilters = useCallback(() => {
 		setSearch("");
+		setFilter("all");
 		setLanguageFilter(null);
 		setShowMoreLanguages(false);
-	}, []);
+	}, [setFilter, setSearch]);
 
 	const toggleLanguageFilter = useCallback((language: string) => {
 		setLanguageFilter((current) => (current === language ? null : language));
@@ -563,7 +568,7 @@ export function UserProfileContent({
 			</aside>
 
 			{/* ── Main content ── */}
-			<main className="flex-1 min-w-0 flex flex-col min-h-0">
+			<main className="flex-1 min-w-0 flex flex-col min-h-0 overflow-y-auto pr-1">
 				{/* Search & filters */}
 				<div className="shrink-0">
 					<div className="flex items-center gap-2 mb-3">
@@ -761,7 +766,9 @@ export function UserProfileContent({
 							</div>
 						)}
 						<div className="flex items-center gap-3 shrink-0 ml-auto pt-1">
-							{(search || languageFilter) && (
+							{(search ||
+								languageFilter ||
+								filter !== "all") && (
 								<button
 									onClick={clearRepoFilters}
 									aria-label="Clear repository filters"
@@ -786,7 +793,7 @@ export function UserProfileContent({
 				)}
 
 				{/* Repo list */}
-				<div className="flex-1 min-h-0 overflow-y-auto border border-border rounded-md divide-y divide-border">
+				<div className="shrink-0 min-h-[280px] border border-border rounded-md divide-y divide-border">
 					{filtered.map((repo) => (
 						<Link
 							key={repo.id}
@@ -882,6 +889,20 @@ export function UserProfileContent({
 							</p>
 						</div>
 					)}
+				</div>
+
+				<div className="shrink-0 mt-6 pb-4">
+					<UserProfileActivityTimelineBoundary>
+						<UserProfileActivityTimeline
+							events={activityEvents}
+							contributions={contributions}
+							profileRepos={repos.map((repo) => ({
+								full_name: repo.full_name,
+								created_at: repo.created_at ?? null,
+								language: repo.language,
+							}))}
+						/>
+					</UserProfileActivityTimelineBoundary>
 				</div>
 			</main>
 		</div>
