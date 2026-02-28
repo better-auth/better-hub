@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useTransition, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
 	Sparkles,
@@ -102,7 +103,7 @@ export function PromptList({ owner, repo, promptRequests }: PromptListProps) {
 		const c = { open: 0, closed: 0 };
 		for (const pr of promptRequests) {
 			if (pr.status === "open") c.open++;
-			else c.closed++;
+			else if (pr.status === "accepted" || pr.status === "closed") c.closed++;
 		}
 		return c;
 	}, [promptRequests]);
@@ -221,7 +222,7 @@ export function PromptList({ owner, repo, promptRequests }: PromptListProps) {
 
 					<button
 						onClick={() => setSuggestDialogOpen(true)}
-						className="ml-auto flex items-center gap-1.5 h-8 px-3 text-xs font-medium bg-foreground text-background rounded-lg hover:bg-foreground/90 transition-colors cursor-pointer"
+						className="ml-auto flex items-center gap-1.5 h-8 px-3 text-xs font-medium bg-primary text-background rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
 					>
 						<Sparkles className="w-3 h-3" />
 						Suggest Prompt
@@ -323,6 +324,51 @@ export function PromptList({ owner, repo, promptRequests }: PromptListProps) {
 									)}
 								</div>
 								<div className="flex items-center gap-2 mt-0.5">
+									{pr.userName && (
+										<>
+											{pr.userAvatarUrl && (
+												<Image
+													src={
+														pr.userAvatarUrl
+													}
+													alt={
+														pr.userName
+													}
+													width={
+														14
+													}
+													height={
+														14
+													}
+													className="rounded-full"
+												/>
+											)}
+											{pr.userLogin ? (
+												<Link
+													href={`/users/${pr.userLogin}`}
+													onClick={(
+														e,
+													) =>
+														e.stopPropagation()
+													}
+													className="text-[11px] text-muted-foreground/60 hover:text-foreground hover:underline"
+												>
+													{
+														pr.userName
+													}
+												</Link>
+											) : (
+												<span className="text-[11px] text-muted-foreground/60">
+													{
+														pr.userName
+													}
+												</span>
+											)}
+											<span className="text-muted-foreground/30">
+												·
+											</span>
+										</>
+									)}
 									<span className="text-[11px] text-muted-foreground/50 font-mono">
 										<TimeAgo
 											date={

@@ -10,8 +10,12 @@ import {
 	createPromptRequestComment,
 	deletePromptRequestComment,
 	getPromptRequestComment,
+	addPromptRequestReaction,
+	removePromptRequestReaction,
+	listPromptRequestReactions,
+	type PromptReactionContent,
 } from "@/lib/prompt-request-store";
-import { auth } from "@/lib/auth";
+import { auth, getServerSession } from "@/lib/auth";
 import { headers } from "next/headers";
 import { getOctokit, extractRepoPermissions } from "@/lib/github";
 
@@ -64,7 +68,7 @@ export async function acceptPromptRequestAction(id: string) {
 }
 
 export async function createPromptRequestAction(owner: string, repo: string, body: string) {
-	const session = await auth.api.getSession({ headers: await headers() });
+	const session = await getServerSession();
 	if (!session?.user?.id) throw new Error("Unauthorized");
 
 	// Auto-generate title from first line of body
@@ -75,7 +79,16 @@ export async function createPromptRequestAction(owner: string, repo: string, bod
 			.trim() || "Untitled prompt";
 	const title = firstLine.length > 80 ? firstLine.slice(0, 77) + "..." : firstLine;
 
-	const pr = await createPromptRequest(session.user.id, owner, repo, title, body);
+	const pr = await createPromptRequest(
+		session.user.id,
+		session.githubUser?.login ?? null,
+		session.user.name,
+		session.user.image ?? null,
+		owner,
+		repo,
+		title,
+		body,
+	);
 	revalidatePath(`/repos/${owner}/${repo}/prompts`);
 	return pr;
 }
@@ -114,7 +127,7 @@ export async function deletePromptRequestAction(id: string) {
 }
 
 export async function addPromptComment(promptRequestId: string, body: string) {
-	const session = await auth.api.getSession({ headers: await headers() });
+	const session = await getServerSession();
 	if (!session?.user?.id) throw new Error("Unauthorized");
 
 	const pr = await getPromptRequest(promptRequestId);
@@ -123,6 +136,7 @@ export async function addPromptComment(promptRequestId: string, body: string) {
 	const comment = await createPromptRequestComment(
 		promptRequestId,
 		session.user.id,
+		session.githubUser?.login ?? null,
 		session.user.name,
 		session.user.image ?? "",
 		body,
@@ -146,4 +160,39 @@ export async function deletePromptComment(commentId: string, promptRequestId: st
 
 	await deletePromptRequestComment(commentId);
 	revalidatePath(`/repos/${pr.owner}/${pr.repo}/prompts/${promptRequestId}`);
+}
+
+export async function togglePromptReaction(
+	promptRequestId: string,
+	content: PromptReactionContent,
+) {
+	const session = await getServerSession();
+	if (!session?.user?.id) throw new Error("Unauthorized");
+
+	const pr = await getPromptRequest(promptRequestId);
+	if (!pr) throw new Error("Prompt request not found");
+
+	const existing = await listPromptRequestReactions(promptRequestId);
+	const userReaction = existing.find(
+		(r) => r.userId === session.user.id && r.content === content,
+	);
+
+	if (userReaction) {
+		await removePromptRequestReaction(promptRequestId, session.user.id, content);
+	} else {
+		await addPromptRequestReaction(
+			promptRequestId,
+			session.user.id,
+			session.githubUser?.login ?? null,
+			session.user.name,
+			session.user.image ?? "",
+			content,
+		);
+	}
+
+	revalidatePath(`/repos/${pr.owner}/${pr.repo}/prompts/${promptRequestId}`);
+}
+
+export async function getPromptReactions(promptRequestId: string) {
+	return listPromptRequestReactions(promptRequestId);
 }

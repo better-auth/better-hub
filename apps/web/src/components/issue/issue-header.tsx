@@ -3,9 +3,9 @@ import Image from "next/image";
 import { CircleDot, CheckCircle2, GitPullRequest, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
-import { CopyLinkButton } from "@/components/shared/copy-link-button";
 import { PinButton } from "@/components/shared/pin-button";
 import type { CrossReference } from "@/lib/github";
+import { UserTooltip } from "@/components/shared/user-tooltip";
 
 interface IssueHeaderProps {
 	title: string;
@@ -49,34 +49,38 @@ export function IssueHeader({
 			<div className="flex items-center gap-3 flex-wrap">
 				<span
 					className={cn(
-						"inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-mono",
-						isOpen ? "text-success" : "text-alert-important",
+						"inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-full",
+						isOpen
+							? "bg-success/10 text-success"
+							: "bg-purple-500/10 text-purple-400",
 					)}
 				>
 					{isOpen ? (
-						<CircleDot className="w-3 h-3" />
+						<CircleDot className="w-3.5 h-3.5" />
 					) : (
-						<CheckCircle2 className="w-3 h-3" />
+						<CheckCircle2 className="w-3.5 h-3.5" />
 					)}
 					{isOpen ? "Open" : "Closed"}
 				</span>
 				{author && (
 					<span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-						<Link
-							href={`/users/${author.login}`}
-							className="flex items-center gap-1.5 hover:text-foreground transition-colors"
-						>
-							<Image
-								src={author.avatar_url}
-								alt={author.login}
-								width={16}
-								height={16}
-								className="rounded-full"
-							/>
-							<span className="font-mono">
-								{author.login}
-							</span>
-						</Link>
+						<UserTooltip username={author.login}>
+							<Link
+								href={`/users/${author.login}`}
+								className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+							>
+								<Image
+									src={author.avatar_url}
+									alt={author.login}
+									width={16}
+									height={16}
+									className="rounded-full"
+								/>
+								<span className="font-mono hover:underline">
+									{author.login}
+								</span>
+							</Link>
+						</UserTooltip>
 						<span className="text-muted-foreground/50">
 							opened <TimeAgo date={createdAt} />
 						</span>
@@ -85,12 +89,6 @@ export function IssueHeader({
 				<span className="text-[11px] text-muted-foreground/50 font-mono">
 					{commentsCount} comment{commentsCount !== 1 ? "s" : ""}
 				</span>
-				<CopyLinkButton
-					owner={owner}
-					repo={repo}
-					number={number}
-					type="issues"
-				/>
 				<PinButton
 					owner={owner}
 					repo={repo}

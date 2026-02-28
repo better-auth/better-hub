@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useQueryState, parseAsStringLiteral } from "nuqs";
 import Link from "next/link";
 import {
 	Bell,
@@ -18,8 +19,10 @@ import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import type { NotificationItem } from "@/lib/github-types";
 import { markNotificationDone, markAllNotificationsRead } from "@/app/(app)/repos/actions";
+import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 
-type FilterType = "all" | "unread" | "participating" | "mention";
+const notifFilterTypes = ["all", "unread", "participating", "mention"] as const;
+type FilterType = (typeof notifFilterTypes)[number];
 
 const reasonLabels: Record<string, string> = {
 	assign: "Assigned",
@@ -58,7 +61,11 @@ function getNotificationHref(notif: NotificationItem): string | null {
 }
 
 export function NotificationsContent({ notifications }: { notifications: NotificationItem[] }) {
-	const [filter, setFilter] = useState<FilterType>("all");
+	const { emit } = useMutationEvents();
+	const [filter, setFilter] = useQueryState(
+		"filter",
+		parseAsStringLiteral(notifFilterTypes).withDefault("all"),
+	);
 	const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
 	const [markingAll, startMarkAll] = useTransition();
 	const [markingId, setMarkingId] = useState<string | null>(null);
@@ -99,6 +106,7 @@ export function NotificationsContent({ notifications }: { notifications: Notific
 		const res = await markNotificationDone(notifId);
 		if (res.success) {
 			setDoneIds((prev) => new Set([...prev, notifId]));
+			emit({ type: "notification:read", id: notifId });
 		}
 		setMarkingId(null);
 	}
@@ -124,16 +132,15 @@ export function NotificationsContent({ notifications }: { notifications: Notific
 								const res =
 									await markAllNotificationsRead();
 								if (res.success) {
-									setDoneIds(
-										new Set(
-											notifications.map(
-												(
-													n,
-												) =>
-													n.id,
-											),
-										),
-									);
+									const ids =
+										notifications.map(
+											(n) => n.id,
+										);
+									setDoneIds(new Set(ids));
+									emit({
+										type: "notification:all-read",
+										ids,
+									});
 								}
 							});
 						}}

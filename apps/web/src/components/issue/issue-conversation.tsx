@@ -1,6 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";
+import { EditableIssueDescription } from "@/components/issue/editable-issue-description";
+import { ReactiveCodeBlocks } from "@/components/shared/reactive-code-blocks";
+import { MarkdownMentionTooltips } from "@/components/shared/markdown-mention-tooltips";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { BotActivityGroup } from "@/components/pr/bot-activity-group";
@@ -8,6 +11,7 @@ import { OlderActivityGroup } from "@/components/issue/older-activity-group";
 import { CollapsibleBody } from "@/components/issue/collapsible-body";
 import { ReactionDisplay, type Reactions } from "@/components/shared/reaction-display";
 import { ChatMessageWrapper } from "@/components/pr/chat-message-wrapper";
+import { UserTooltip } from "@/components/shared/user-tooltip";
 
 interface BaseUser {
 	login: string;
@@ -107,18 +111,29 @@ export function IssueConversation({
 	owner,
 	repo,
 	issueNumber,
+	canEdit,
+	issueTitle,
+	currentUserLogin,
+	viewerHasWriteAccess,
+	hasMoreAfter = false,
 }: {
 	entries: IssueTimelineEntry[];
 	owner: string;
 	repo: string;
 	issueNumber: number;
+	canEdit?: boolean;
+	issueTitle?: string;
+	currentUserLogin?: string;
+	viewerHasWriteAccess?: boolean;
+	hasMoreAfter?: boolean;
 }) {
 	const grouped = groupEntries(entries);
+	const showLine = grouped.length > 1 || hasMoreAfter;
 
 	return (
 		<div className="relative">
 			{/* Timeline connector line */}
-			{grouped.length > 1 && (
+			{showLine && (
 				<div className="absolute left-[19px] top-10 bottom-4 w-px bg-border/50" />
 			)}
 
@@ -165,6 +180,12 @@ export function IssueConversation({
 													}
 													issueNumber={
 														issueNumber
+													}
+													currentUserLogin={
+														currentUserLogin
+													}
+													viewerHasWriteAccess={
+														viewerHasWriteAccess
 													}
 												/>
 											),
@@ -217,6 +238,12 @@ export function IssueConversation({
 												issueNumber={
 													issueNumber
 												}
+												currentUserLogin={
+													currentUserLogin
+												}
+												viewerHasWriteAccess={
+													viewerHasWriteAccess
+												}
 											/>
 										),
 									)}
@@ -240,6 +267,10 @@ export function IssueConversation({
 							owner={owner}
 							repo={repo}
 							issueNumber={issueNumber}
+							canEdit={canEdit}
+							issueTitle={issueTitle}
+							currentUserLogin={currentUserLogin}
+							viewerHasWriteAccess={viewerHasWriteAccess}
 						/>
 					);
 				})}
@@ -262,22 +293,38 @@ function ThreadEntry({
 	owner,
 	repo,
 	issueNumber,
+	canEdit,
+	issueTitle,
+	currentUserLogin,
+	viewerHasWriteAccess,
 }: {
 	entry: IssueTimelineEntry;
 	isDescription: boolean;
 	owner: string;
 	repo: string;
 	issueNumber: number;
+	canEdit?: boolean;
+	issueTitle?: string;
+	currentUserLogin?: string;
+	viewerHasWriteAccess?: boolean;
 }) {
 	const hasBody = Boolean(entry.body && entry.body.trim().length > 0);
 	const isLong = hasBody && entry.body.length > 800;
+	const canEditComment = !!(
+		currentUserLogin &&
+		(currentUserLogin === entry.user?.login || viewerHasWriteAccess)
+	);
 
 	const renderedBody = entry.bodyHtml ? (
 		<MarkdownCopyHandler>
-			<div
-				className="ghmd"
-				dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
-			/>
+			<ReactiveCodeBlocks>
+				<MarkdownMentionTooltips>
+					<div
+						className="ghmd"
+						dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
+					/>
+				</MarkdownMentionTooltips>
+			</ReactiveCodeBlocks>
 		</MarkdownCopyHandler>
 	) : null;
 
@@ -286,20 +333,22 @@ function ThreadEntry({
 			{/* Avatar */}
 			<div className="shrink-0 relative z-10">
 				{entry.user ? (
-					<Link href={`/users/${entry.user.login}`}>
-						<Image
-							src={entry.user.avatar_url}
-							alt={entry.user.login}
-							width={40}
-							height={40}
-							className={cn(
-								"rounded-full bg-background",
-								isDescription
-									? "ring-2 ring-border/60"
-									: "",
-							)}
-						/>
-					</Link>
+					<UserTooltip username={entry.user.login} side="right">
+						<Link href={`/users/${entry.user.login}`}>
+							<Image
+								src={entry.user.avatar_url}
+								alt={entry.user.login}
+								width={40}
+								height={40}
+								className={cn(
+									"rounded-full bg-background",
+									isDescription
+										? "ring-2 ring-border/60"
+										: "",
+								)}
+							/>
+						</Link>
+					</UserTooltip>
 				) : (
 					<div className="w-10 h-10 rounded-full bg-muted-foreground/20" />
 				)}
@@ -308,15 +357,25 @@ function ThreadEntry({
 			{/* Content */}
 			<div className="flex-1 min-w-0">
 				{isDescription ? (
-					<DescriptionBlock
-						entry={entry}
-						hasBody={hasBody}
-						isLong={isLong}
-						renderedBody={renderedBody}
-						owner={owner}
-						repo={repo}
-						issueNumber={issueNumber}
-					/>
+					canEdit && issueTitle !== undefined ? (
+						<EditableIssueDescription
+							entry={entry}
+							issueTitle={issueTitle}
+							owner={owner}
+							repo={repo}
+							issueNumber={issueNumber}
+						/>
+					) : (
+						<DescriptionBlock
+							entry={entry}
+							hasBody={hasBody}
+							isLong={isLong}
+							renderedBody={renderedBody}
+							owner={owner}
+							repo={repo}
+							issueNumber={issueNumber}
+						/>
+					)
 				) : (
 					<CommentBlock
 						entry={entry as IssueCommentEntry}
@@ -326,6 +385,7 @@ function ThreadEntry({
 						owner={owner}
 						repo={repo}
 						issueNumber={issueNumber}
+						canEditComment={canEditComment}
 					/>
 				)}
 			</div>
@@ -354,12 +414,14 @@ function DescriptionBlock({
 		<div className="border border-border/60 rounded-lg overflow-hidden">
 			<div className="flex items-center gap-2 px-3.5 py-2 border-b border-border/60 bg-card/80">
 				{entry.user && (
-					<Link
-						href={`/users/${entry.user.login}`}
-						className="text-xs font-semibold text-foreground/90 hover:text-foreground transition-colors"
-					>
-						{entry.user.login}
-					</Link>
+					<UserTooltip username={entry.user.login}>
+						<Link
+							href={`/users/${entry.user.login}`}
+							className="text-xs font-semibold text-foreground/90 hover:text-foreground hover:underline transition-colors"
+						>
+							{entry.user.login}
+						</Link>
+					</UserTooltip>
 				)}
 				<span className="text-[11px] text-muted-foreground/50">
 					commented <TimeAgo date={entry.created_at} />
@@ -403,6 +465,7 @@ function CommentBlock({
 	owner,
 	repo,
 	issueNumber,
+	canEditComment,
 }: {
 	entry: IssueCommentEntry;
 	hasBody: boolean;
@@ -411,16 +474,19 @@ function CommentBlock({
 	owner: string;
 	repo: string;
 	issueNumber: number;
+	canEditComment?: boolean;
 }) {
 	const headerContent = (
 		<>
 			{entry.user ? (
-				<Link
-					href={`/users/${entry.user.login}`}
-					className="text-xs font-semibold text-foreground/90 hover:text-foreground transition-colors"
-				>
-					{entry.user.login}
-				</Link>
+				<UserTooltip username={entry.user.login}>
+					<Link
+						href={`/users/${entry.user.login}`}
+						className="text-xs font-semibold text-foreground/90 hover:text-foreground hover:underline transition-colors"
+					>
+						{entry.user.login}
+					</Link>
+				</UserTooltip>
 			) : (
 				<span className="text-xs font-semibold text-foreground/80">
 					ghost
@@ -475,6 +541,7 @@ function CommentBlock({
 			issueNumber={issueNumber}
 			commentId={entry.id}
 			body={entry.body}
+			canEdit={canEditComment}
 		/>
 	);
 }
@@ -484,21 +551,33 @@ function ThreadComment({
 	owner,
 	repo,
 	issueNumber,
+	currentUserLogin,
+	viewerHasWriteAccess,
 }: {
 	entry: IssueTimelineEntry;
 	owner: string;
 	repo: string;
 	issueNumber: number;
+	currentUserLogin?: string;
+	viewerHasWriteAccess?: boolean;
 }) {
 	const hasBody = Boolean(entry.body && entry.body.trim().length > 0);
 	const isLong = hasBody && entry.body.length > 800;
+	const canEditComment = !!(
+		currentUserLogin &&
+		(currentUserLogin === entry.user?.login || viewerHasWriteAccess)
+	);
 
 	const renderedBody = entry.bodyHtml ? (
 		<MarkdownCopyHandler>
-			<div
-				className="ghmd ghmd-sm"
-				dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
-			/>
+			<ReactiveCodeBlocks>
+				<MarkdownMentionTooltips>
+					<div
+						className="ghmd ghmd-sm"
+						dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
+					/>
+				</MarkdownMentionTooltips>
+			</ReactiveCodeBlocks>
 		</MarkdownCopyHandler>
 	) : null;
 
@@ -525,6 +604,7 @@ function ThreadComment({
 			owner={owner}
 			repo={repo}
 			issueNumber={issueNumber}
+			canEditComment={canEditComment}
 		/>
 	);
 }

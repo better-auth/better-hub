@@ -5,10 +5,10 @@ services:
                 restart: unless-stopped
                 environment:
                         POSTGRES_USER: postgres
-                        POSTGRES_PASSWORD: postgres
+                        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
                         POSTGRES_DB: better_hub
                 ports:
-                        - "54320:5432"
+                        - "127.0.0.1:54320:5432"
                 volumes:
                         - postgres_data:/var/lib/postgresql/data
 
@@ -24,10 +24,10 @@ services:
                 container_name: better-hub-redis-rest
                 restart: unless-stopped
                 ports:
-                        - "8079:80"
+                        - "127.0.0.1:8079:80"
                 environment:
                         SRH_MODE: env
-                        SRH_TOKEN: local_token
+                        SRH_TOKEN: ${SRH_TOKEN:-local_token}
                         SRH_CONNECTION_STRING: redis://redis:6379
                 depends_on:
                         - redis

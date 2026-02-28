@@ -60,6 +60,8 @@ import type { ReviewThread, CheckStatus } from "@/lib/github";
 import { ClientMarkdown } from "@/components/shared/client-markdown";
 import { CheckStatusBadge } from "@/components/pr/check-status-badge";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
+import { UserTooltip } from "@/components/shared/user-tooltip";
+import { getDiffPreferences, setSplitView, setWordWrap } from "@/lib/diff-preferences";
 
 interface DiffFile {
 	filename: string;
@@ -157,8 +159,8 @@ export function PRDiffViewer({
 		}
 		return 0;
 	});
-	const [wordWrap, setWordWrap] = useState(true);
-	const [splitView, setSplitView] = useState(false);
+	const [wordWrap, setWordWrapState] = useState(() => getDiffPreferences().wordWrap);
+	const [splitView, setSplitViewState] = useState(() => getDiffPreferences().splitView);
 	const [sidebarWidth, setSidebarWidth] = useState(220);
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 	const [isDragging, setIsDragging] = useState(false);
@@ -542,8 +544,18 @@ export function PRDiffViewer({
 						total={files.length}
 						wordWrap={wordWrap}
 						splitView={splitView}
-						onToggleWrap={() => setWordWrap((w) => !w)}
-						onToggleSplit={() => setSplitView((s) => !s)}
+						onToggleWrap={() => {
+							setWordWrapState((w) => {
+								setWordWrap(!w);
+								return !w;
+							});
+						}}
+						onToggleSplit={() => {
+							setSplitViewState((s) => {
+								setSplitView(!s);
+								return !s;
+							});
+						}}
 						sidebarCollapsed={sidebarCollapsed}
 						onToggleSidebar={() =>
 							setSidebarCollapsed((c) => !c)
@@ -3286,13 +3298,24 @@ function InlineCommentDisplay({
 					)}
 				/>
 				{comment.user ? (
-					<Link
-						href={`/users/${comment.user.login}`}
-						className="text-xs font-medium text-foreground/70 hover:text-foreground hover:underline transition-colors"
-						onClick={(e) => e.stopPropagation()}
-					>
-						{comment.user.login}
-					</Link>
+					<UserTooltip username={comment.user.login}>
+						<Link
+							href={`/users/${comment.user.login}`}
+							className="flex items-center gap-1.5 text-xs font-medium text-foreground/70 hover:text-foreground transition-colors"
+							onClick={(e) => e.stopPropagation()}
+						>
+							<Image
+								src={comment.user.avatar_url}
+								alt={comment.user.login}
+								width={16}
+								height={16}
+								className="rounded-full"
+							/>
+							<span className="hover:underline">
+								{comment.user.login}
+							</span>
+						</Link>
+					</UserTooltip>
 				) : (
 					<span className="text-xs font-medium text-foreground/70">
 						ghost
@@ -4693,6 +4716,7 @@ function SidebarCommits({
 						<CheckStatusBadge
 							checkStatus={checkStatus}
 							align="right"
+							usePortal
 							owner={owner}
 							repo={repo}
 						/>
@@ -4773,6 +4797,7 @@ function SidebarCommits({
 														commitCheck
 													}
 													align="right"
+													usePortal
 													owner={
 														owner
 													}

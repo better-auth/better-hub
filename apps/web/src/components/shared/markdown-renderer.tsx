@@ -60,6 +60,8 @@ const sanitizeSchema: typeof defaultSchema = {
 import { highlightCode } from "@/lib/shiki";
 import { toInternalUrl } from "@/lib/github-utils";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";
+import { ReactiveCodeBlocks } from "@/components/shared/reactive-code-blocks";
+import { MarkdownMentionTooltips } from "@/components/shared/markdown-mention-tooltips";
 
 interface RepoContext {
 	owner: string;
@@ -386,6 +388,15 @@ function escapeHtml(str: string): string {
 		.replace(/"/g, "&quot;");
 }
 
+function escapeDataAttr(str: string): string {
+	return str
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/\n/g, "&#10;");
+}
+
 function buildInstallTabsHtml(variants: PkgVariant[], id: number): string {
 	const name = `pkgtab-${id}`;
 	let html = '<div class="ghmd-pkg-tabs">';
@@ -445,12 +456,15 @@ export async function renderMarkdownToHtml(
 	const renderedBlocks = await Promise.all(
 		codeBlocks.map(async (block) => ({
 			id: block.id,
+			code: block.code,
+			lang: block.lang,
 			html: await highlightCode(block.code, block.lang),
 		})),
 	);
 
 	for (const block of renderedBlocks) {
-		html = html.replace(`<div data-code-block="${block.id}"></div>`, block.html);
+		const wrappedHtml = `<div class="ghmd-reactive-code" data-code="${escapeDataAttr(block.code)}" data-lang="${escapeHtml(block.lang)}">${block.html}</div>`;
+		html = html.replace(`<div data-code-block="${block.id}"></div>`, wrappedHtml);
 	}
 
 	for (const block of installBlocks) {
@@ -507,10 +521,14 @@ export async function MarkdownRenderer({
 
 	return (
 		<MarkdownCopyHandler>
-			<div
-				className={`ghmd ${className || ""}`}
-				dangerouslySetInnerHTML={{ __html: html }}
-			/>
+			<ReactiveCodeBlocks>
+				<MarkdownMentionTooltips>
+					<div
+						className={`ghmd ${className || ""}`}
+						dangerouslySetInnerHTML={{ __html: html }}
+					/>
+				</MarkdownMentionTooltips>
+			</ReactiveCodeBlocks>
 		</MarkdownCopyHandler>
 	);
 }

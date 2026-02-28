@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
@@ -36,6 +36,8 @@ interface IssueCommentFormProps {
 	repo: string;
 	issueNumber: number;
 	issueState: string;
+	canClose?: boolean;
+	canReopen?: boolean;
 	userAvatarUrl?: string;
 	userName?: string;
 	participants?: Array<{ login: string; avatar_url: string }>;
@@ -46,12 +48,25 @@ export function IssueCommentForm({
 	repo,
 	issueNumber,
 	issueState,
+	canClose = false,
+	canReopen = false,
 	userAvatarUrl,
 	userName,
 	participants,
 }: IssueCommentFormProps) {
 	const router = useRouter();
-	const [body, setBody] = useState("");
+	const draftKey = `better-hub:draft:comment:${owner}/${repo}/${issueNumber}`;
+
+	// Restore draft on mount
+	const [body, setBody] = useState(() => {
+		if (typeof window === "undefined") return "";
+		try {
+			const raw = localStorage.getItem(draftKey);
+			return raw ? (JSON.parse(raw) as string) : "";
+		} catch {
+			return "";
+		}
+	});
 	const [isPending, startTransition] = useTransition();
 	const [error, setError] = useState<string | null>(null);
 	const [optimisticComments, setOptimisticComments] = useState<OptimisticComment[]>([]);
@@ -61,6 +76,19 @@ export function IssueCommentForm({
 	const { emit } = useMutationEvents();
 
 	useClickOutside(dropdownRef, () => setCloseDropdownOpen(false));
+
+	// Persist draft when body changes (debounced)
+	useEffect(() => {
+		if (!body.trim()) return;
+		const t = setTimeout(() => {
+			try {
+				localStorage.setItem(draftKey, JSON.stringify(body));
+			} catch {
+				/* ignore */
+			}
+		}, 500);
+		return () => clearTimeout(t);
+	}, [body, draftKey]);
 
 	const isOpen = issueState === "open";
 
@@ -79,6 +107,11 @@ export function IssueCommentForm({
 			},
 		]);
 		setBody("");
+		try {
+			localStorage.removeItem(draftKey);
+		} catch {
+			/* ignore */
+		}
 
 		(async () => {
 			const res = await addIssueComment(owner, repo, issueNumber, commentBody);
@@ -117,6 +150,11 @@ export function IssueCommentForm({
 				setError(res.error);
 			} else {
 				setBody("");
+				try {
+					localStorage.removeItem(draftKey);
+				} catch {
+					/* ignore */
+				}
 				emit({ type: "issue:closed", owner, repo, number: issueNumber });
 				router.refresh();
 			}
@@ -221,7 +259,7 @@ export function IssueCommentForm({
 						</div>
 						<div className="flex items-center gap-2">
 							{/* Close / Reopen button */}
-							{isOpen ? (
+							{canClose && isOpen ? (
 								<div
 									className="relative"
 									ref={dropdownRef}
@@ -351,7 +389,7 @@ export function IssueCommentForm({
 										</div>
 									)}
 								</div>
-							) : (
+							) : canReopen && !isOpen ? (
 								<button
 									onClick={handleReopen}
 									disabled={isPending}
@@ -372,7 +410,7 @@ export function IssueCommentForm({
 										? "Reopen with comment"
 										: "Reopen issue"}
 								</button>
-							)}
+							) : null}
 
 							{/* Comment button */}
 							<button

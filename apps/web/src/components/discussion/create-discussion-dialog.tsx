@@ -33,6 +33,7 @@ import ReactMarkdown from "react-markdown";
 import { createDiscussion } from "@/app/(app)/repos/[owner]/[repo]/discussions/actions";
 import { uploadImage } from "@/app/(app)/repos/[owner]/[repo]/issues/actions";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
+import { GitHubEmoji } from "@/components/shared/github-emoji";
 import type { DiscussionCategory } from "@/lib/github";
 
 interface CreateDiscussionDialogProps {
@@ -262,7 +263,7 @@ export function CreateDiscussionDialog({
 		<>
 			<button
 				onClick={handleOpen}
-				className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-foreground hover:bg-foreground/90 text-background transition-colors cursor-pointer rounded-md"
+				className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary hover:bg-primary/90 text-background transition-colors cursor-pointer rounded-md"
 			>
 				<Plus className="w-3 h-3" />
 				New discussion
@@ -321,11 +322,11 @@ export function CreateDiscussionDialog({
 								>
 									{selectedCategory ? (
 										<>
-											<span>
-												{
-													selectedCategory.emoji
+											<GitHubEmoji
+												emojiHTML={
+													selectedCategory.emojiHTML
 												}
-											</span>
+											/>
 											<span className="flex-1 min-w-0 truncate">
 												{
 													selectedCategory.name
@@ -372,9 +373,11 @@ export function CreateDiscussionDialog({
 															)}
 														>
 															<span className="text-sm shrink-0">
-																{
-																	cat.emoji
-																}
+																<GitHubEmoji
+																	emojiHTML={
+																		cat.emojiHTML
+																	}
+																/>
 															</span>
 															<div className="flex-1 min-w-0">
 																<span className="text-[12px] font-medium block truncate">

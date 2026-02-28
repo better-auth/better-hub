@@ -2,11 +2,13 @@ import Link from "next/link";
 import Image from "next/image";
 import {
 	GitCommitHorizontal,
+	GitPullRequest,
 	CircleDot,
 	CircleX,
 	CircleDashed,
 	GitMerge,
 	FileCheck,
+	Link2Icon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
@@ -20,6 +22,7 @@ import { CollapsibleDescription } from "./collapsible-description";
 import { ChatMessageWrapper } from "./chat-message-wrapper";
 import { PRChecksPanel } from "./pr-checks-panel";
 import type { CheckStatus } from "@/lib/github";
+import { UserTooltip } from "@/components/shared/user-tooltip";
 
 interface BaseUser {
 	login: string;
@@ -87,18 +90,34 @@ export interface StateChangeEntry {
 	merge_ref_name?: string;
 }
 
+export interface CrossReferenceEntry {
+	type: "cross_reference";
+	id: string;
+	number: number;
+	title: string;
+	state: "open" | "closed";
+	merged: boolean;
+	isPullRequest: boolean;
+	user: BaseUser | null;
+	repoOwner: string;
+	repoName: string;
+	created_at: string;
+}
+
 export type TimelineEntry =
 	| DescriptionEntry
 	| CommentEntry
 	| ReviewEntry
 	| CommitEntry
-	| StateChangeEntry;
+	| StateChangeEntry
+	| CrossReferenceEntry;
 
 function isBot(entry: TimelineEntry): boolean {
 	if (!entry.user) return false;
 	if (entry.type === "description") return false;
 	if (entry.type === "commit") return false;
 	if (entry.type === "state_change") return false;
+	if (entry.type === "cross_reference") return false;
 	return (
 		entry.user.type === "Bot" ||
 		entry.user.login.endsWith("[bot]") ||
@@ -231,6 +250,25 @@ export async function PRConversation({
 											/>
 										);
 									}
+									if (
+										entry.type ===
+										"cross_reference"
+									) {
+										return (
+											<CrossReferenceEvent
+												key={`xref-${entry.id}`}
+												entry={
+													entry
+												}
+												owner={
+													owner
+												}
+												repo={
+													repo
+												}
+											/>
+										);
+									}
 									return (
 										<ChatMessage
 											key={
@@ -290,6 +328,16 @@ export async function PRConversation({
 						<StateChangeEvent
 							key={`state-${entry.id}`}
 							entry={entry}
+						/>
+					);
+				}
+				if (entry.type === "cross_reference") {
+					return (
+						<CrossReferenceEvent
+							key={`xref-${entry.id}`}
+							entry={entry}
+							owner={owner}
+							repo={repo}
 						/>
 					);
 				}
@@ -385,21 +433,23 @@ async function ChatMessage({
 	const headerContent = (
 		<>
 			{entry.user ? (
-				<Link
-					href={`/users/${entry.user.login}`}
-					className="flex items-center gap-2 hover:text-foreground transition-colors"
-				>
-					<Image
-						src={entry.user.avatar_url}
-						alt={entry.user.login}
-						width={16}
-						height={16}
-						className="rounded-full shrink-0"
-					/>
-					<span className="text-xs font-medium text-foreground/80">
-						{entry.user.login}
-					</span>
-				</Link>
+				<UserTooltip username={entry.user.login}>
+					<Link
+						href={`/users/${entry.user.login}`}
+						className="flex items-center gap-2 hover:text-foreground transition-colors"
+					>
+						<Image
+							src={entry.user.avatar_url}
+							alt={entry.user.login}
+							width={16}
+							height={16}
+							className="rounded-full shrink-0"
+						/>
+						<span className="text-xs font-medium text-foreground/80 hover:underline">
+							{entry.user.login}
+						</span>
+					</Link>
+				</UserTooltip>
 			) : (
 				<>
 					<div className="w-4 h-4 rounded-full bg-muted-foreground shrink-0" />
@@ -521,24 +571,30 @@ function CommitGroup({ commits }: { commits: CommitEntry[] }) {
 						<GitCommitHorizontal className="w-3.5 h-3.5 text-muted-foreground/30 shrink-0" />
 						<div className="flex items-center -space-x-1 shrink-0">
 							{commit.user ? (
-								<Link
-									href={`/users/${commit.user.login}`}
-									className="relative z-10"
+								<UserTooltip
+									username={commit.user.login}
 								>
-									<Image
-										src={
-											commit.user
-												.avatar_url
-										}
-										alt={
-											commit.user
-												.login
-										}
-										width={16}
-										height={16}
-										className="rounded-full border border-background"
-									/>
-								</Link>
+									<Link
+										href={`/users/${commit.user.login}`}
+										className="relative z-10"
+									>
+										<Image
+											src={
+												commit
+													.user
+													.avatar_url
+											}
+											alt={
+												commit
+													.user
+													.login
+											}
+											width={16}
+											height={16}
+											className="rounded-full border border-background"
+										/>
+									</Link>
+								</UserTooltip>
 							) : (
 								<div className="w-4 h-4 rounded-full bg-muted-foreground border border-background relative z-10 shrink-0" />
 							)}
@@ -640,21 +696,23 @@ function StateChangeEvent({ entry }: { entry: StateChangeEntry }) {
 			<Icon className={cn("w-4 h-4 shrink-0", config.color)} />
 			<div className="flex items-center gap-2 min-w-0 flex-1">
 				{entry.user ? (
-					<Link
-						href={`/users/${entry.user.login}`}
-						className="flex items-center gap-1.5 hover:opacity-80 transition-opacity shrink-0"
-					>
-						<Image
-							src={entry.user.avatar_url}
-							alt={entry.user.login}
-							width={16}
-							height={16}
-							className="rounded-full"
-						/>
-						<span className="text-xs font-medium text-foreground/80">
-							{entry.user.login}
-						</span>
-					</Link>
+					<UserTooltip username={entry.user.login}>
+						<Link
+							href={`/users/${entry.user.login}`}
+							className="flex items-center gap-1.5 hover:opacity-80 transition-opacity shrink-0"
+						>
+							<Image
+								src={entry.user.avatar_url}
+								alt={entry.user.login}
+								width={16}
+								height={16}
+								className="rounded-full"
+							/>
+							<span className="text-xs font-medium text-foreground/80 hover:underline">
+								{entry.user.login}
+							</span>
+						</Link>
+					</UserTooltip>
 				) : (
 					<span className="text-xs font-medium text-foreground/80">
 						Someone
@@ -663,6 +721,79 @@ function StateChangeEvent({ entry }: { entry: StateChangeEntry }) {
 				<span className="text-xs text-muted-foreground">
 					{config.label}
 				</span>
+			</div>
+			<span className="text-[10px] text-muted-foreground shrink-0">
+				<TimeAgo date={entry.created_at} />
+			</span>
+		</div>
+	);
+}
+
+function CrossReferenceEvent({
+	entry,
+	owner,
+	repo,
+}: {
+	entry: CrossReferenceEntry;
+	owner: string;
+	repo: string;
+}) {
+	const isLocal = entry.repoOwner === owner && entry.repoName === repo;
+	const href = isLocal
+		? `/${owner}/${repo}/${entry.isPullRequest ? "pulls" : "issues"}/${entry.number}`
+		: `/${entry.repoOwner}/${entry.repoName}/${entry.isPullRequest ? "pulls" : "issues"}/${entry.number}`;
+
+	const Icon = entry.isPullRequest ? (entry.merged ? GitMerge : GitPullRequest) : CircleDot;
+
+	const color = entry.merged
+		? "text-purple-500"
+		: entry.state === "open"
+			? "text-green-500"
+			: "text-red-500";
+
+	return (
+		<div className="flex items-center gap-2.5 px-3 py-2 rounded-lg border bg-muted/20 dark:bg-white/[0.015] border-border/40 dark:border-white/5">
+			<Link2Icon className="w-4 h-4 self-start shrink-0 text-muted-foreground/50" />
+			<div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
+				{entry.user && (
+					<UserTooltip username={entry.user.login}>
+						<Link
+							href={`/users/${entry.user.login}`}
+							className="flex items-center gap-1.5 hover:opacity-80 transition-opacity shrink-0"
+						>
+							<Image
+								src={entry.user.avatar_url}
+								alt={entry.user.login}
+								width={16}
+								height={16}
+								className="rounded-full"
+							/>
+							<span className="text-xs font-medium text-foreground/80 hover:underline">
+								{entry.user.login}
+							</span>
+						</Link>
+					</UserTooltip>
+				)}
+				<span className="text-xs text-muted-foreground">
+					mentioned this in
+				</span>
+				<Link
+					href={href}
+					className="inline-flex items-center gap-1 text-xs hover:underline min-w-0"
+				>
+					<Icon className={cn("w-3.5 h-3.5 shrink-0", color)} />
+					{!isLocal && (
+						<span className="text-muted-foreground/50 shrink-0">
+							{entry.repoOwner}/{entry.repoName}
+						</span>
+					)}
+					<span className={cn("font-mono shrink-0", color)}>
+						#{entry.number}
+					</span>
+					<span className="text-muted-foreground/70 truncate max-w-[300px]">
+						{entry.title}
+					</span>
+				</Link>
 			</div>
 			<span className="text-[10px] text-muted-foreground shrink-0">
 				<TimeAgo date={entry.created_at} />

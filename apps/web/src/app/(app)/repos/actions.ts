@@ -54,12 +54,45 @@ export async function forkRepo(
 	}
 }
 
+export async function syncFork(
+	owner: string,
+	repo: string,
+	defaultBranch: string,
+): Promise<{ success: boolean; message?: string; error?: string }> {
+	const octokit = await getOctokit();
+	if (!octokit) return { success: false, error: "Not authenticated" };
+
+	try {
+		const { data } = await octokit.request(
+			"POST /repos/{owner}/{repo}/merge-upstream",
+			{ owner, repo, branch: defaultBranch },
+		);
+
+		invalidateRepoCache(owner, repo);
+		revalidatePath(`/${owner}/${repo}`);
+
+		if (data.merge_type === "fast-forward") {
+			return { success: true, message: "Fast-forwarded to upstream" };
+		}
+		if (data.merge_type === "merge") {
+			return { success: true, message: "Merged upstream changes" };
+		}
+		return { success: true, message: "Already up to date" };
+	} catch (e: unknown) {
+		return {
+			success: false,
+			error: getErrorMessage(e) || "Failed to sync fork",
+		};
+	}
+}
+
 export async function markNotificationDone(threadId: string) {
 	const octokit = await getOctokit();
 	if (!octokit) return { error: "Not authenticated" };
 	try {
 		await octokit.activity.markThreadAsRead({ thread_id: Number(threadId) });
 		revalidatePath("/notifications");
+		revalidatePath("/dashboard", "layout");
 		return { success: true };
 	} catch (e: unknown) {
 		return { error: getErrorMessage(e) || "Failed to mark notification as done" };
@@ -72,6 +105,7 @@ export async function markAllNotificationsRead() {
 	try {
 		await octokit.activity.markNotificationsAsRead();
 		revalidatePath("/notifications");
+		revalidatePath("/dashboard", "layout");
 		return { success: true };
 	} catch (e: unknown) {
 		return { error: getErrorMessage(e) || "Failed to mark all as read" };

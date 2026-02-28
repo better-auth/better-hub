@@ -12,6 +12,8 @@ import { RefreshButton } from "@/components/shared/refresh-button";
 import { EditablePRTitle } from "@/components/pr/editable-pr-title";
 import { EditableBaseBranch } from "@/components/pr/editable-base-branch";
 import { PRStatusIndicator } from "@/components/pr/pr-status-indicator";
+import { UserTooltip } from "@/components/shared/user-tooltip";
+import { buildPrHeadBranchTreeHref } from "@/lib/github-utils";
 
 interface PRHeaderProps {
 	title: string;
@@ -32,6 +34,8 @@ interface PRHeaderProps {
 	actions?: React.ReactNode;
 	owner: string;
 	repo: string;
+	headRepoOwner?: string | null;
+	headRepoName?: string | null;
 	canEdit?: boolean;
 	isPinned?: boolean;
 	crossRefs?: CrossReference[];
@@ -56,10 +60,20 @@ export function PRHeader({
 	actions,
 	owner,
 	repo,
+	headRepoOwner,
+	headRepoName,
 	canEdit = false,
 	isPinned = false,
 	crossRefs,
 }: PRHeaderProps) {
+	const headBranchHref = buildPrHeadBranchTreeHref({
+		baseOwner: owner,
+		baseRepo: repo,
+		headBranch,
+		headRepoOwner,
+		headRepoName,
+	});
+
 	return (
 		<div className="pb-3 mb-0">
 			{/* Title + actions */}
@@ -88,21 +102,23 @@ export function PRHeader({
 
 				{/* Author */}
 				{author && (
-					<Link
-						href={`/users/${author.login}`}
-						className="flex items-center gap-1.5 text-muted-foreground/70 hover:text-foreground transition-colors"
-					>
-						<Image
-							src={author.avatar_url}
-							alt={author.login}
-							width={16}
-							height={16}
-							className="rounded-full"
-						/>
-						<span className="font-mono text-[11px]">
-							{author.login}
-						</span>
-					</Link>
+					<UserTooltip username={author.login}>
+						<Link
+							href={`/users/${author.login}`}
+							className="flex items-center gap-1.5 text-muted-foreground/70 hover:text-foreground transition-colors"
+						>
+							<Image
+								src={author.avatar_url}
+								alt={author.login}
+								width={16}
+								height={16}
+								className="rounded-full"
+							/>
+							<span className="font-mono text-[11px] hover:underline">
+								{author.login}
+							</span>
+						</Link>
+					</UserTooltip>
 				)}
 
 				<span className="text-muted-foreground/50 text-[10px]">
@@ -116,7 +132,7 @@ export function PRHeader({
 				<span className="flex items-center gap-1 font-mono text-muted-foreground/60 text-[10px]">
 					<GitBranch className="w-3 h-3" />
 					<Link
-						href={`/${owner}/${repo}/tree/${headBranch}`}
+						href={headBranchHref}
 						className="hover:text-info transition-colors hover:underline"
 					>
 						{headBranch}
@@ -193,38 +209,46 @@ export function PRHeader({
 					<>
 						<span className="w-px h-3 bg-border" />
 						{reviewStatuses.map((r) => (
-							<Link
+							<UserTooltip
 								key={r.login}
-								href={`/users/${r.login}`}
-								className="inline-flex items-center gap-1 hover:opacity-80 transition-opacity"
-								title={`${r.login} ${r.state === "APPROVED" ? "approved" : "requested changes"}`}
+								username={r.login}
 							>
-								<span className="relative">
-									<Image
-										src={r.avatar_url}
-										alt={r.login}
-										width={16}
-										height={16}
-										className="rounded-full"
-									/>
-									<span
-										className={cn(
-											"absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full flex items-center justify-center ring-2 ring-background",
-											r.state ===
-												"APPROVED"
-												? "bg-success"
-												: "bg-warning",
-										)}
-									>
-										{r.state ===
-										"APPROVED" ? (
-											<Check className="w-2 h-2 text-white" />
-										) : (
-											<X className="w-2 h-2 text-white" />
-										)}
+								<Link
+									href={`/users/${r.login}`}
+									className="inline-flex items-center gap-1 hover:opacity-80 transition-opacity"
+									title={`${r.login} ${r.state === "APPROVED" ? "approved" : "requested changes"}`}
+								>
+									<span className="relative">
+										<Image
+											src={
+												r.avatar_url
+											}
+											alt={
+												r.login
+											}
+											width={16}
+											height={16}
+											className="rounded-full"
+										/>
+										<span
+											className={cn(
+												"absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full flex items-center justify-center ring-2 ring-background",
+												r.state ===
+													"APPROVED"
+													? "bg-success"
+													: "bg-warning",
+											)}
+										>
+											{r.state ===
+											"APPROVED" ? (
+												<Check className="w-2 h-2 text-white" />
+											) : (
+												<X className="w-2 h-2 text-white" />
+											)}
+										</span>
 									</span>
-								</span>
-							</Link>
+								</Link>
+							</UserTooltip>
 						))}
 					</>
 				)}

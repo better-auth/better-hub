@@ -35,6 +35,7 @@ import {
 	Code,
 	Eye,
 	Pin,
+	Square,
 } from "lucide-react";
 import { formatForDisplay } from "@tanstack/react-hotkeys";
 import { signOut } from "@/lib/auth-client";
@@ -43,8 +44,7 @@ import { getLanguageColor } from "@/lib/github-utils";
 import { useGlobalChatOptional } from "@/components/shared/global-chat-provider";
 import { getRecentViews, type RecentViewItem } from "@/lib/recent-views";
 import { useColorTheme } from "@/components/theme/theme-provider";
-import { useCodeTheme } from "@/components/theme/code-theme-provider";
-import { BUILT_IN_THEMES } from "@/lib/code-themes/built-in";
+import { BORDER_RADIUS_PRESETS, type BorderRadiusPreset } from "@/lib/themes/border-radius";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { useMutationSubscription } from "@/hooks/use-mutation-subscription";
 import type { MutationEvent } from "@/lib/mutation-events";
@@ -108,7 +108,7 @@ type Mode =
 	| "commands"
 	| "search"
 	| "theme"
-	| "code-theme"
+	| "radius"
 	| "accounts"
 	| "settings"
 	| "model"
@@ -127,17 +127,14 @@ export function CommandMenu() {
 	const panelRef = useRef<HTMLDivElement>(null);
 	const globalChat = useGlobalChatOptional();
 	const {
-		colorTheme,
-		setColorTheme,
+		themeId: currentThemeId,
+		mode: currentMode,
+		borderRadius: currentBorderRadius,
+		setTheme: setColorTheme,
+		toggleMode,
+		setBorderRadius,
 		themes: colorThemes,
-		darkThemes: colorDarkThemes,
-		lightThemes: colorLightThemes,
-		darkThemeId,
-		lightThemeId,
-		mode: _colorMode,
 	} = useColorTheme();
-	const { codeThemeDark, codeThemeLight, setCodeThemeDark, setCodeThemeLight } =
-		useCodeTheme();
 	const { emit } = useMutationEvents();
 
 	// Recently viewed
@@ -176,6 +173,9 @@ export function CommandMenu() {
 	);
 	const [fileTreeLoading, setFileTreeLoading] = useState(false);
 	const fileTreeRepoRef = useRef<string>("");
+
+	// Track previous mode to detect when entering theme mode
+	const prevModeRef = useRef<Mode>("commands");
 
 	const MODELS = useMemo(
 		() => [
@@ -789,27 +789,27 @@ export function CommandMenu() {
 					"wave",
 					"contrast",
 					"style",
+					"code",
+					"syntax",
 				],
 				action: () => switchMode("theme"),
 				icon: Palette,
 				keepOpen: true,
 			},
 			{
-				name: "Code Theme",
-				description: "Change syntax highlighting",
+				name: "Set Border Radius",
+				description: "Adjust corner rounding",
 				keywords: [
-					"code",
-					"syntax",
-					"editor",
-					"highlight",
-					"dracula",
-					"monokai",
-					"catppuccin",
-					"shiki",
-					"font",
+					"radius",
+					"rounded",
+					"corners",
+					"square",
+					"sharp",
+					"soft",
+					"rounding",
 				],
-				action: () => switchMode("code-theme"),
-				icon: Code,
+				action: () => switchMode("radius"),
+				icon: Square,
 				keepOpen: true,
 			},
 			{
@@ -1126,61 +1126,64 @@ export function CommandMenu() {
 	}, [search, topUserRepos, filteredUserRepos, dedupedGithubResults, router]);
 
 	// --- Theme mode items ---
-	const filteredDarkThemes = useMemo(() => {
-		if (mode !== "theme") return colorDarkThemes;
-		if (!search.trim()) return colorDarkThemes;
-		const s = search.toLowerCase();
-		return colorDarkThemes.filter(
-			(t) =>
+	const { regularThemes, brandedThemes } = useMemo(() => {
+		const filterFn = (t: (typeof colorThemes)[0]) => {
+			if (!search.trim()) return true;
+			const s = search.toLowerCase();
+			return (
 				t.name.toLowerCase().includes(s) ||
-				t.description.toLowerCase().includes(s),
-		);
-	}, [mode, search, colorDarkThemes]);
+				t.description.toLowerCase().includes(s)
+			);
+		};
 
-	const filteredLightThemes = useMemo(() => {
-		if (mode !== "theme") return colorLightThemes;
-		if (!search.trim()) return colorLightThemes;
-		const s = search.toLowerCase();
-		return colorLightThemes.filter(
-			(t) =>
-				t.name.toLowerCase().includes(s) ||
-				t.description.toLowerCase().includes(s),
-		);
-	}, [mode, search, colorLightThemes]);
+		const regular: typeof colorThemes = [];
+		const branded: typeof colorThemes = [];
 
-	const filteredThemes = useMemo(
-		() => [...filteredDarkThemes, ...filteredLightThemes],
-		[filteredDarkThemes, filteredLightThemes],
-	);
+		for (const theme of colorThemes) {
+			if (!filterFn(theme)) continue;
+			if (theme.icon) {
+				branded.push(theme);
+			} else {
+				regular.push(theme);
+			}
+		}
+
+		return { regularThemes: regular, brandedThemes: branded };
+	}, [mode, search, colorThemes]);
 
 	const themeItems = useMemo(() => {
-		return filteredThemes.map((t) => ({
+		return [...regularThemes, ...brandedThemes].map((t) => ({
 			id: `theme-${t.id}`,
 			action: () => setColorTheme(t.id),
 			keepOpen: true,
 		}));
-	}, [filteredThemes, setColorTheme]);
+	}, [regularThemes, brandedThemes, setColorTheme]);
 
-	// --- Code theme mode items ---
-	const filteredCodeThemes = useMemo(() => {
-		if (mode !== "code-theme") return BUILT_IN_THEMES;
-		if (!search.trim()) return BUILT_IN_THEMES;
+	// --- Radius mode items ---
+	const RADIUS_OPTIONS: { id: BorderRadiusPreset; label: string; description: string }[] = [
+		{ id: "default", label: "Default", description: "Sharp corners" },
+		{ id: "small", label: "Small", description: "Subtle rounding" },
+		{ id: "medium", label: "Medium", description: "Balanced corners" },
+		{ id: "large", label: "Large", description: "Soft & rounded" },
+	];
+
+	const filteredRadiusOptions = useMemo(() => {
+		if (!search.trim()) return RADIUS_OPTIONS;
 		const s = search.toLowerCase();
-		return BUILT_IN_THEMES.filter(
-			(t) => t.name.toLowerCase().includes(s) || t.id.toLowerCase().includes(s),
+		return RADIUS_OPTIONS.filter(
+			(r) =>
+				r.label.toLowerCase().includes(s) ||
+				r.description.toLowerCase().includes(s),
 		);
-	}, [mode, search]);
+	}, [search]);
 
-	const codeThemeItems = useMemo(() => {
-		return filteredCodeThemes.map((t) => ({
-			id: `code-theme-${t.id}`,
-			action: () => {
-				if (t.mode === "dark") setCodeThemeDark(t.id);
-				else setCodeThemeLight(t.id);
-			},
+	const radiusItems = useMemo(() => {
+		return filteredRadiusOptions.map((r) => ({
+			id: `radius-${r.id}`,
+			action: () => setBorderRadius(r.id),
 			keepOpen: true,
 		}));
-	}, [filteredCodeThemes, setCodeThemeDark, setCodeThemeLight]);
+	}, [filteredRadiusOptions, setBorderRadius]);
 
 	// --- Accounts mode items ---
 	const handleSwitchAccount = useCallback(
@@ -1321,8 +1324,8 @@ export function CommandMenu() {
 		const items: { id: string; action: () => void; keepOpen: boolean }[] = [
 			{ id: "settings-theme", action: () => switchMode("theme"), keepOpen: true },
 			{
-				id: "settings-code-theme",
-				action: () => switchMode("code-theme"),
+				id: "settings-radius",
+				action: () => switchMode("radius"),
 				keepOpen: true,
 			},
 			{ id: "settings-model", action: () => switchMode("model"), keepOpen: true },
@@ -1396,8 +1399,8 @@ export function CommandMenu() {
 				? searchItems
 				: mode === "theme"
 					? themeItems
-					: mode === "code-theme"
-						? codeThemeItems
+					: mode === "radius"
+						? radiusItems
 						: mode === "accounts"
 							? accountItems
 							: mode === "settings"
@@ -1409,6 +1412,22 @@ export function CommandMenu() {
 	useEffect(() => {
 		setSelectedIndex(0);
 	}, [allItems.length, search]);
+
+	// Auto-select and scroll to current theme when entering theme mode
+	useEffect(() => {
+		const enteredThemeMode = mode === "theme" && prevModeRef.current !== "theme";
+		prevModeRef.current = mode;
+
+		if (enteredThemeMode && !search.trim()) {
+			const allThemes = [...regularThemes, ...brandedThemes];
+			const currentThemeIndex = allThemes.findIndex(
+				(t) => t.id === currentThemeId,
+			);
+			if (currentThemeIndex !== -1) {
+				setSelectedIndex(currentThemeIndex);
+			}
+		}
+	}, [mode, search, regularThemes, brandedThemes, currentThemeId]);
 
 	useEffect(() => {
 		if (!listRef.current) return;
@@ -1423,12 +1442,13 @@ export function CommandMenu() {
 
 	const handleKeyDown = useCallback(
 		(e: React.KeyboardEvent) => {
-			// Tab cycles modes: commands → search → theme → accounts → settings → commands
+			// Tab cycles modes: commands → search → theme → radius → accounts → settings → commands
 			if (e.key === "Tab") {
 				e.preventDefault();
 				if (mode === "commands") switchMode("search");
 				else if (mode === "search") switchMode("theme");
-				else if (mode === "theme") switchMode("accounts");
+				else if (mode === "theme") switchMode("radius");
+				else if (mode === "radius") switchMode("accounts");
 				else if (mode === "accounts") switchMode("settings");
 				else switchMode("commands");
 				return;
@@ -1445,11 +1465,7 @@ export function CommandMenu() {
 			if (e.key === "Backspace" && mode !== "commands" && !search) {
 				e.preventDefault();
 				// Sub-modes go back to settings, others go to commands
-				switchMode(
-					mode === "model" || mode === "code-theme"
-						? "settings"
-						: "commands",
-				);
+				switchMode(mode === "model" ? "settings" : "commands");
 				return;
 			}
 
@@ -1530,8 +1546,8 @@ export function CommandMenu() {
 									<FileText className="size-4 text-muted-foreground/50 shrink-0" />
 								) : mode === "theme" ? (
 									<Palette className="size-4 text-muted-foreground/50 shrink-0" />
-								) : mode === "code-theme" ? (
-									<Code className="size-4 text-muted-foreground/50 shrink-0" />
+								) : mode === "radius" ? (
+									<Square className="size-4 text-muted-foreground/50 shrink-0" />
 								) : mode === "accounts" ? (
 									<Users className="size-4 text-muted-foreground/50 shrink-0" />
 								) : mode === "settings" ? (
@@ -1561,8 +1577,8 @@ export function CommandMenu() {
 													  "theme"
 													? "Search themes..."
 													: mode ===
-														  "code-theme"
-														? "Search code themes..."
+														  "radius"
+														? "Select border radius..."
 														: mode ===
 															  "accounts"
 															? "Filter accounts..."
@@ -2104,18 +2120,53 @@ export function CommandMenu() {
 								) : mode === "theme" ? (
 									/* Theme mode */
 									<>
-										{filteredDarkThemes.length >
+										{/* Mode toggle at the top */}
+										<div className="px-3 py-2 border-b border-border/50">
+											<button
+												type="button"
+												className="flex items-center justify-between w-full px-2 py-1.5 rounded-md hover:bg-muted/50 transition-colors"
+												onClick={() =>
+													toggleMode()
+												}
+											>
+												<span className="flex items-center gap-2 text-sm text-muted-foreground">
+													{currentMode ===
+													"dark" ? (
+														<Moon className="size-3.5" />
+													) : (
+														<Sun className="size-3.5" />
+													)}
+													<span>
+														{currentMode ===
+														"dark"
+															? "Dark"
+															: "Light"}{" "}
+														mode
+													</span>
+												</span>
+												<span className="text-xs text-muted-foreground/60">
+													Click
+													to
+													toggle
+												</span>
+											</button>
+										</div>
+										{regularThemes.length >
 											0 && (
-											<CommandGroup title="Dark Themes">
-												{filteredDarkThemes.map(
+											<CommandGroup title="Themes">
+												{regularThemes.map(
 													(
 														theme,
 													) => {
 														const idx =
 															getNextIndex();
 														const isActive =
-															darkThemeId ===
+															currentThemeId ===
 															theme.id;
+														const variant =
+															theme[
+																currentMode
+															];
 														return (
 															<CommandItemButton
 																key={
@@ -2134,22 +2185,28 @@ export function CommandMenu() {
 																	)
 																}
 															>
-																<span className="flex items-center gap-1 shrink-0">
-																	<span
-																		className="w-3 h-3 rounded-full border border-border/40"
-																		style={{
-																			backgroundColor:
-																				theme.bgPreview,
-																		}}
-																	/>
-																	<span
-																		className="w-3 h-3 rounded-full border border-border/40"
-																		style={{
-																			backgroundColor:
-																				theme.accentPreview,
-																		}}
-																	/>
-																</span>
+																{theme.icon ? (
+																	<div className="min-w-[28px] flex items-center justify-center">
+																		<theme.icon className="size-4 shrink-0" />
+																	</div>
+																) : (
+																	<span className="flex items-center gap-1 shrink-0">
+																		<span
+																			className="w-3 h-3 rounded-full border border-border/40"
+																			style={{
+																				backgroundColor:
+																					variant.bgPreview,
+																			}}
+																		/>
+																		<span
+																			className="w-3 h-3 rounded-full border border-border/40"
+																			style={{
+																				backgroundColor:
+																					variant.accentPreview,
+																			}}
+																		/>
+																	</span>
+																)}
 																<span className="text-[13px] text-foreground flex-1">
 																	{
 																		theme.name
@@ -2169,17 +2226,17 @@ export function CommandMenu() {
 												)}
 											</CommandGroup>
 										)}
-										{filteredLightThemes.length >
+										{brandedThemes.length >
 											0 && (
-											<CommandGroup title="Light Themes">
-												{filteredLightThemes.map(
+											<CommandGroup title="Brands">
+												{brandedThemes.map(
 													(
 														theme,
 													) => {
 														const idx =
 															getNextIndex();
 														const isActive =
-															lightThemeId ===
+															currentThemeId ===
 															theme.id;
 														return (
 															<CommandItemButton
@@ -2199,22 +2256,11 @@ export function CommandMenu() {
 																	)
 																}
 															>
-																<span className="flex items-center gap-1 shrink-0">
-																	<span
-																		className="w-3 h-3 rounded-full border border-border/40"
-																		style={{
-																			backgroundColor:
-																				theme.bgPreview,
-																		}}
-																	/>
-																	<span
-																		className="w-3 h-3 rounded-full border border-border/40"
-																		style={{
-																			backgroundColor:
-																				theme.accentPreview,
-																		}}
-																	/>
-																</span>
+																{theme.icon && (
+																	<div className="min-w-[28px] flex items-center justify-center">
+																		<theme.icon className="size-4 shrink-0" />
+																	</div>
+																)}
 																<span className="text-[13px] text-foreground flex-1">
 																	{
 																		theme.name
@@ -2235,7 +2281,9 @@ export function CommandMenu() {
 											</CommandGroup>
 										)}
 										{hasQuery &&
-											filteredThemes.length ===
+											regularThemes.length ===
+												0 &&
+											brandedThemes.length ===
 												0 && (
 												<div className="py-8 text-center text-sm text-muted-foreground/70">
 													No
@@ -2249,160 +2297,75 @@ export function CommandMenu() {
 												</div>
 											)}
 									</>
-								) : mode === "code-theme" ? (
-									/* Code theme mode */
+								) : mode === "radius" ? (
+									/* Border Radius mode */
 									<>
-										{(() => {
-											const darkThemes =
-												filteredCodeThemes.filter(
-													(
-														t,
-													) =>
-														t.mode ===
-														"dark",
-												);
-											const lightThemes =
-												filteredCodeThemes.filter(
-													(
-														t,
-													) =>
-														t.mode ===
-														"light",
-												);
-											return (
-												<>
-													{darkThemes.length >
-														0 && (
-														<CommandGroup title="Dark">
-															{darkThemes.map(
-																(
-																	theme,
-																) => {
-																	const idx =
-																		getNextIndex();
-																	const isActive =
-																		codeThemeDark ===
-																		theme.id;
-																	return (
-																		<CommandItemButton
-																			key={
-																				theme.id
-																			}
-																			index={
-																				idx
-																			}
-																			selected={
-																				selectedIndex ===
-																				idx
-																			}
-																			onClick={() =>
-																				setCodeThemeDark(
-																					theme.id,
-																				)
-																			}
-																		>
-																			<span className="flex items-center gap-1 shrink-0">
-																				<span
-																					className="w-3 h-3 rounded-full border border-border/40"
-																					style={{
-																						backgroundColor:
-																							theme.bgColor,
-																					}}
-																				/>
-																				<span
-																					className="w-3 h-3 rounded-full border border-border/40"
-																					style={{
-																						backgroundColor:
-																							theme.accentColor,
-																					}}
-																				/>
-																			</span>
-																			<span className="text-[13px] text-foreground flex-1">
-																				{
-																					theme.name
-																				}
-																			</span>
-																			<Moon className="size-2.5 text-muted-foreground shrink-0" />
-																			{isActive && (
-																				<Check className="size-3.5 text-success shrink-0" />
-																			)}
-																		</CommandItemButton>
-																	);
-																},
+										<CommandGroup title="Border Radius">
+											{filteredRadiusOptions.map(
+												(
+													option,
+												) => {
+													const idx =
+														getNextIndex();
+													const isActive =
+														currentBorderRadius ===
+														option.id;
+													const presetValues =
+														BORDER_RADIUS_PRESETS[
+															option
+																.id
+														];
+													return (
+														<CommandItemButton
+															key={
+																option.id
+															}
+															index={
+																idx
+															}
+															selected={
+																selectedIndex ===
+																idx
+															}
+															onClick={() =>
+																setBorderRadius(
+																	option.id,
+																)
+															}
+														>
+															<span
+																className="w-6 h-6 border border-border/60 bg-muted/30 shrink-0"
+																style={{
+																	borderRadius:
+																		presetValues[
+																			"--radius-md"
+																		],
+																}}
+															/>
+															<span className="text-[13px] text-foreground flex-1">
+																{
+																	option.label
+																}
+															</span>
+															<span className="text-[11px] text-muted-foreground hidden sm:block">
+																{
+																	option.description
+																}
+															</span>
+															{isActive && (
+																<Check className="size-3.5 text-success shrink-0" />
 															)}
-														</CommandGroup>
-													)}
-													{lightThemes.length >
-														0 && (
-														<CommandGroup title="Light">
-															{lightThemes.map(
-																(
-																	theme,
-																) => {
-																	const idx =
-																		getNextIndex();
-																	const isActive =
-																		codeThemeLight ===
-																		theme.id;
-																	return (
-																		<CommandItemButton
-																			key={
-																				theme.id
-																			}
-																			index={
-																				idx
-																			}
-																			selected={
-																				selectedIndex ===
-																				idx
-																			}
-																			onClick={() =>
-																				setCodeThemeLight(
-																					theme.id,
-																				)
-																			}
-																		>
-																			<span className="flex items-center gap-1 shrink-0">
-																				<span
-																					className="w-3 h-3 rounded-full border border-border/40"
-																					style={{
-																						backgroundColor:
-																							theme.bgColor,
-																					}}
-																				/>
-																				<span
-																					className="w-3 h-3 rounded-full border border-border/40"
-																					style={{
-																						backgroundColor:
-																							theme.accentColor,
-																					}}
-																				/>
-																			</span>
-																			<span className="text-[13px] text-foreground flex-1">
-																				{
-																					theme.name
-																				}
-																			</span>
-																			<Sun className="size-2.5 text-muted-foreground shrink-0" />
-																			{isActive && (
-																				<Check className="size-3.5 text-success shrink-0" />
-																			)}
-																		</CommandItemButton>
-																	);
-																},
-															)}
-														</CommandGroup>
-													)}
-												</>
-											);
-										})()}
+														</CommandItemButton>
+													);
+												},
+											)}
+										</CommandGroup>
 										{hasQuery &&
-											filteredCodeThemes.length ===
+											filteredRadiusOptions.length ===
 												0 && (
 												<div className="py-8 text-center text-sm text-muted-foreground/70">
 													No
-													code
-													themes
+													options
 													match
 													&quot;
 													{
@@ -2904,7 +2867,7 @@ export function CommandMenu() {
 																	t,
 																) =>
 																	t.id ===
-																	colorTheme,
+																	currentThemeId,
 															)
 																?.name ??
 																"Theme"}
@@ -2916,17 +2879,18 @@ export function CommandMenu() {
 											{(() => {
 												const idx =
 													getNextIndex();
-												const activeDarkTheme =
-													BUILT_IN_THEMES.find(
-														(
-															t,
-														) =>
-															t.id ===
-															codeThemeDark,
+												const radiusLabel =
+													currentBorderRadius
+														.charAt(
+															0,
+														)
+														.toUpperCase() +
+													currentBorderRadius.slice(
+														1,
 													);
 												return (
 													<CommandItemButton
-														key="settings-code-theme"
+														key="settings-radius"
 														index={
 															idx
 														}
@@ -2936,18 +2900,19 @@ export function CommandMenu() {
 														}
 														onClick={() =>
 															switchMode(
-																"code-theme",
+																"radius",
 															)
 														}
 													>
-														<Code className="size-3.5 text-muted-foreground/50 shrink-0" />
+														<Square className="size-3.5 text-muted-foreground/50 shrink-0" />
 														<span className="text-[13px] text-foreground flex-1">
-															Code
-															Theme
+															Border
+															Radius
 														</span>
 														<span className="text-[11px] text-muted-foreground hidden sm:block">
-															{activeDarkTheme?.name ??
-																codeThemeDark}
+															{
+																radiusLabel
+															}
 														</span>
 														<ChevronRight className="size-3 text-muted-foreground/30 shrink-0" />
 													</CommandItemButton>

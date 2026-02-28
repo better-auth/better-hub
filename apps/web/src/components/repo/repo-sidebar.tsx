@@ -15,6 +15,7 @@ import { TimeAgo } from "@/components/ui/time-ago";
 import { formatBytes } from "@/lib/github-utils";
 import { StarButton } from "@/components/repo/star-button";
 import { ForkButton } from "@/components/repo/fork-button";
+import { ForkSyncButton } from "@/components/repo/fork-sync-button";
 import { PinButton } from "@/components/repo/pin-button";
 import { SidebarLanguages } from "@/components/repo/sidebar-languages";
 import { SidebarContributors } from "@/components/repo/sidebar-contributors";
@@ -22,6 +23,7 @@ import { SidebarContributors } from "@/components/repo/sidebar-contributors";
 import { LatestCommitSection } from "@/components/repo/latest-commit-section";
 import { RepoBreadcrumb } from "@/components/repo/repo-breadcrumb";
 import type { ContributorAvatarsData } from "@/lib/repo-data-cache";
+import type { ForkSyncStatus } from "@/lib/github";
 
 interface LatestCommit {
 	sha: string;
@@ -57,6 +59,8 @@ interface RepoSidebarProps {
 	latestCommit: LatestCommit | null;
 	isStarred: boolean;
 	disableForkButton?: boolean;
+	isOwnFork?: boolean;
+	forkSyncStatus?: ForkSyncStatus | null;
 }
 
 export function RepoSidebar({
@@ -86,6 +90,8 @@ export function RepoSidebar({
 	latestCommit,
 	isStarred,
 	disableForkButton = false,
+	isOwnFork,
+	forkSyncStatus,
 }: RepoSidebarProps) {
 	const badges = [
 		isPrivate ? { label: "Private", icon: Lock } : { label: "Public", icon: Globe },
@@ -97,20 +103,21 @@ export function RepoSidebar({
 	return (
 		<>
 			{/* Desktop sidebar */}
-			<aside className="hidden lg:flex w-[260px] shrink-0 overflow-y-auto pt-0 px-4 pb-4 flex-col gap-5">
+			<aside className="hidden lg:flex w-[260px] shrink-0 overflow-y-auto pt-0 pr-2 pl-6 pb-4 flex-col gap-5">
 				{/* Name + Avatar + Description + Badges */}
 				<div className="flex flex-col gap-2">
 					<RepoBreadcrumb
 						owner={owner}
 						repoName={repoName}
 						ownerType={ownerType}
+						ownerAvatarUrl={avatarUrl}
 					/>
 					<Image
 						src={avatarUrl}
 						alt=""
 						width={160}
 						height={160}
-						className="w-32 aspect-square rounded-sm"
+						className="w-32 aspect-square rounded-lg"
 					/>
 					{description && (
 						<p className="text-xs text-muted-foreground leading-relaxed">
@@ -157,6 +164,15 @@ export function RepoSidebar({
 								{parent.fullName}
 							</Link>
 						</p>
+					)}
+					{isOwnFork && fork && forkSyncStatus && (
+						<ForkSyncButton
+							owner={owner}
+							repo={repoName}
+							defaultBranch={defaultBranch}
+							behind={forkSyncStatus.behind}
+							parentFullName={parent?.fullName}
+						/>
 					)}
 				</div>
 
@@ -207,6 +223,7 @@ export function RepoSidebar({
 						forkCount={forks}
 						disabled={disableForkButton}
 					/>
+
 					<span className="flex items-center justify-center gap-1.5 text-[11px] font-mono text-muted-foreground/60">
 						<Eye className="w-3 h-3" />
 						Watchers

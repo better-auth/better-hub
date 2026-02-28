@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
-import { getPromptRequest, listPromptRequestComments } from "@/lib/prompt-request-store";
+import {
+	getPromptRequest,
+	listPromptRequestComments,
+	listPromptRequestReactions,
+} from "@/lib/prompt-request-store";
 import { PromptDetail } from "@/components/prompt-request/prompt-detail";
 import { notFound } from "next/navigation";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
-import { getOctokit, extractRepoPermissions } from "@/lib/github";
+import { getServerSession } from "@/lib/auth";
+import { getOctokit, extractRepoPermissions, getRepo } from "@/lib/github";
 
 export async function generateMetadata({
 	params,
@@ -12,6 +15,14 @@ export async function generateMetadata({
 	params: Promise<{ owner: string; repo: string; id: string }>;
 }): Promise<Metadata> {
 	const { owner, repo, id } = await params;
+
+	const repoData = await getRepo(owner, repo);
+	const isPrivate = !repoData || repoData.private === true;
+
+	if (isPrivate) {
+		return { title: `Prompt · ${owner}/${repo}` };
+	}
+
 	const promptRequest = await getPromptRequest(id);
 	if (!promptRequest) {
 		return { title: `Prompt · ${owner}/${repo}` };
@@ -25,10 +36,11 @@ export default async function PromptDetailPage({
 	params: Promise<{ owner: string; repo: string; id: string }>;
 }) {
 	const { owner, repo, id } = await params;
-	const [promptRequest, comments, session] = await Promise.all([
+	const [promptRequest, comments, reactions, session] = await Promise.all([
 		getPromptRequest(id),
 		listPromptRequestComments(id),
-		auth.api.getSession({ headers: await headers() }),
+		listPromptRequestReactions(id),
+		getServerSession(),
 	]);
 
 	if (!promptRequest) {
@@ -36,7 +48,12 @@ export default async function PromptDetailPage({
 	}
 
 	const currentUser = session?.user
-		? { id: session.user.id, name: session.user.name, image: session.user.image ?? "" }
+		? {
+				id: session.user.id,
+				login: session.githubUser?.login ?? null,
+				name: session.user.name,
+				image: session.user.image ?? "",
+			}
 		: null;
 
 	// Check repo maintainer permissions (push/admin/maintain)
@@ -63,6 +80,7 @@ export default async function PromptDetailPage({
 			repo={repo}
 			promptRequest={promptRequest}
 			comments={comments}
+			reactions={reactions}
 			currentUser={currentUser}
 			canManage={canManage}
 			isMaintainer={isMaintainer}

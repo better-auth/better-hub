@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useMemo, useCallback } from "react";
+import { useQueryState, parseAsString, parseAsStringLiteral } from "nuqs";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import Link from "next/link";
 import Image from "next/image";
@@ -46,8 +47,12 @@ interface Repo {
 	};
 }
 
-type FilterType = "all" | "public" | "private" | "forks" | "archived";
-type SortType = "updated" | "name" | "stars";
+const repoFilterTypes = ["all", "public", "private", "forks", "archived"] as const;
+type FilterType = (typeof repoFilterTypes)[number];
+
+const sortTypes = ["updated", "name", "stars"] as const;
+type SortType = (typeof sortTypes)[number];
+
 type ViewMode = "list" | "grid" | "grouped";
 
 function RepoRow({ repo, showOwner = true }: { repo: Repo; showOwner?: boolean }) {
@@ -214,10 +219,16 @@ function RepoCard({ repo }: { repo: Repo }) {
 }
 
 export function ReposContent({ repos }: { repos: Repo[] }) {
-	const [search, setSearch] = useState("");
-	const [filter, setFilter] = useState<FilterType>("all");
-	const [sort, setSort] = useState<SortType>("updated");
-	const [lang, setLang] = useState("");
+	const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
+	const [filter, setFilter] = useQueryState(
+		"filter",
+		parseAsStringLiteral(repoFilterTypes).withDefault("all"),
+	);
+	const [sort, setSort] = useQueryState(
+		"sort",
+		parseAsStringLiteral(sortTypes).withDefault("updated"),
+	);
+	const [lang, setLang] = useQueryState("lang", parseAsString.withDefault(""));
 	const [showFilters, setShowFilters] = useState(false);
 	const [sortOpen, setSortOpen] = useState(false);
 	const [view, setView] = useState<ViewMode>(() => {

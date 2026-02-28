@@ -77,6 +77,10 @@ export async function DELETE(req: Request) {
 		return Response.json({ error: "conversationId required" }, { status: 400 });
 	}
 
-	await deleteConversation(conversationId);
+	try {
+		await deleteConversation(conversationId, userId);
+	} catch {
+		return Response.json({ error: "Conversation not found" }, { status: 404 });
+	}
 	return Response.json({ success: true });
 }

@@ -1,16 +1,29 @@
 import type { ThemeDefinition } from "./themes/types";
 
+interface ThemeScriptData {
+	dark: { colors: Record<string, string> };
+	light: { colors: Record<string, string> };
+}
+
 /**
  * Generate an inline script that applies the saved color theme before first paint.
- * If no theme is saved, detects system preference (dark/light) and picks the
- * user's preferred theme for that mode. Sets both CSS variables and the dark/light class.
+ * Reads theme ID and mode from localStorage, then applies the correct variant's colors.
  */
 export function generateThemeScript(themes: ThemeDefinition[]): string {
-	// Serialize: id → { mode, colors }
-	const data: Record<string, { mode: string; colors: Record<string, string> }> = {};
+	const data: Record<string, ThemeScriptData> = {};
 	for (const t of themes) {
-		data[t.id] = { mode: t.mode, colors: { ...t.colors } };
+		data[t.id] = {
+			dark: { colors: { ...t.dark.colors } },
+			light: { colors: { ...t.light.colors } },
+		};
 	}
 
-	return `(function(){try{var d=document.documentElement;var id=localStorage.getItem("color-theme");if(!id){var prefersDark=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;var dk=localStorage.getItem("dark-theme")||"midnight";var lt=localStorage.getItem("light-theme")||"hub-light";id=prefersDark?dk:lt;localStorage.setItem("color-theme",id)}var themes=${JSON.stringify(data)};var t=themes[id];if(!t)t=themes["midnight"];if(!t)return;if(t.mode==="dark"){d.classList.add("dark");d.classList.remove("light");d.style.colorScheme="dark"}else{d.classList.remove("dark");d.classList.add("light");d.style.colorScheme="light"}localStorage.setItem("theme",t.mode);if(id!=="midnight"){for(var k in t.colors){d.style.setProperty(k,t.colors[k])}}var cp=localStorage.getItem("code-theme-prefs");if(cp){try{var p=JSON.parse(cp);if(p.bg)d.style.setProperty("--code-theme-bg",p.bg);if(p.font)d.style.setProperty("--code-font-override",p.font);if(p.fontSize)d.style.setProperty("--code-font-size",p.fontSize+"px")}catch(e2){}}}catch(e){}})()`;
+	const legacyMap: Record<string, { themeId: string; mode: string }> = {
+		midnight: { themeId: "better-auth", mode: "dark" },
+		"hub-light": { themeId: "better-auth", mode: "light" },
+		"hub-dark": { themeId: "zinc", mode: "dark" },
+		dawn: { themeId: "ember", mode: "light" },
+	};
+
+	return `(function(){try{var d=document.documentElement;var themes=${JSON.stringify(data)};var legacy=${JSON.stringify(legacyMap)};var id=localStorage.getItem("color-theme");var mode=localStorage.getItem("color-mode");if(id&&legacy[id]){var m=legacy[id];id=m.themeId;mode=m.mode;localStorage.setItem("color-theme",id);localStorage.setItem("color-mode",mode)}if(!id)id="hub";if(!mode){var prefersDark=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;mode=prefersDark?"dark":"light";localStorage.setItem("color-mode",mode)}var t=themes[id];if(!t)t=themes["hub"];if(!t)return;var v=t[mode];if(!v)v=t.dark;if(mode==="dark"){d.classList.add("dark");d.classList.remove("light");d.style.colorScheme="dark"}else{d.classList.remove("dark");d.classList.add("light");d.style.colorScheme="light"}localStorage.setItem("theme",mode);if(!(id==="hub"&&mode==="dark")){for(var k in v.colors){d.style.setProperty(k,v.colors[k])}}}catch(e){}})()`;
 }

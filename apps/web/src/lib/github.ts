@@ -60,6 +60,7 @@ type GitDataSyncJobType =
 	| "repo_tree"
 	| "repo_branches"
 	| "repo_tags"
+	| "repo_releases"
 	| "file_content"
 	| "repo_readme"
 	| "authenticated_user"
@@ -93,13 +94,14 @@ type GitDataSyncJobType =
 	| "pr_bundle"
 	| "repo_discussions";
 
+// SECURITY: Only cache types that are safe to share across users belong here.
+// Any data from repos (issues, PRs, code, branches, etc.) is excluded because
+// private-repo data fetched by one authorized user would leak to others via
+// the shared cache, bypassing GitHub permission checks.
 const SHAREABLE_CACHE_TYPES: ReadonlySet<string> = new Set([
-	"repo_contents",
-	"repo_tree",
 	"repo_branches",
 	"repo_tags",
-	"file_content",
-	"repo_readme",
+	"repo_releases",
 	"repo_issues",
 	"repo_pull_requests",
 	"issue",
@@ -120,8 +122,6 @@ const SHAREABLE_CACHE_TYPES: ReadonlySet<string> = new Set([
 	"org_repos",
 	"org_members",
 	"trending_repos",
-	"pr_bundle",
-	"person_repo_activity",
 ]);
 
 function isShareableCacheType(jobType: string): boolean {
@@ -306,6 +306,10 @@ function buildRepoBranchesCacheKey(owner: string, repo: string): string {
 
 function buildRepoTagsCacheKey(owner: string, repo: string): string {
 	return `repo_tags:${normalizeRepoKey(owner, repo)}`;
+}
+
+function buildRepoReleasesCacheKey(owner: string, repo: string): string {
+	return `repo_releases:${normalizeRepoKey(owner, repo)}`;
 }
 
 function buildFileContentCacheKey(owner: string, repo: string, path: string, ref?: string): string {
@@ -563,6 +567,15 @@ async function fetchRepoTagsFromGitHub(octokit: Octokit, owner: string, repo: st
 	return data;
 }
 
+async function fetchRepoReleasesFromGitHub(octokit: Octokit, owner: string, repo: string) {
+	const { data } = await octokit.repos.listReleases({
+		owner,
+		repo,
+		per_page: 100,
+	});
+	return data;
+}
+
 async function fetchFileContentFromGitHub(
 	octokit: Octokit,
 	owner: string,
@@ -794,19 +807,51 @@ async function fetchPullRequestFromGitHub(
 	return data;
 }
 
+export async function isBranchBehindBase(
+	owner: string,
+	repo: string,
+	baseRef: string,
+	headRef: string,
+	headOwner?: string | null,
+): Promise<boolean> {
+	const octokit = await getOctokit();
+	if (!octokit) return false;
+	try {
+		const headPart =
+			headOwner && headOwner !== owner ? `${headOwner}:${headRef}` : headRef;
+		const basehead = `${headPart}...${baseRef}`;
+		const { data } = await octokit.repos.compareCommitsWithBasehead({
+			owner,
+			repo,
+			basehead,
+		});
+		return (data.behind_by ?? 0) > 0;
+	} catch {
+		return false;
+	}
+}
+
 async function fetchPullRequestFilesFromGitHub(
 	octokit: Octokit,
 	owner: string,
 	repo: string,
 	pullNumber: number,
 ) {
-	const { data } = await octokit.pulls.listFiles({
-		owner,
-		repo,
-		pull_number: pullNumber,
-		per_page: 100,
-	});
-	return data;
+	const files: Awaited<ReturnType<typeof octokit.pulls.listFiles>>["data"] = [];
+	let page = 1;
+	while (true) {
+		const { data } = await octokit.pulls.listFiles({
+			owner,
+			repo,
+			pull_number: pullNumber,
+			per_page: 100,
+			page,
+		});
+		files.push(...data);
+		if (data.length < 100) break;
+		page++;
+	}
+	return files;
 }
 
 async function fetchPullRequestCommentsFromGitHub(
@@ -942,7 +987,85 @@ async function fetchUserProfileFromGitHub(octokit: Octokit, username: string) {
 	return null;
 }
 
-async function fetchUserPublicReposFromGitHub(octokit: Octokit, username: string, perPage: number) {
+async function enrichMissingRepoLanguagesFromGraphQL<
+	T extends {
+		language?: string | null;
+		name: string;
+		owner?: { login?: string | null } | null;
+	},
+>(token: string, repos: T[]): Promise<T[]> {
+	const missing = repos
+		.map((repo, index) => ({ repo, index }))
+		.filter(
+			({ repo }) =>
+				!repo.language &&
+				typeof repo.name === "string" &&
+				typeof repo.owner?.login === "string",
+		)
+		.slice(0, 50);
+	if (missing.length === 0) return repos;
+
+	const aliases = missing.map(
+		(_item, i) =>
+			`r${i}: repository(owner: $owner${i}, name: $name${i}) { primaryLanguage { name } }`,
+	);
+	const variableDefinitions = missing
+		.flatMap((_item, i) => [`$owner${i}: String!`, `$name${i}: String!`])
+		.join(", ");
+	const variables = Object.fromEntries(
+		missing.flatMap(({ repo }, i) => [
+			[`owner${i}`, String(repo.owner?.login)],
+			[`name${i}`, repo.name],
+		]),
+	);
+	const query = `query(${variableDefinitions}) { ${aliases.join("\n")} }`;
+
+	try {
+		const response = await fetch("https://api.github.com/graphql", {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ query, variables }),
+			signal: AbortSignal.timeout(8_000),
+		});
+		if (!response.ok) return repos;
+		const json = (await response.json()) as {
+			data?: Record<
+				string,
+				{ primaryLanguage?: { name?: string | null } } | null
+			>;
+		};
+		if (!json.data) return repos;
+
+		const languageByIndex = new Map<number, string>();
+		for (let i = 0; i < missing.length; i++) {
+			const lang = json.data[`r${i}`]?.primaryLanguage?.name;
+			if (typeof lang === "string" && lang.trim()) {
+				languageByIndex.set(missing[i].index, lang);
+			}
+		}
+
+		if (languageByIndex.size === 0) return repos;
+		return repos.map((repo, idx) =>
+			languageByIndex.has(idx)
+				? { ...repo, language: languageByIndex.get(idx) ?? repo.language }
+				: repo,
+		);
+	} catch {
+		return repos;
+	}
+}
+
+type UserPublicRepo = Awaited<ReturnType<Octokit["repos"]["listForUser"]>>["data"][number];
+
+async function fetchUserPublicReposFromGitHub(
+	octokit: Octokit,
+	username: string,
+	perPage: number,
+	token?: string | null,
+): Promise<UserPublicRepo[]> {
 	// Fetch recently-updated repos for the listing + top-starred repos via
 	// search API for accurate profile scoring (listForUser can't sort by stars).
 	const half = Math.ceil(perPage / 2);
@@ -957,10 +1080,13 @@ async function fetchUserPublicReposFromGitHub(octokit: Octokit, username: string
 			})
 			.catch(() => null),
 	]);
-	if (!topStarred) return byUpdated.data;
+	if (!topStarred) {
+		if (!token) return byUpdated.data;
+		return enrichMissingRepoLanguagesFromGraphQL(token, byUpdated.data);
+	}
 	// Merge and deduplicate — recently-updated first, then top-starred fills gaps
 	const seen = new Set<number>();
-	const merged = [];
+	const merged: UserPublicRepo[] = [];
 	for (const repo of byUpdated.data) {
 		seen.add(repo.id);
 		merged.push(repo);
@@ -971,7 +1097,8 @@ async function fetchUserPublicReposFromGitHub(octokit: Octokit, username: string
 			merged.push(repo as (typeof byUpdated.data)[number]);
 		}
 	}
-	return merged;
+	if (!token) return merged;
+	return enrichMissingRepoLanguagesFromGraphQL(token, merged);
 }
 
 async function fetchUserPublicOrgsFromGitHub(octokit: Octokit, username: string) {
@@ -1328,6 +1455,7 @@ async function processGitDataSyncJob(
 				authCtx.octokit,
 				payload.username,
 				perPage,
+				authCtx.token,
 			);
 			await upsertCacheWithShared(
 				authCtx.userId,
@@ -1437,6 +1565,20 @@ async function processGitDataSyncJob(
 				authCtx.userId,
 				buildRepoTagsCacheKey(owner, repo),
 				"repo_tags",
+				data,
+			);
+			return;
+		}
+		case "repo_releases": {
+			const data = await fetchRepoReleasesFromGitHub(
+				authCtx.octokit,
+				owner,
+				repo,
+			);
+			await upsertCacheWithShared(
+				authCtx.userId,
+				buildRepoReleasesCacheKey(owner, repo),
+				"repo_releases",
 				data,
 			);
 			return;
@@ -2144,6 +2286,59 @@ export async function getRepoTags(owner: string, repo: string) {
 	});
 }
 
+export async function getRepoReleases(owner: string, repo: string) {
+	const authCtx = await getGitHubAuthContext();
+	const cacheKey = buildRepoReleasesCacheKey(owner, repo);
+
+	return readLocalFirstGitData({
+		authCtx,
+		cacheKey,
+		cacheType: "repo_releases",
+		fallback: [],
+		jobType: "repo_releases",
+		jobPayload: { owner, repo },
+		fetchRemote: (octokit) => fetchRepoReleasesFromGitHub(octokit, owner, repo),
+	});
+}
+
+export async function getRepoReleasesPage(owner: string, repo: string, page: number) {
+	const octokit = await getOctokit();
+	if (!octokit) return [];
+	try {
+		const { data } = await octokit.repos.listReleases({
+			owner,
+			repo,
+			per_page: 100,
+			page,
+		});
+		return data;
+	} catch {
+		return [];
+	}
+}
+
+export async function getRepoTagsPage(owner: string, repo: string, page: number) {
+	const octokit = await getOctokit();
+	if (!octokit) return [];
+	try {
+		const { data } = await octokit.repos.listTags({ owner, repo, per_page: 100, page });
+		return data;
+	} catch {
+		return [];
+	}
+}
+
+export async function getRepoReleaseByTag(owner: string, repo: string, tag: string) {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx?.octokit) return null;
+	try {
+		const { data } = await authCtx.octokit.repos.getReleaseByTag({ owner, repo, tag });
+		return data;
+	} catch {
+		return null;
+	}
+}
+
 export async function getFileContent(owner: string, repo: string, path: string, ref?: string) {
 	const authCtx = await getGitHubAuthContext();
 	const normalizedRef = normalizeRef(ref);
@@ -2397,6 +2592,8 @@ export interface PRBundleData {
 		changed_files: number;
 		user: { login: string; avatar_url: string; type?: string } | null;
 		head: { ref: string; sha: string };
+		head_repo_owner?: string | null;
+		head_repo_name?: string | null;
 		base: { ref: string; sha: string };
 		labels: { name: string; color: string | null; description: string | null }[];
 		reactions: ReactionSummary | undefined;
@@ -2465,6 +2662,7 @@ const PR_BUNDLE_QUERY = `
         author { __typename login avatarUrl }
         headRefName
         headRefOid
+        headRepository { name owner { login } }
         baseRefName
         baseRefOid
         labels(first: 20) {
@@ -2695,6 +2893,7 @@ interface GQLPRNode {
 	author: GQLAuthor | null;
 	headRefName: string;
 	headRefOid: string;
+	headRepository?: { name: string; owner: { login: string } } | null;
 	baseRefName: string;
 	baseRefOid: string;
 	labels?: { nodes: GQLLabel[] };
@@ -2738,6 +2937,8 @@ function transformGraphQLPRBundle(node: GQLPRNode): PRBundleData {
 				}
 			: null,
 		head: { ref: node.headRefName, sha: node.headRefOid },
+		head_repo_owner: node.headRepository?.owner?.login ?? null,
+		head_repo_name: node.headRepository?.name ?? null,
 		base: { ref: node.baseRefName, sha: node.baseRefOid },
 		labels: (node.labels?.nodes ?? []).map((l) => ({
 			name: l.name,
@@ -2957,6 +3158,7 @@ export interface CrossReference {
 	html_url: string;
 	repoOwner: string;
 	repoName: string;
+	created_at: string;
 }
 
 /**
@@ -2984,26 +3186,26 @@ export async function getCrossReferences(
 
 		for (const event of events) {
 			if (event.event !== "cross-referenced") continue;
-			const source = (
-				event as {
-					source?: {
-						issue?: {
-							pull_request?: {
-								merged_at?: string | null;
-							};
-							repository?: { full_name?: string };
-							number: number;
-							title: string;
-							state: string;
-							user?: {
-								login: string;
-								avatar_url: string;
-							} | null;
-							html_url: string;
+			const typedEvent = event as {
+				created_at?: string;
+				source?: {
+					issue?: {
+						pull_request?: {
+							merged_at?: string | null;
 						};
+						repository?: { full_name?: string };
+						number: number;
+						title: string;
+						state: string;
+						user?: {
+							login: string;
+							avatar_url: string;
+						} | null;
+						html_url: string;
 					};
-				}
-			).source?.issue;
+				};
+			};
+			const source = typedEvent.source?.issue;
 			if (!source) continue;
 
 			const repoFullName = source.repository?.full_name;
@@ -3032,10 +3234,183 @@ export async function getCrossReferences(
 				html_url: source.html_url,
 				repoOwner: refOwner,
 				repoName: refName,
+				created_at: typedEvent.created_at ?? "",
 			});
 		}
 
 		return refs;
+	} catch {
+		return [];
+	}
+}
+
+export type IssueTimelineEventType =
+	| "closed"
+	| "reopened"
+	| "referenced"
+	| "cross-referenced"
+	| "committed";
+
+export interface IssueTimelineEvent {
+	id: string;
+	event: IssueTimelineEventType;
+	created_at: string;
+	actor: { login: string; avatar_url: string } | null;
+	commit_id?: string;
+	commit_url?: string;
+	state_reason?: string | null;
+	source?: {
+		type: "issue" | "pull_request";
+		number: number;
+		title: string;
+		state: "open" | "closed";
+		merged?: boolean;
+		repoOwner: string;
+		repoName: string;
+	};
+}
+
+export async function getIssueTimelineEvents(
+	owner: string,
+	repo: string,
+	issueNumber: number,
+): Promise<IssueTimelineEvent[]> {
+	const octokit = await getOctokit();
+	if (!octokit) return [];
+
+	try {
+		const events = await octokit.paginate(octokit.issues.listEventsForTimeline, {
+			owner,
+			repo,
+			issue_number: issueNumber,
+			per_page: 100,
+		});
+
+		const timelineEvents: IssueTimelineEvent[] = [];
+
+		for (const event of events) {
+			const eventType = event.event;
+
+			if (eventType === "closed") {
+				const typedEvent = event as {
+					id: number;
+					event: string;
+					created_at: string;
+					actor?: { login: string; avatar_url: string } | null;
+					state_reason?: string | null;
+					commit_id?: string | null;
+					commit_url?: string | null;
+				};
+				timelineEvents.push({
+					id: `closed-${typedEvent.id}`,
+					event: "closed",
+					created_at: typedEvent.created_at,
+					actor: typedEvent.actor ?? null,
+					state_reason: typedEvent.state_reason,
+					commit_id: typedEvent.commit_id ?? undefined,
+					commit_url: typedEvent.commit_url ?? undefined,
+				});
+			} else if (eventType === "reopened") {
+				const typedEvent = event as {
+					id: number;
+					event: string;
+					created_at: string;
+					actor?: { login: string; avatar_url: string } | null;
+				};
+				timelineEvents.push({
+					id: `reopened-${typedEvent.id}`,
+					event: "reopened",
+					created_at: typedEvent.created_at,
+					actor: typedEvent.actor ?? null,
+				});
+			} else if (eventType === "referenced") {
+				const typedEvent = event as {
+					id: number;
+					event: string;
+					created_at: string;
+					actor?: { login: string; avatar_url: string } | null;
+					commit_id?: string | null;
+					commit_url?: string | null;
+				};
+				timelineEvents.push({
+					id: `referenced-${typedEvent.id}`,
+					event: "referenced",
+					created_at: typedEvent.created_at,
+					actor: typedEvent.actor ?? null,
+					commit_id: typedEvent.commit_id ?? undefined,
+					commit_url: typedEvent.commit_url ?? undefined,
+				});
+			} else if (eventType === "cross-referenced") {
+				const typedEvent = event as {
+					created_at?: string;
+					actor?: { login: string; avatar_url: string } | null;
+					source?: {
+						issue?: {
+							pull_request?: {
+								merged_at?: string | null;
+							};
+							repository?: { full_name?: string };
+							number: number;
+							title: string;
+							state: string;
+						};
+					};
+				};
+				const source = typedEvent.source?.issue;
+				if (source) {
+					const repoFullName = source.repository?.full_name;
+					const [refOwner, refName] = repoFullName
+						? repoFullName.split("/")
+						: [owner, repo];
+					timelineEvents.push({
+						id: `cross-ref-${refOwner}-${refName}-${source.number}`,
+						event: "cross-referenced",
+						created_at: typedEvent.created_at ?? "",
+						actor: typedEvent.actor ?? null,
+						source: {
+							type: source.pull_request
+								? "pull_request"
+								: "issue",
+							number: source.number,
+							title: source.title,
+							state: source.state as "open" | "closed",
+							merged: !!source.pull_request?.merged_at,
+							repoOwner: refOwner,
+							repoName: refName,
+						},
+					});
+				}
+			} else if (eventType === "committed") {
+				const typedEvent = event as {
+					sha?: string;
+					url?: string;
+					message?: string;
+					author?: {
+						name?: string;
+						email?: string;
+						date?: string;
+					} | null;
+					committer?: {
+						name?: string;
+						email?: string;
+						date?: string;
+					} | null;
+				};
+				timelineEvents.push({
+					id: `committed-${typedEvent.sha}`,
+					event: "committed",
+					created_at:
+						typedEvent.committer?.date ??
+						typedEvent.author?.date ??
+						"",
+					actor: null,
+					commit_id: typedEvent.sha,
+					commit_url: typedEvent.url,
+				});
+			}
+		}
+
+		return timelineEvents;
 	} catch {
 		return [];
 	}
@@ -3112,6 +3487,7 @@ export interface DiscussionCategory {
 	id: string;
 	name: string;
 	emoji: string;
+	emojiHTML?: string | null;
 	description: string;
 	isAnswerable: boolean;
 }
@@ -3123,7 +3499,7 @@ export interface RepoDiscussionNode {
 	createdAt: string;
 	updatedAt: string;
 	author: { login: string; avatar_url: string } | null;
-	category: { name: string; emoji: string; isAnswerable: boolean };
+	category: { name: string; emoji: string; emojiHTML?: string | null; isAnswerable: boolean };
 	commentsCount: number;
 	upvoteCount: number;
 	isAnswered: boolean;
@@ -3148,7 +3524,9 @@ export interface DiscussionReply {
 	createdAt: string;
 	author: { login: string; avatar_url: string; type?: string } | null;
 	upvoteCount: number;
+	viewerHasUpvoted: boolean;
 	isAnswer: boolean;
+	reactions?: ReactionSummary;
 }
 
 export interface DiscussionComment {
@@ -3159,8 +3537,10 @@ export interface DiscussionComment {
 	createdAt: string;
 	author: { login: string; avatar_url: string; type?: string } | null;
 	upvoteCount: number;
+	viewerHasUpvoted: boolean;
 	isAnswer: boolean;
 	replies: DiscussionReply[];
+	reactions?: ReactionSummary;
 }
 
 export interface DiscussionDetail {
@@ -3171,12 +3551,14 @@ export interface DiscussionDetail {
 	createdAt: string;
 	updatedAt: string;
 	author: { login: string; avatar_url: string } | null;
-	category: { name: string; emoji: string; isAnswerable: boolean };
+	category: { name: string; emoji: string; emojiHTML?: string | null; isAnswerable: boolean };
 	commentsCount: number;
 	upvoteCount: number;
+	viewerHasUpvoted: boolean;
 	isAnswered: boolean;
 	answerChosenAt: string | null;
 	labels: Array<{ name?: string; color?: string | null }>;
+	reactions?: ReactionSummary;
 }
 
 // ── Discussion GraphQL queries ──
@@ -3198,7 +3580,7 @@ const DISCUSSIONS_PAGE_GRAPHQL = `
 					createdAt
 					updatedAt
 					author { login avatarUrl }
-					category { name emoji isAnswerable }
+					category { name emoji emojiHTML isAnswerable }
 					comments { totalCount }
 					upvoteCount
 					isAnswered
@@ -3211,6 +3593,7 @@ const DISCUSSIONS_PAGE_GRAPHQL = `
 					id
 					name
 					emoji
+					emojiHTML
 					description
 					isAnswerable
 				}
@@ -3230,7 +3613,11 @@ const DISCUSSION_DETAIL_GRAPHQL = `
 				createdAt
 				updatedAt
 				author { __typename login avatarUrl }
-				category { name emoji isAnswerable }
+				category { name emoji emojiHTML isAnswerable }
+				reactionGroups {
+					content
+					reactors { totalCount }
+				}
 				comments(first: 50) {
 					totalCount
 					nodes {
@@ -3240,7 +3627,12 @@ const DISCUSSION_DETAIL_GRAPHQL = `
 						createdAt
 						author { __typename login avatarUrl }
 						upvoteCount
+						viewerHasUpvoted
 						isAnswer
+						reactionGroups {
+							content
+							reactors { totalCount }
+						}
 						replies(first: 20) {
 							nodes {
 								id
@@ -3249,12 +3641,18 @@ const DISCUSSION_DETAIL_GRAPHQL = `
 								createdAt
 								author { __typename login avatarUrl }
 								upvoteCount
+								viewerHasUpvoted
 								isAnswer
+								reactionGroups {
+									content
+									reactors { totalCount }
+								}
 							}
 						}
 					}
 				}
 				upvoteCount
+				viewerHasUpvoted
 				isAnswered
 				answerChosenAt
 				labels(first: 20) { nodes { name color } }
@@ -3277,6 +3675,78 @@ const ADD_DISCUSSION_COMMENT_MUTATION = `
 	}
 `;
 
+const ADD_DISCUSSION_REACTION_MUTATION = `
+	mutation($subjectId: ID!, $content: ReactionContent!) {
+		addReaction(input: { subjectId: $subjectId, content: $content }) {
+			reaction {
+				id
+				databaseId
+				content
+				user { login avatarUrl }
+			}
+		}
+	}
+`;
+
+const REMOVE_DISCUSSION_REACTION_MUTATION = `
+	mutation($subjectId: ID!, $content: ReactionContent!) {
+		removeReaction(input: { subjectId: $subjectId, content: $content }) {
+			reaction {
+				id
+				content
+			}
+		}
+	}
+`;
+
+const ADD_DISCUSSION_UPVOTE_MUTATION = `
+	mutation($id: ID!) {
+		addUpvoteToDiscussion(input: { discussionId: $id }) {
+			discussion {
+				id
+				upvoteCount
+				viewerHasUpvoted
+			}
+		}
+	}
+`;
+
+const REMOVE_DISCUSSION_UPVOTE_MUTATION = `
+	mutation($id: ID!) {
+		removeUpvoteFromDiscussion(input: { discussionId: $id }) {
+			discussion {
+				id
+				upvoteCount
+				viewerHasUpvoted
+			}
+		}
+	}
+`;
+
+const ADD_DISCUSSION_COMMENT_UPVOTE_MUTATION = `
+	mutation($id: ID!) {
+		addUpvoteToDiscussionComment(input: { discussionCommentId: $id }) {
+			comment {
+				id
+				upvoteCount
+				viewerHasUpvoted
+			}
+		}
+	}
+`;
+
+const REMOVE_DISCUSSION_COMMENT_UPVOTE_MUTATION = `
+	mutation($id: ID!) {
+		removeUpvoteFromDiscussionComment(input: { discussionCommentId: $id }) {
+			comment {
+				id
+				upvoteCount
+				viewerHasUpvoted
+			}
+		}
+	}
+`;
+
 // ── Discussion GraphQL types ──
 
 interface GQLDiscussionNode {
@@ -3286,7 +3756,7 @@ interface GQLDiscussionNode {
 	createdAt: string;
 	updatedAt: string;
 	author: { login: string; avatarUrl: string } | null;
-	category: { name: string; emoji: string; isAnswerable: boolean };
+	category: { name: string; emoji: string; emojiHTML?: string | null; isAnswerable: boolean };
 	comments?: { totalCount: number };
 	upvoteCount: number;
 	isAnswered: boolean;
@@ -3301,7 +3771,9 @@ interface GQLDiscussionCommentNode {
 	createdAt: string;
 	author: { login: string; avatarUrl: string; __typename?: string } | null;
 	upvoteCount: number;
+	viewerHasUpvoted: boolean;
 	isAnswer: boolean;
+	reactionGroups?: GraphQLReactionGroup[];
 	replies?: {
 		nodes: {
 			id: string;
@@ -3310,7 +3782,9 @@ interface GQLDiscussionCommentNode {
 			createdAt: string;
 			author: { login: string; avatarUrl: string; __typename?: string } | null;
 			upvoteCount: number;
+			viewerHasUpvoted: boolean;
 			isAnswer: boolean;
+			reactionGroups?: GraphQLReactionGroup[];
 		}[];
 	};
 }
@@ -3333,7 +3807,12 @@ function mapGQLDiscussionNode(node: GQLDiscussionNode): RepoDiscussionNode {
 		createdAt: node.createdAt,
 		updatedAt: node.updatedAt,
 		author: mapGQLAuthor(node.author),
-		category: node.category,
+		category: {
+			name: node.category.name,
+			emoji: node.category.emoji,
+			emojiHTML: node.category.emojiHTML ?? null,
+			isAnswerable: node.category.isAnswerable,
+		},
 		commentsCount: node.comments?.totalCount ?? 0,
 		upvoteCount: node.upvoteCount,
 		isAnswered: node.isAnswered,
@@ -3350,7 +3829,9 @@ function mapGQLDiscussionComment(node: GQLDiscussionCommentNode): DiscussionComm
 		createdAt: node.createdAt,
 		author: mapGQLAuthor(node.author),
 		upvoteCount: node.upvoteCount,
+		viewerHasUpvoted: node.viewerHasUpvoted ?? false,
 		isAnswer: node.isAnswer,
+		reactions: mapReactionGroups(node.reactionGroups),
 		replies: (node.replies?.nodes ?? []).map((r) => ({
 			id: r.id,
 			databaseId: r.databaseId,
@@ -3358,7 +3839,9 @@ function mapGQLDiscussionComment(node: GQLDiscussionCommentNode): DiscussionComm
 			createdAt: r.createdAt,
 			author: mapGQLAuthor(r.author),
 			upvoteCount: r.upvoteCount,
+			viewerHasUpvoted: r.viewerHasUpvoted ?? false,
 			isAnswer: r.isAnswer,
+			reactions: mapReactionGroups(r.reactionGroups),
 		})),
 	};
 }
@@ -3407,12 +3890,14 @@ async function fetchRepoDiscussionsPageGraphQL(
 				id: string;
 				name: string;
 				emoji: string;
+				emojiHTML?: string | null;
 				description: string;
 				isAnswerable: boolean;
 			}) => ({
 				id: c.id,
 				name: c.name,
 				emoji: c.emoji,
+				emojiHTML: c.emojiHTML ?? null,
 				description: c.description,
 				isAnswerable: c.isAnswerable,
 			}),
@@ -3456,11 +3941,18 @@ async function fetchDiscussionDetailGraphQL(
 		createdAt: d.createdAt,
 		updatedAt: d.updatedAt,
 		author: mapGQLAuthor(d.author),
-		category: d.category,
+		category: {
+			name: d.category.name,
+			emoji: d.category.emoji,
+			emojiHTML: d.category.emojiHTML ?? null,
+			isAnswerable: d.category.isAnswerable,
+		},
 		commentsCount: d.comments?.totalCount ?? 0,
 		upvoteCount: d.upvoteCount,
+		viewerHasUpvoted: d.viewerHasUpvoted ?? false,
 		isAnswered: d.isAnswered,
 		answerChosenAt: d.answerChosenAt ?? null,
+		reactions: mapReactionGroups(d.reactionGroups),
 		labels: (d.labels?.nodes ?? []).map((l: { name: string; color: string }) => ({
 			name: l.name,
 			color: l.color,
@@ -3477,7 +3969,7 @@ async function fetchDiscussionDetailGraphQL(
 // ── Discussion exported functions ──
 
 function buildRepoDiscussionsCacheKey(owner: string, repo: string): string {
-	return `repo_discussions:${normalizeRepoKey(owner, repo)}`;
+	return `repo_discussions:v2:${normalizeRepoKey(owner, repo)}`;
 }
 
 export async function getRepoDiscussionsPage(
@@ -3622,6 +4114,157 @@ export async function createDiscussionViaGraphQL(
 	return discussion
 		? { id: discussion.id, number: discussion.number, title: discussion.title }
 		: null;
+}
+
+export type DiscussionReactionContent =
+	| "THUMBS_UP"
+	| "THUMBS_DOWN"
+	| "LAUGH"
+	| "HOORAY"
+	| "CONFUSED"
+	| "HEART"
+	| "ROCKET"
+	| "EYES";
+
+export async function addDiscussionReaction(
+	subjectId: string,
+	content: DiscussionReactionContent,
+): Promise<{ success: boolean; reactionId?: number; error?: string }> {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx) return { success: false, error: "Not authenticated" };
+
+	const response = await fetch("https://api.github.com/graphql", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${authCtx.token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			query: ADD_DISCUSSION_REACTION_MUTATION,
+			variables: { subjectId, content },
+		}),
+	});
+
+	if (!response.ok) {
+		return { success: false, error: `Request failed: ${response.status}` };
+	}
+	const json = await response.json();
+	if (json.errors?.length) {
+		return { success: false, error: json.errors[0]?.message ?? "Unknown error" };
+	}
+	const reaction = json.data?.addReaction?.reaction;
+	return { success: true, reactionId: reaction?.databaseId };
+}
+
+export async function removeDiscussionReaction(
+	subjectId: string,
+	content: DiscussionReactionContent,
+): Promise<{ success: boolean; error?: string }> {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx) return { success: false, error: "Not authenticated" };
+
+	const response = await fetch("https://api.github.com/graphql", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${authCtx.token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			query: REMOVE_DISCUSSION_REACTION_MUTATION,
+			variables: { subjectId, content },
+		}),
+	});
+
+	if (!response.ok) {
+		return { success: false, error: `Request failed: ${response.status}` };
+	}
+	const json = await response.json();
+	if (json.errors?.length) {
+		return { success: false, error: json.errors[0]?.message ?? "Unknown error" };
+	}
+	return { success: true };
+}
+
+export async function toggleDiscussionUpvote(
+	discussionId: string,
+	hasUpvoted: boolean,
+): Promise<{ success: boolean; upvoteCount?: number; viewerHasUpvoted?: boolean; error?: string }> {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx) return { success: false, error: "Not authenticated" };
+
+	const mutation = hasUpvoted
+		? REMOVE_DISCUSSION_UPVOTE_MUTATION
+		: ADD_DISCUSSION_UPVOTE_MUTATION;
+
+	const response = await fetch("https://api.github.com/graphql", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${authCtx.token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			query: mutation,
+			variables: { id: discussionId },
+		}),
+	});
+
+	if (!response.ok) {
+		return { success: false, error: `Request failed: ${response.status}` };
+	}
+	const json = await response.json();
+	if (json.errors?.length) {
+		return { success: false, error: json.errors[0]?.message ?? "Unknown error" };
+	}
+
+	const key = hasUpvoted ? "removeUpvoteFromDiscussion" : "addUpvoteToDiscussion";
+	const result = json.data?.[key]?.discussion;
+	return {
+		success: true,
+		upvoteCount: result?.upvoteCount,
+		viewerHasUpvoted: result?.viewerHasUpvoted,
+	};
+}
+
+export async function toggleDiscussionCommentUpvote(
+	commentId: string,
+	hasUpvoted: boolean,
+): Promise<{ success: boolean; upvoteCount?: number; viewerHasUpvoted?: boolean; error?: string }> {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx) return { success: false, error: "Not authenticated" };
+
+	const mutation = hasUpvoted
+		? REMOVE_DISCUSSION_COMMENT_UPVOTE_MUTATION
+		: ADD_DISCUSSION_COMMENT_UPVOTE_MUTATION;
+
+	const response = await fetch("https://api.github.com/graphql", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${authCtx.token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			query: mutation,
+			variables: { id: commentId },
+		}),
+	});
+
+	if (!response.ok) {
+		return { success: false, error: `Request failed: ${response.status}` };
+	}
+	const json = await response.json();
+	if (json.errors?.length) {
+		return { success: false, error: json.errors[0]?.message ?? "Unknown error" };
+	}
+
+	const key = hasUpvoted
+		? "removeUpvoteFromDiscussionComment"
+		: "addUpvoteToDiscussionComment";
+	const result = json.data?.[key]?.comment;
+	return {
+		success: true,
+		upvoteCount: result?.upvoteCount,
+		viewerHasUpvoted: result?.viewerHasUpvoted,
+	};
 }
 
 export async function invalidateRepoDiscussionsCache(owner: string, repo: string) {
@@ -3912,6 +4555,9 @@ export async function invalidateIssueCache(owner: string, repo: string, issueNum
 	await deleteGithubCacheByPrefix(authCtx.userId, `issue:${key}:${issueNumber}`);
 	await deleteGithubCacheByPrefix(authCtx.userId, `issue_comments:${key}:${issueNumber}`);
 	await deleteGithubCacheByPrefix(authCtx.userId, `repo_issues:${key}`);
+	// Also invalidate shared cache so other users see fresh data
+	await deleteSharedCacheByPrefix(`issue:${key}:${issueNumber}`);
+	await deleteSharedCacheByPrefix(`issue_comments:${key}:${issueNumber}`);
 	// Also invalidate nav counts so issue count updates immediately
 	const navCountsKey = buildRepoNavCountsCacheKey(owner, repo);
 	await deleteGithubCacheByPrefix(authCtx.userId, navCountsKey);
@@ -5116,7 +5762,12 @@ export async function getUserPublicRepos(username: string, perPage = 30) {
 		jobType: "user_public_repos",
 		jobPayload: { username, perPage },
 		fetchRemote: (octokit) =>
-			fetchUserPublicReposFromGitHub(octokit, username, perPage),
+			fetchUserPublicReposFromGitHub(
+				octokit,
+				username,
+				perPage,
+				authCtx?.token ?? null,
+			),
 	});
 }
 
@@ -6008,6 +6659,38 @@ export async function getAuthorDossier(
 		return result;
 	} catch (e) {
 		console.error("[getAuthorDossier] failed:", e);
+		return null;
+	}
+}
+
+export interface ForkSyncStatus {
+	behind: number;
+}
+
+export async function getForkSyncStatus(
+	owner: string,
+	repo: string,
+	defaultBranch: string,
+): Promise<ForkSyncStatus | null> {
+	const octokit = await getOctokit();
+	if (!octokit) return null;
+
+	try {
+		const { data: repoData } = await octokit.repos.get({ owner, repo });
+		if (!repoData.parent) return null;
+
+		const parentOwner = repoData.parent.owner.login;
+
+		// Compare fork against upstream: how many commits is the fork behind?
+		const { data: comparison } = await octokit.repos.compareCommits({
+			owner,
+			repo,
+			base: defaultBranch,
+			head: `${parentOwner}:${defaultBranch}`,
+		});
+
+		return { behind: comparison.ahead_by ?? 0 };
+	} catch {
 		return null;
 	}
 }

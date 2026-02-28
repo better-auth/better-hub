@@ -20,7 +20,7 @@ async function getOctokitUser(token: string) {
 	const octokit = new Octokit({ auth: token });
 	const githubUser = await octokit.users.getAuthenticated();
 	const hash = await createHash("SHA-256", "base64").digest(token);
-	waitUntil(redis.set(`github_user:${hash}`, JSON.stringify(githubUser.data)));
+	waitUntil(redis.set(`github_user:${hash}`, JSON.stringify(githubUser.data), { ex: 3600 }));
 	return githubUser;
 }
 
@@ -87,6 +87,8 @@ export const auth = betterAuth({
 		"https://www.better-hub.com",
 		// Vercel preview
 		"https://better-hub-*-better-auth.vercel.app",
+		// Beta site
+		"https://beta.better-hub.com",
 	],
 });
 

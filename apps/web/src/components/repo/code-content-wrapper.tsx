@@ -3,7 +3,7 @@
 import { useMemo, useState, useCallback, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { PanelLeft, Copy, Check, Download } from "lucide-react";
+import { PanelLeft, Copy, Check, Download, Monitor } from "lucide-react";
 import { type FileTreeNode } from "@/lib/file-tree";
 import { parseRefAndPath } from "@/lib/github-utils";
 import { FileExplorerTree } from "./file-explorer-tree";
@@ -66,6 +66,7 @@ function CloneDownloadButtons({
 				</button>
 				<a
 					href={zipUrl}
+					data-no-github-intercept
 					className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/5 transition-colors"
 				>
 					<Download className="w-3 h-3" />
@@ -126,6 +127,13 @@ function CloneDownloadButtons({
 								)}
 							</button>
 						</div>
+						<a
+							href={`x-github-client://openRepo/https://github.com/${owner}/${repo}`}
+							className="mt-3 pt-3 border-t border-border flex items-center gap-2 text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors"
+						>
+							<Monitor className="w-3.5 h-3.5" />
+							Open with GitHub Desktop
+						</a>
 					</div>
 				</>
 			)}
@@ -347,7 +355,10 @@ export function CodeContentWrapper({
 											: "pt-3",
 									),
 					)}
-					style={{ paddingRight: "var(--repo-pr, 1rem)" }}
+					style={{
+						paddingRight:
+							"var(--repo-pr, calc(var(--spacing) * 4))",
+					}}
 				>
 					{children}
 				</div>
