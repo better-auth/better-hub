@@ -4,6 +4,7 @@ import {
 	getIssueComments,
 	getRepo,
 	getCrossReferences,
+	getIssueTimelineEvents,
 	getAuthenticatedUser,
 	extractRepoPermissions,
 } from "@/lib/github";
@@ -69,14 +70,16 @@ export default async function IssueDetailPage({
 	const issueNumber = parseInt(numStr, 10);
 
 	const hdrs = await headers();
-	const [issue, rawComments, repoData, crossRefs, currentUser, session] = await Promise.all([
-		getIssue(owner, repo, issueNumber),
-		getIssueComments(owner, repo, issueNumber),
-		getRepo(owner, repo),
-		getCrossReferences(owner, repo, issueNumber),
-		getAuthenticatedUser(),
-		auth.api.getSession({ headers: hdrs }),
-	]);
+	const [issue, rawComments, repoData, crossRefs, timelineEvents, currentUser, session] =
+		await Promise.all([
+			getIssue(owner, repo, issueNumber),
+			getIssueComments(owner, repo, issueNumber),
+			getRepo(owner, repo),
+			getCrossReferences(owner, repo, issueNumber),
+			getIssueTimelineEvents(owner, repo, issueNumber),
+			getAuthenticatedUser(),
+			auth.api.getSession({ headers: hdrs }),
+		]);
 	const comments = rawComments as IssueComment[];
 
 	if (!issue) {
@@ -231,6 +234,11 @@ export default async function IssueDetailPage({
 						issueTitle={issue.title}
 						currentUserLogin={currentUserLogin}
 						viewerHasWriteAccess={viewerHasWriteAccess}
+						timelineEvents={timelineEvents}
+						issueStateReason={
+							(issue as { state_reason?: string | null })
+								.state_reason
+						}
 					/>
 				}
 				commentForm={

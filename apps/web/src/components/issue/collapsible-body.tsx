@@ -8,7 +8,7 @@ const COLLAPSED_HEIGHT = 500; // px — generous since issue layout has conversa
 export function CollapsibleBody({ children }: { children: React.ReactNode }) {
 	const ref = useRef<HTMLDivElement>(null);
 	const [needsCollapse, setNeedsCollapse] = useState(false);
-	const [expanded, setExpanded] = useState(false);
+	const [expanded, setExpanded] = useState(true);
 
 	useEffect(() => {
 		if (ref.current && ref.current.scrollHeight > COLLAPSED_HEIGHT + 40) {

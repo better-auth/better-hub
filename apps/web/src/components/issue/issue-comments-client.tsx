@@ -8,6 +8,8 @@ import {
 	type IssueCommentEntry,
 	type IssueDescriptionEntry,
 } from "@/components/issue/issue-conversation";
+import { IssueTimelineEvents } from "@/components/issue/issue-timeline-events";
+import type { IssueTimelineEvent } from "@/lib/github";
 
 export interface IssueComment {
 	id: number;
@@ -42,6 +44,8 @@ export function IssueCommentsClient({
 	issueTitle,
 	currentUserLogin,
 	viewerHasWriteAccess,
+	timelineEvents,
+	issueStateReason,
 }: {
 	owner: string;
 	repo: string;
@@ -52,6 +56,8 @@ export function IssueCommentsClient({
 	issueTitle?: string;
 	currentUserLogin?: string;
 	viewerHasWriteAccess?: boolean;
+	timelineEvents?: IssueTimelineEvent[];
+	issueStateReason?: string | null;
 }) {
 	const { data: comments = initialComments } = useQuery({
 		queryKey: ["issue-comments", owner, repo, issueNumber],
@@ -65,15 +71,25 @@ export function IssueCommentsClient({
 	const entries: IssueTimelineEntry[] = [descriptionEntry, ...toEntries(comments)];
 
 	return (
-		<IssueConversation
-			entries={entries}
-			owner={owner}
-			repo={repo}
-			issueNumber={issueNumber}
-			canEdit={canEdit}
-			issueTitle={issueTitle}
-			currentUserLogin={currentUserLogin}
-			viewerHasWriteAccess={viewerHasWriteAccess}
-		/>
+		<>
+			<IssueConversation
+				entries={entries}
+				owner={owner}
+				repo={repo}
+				issueNumber={issueNumber}
+				canEdit={canEdit}
+				issueTitle={issueTitle}
+				currentUserLogin={currentUserLogin}
+				viewerHasWriteAccess={viewerHasWriteAccess}
+			/>
+			{timelineEvents && timelineEvents.length > 0 && (
+				<IssueTimelineEvents
+					events={timelineEvents}
+					owner={owner}
+					repo={repo}
+					issueStateReason={issueStateReason}
+				/>
+			)}
+		</>
 	);
 }

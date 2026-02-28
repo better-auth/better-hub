@@ -31,7 +31,7 @@ export function RepoLayoutWrapper({
 	ownerType,
 }: RepoLayoutWrapperProps) {
 	const pathname = usePathname();
-	const isPrPage = pathname.includes("/pulls");
+	const isPrPage = pathname.includes("/pulls/");
 	const effectiveInitialCollapsed = isPrPage ? true : initialCollapsed;
 
 	const [sidebarWidth, setSidebarWidth] = useState(
