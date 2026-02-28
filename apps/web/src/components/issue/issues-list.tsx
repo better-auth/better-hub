@@ -96,7 +96,7 @@ export function IssuesList({
 		tabParam === "closed" || tabParam === "not_planned" ? tabParam : "open";
 	const [state, setState] = useState<TabState>(initialTab);
 	const [search, setSearch] = useState("");
-	const [sort, setSort] = useState<SortType>("updated");
+	const [sort, setSort] = useState<SortType>("newest");
 	const [selectedAuthor, setSelectedAuthor] = useState<string | null>(null);
 	const [authorSearch, setAuthorSearch] = useState("");
 	const [authorDropdownOpen, setAuthorDropdownOpen] = useState(false);

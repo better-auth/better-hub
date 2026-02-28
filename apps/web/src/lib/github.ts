@@ -4277,7 +4277,7 @@ export async function invalidateRepoDiscussionsCache(owner: string, repo: string
 const ISSUES_PAGE_GRAPHQL = `
 	query($owner: String!, $repo: String!) {
 		repository(owner: $owner, name: $repo) {
-			openIssues: issues(states: [OPEN], first: 50, orderBy: {field: UPDATED_AT, direction: DESC}) {
+			openIssues: issues(states: [OPEN], first: 50, orderBy: {field: CREATED_AT, direction: DESC}) {
 				totalCount
 				nodes {
 					databaseId
@@ -4306,7 +4306,7 @@ const ISSUES_PAGE_GRAPHQL = `
 					}
 				}
 			}
-			closedIssues: issues(states: [CLOSED], first: 50, orderBy: {field: UPDATED_AT, direction: DESC}) {
+			closedIssues: issues(states: [CLOSED], first: 50, orderBy: {field: CREATED_AT, direction: DESC}) {
 				totalCount
 				nodes {
 					databaseId
