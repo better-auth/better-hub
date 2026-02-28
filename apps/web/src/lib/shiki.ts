@@ -247,7 +247,7 @@ export async function highlightCode(code: string, lang: string): Promise<string>
 			return highlighter.codeToHtml(code, {
 				lang: "text",
 				themes: { light: themes.light, dark: themes.dark },
-				defaultColor: false,
+				defaultColor: "light-dark()",
 			});
 		}
 	}
@@ -256,13 +256,13 @@ export async function highlightCode(code: string, lang: string): Promise<string>
 		return highlighter.codeToHtml(code, {
 			lang: target,
 			themes: { light: themes.light, dark: themes.dark },
-			defaultColor: false,
+			defaultColor: "light-dark()",
 		});
 	} catch {
 		return highlighter.codeToHtml(code, {
 			lang: "text",
 			themes: { light: themes.light, dark: themes.dark },
-			defaultColor: false,
+			defaultColor: "light-dark()",
 		});
 	}
 }

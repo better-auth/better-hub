@@ -15,6 +15,7 @@ import {
 	vercel,
 	vesper,
 	zinc,
+	catppuccin,
 	LEGACY_THEME_MAP,
 } from "./themes";
 
@@ -34,6 +35,7 @@ const themes: ThemeDefinition[] = [
 	rabbit,
 	noir,
 	forest,
+	catppuccin,
 ];
 
 export type { ThemeColors, ThemeDefinition, ThemeVariant, ShikiTheme };

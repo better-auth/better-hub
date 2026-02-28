@@ -60,7 +60,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 											notifications
 										}
 									/>
-									<div className="mt-10 lg:h-[calc(100dvh-var(--spacing)*10)] flex flex-col px-2 sm:px-4 pt-2 lg:overflow-auto">
+									<div className="mt-10 lg:h-[calc(100dvh-var(--spacing)*10)] flex flex-col px-2 sm:px-4 pt-2 lg:overflow-auto overflow-x-hidden">
 										{children}
 									</div>
 									<Suspense>

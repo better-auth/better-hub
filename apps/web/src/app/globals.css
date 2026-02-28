@@ -370,16 +370,12 @@ tr.diff-search-match-active > td {
 	background: var(--search-highlight-active) !important;
 }
 
-/* Shiki dual-theme (defaultColor: false) */
+/* Shiki dual-theme: uses defaultColor: "light-dark()" so inline styles
+   already contain color: light-dark(<light>, <dark>) which adapts via color-scheme. */
 .code-content .shiki {
 	background-color: var(--code-bg) !important;
 }
-:root:where(.dark) .code-content .shiki span {
-	color: var(--shiki-dark) !important;
-	background-color: transparent !important;
-}
-:root:not(.dark) .code-content .shiki span {
-	color: var(--shiki-light) !important;
+.code-content .shiki span {
 	background-color: transparent !important;
 }
 
@@ -396,14 +392,6 @@ tr.diff-search-match-active > td {
 }
 .diff-split-divider {
 	border-left-color: var(--border) !important;
-}
-
-/* Diff syntax highlighting */
-:root:where(.dark) .diff-syntax span[style] {
-	color: var(--shiki-dark);
-}
-:root:not(.dark) .diff-syntax span[style] {
-	color: var(--shiki-light);
 }
 
 /* ── GitHub-style Markdown ── */
@@ -548,12 +536,7 @@ tr.diff-search-match-active > td {
 .ghmd .shiki {
 	background-color: var(--code-block-bg) !important;
 }
-:root:where(.dark) .ghmd .shiki span {
-	color: var(--shiki-dark) !important;
-	background-color: transparent !important;
-}
-:root:not(.dark) .ghmd .shiki span {
-	color: var(--shiki-light) !important;
+.ghmd .shiki span {
 	background-color: transparent !important;
 }
 /* Override shiki's inline bg in markdown context */
