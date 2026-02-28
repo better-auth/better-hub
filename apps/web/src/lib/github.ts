@@ -3244,6 +3244,178 @@ export async function getCrossReferences(
 	}
 }
 
+export type IssueTimelineEventType =
+	| "closed"
+	| "reopened"
+	| "referenced"
+	| "cross-referenced"
+	| "committed";
+
+export interface IssueTimelineEvent {
+	id: string;
+	event: IssueTimelineEventType;
+	created_at: string;
+	actor: { login: string; avatar_url: string } | null;
+	commit_id?: string;
+	commit_url?: string;
+	state_reason?: string | null;
+	source?: {
+		type: "issue" | "pull_request";
+		number: number;
+		title: string;
+		state: "open" | "closed";
+		merged?: boolean;
+		repoOwner: string;
+		repoName: string;
+	};
+}
+
+export async function getIssueTimelineEvents(
+	owner: string,
+	repo: string,
+	issueNumber: number,
+): Promise<IssueTimelineEvent[]> {
+	const octokit = await getOctokit();
+	if (!octokit) return [];
+
+	try {
+		const events = await octokit.paginate(octokit.issues.listEventsForTimeline, {
+			owner,
+			repo,
+			issue_number: issueNumber,
+			per_page: 100,
+		});
+
+		const timelineEvents: IssueTimelineEvent[] = [];
+
+		for (const event of events) {
+			const eventType = event.event;
+
+			if (eventType === "closed") {
+				const typedEvent = event as {
+					id: number;
+					event: string;
+					created_at: string;
+					actor?: { login: string; avatar_url: string } | null;
+					state_reason?: string | null;
+					commit_id?: string | null;
+					commit_url?: string | null;
+				};
+				timelineEvents.push({
+					id: `closed-${typedEvent.id}`,
+					event: "closed",
+					created_at: typedEvent.created_at,
+					actor: typedEvent.actor ?? null,
+					state_reason: typedEvent.state_reason,
+					commit_id: typedEvent.commit_id ?? undefined,
+					commit_url: typedEvent.commit_url ?? undefined,
+				});
+			} else if (eventType === "reopened") {
+				const typedEvent = event as {
+					id: number;
+					event: string;
+					created_at: string;
+					actor?: { login: string; avatar_url: string } | null;
+				};
+				timelineEvents.push({
+					id: `reopened-${typedEvent.id}`,
+					event: "reopened",
+					created_at: typedEvent.created_at,
+					actor: typedEvent.actor ?? null,
+				});
+			} else if (eventType === "referenced") {
+				const typedEvent = event as {
+					id: number;
+					event: string;
+					created_at: string;
+					actor?: { login: string; avatar_url: string } | null;
+					commit_id?: string | null;
+					commit_url?: string | null;
+				};
+				timelineEvents.push({
+					id: `referenced-${typedEvent.id}`,
+					event: "referenced",
+					created_at: typedEvent.created_at,
+					actor: typedEvent.actor ?? null,
+					commit_id: typedEvent.commit_id ?? undefined,
+					commit_url: typedEvent.commit_url ?? undefined,
+				});
+			} else if (eventType === "cross-referenced") {
+				const typedEvent = event as {
+					created_at?: string;
+					actor?: { login: string; avatar_url: string } | null;
+					source?: {
+						issue?: {
+							pull_request?: {
+								merged_at?: string | null;
+							};
+							repository?: { full_name?: string };
+							number: number;
+							title: string;
+							state: string;
+						};
+					};
+				};
+				const source = typedEvent.source?.issue;
+				if (source) {
+					const repoFullName = source.repository?.full_name;
+					const [refOwner, refName] = repoFullName
+						? repoFullName.split("/")
+						: [owner, repo];
+					timelineEvents.push({
+						id: `cross-ref-${refOwner}-${refName}-${source.number}`,
+						event: "cross-referenced",
+						created_at: typedEvent.created_at ?? "",
+						actor: typedEvent.actor ?? null,
+						source: {
+							type: source.pull_request
+								? "pull_request"
+								: "issue",
+							number: source.number,
+							title: source.title,
+							state: source.state as "open" | "closed",
+							merged: !!source.pull_request?.merged_at,
+							repoOwner: refOwner,
+							repoName: refName,
+						},
+					});
+				}
+			} else if (eventType === "committed") {
+				const typedEvent = event as {
+					sha?: string;
+					url?: string;
+					message?: string;
+					author?: {
+						name?: string;
+						email?: string;
+						date?: string;
+					} | null;
+					committer?: {
+						name?: string;
+						email?: string;
+						date?: string;
+					} | null;
+				};
+				timelineEvents.push({
+					id: `committed-${typedEvent.sha}`,
+					event: "committed",
+					created_at:
+						typedEvent.committer?.date ??
+						typedEvent.author?.date ??
+						"",
+					actor: null,
+					commit_id: typedEvent.sha,
+					commit_url: typedEvent.url,
+				});
+			}
+		}
+
+		return timelineEvents;
+	} catch {
+		return [];
+	}
+}
+
 /** @deprecated Use getCrossReferences instead */
 export async function getLinkedPullRequests(
 	owner: string,
