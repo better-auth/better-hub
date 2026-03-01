@@ -8,6 +8,7 @@ import {
 	getUserPublicOrgs,
 	getUserOrgTopRepos,
 	getContributionData,
+	getUserEvents,
 } from "@/lib/github";
 import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { OrgDetailContent } from "@/components/orgs/org-detail-content";
@@ -114,14 +115,24 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 	let orgsData: Awaited<ReturnType<typeof getUserPublicOrgs>> = [];
 	let contributionData: Awaited<ReturnType<typeof getContributionData>> = null;
 	let orgTopRepos: Awaited<ReturnType<typeof getUserOrgTopRepos>> = [];
+	let activityEvents: Awaited<ReturnType<typeof getUserEvents>> = [];
 
 	if (!isBot) {
 		try {
-			[reposData, orgsData, contributionData] = await Promise.all([
-				getUserPublicRepos(userData.login, 100),
-				getUserPublicOrgs(userData.login),
-				getContributionData(userData.login),
-			]);
+			const [reposResult, orgsResult, contributionsResult, eventsResult] =
+				await Promise.allSettled([
+					getUserPublicRepos(userData.login, 100),
+					getUserPublicOrgs(userData.login),
+					getContributionData(userData.login),
+					getUserEvents(userData.login, 100),
+				]);
+			if (reposResult.status === "fulfilled") reposData = reposResult.value;
+			if (orgsResult.status === "fulfilled") orgsData = orgsResult.value;
+			if (contributionsResult.status === "fulfilled") {
+				contributionData = contributionsResult.value;
+			}
+			if (eventsResult.status === "fulfilled")
+				activityEvents = eventsResult.value;
 			if (orgsData.length > 0) {
 				orgTopRepos = await getUserOrgTopRepos(
 					orgsData.map((o) => o.login),
@@ -163,6 +174,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 				stargazers_count: repo.stargazers_count ?? 0,
 				forks_count: repo.forks_count ?? 0,
 				open_issues_count: repo.open_issues_count ?? 0,
+				created_at: repo.created_at ?? null,
 				updated_at: repo.updated_at ?? null,
 				pushed_at: repo.pushed_at ?? null,
 			}))}
@@ -171,6 +183,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 				avatar_url: org.avatar_url,
 			}))}
 			contributions={contributionData}
+			activityEvents={activityEvents}
 			orgTopRepos={orgTopRepos.map((r) => ({
 				name: r.name,
 				full_name: r.full_name,
