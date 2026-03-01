@@ -2,8 +2,10 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import rehypeKatex from "rehype-katex";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { parseGitHubUrl, toInternalUrl } from "@/lib/github-utils";
@@ -62,8 +64,12 @@ export function ClientMarkdown({ content, className }: { content: string; classN
 	return (
 		<div className={cn("ghmd ghmd-sm", className)}>
 			<ReactMarkdown
-				remarkPlugins={[remarkGfm]}
-				rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
+				remarkPlugins={[remarkGfm, remarkMath]}
+				rehypePlugins={[
+					rehypeRaw,
+					[rehypeSanitize, sanitizeSchema],
+					rehypeKatex,
+				]}
 				components={{
 					code({ className: codeClassName, children, ref, ...rest }) {
 						const match = /language-(\w+)/.exec(

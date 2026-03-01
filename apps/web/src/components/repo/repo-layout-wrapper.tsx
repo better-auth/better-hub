@@ -193,7 +193,7 @@ export function RepoLayoutWrapper({
 
 			{/* Main content */}
 			<div
-				className="flex-1 min-w-0 flex flex-col min-h-0"
+				className="flex-1 min-w-0 flex flex-col min-h-0 overflow-hidden"
 				style={
 					{
 						"--repo-pr": collapsed ? "0.5rem" : "1rem",

@@ -27,9 +27,13 @@ function getClientHighlighter(): Promise<Highlighter> {
 export const HighlightedCodeBlock = memo(function HighlightedCodeBlock({
 	code,
 	lang,
+	inlineColors = false,
+	className,
 }: {
 	code: string;
 	lang: string;
+	inlineColors?: boolean;
+	className?: string;
 }) {
 	const [html, setHtml] = useState<string | null>(null);
 
@@ -63,7 +67,7 @@ export const HighlightedCodeBlock = memo(function HighlightedCodeBlock({
 							light: "vitesse-light",
 							dark: "vitesse-black",
 						},
-						defaultColor: false,
+						defaultColor: inlineColors ? "light-dark()" : false,
 					});
 					setHtml(result);
 				}
@@ -74,13 +78,13 @@ export const HighlightedCodeBlock = memo(function HighlightedCodeBlock({
 		return () => {
 			cancelled = true;
 		};
-	}, [code, lang]);
+	}, [code, lang, inlineColors]);
 
 	if (html) {
-		return <div dangerouslySetInnerHTML={{ __html: html }} />;
+		return <div className={className} dangerouslySetInnerHTML={{ __html: html }} />;
 	}
 	return (
-		<pre>
+		<pre className={className}>
 			<code>{code}</code>
 		</pre>
 	);

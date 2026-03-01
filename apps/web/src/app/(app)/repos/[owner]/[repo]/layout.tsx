@@ -166,7 +166,7 @@ export default async function RepoLayout({
 	const parent = repoData.parent;
 
 	return (
-		<div className="-mx-4 flex-1 min-h-0 flex flex-col">
+		<div className="-mx-4 flex-1 min-h-0 flex flex-col overflow-hidden">
 			<RepoLayoutWrapper
 				owner={owner}
 				repo={repoName}

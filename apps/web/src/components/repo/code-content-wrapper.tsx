@@ -261,7 +261,7 @@ export function CodeContentWrapper({
 	}, []);
 
 	return (
-		<div className="flex flex-1 min-h-0">
+		<div className="flex flex-1 min-h-0 overflow-hidden">
 			{showTree && (
 				<>
 					{/* Collapsed toggle */}
@@ -304,7 +304,7 @@ export function CodeContentWrapper({
 					)}
 				</>
 			)}
-			<div className="flex-1 min-w-0 flex flex-col min-h-0">
+			<div className="flex-1 min-w-0 flex flex-col min-h-0 overflow-hidden">
 				{isBlobOrTree && (
 					<div
 						className="shrink-0 pl-4 pt-3 pb-3 flex items-center gap-3"
