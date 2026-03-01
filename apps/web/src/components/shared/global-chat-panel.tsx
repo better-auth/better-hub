@@ -440,7 +440,7 @@ export function GlobalChatPanel() {
 						<button
 							type="button"
 							onClick={() => setContexts([])}
-							className="p-0.5 rounded text-muted-foreground/30 hover:text-muted-foreground transition-colors cursor-pointer shrink-0"
+							className="p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground transition-colors cursor-pointer shrink-0"
 						>
 							<X className="w-2 h-2" />
 						</button>
@@ -457,7 +457,7 @@ export function GlobalChatPanel() {
 						<button
 							type="button"
 							onClick={() => setContexts([])}
-							className="p-0.5 rounded text-muted-foreground/30 hover:text-muted-foreground transition-colors cursor-pointer shrink-0"
+							className="p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground transition-colors cursor-pointer shrink-0"
 						>
 							<X className="w-2 h-2" />
 						</button>

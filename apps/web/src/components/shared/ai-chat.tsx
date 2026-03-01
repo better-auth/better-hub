@@ -135,7 +135,7 @@ function GhostThinkingIndicator({ status }: { status: string }) {
 				{phrase}
 			</span>
 			{elapsed !== null && elapsed >= 1000 && (
-				<span className="text-[10px] font-mono text-muted-foreground/30 tabular-nums">
+				<span className="text-[10px] font-mono text-muted-foreground/50 tabular-nums">
 					{formatElapsed(elapsed)}
 				</span>
 			)}
@@ -1670,7 +1670,7 @@ export function AIChat({
 							{/* Error state — stream died, timed out, etc. */}
 							{error && historyLoaded && (
 								<div className="flex flex-col items-center gap-2 py-4">
-									<Ghost className="w-5 h-5 text-muted-foreground/20" />
+									<Ghost className="w-5 h-5 text-muted-foreground/50" />
 									{isLimitReached ? (
 										<div className="flex flex-col items-center gap-1.5 max-w-[300px]">
 											<p className="text-[11px] text-muted-foreground/50 text-center">
@@ -1684,7 +1684,7 @@ export function AIChat({
 														? "You've reached your monthly spending limit."
 														: "You've reached the free message limit."}
 											</p>
-											<p className="text-[10px] text-muted-foreground/35 text-center">
+											<p className="text-[10px] text-muted-foreground/50 text-center">
 												{error?.message?.includes(
 													BILLING_ERROR.SPENDING_LIMIT_REACHED,
 												)
@@ -1747,7 +1747,7 @@ export function AIChat({
 				historyItems.length > 0 && (
 					<div className="shrink-0 border-t border-border/30 px-3 py-2">
 						<div className="flex items-center mb-1">
-							<span className="text-[10px] font-medium text-muted-foreground/30 uppercase tracking-wider">
+							<span className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider">
 								Recent
 							</span>
 							<button
@@ -1755,7 +1755,7 @@ export function AIChat({
 								onClick={() =>
 									setHistoryDismissed(true)
 								}
-								className="ml-auto p-0.5 rounded text-muted-foreground/20 hover:text-muted-foreground/50 transition-colors cursor-pointer"
+								className="ml-auto p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground/70 transition-colors cursor-pointer"
 								title="Dismiss"
 							>
 								<X className="w-3 h-3" />
@@ -1774,11 +1774,11 @@ export function AIChat({
 									}
 									className="w-full flex items-center gap-2 px-2 py-1 rounded text-left text-[11px] text-muted-foreground/50 hover:text-foreground hover:bg-muted/30 transition-colors cursor-pointer group"
 								>
-									<MessageSquare className="w-3 h-3 shrink-0 text-muted-foreground/25 group-hover:text-muted-foreground/50" />
+									<MessageSquare className="w-3 h-3 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground/70" />
 									<span className="truncate flex-1">
 										{item.title}
 									</span>
-									<span className="text-[10px] text-muted-foreground/20 shrink-0">
+									<span className="text-[10px] text-muted-foreground/50 shrink-0">
 										{formatRelativeTime(
 											item.updatedAt,
 										)}
@@ -2103,7 +2103,7 @@ export function AIChat({
 								rows={1}
 								className={cn(
 									"flex-1 resize-none text-[13px] bg-transparent pl-3.5 pr-1.5 py-2.5",
-									"placeholder:text-muted-foreground/35",
+									"placeholder:text-muted-foreground/50",
 									"focus:outline-none",
 									"min-h-[38px] overflow-y-auto",
 								)}
@@ -2135,7 +2135,7 @@ export function AIChat({
 											input.trim() &&
 												!isLimitReached
 												? "bg-foreground text-background hover:bg-foreground/90 cursor-pointer"
-												: "bg-muted/50 dark:bg-white/5 text-muted-foreground/25 cursor-default",
+												: "bg-muted/50 dark:bg-white/5 text-muted-foreground/50 cursor-default",
 										)}
 										title="Send (Enter)"
 									>
@@ -2146,7 +2146,7 @@ export function AIChat({
 						</div>
 					</div>
 				</div>
-				<p className="text-[10px] text-muted-foreground/25 mt-1.5 text-center">
+				<p className="text-[10px] text-muted-foreground/50 mt-1.5 text-center">
 					AI can make mistakes. Verify important information.
 				</p>
 			</div>
