@@ -62,6 +62,14 @@ import { CheckStatusBadge } from "@/components/pr/check-status-badge";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { UserTooltip } from "@/components/shared/user-tooltip";
 import { getDiffPreferences, setSplitView, setWordWrap } from "@/lib/diff-preferences";
+import { formatForDisplay, useHotkey } from "@tanstack/react-hotkeys";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 
 interface DiffFile {
 	filename: string;
@@ -165,6 +173,9 @@ export function PRDiffViewer({
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 	const [isDragging, setIsDragging] = useState(false);
 	const [viewedFiles, setViewedFiles] = useState<Set<string>>(new Set());
+	const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+	const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
+	const [bulkMarkDialogOpen, setBulkMarkDialogOpen] = useState(false);
 	const [sidebarMode, setSidebarMode] = useState<SidebarMode>(() => {
 		const tab = searchParams.get("tab");
 		if (tab === "reviews" || tab === "commits") return tab;
@@ -238,6 +249,46 @@ export function PRDiffViewer({
 		});
 	};
 
+	const toggleFileSelection = useCallback(
+		(filename: string, index: number, shiftKey: boolean) => {
+			setSelectedFiles((prev) => {
+				const next = new Set(prev);
+				if (shiftKey && lastClickedIndex !== null) {
+					const lo = Math.min(lastClickedIndex, index);
+					const hi = Math.max(lastClickedIndex, index);
+					for (let j = lo; j <= hi; j++) {
+						const f = files[j]?.filename;
+						if (f) next.add(f);
+					}
+				} else {
+					if (next.has(filename)) next.delete(filename);
+					else next.add(filename);
+				}
+				return next;
+			});
+			setLastClickedIndex(index);
+		},
+		[files, lastClickedIndex],
+	);
+
+	const selectAll = useCallback(() => {
+		setSelectedFiles(new Set(files.map((f) => f.filename)));
+	}, [files]);
+
+	const selectNone = useCallback(() => {
+		setSelectedFiles(new Set());
+	}, []);
+
+	const markSelectedAsViewed = useCallback(() => {
+		setViewedFiles((prev) => {
+			const next = new Set(prev);
+			for (const f of selectedFiles) next.add(f);
+			return next;
+		});
+		setSelectedFiles(new Set());
+		setBulkMarkDialogOpen(false);
+	}, [selectedFiles]);
+
 	const viewedCount = viewedFiles.size;
 
 	// Group review comments by file
@@ -264,6 +315,47 @@ export function PRDiffViewer({
 		const x = clientX - rect.left;
 		setSidebarWidth(Math.max(140, Math.min(400, x)));
 	}, []);
+
+	useHotkey(
+		"Mod+A",
+		(e) => {
+			if (sidebarMode !== "files") return;
+			e.preventDefault();
+			selectAll();
+		},
+		{
+			target: containerRef,
+			enabled: sidebarMode === "files" && !sidebarCollapsed,
+			ignoreInputs: true,
+		},
+	);
+
+	useHotkey(
+		"Escape",
+		(e) => {
+			if (selectedFiles.size === 0) return;
+			e.preventDefault();
+			selectNone();
+		},
+		{
+			target: containerRef,
+			enabled: selectedFiles.size > 0,
+		},
+	);
+
+	useHotkey(
+		"Mod+Enter",
+		(e) => {
+			if (selectedFiles.size === 0) return;
+			e.preventDefault();
+			setBulkMarkDialogOpen(true);
+		},
+		{
+			target: containerRef,
+			enabled: selectedFiles.size > 0,
+			ignoreInputs: true,
+		},
+	);
 
 	return (
 		<div ref={containerRef} className="flex flex-1 min-h-0 min-w-0">
@@ -365,6 +457,50 @@ export function PRDiffViewer({
 								</button>
 							</div>
 						</div>
+						{sidebarMode === "files" && (
+							<div className="shrink-0 flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1.5 border-t border-border/50">
+								<button
+									onClick={selectAll}
+									title={`Select All (${formatForDisplay("Mod+A")})`}
+									className="text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+								>
+									Select All
+								</button>
+								<span className="text-muted-foreground/40">
+									|
+								</span>
+								<button
+									onClick={selectNone}
+									title={`Select None (${formatForDisplay("Escape")})`}
+									className="text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+								>
+									Select None
+								</button>
+								{selectedFiles.size > 0 && (
+									<>
+										<span className="text-[10px] font-mono text-muted-foreground/60 ml-auto">
+											{
+												selectedFiles.size
+											}{" "}
+											selected
+										</span>
+										<button
+											onClick={() =>
+												setBulkMarkDialogOpen(
+													true,
+												)
+											}
+											title={`Mark Selected as Reviewed (${formatForDisplay("Mod+Enter")})`}
+											className="text-[10px] font-mono px-2 py-0.5 rounded bg-success/20 text-success hover:bg-success/30 transition-colors cursor-pointer"
+										>
+											Mark
+											Selected as
+											Reviewed
+										</button>
+									</>
+								)}
+							</div>
+						)}
 						{viewedCount > 0 && (
 							<div className="shrink-0 h-1 bg-border/60 mx-3 rounded-full overflow-hidden">
 								<div
@@ -407,21 +543,72 @@ export function PRDiffViewer({
 											viewedFiles.has(
 												file.filename,
 											);
+										const isSelected =
+											selectedFiles.has(
+												file.filename,
+											);
 										const fileThreads =
 											threadsByFile.get(
 												file.filename,
 											);
 
 										return (
-											<button
+											<div
 												key={
 													file.filename
 												}
-												onClick={() =>
-													setActiveIndex(
-														i,
-													)
+												role="button"
+												tabIndex={
+													0
 												}
+												onKeyDown={(
+													e,
+												) => {
+													if (
+														e.key ===
+															"Enter" ||
+														e.key ===
+															" "
+													) {
+														e.preventDefault();
+														if (
+															e.shiftKey
+														) {
+															toggleFileSelection(
+																file.filename,
+																i,
+																true,
+															);
+														} else {
+															setActiveIndex(
+																i,
+															);
+															setLastClickedIndex(
+																i,
+															);
+														}
+													}
+												}}
+												onClick={(
+													e,
+												) => {
+													if (
+														e.shiftKey
+													) {
+														toggleFileSelection(
+															file.filename,
+															i,
+															true,
+														);
+													} else {
+														setActiveIndex(
+															i,
+														);
+														setLastClickedIndex(
+															i,
+														);
+													}
+												}}
 												className={cn(
 													"w-full flex items-center gap-1.5 px-3 py-1 text-left transition-colors cursor-pointer group/file",
 													activeIndex ===
@@ -432,6 +619,25 @@ export function PRDiffViewer({
 														"opacity-50",
 												)}
 											>
+												<input
+													type="checkbox"
+													checked={
+														isSelected
+													}
+													onChange={() => {}}
+													onClick={(
+														e,
+													) => {
+														e.stopPropagation();
+														toggleFileSelection(
+															file.filename,
+															i,
+															e.shiftKey,
+														);
+													}}
+													className="w-3 h-3 shrink-0 rounded border-border cursor-pointer accent-success"
+													aria-label={`Select ${file.filename}`}
+												/>
 												{isViewed ? (
 													<Check className="w-3 h-3 shrink-0 text-success" />
 												) : (
@@ -485,7 +691,7 @@ export function PRDiffViewer({
 														file.deletions
 													}
 												</span>
-											</button>
+											</div>
 										);
 									})}
 								</>
@@ -587,6 +793,32 @@ export function PRDiffViewer({
 					/>
 				)}
 			</div>
+
+			<Dialog open={bulkMarkDialogOpen} onOpenChange={setBulkMarkDialogOpen}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Mark files as reviewed</DialogTitle>
+					</DialogHeader>
+					<p className="text-sm text-muted-foreground">
+						Mark {selectedFiles.size} file
+						{selectedFiles.size !== 1 ? "s" : ""} as reviewed?
+					</p>
+					<DialogFooter>
+						<button
+							onClick={() => setBulkMarkDialogOpen(false)}
+							className="px-3 py-1.5 text-sm rounded-md border border-border bg-background hover:bg-accent transition-colors cursor-pointer"
+						>
+							Cancel
+						</button>
+						<button
+							onClick={markSelectedAsViewed}
+							className="px-3 py-1.5 text-sm rounded-md bg-success text-white hover:bg-success/90 transition-colors cursor-pointer"
+						>
+							Confirm
+						</button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }
