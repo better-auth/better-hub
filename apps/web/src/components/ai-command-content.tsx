@@ -13,7 +13,6 @@ const KNOWN_PREFIXES = new Set([
 	"repos",
 	"prs",
 	"issues",
-	"notifications",
 	"settings",
 	"search",
 	"trending",
@@ -78,7 +77,6 @@ export default function AICommandContent({ onClose, onToggleMode }: AICommandCon
 		else if (pathname === "/dashboard") page = "dashboard";
 		else if (pathname === "/prs") page = "prs";
 		else if (pathname === "/issues") page = "issues";
-		else if (pathname === "/notifications") page = "notifications";
 		else if (pathname === "/settings") page = "settings";
 
 		return { page, pathname, entities };
@@ -163,7 +161,8 @@ export default function AICommandContent({ onClose, onToggleMode }: AICommandCon
 							repos: "/repos",
 							prs: "/prs",
 							issues: "/issues",
-							notifications: "/notifications",
+							notifications:
+								"/dashboard?panel=notifications",
 							settings: "/settings",
 							search: "/search",
 							trending: "/trending",

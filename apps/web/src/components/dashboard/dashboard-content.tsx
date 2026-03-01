@@ -1,7 +1,7 @@
 "use client";
 
 import { noSSR } from "foxact/no-ssr";
-import { Suspense, useEffect, useState, useCallback, useTransition, useMemo } from "react";
+import { Suspense, useEffect, useState, useCallback, useMemo } from "react";
 import { useQueryState, parseAsStringLiteral } from "nuqs";
 import Image from "next/image";
 import Link from "next/link";
@@ -23,8 +23,6 @@ import {
 	Trash2,
 	X,
 	Lightbulb,
-	Check,
-	Loader2,
 	Pin,
 	PinOff,
 } from "lucide-react";
@@ -33,8 +31,6 @@ import { TimeAgo } from "@/components/ui/time-ago";
 import { toInternalUrl, getLanguageColor } from "@/lib/github-utils";
 import { RecentlyViewed } from "./recently-viewed";
 import { CreateRepoDialog } from "@/components/repo/create-repo-dialog";
-import { markNotificationDone } from "@/app/(app)/repos/actions";
-import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import {
 	getPinnedRepos,
 	togglePinRepo,
@@ -42,10 +38,11 @@ import {
 	reorderPinnedRepos,
 	type PinnedRepo,
 } from "@/lib/pinned-repos";
+import { NotificationFeed } from "@/components/notifications/notification-feed";
 import type {
 	IssueItem,
 	RepoItem,
-	NotificationItem,
+	NotificationEnrichedItem,
 	ActivityEvent,
 	TrendingRepoItem,
 	GitHubUser,
@@ -61,7 +58,7 @@ interface DashboardContentProps {
 	myOpenPRs: SearchResult<IssueItem>;
 	myIssues: SearchResult<IssueItem>;
 	repos: Array<RepoItem>;
-	notifications: Array<NotificationItem>;
+	notifications: Array<NotificationEnrichedItem>;
 	activity: Array<ActivityEvent>;
 	trending: Array<TrendingRepoItem>;
 }
@@ -105,7 +102,6 @@ export function DashboardContent({
 		"tab",
 		parseAsStringLiteral(tabKeys).withDefault("reviews"),
 	);
-	const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
 
 	const handleStatClick = useCallback(
 		(tab: TabKey) => {
@@ -176,18 +172,10 @@ export function DashboardContent({
 							label="Notifs"
 							value={
 								notifications.filter(
-									(n) =>
-										n.unread &&
-										!doneIds.has(n.id),
+									(n) => n.unread,
 								).length
 							}
-							accent={
-								notifications.filter(
-									(n) =>
-										n.unread &&
-										!doneIds.has(n.id),
-								).length > 0
-							}
+							accent={notifications.some((n) => n.unread)}
 							active={activeTab === "notifs"}
 							onClick={() => handleStatClick("notifs")}
 						/>
@@ -202,8 +190,6 @@ export function DashboardContent({
 						hasWork={hasWork}
 						activeTab={activeTab}
 						activity={activity ?? []}
-						doneIds={doneIds}
-						setDoneIds={setDoneIds}
 					/>
 				</div>
 
@@ -267,21 +253,15 @@ function WorkTabs({
 	hasWork,
 	activeTab,
 	activity,
-	doneIds,
-	setDoneIds,
 }: {
 	reviewRequests: SearchResult<IssueItem>;
 	myOpenPRs: SearchResult<IssueItem>;
 	myIssues: SearchResult<IssueItem>;
-	notifications: Array<NotificationItem>;
+	notifications: Array<NotificationEnrichedItem>;
 	hasWork: boolean;
 	activeTab: TabKey;
 	activity: Array<ActivityEvent>;
-	doneIds: Set<string>;
-	setDoneIds: React.Dispatch<React.SetStateAction<Set<string>>>;
 }) {
-	const visibleNotifs = notifications.filter((n) => !doneIds.has(n.id));
-
 	if (!hasWork && activeTab !== "notifs") {
 		return (
 			<div className="flex-1 min-h-0 border border-border py-12 text-center">
@@ -327,22 +307,11 @@ function WorkTabs({
 					<EmptyTab message="No assigned issues" />
 				))}
 			{activeTab === "notifs" &&
-				(visibleNotifs.length > 0 ? (
-					visibleNotifs.map((notif) => (
-						<NotificationRow
-							key={notif.id}
-							notif={notif}
-							onDone={(id) =>
-								setDoneIds(
-									(prev) =>
-										new Set([
-											...prev,
-											id,
-										]),
-								)
-							}
-						/>
-					))
+				(notifications.length > 0 ? (
+					<NotificationFeed
+						items={notifications}
+						persistTabInQuery={false}
+					/>
 				) : (
 					<EmptyTab message="No notifications" />
 				))}
@@ -354,114 +323,6 @@ function EmptyTab({ message }: { message: string }) {
 	return (
 		<div className="py-10 text-center">
 			<p className="text-xs text-muted-foreground/50 font-mono">{message}</p>
-		</div>
-	);
-}
-
-const reasonLabels: Record<string, string> = {
-	assign: "Assigned",
-	author: "Author",
-	comment: "Comment",
-	ci_activity: "CI",
-	invitation: "Invited",
-	manual: "Subscribed",
-	mention: "Mentioned",
-	review_requested: "Review requested",
-	security_alert: "Security",
-	state_change: "State change",
-	subscribed: "Watching",
-	team_mention: "Team mention",
-};
-
-function getNotificationHref(notif: NotificationItem): string {
-	const repo = notif.repository.full_name;
-	if (!notif.subject.url) return `/${repo}`;
-	const match = notif.subject.url.match(/repos\/[^/]+\/[^/]+\/(pulls|issues)\/(\d+)/);
-	if (match) {
-		const type = match[1] === "pulls" ? "pulls" : "issues";
-		return `/${repo}/${type}/${match[2]}`;
-	}
-	return `/${repo}`;
-}
-
-function NotificationRow({
-	notif,
-	onDone,
-}: {
-	notif: NotificationItem;
-	onDone: (id: string) => void;
-}) {
-	const { emit } = useMutationEvents();
-	const href = getNotificationHref(notif);
-	const repo = notif.repository.full_name;
-	const [marking, startMarking] = useTransition();
-	const icon =
-		notif.subject.type === "PullRequest" ? (
-			<GitPullRequest className="w-3.5 h-3.5" />
-		) : notif.subject.type === "Issue" ? (
-			<CircleDot className="w-3.5 h-3.5" />
-		) : (
-			<Bell className="w-3.5 h-3.5" />
-		);
-
-	return (
-		<div className="group flex items-center gap-3 px-4 py-2 hover:bg-muted/50 dark:hover:bg-white/2 transition-colors border-b border-border/60 last:border-b-0">
-			<span className="text-muted-foreground/70 shrink-0">{icon}</span>
-			<Link href={href} className="flex-1 min-w-0">
-				<div className="flex items-center gap-2">
-					{notif.unread && (
-						<span className="w-1.5 h-1.5 rounded-full bg-foreground shrink-0" />
-					)}
-					<span className="text-sm truncate group-hover:text-foreground transition-colors">
-						{notif.subject.title}
-					</span>
-				</div>
-				<div className="flex items-center gap-2 mt-px">
-					<span className="text-[11px] font-mono text-muted-foreground/70">
-						{repo}
-					</span>
-					<span
-						className={cn(
-							"text-[9px] font-mono px-1 py-0.5 border",
-							notif.reason === "review_requested"
-								? "border-warning/30 text-warning"
-								: notif.reason === "mention" ||
-									  notif.reason ===
-											"team_mention"
-									? "border-foreground/20 text-foreground/60"
-									: "border-border text-muted-foreground",
-						)}
-					>
-						{reasonLabels[notif.reason] || notif.reason}
-					</span>
-					<span className="text-[11px] text-muted-foreground/50">
-						<TimeAgo date={notif.updated_at} />
-					</span>
-				</div>
-			</Link>
-			<button
-				disabled={marking}
-				onClick={() => {
-					startMarking(async () => {
-						const res = await markNotificationDone(notif.id);
-						if (res.success) {
-							onDone(notif.id);
-							emit({
-								type: "notification:read",
-								id: notif.id,
-							});
-						}
-					});
-				}}
-				className="shrink-0 p-1 text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:text-foreground/70 transition-all cursor-pointer disabled:opacity-100"
-				title="Mark as done"
-			>
-				{marking ? (
-					<Loader2 className="w-3.5 h-3.5 animate-spin" />
-				) : (
-					<Check className="w-3.5 h-3.5" />
-				)}
-			</button>
 		</div>
 	);
 }

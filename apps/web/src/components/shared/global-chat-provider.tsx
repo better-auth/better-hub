@@ -77,7 +77,6 @@ const KNOWN_APP_PREFIXES = new Set([
 	"repos",
 	"prs",
 	"issues",
-	"notifications",
 	"settings",
 	"search",
 	"trending",
@@ -112,7 +111,7 @@ function getTabLabelForPathname(pathname: string): string {
 	}
 	if (pathname.startsWith("/prs")) return "My PRs";
 	if (pathname.startsWith("/issues")) return "My Issues";
-	if (pathname.startsWith("/notifications")) return "Notifs";
+	if (pathname === "/dashboard") return "Dashboard";
 	if (pathname.startsWith("/repos")) return "Repos";
 	return "New chat";
 }

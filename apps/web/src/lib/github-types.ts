@@ -39,6 +39,60 @@ export interface NotificationItem {
 	unread: boolean;
 }
 
+export type NotificationEntityType = "pull" | "issue" | "repo" | "unknown";
+
+export type NotificationStatusKind =
+	| "failed"
+	| "running"
+	| "passed"
+	| "review_requested"
+	| "mention"
+	| "comment"
+	| "security"
+	| "state_change"
+	| "info";
+
+export interface NotificationEntityRef {
+	owner: string;
+	repo: string;
+	type: NotificationEntityType;
+	number?: number;
+}
+
+export interface NotificationActor {
+	login: string;
+	avatarUrl?: string;
+}
+
+export interface NotificationCISummary {
+	state: "pending" | "success" | "failure" | "error";
+	total: number;
+	success: number;
+	failure: number;
+	pending: number;
+	primaryRunId?: number | null;
+}
+
+export interface NotificationEnrichedItem {
+	id: string;
+	unread: boolean;
+	updatedAt: string;
+	reason: string;
+	subjectType: string;
+	title: string;
+	repoFullName: string;
+	href: string;
+	entity: NotificationEntityRef;
+	actor?: NotificationActor | null;
+	statusKind: NotificationStatusKind;
+	ci?: NotificationCISummary | null;
+	contextLine: string;
+	primaryAction: {
+		label: string;
+		href: string;
+	};
+}
+
 export interface ActivityEvent {
 	id: string;
 	type: string | null;

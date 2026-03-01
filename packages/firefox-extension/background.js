@@ -189,7 +189,9 @@ function buildRules(host) {
 			priority: 4,
 			action: {
 				type: "redirect",
-				redirect: { regexSubstitution: `${host}/notifications` },
+				redirect: {
+					regexSubstitution: `${host}/dashboard?panel=notifications`,
+				},
 			},
 			condition: {
 				regexFilter: "^https://github\\.com/notifications",

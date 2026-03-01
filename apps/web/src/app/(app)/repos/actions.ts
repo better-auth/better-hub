@@ -91,7 +91,6 @@ export async function markNotificationDone(threadId: string) {
 	if (!octokit) return { error: "Not authenticated" };
 	try {
 		await octokit.activity.markThreadAsRead({ thread_id: Number(threadId) });
-		revalidatePath("/notifications");
 		revalidatePath("/dashboard", "layout");
 		return { success: true };
 	} catch (e: unknown) {
@@ -104,7 +103,6 @@ export async function markAllNotificationsRead() {
 	if (!octokit) return { error: "Not authenticated" };
 	try {
 		await octokit.activity.markNotificationsAsRead();
-		revalidatePath("/notifications");
 		revalidatePath("/dashboard", "layout");
 		return { success: true };
 	} catch (e: unknown) {

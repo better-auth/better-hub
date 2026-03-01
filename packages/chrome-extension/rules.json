@@ -239,7 +239,7 @@
 		"action": {
 			"type": "redirect",
 			"redirect": {
-				"regexSubstitution": "https://better-hub.com/notifications"
+				"regexSubstitution": "https://better-hub.com/dashboard?panel=notifications"
 			}
 		},
 		"condition": {

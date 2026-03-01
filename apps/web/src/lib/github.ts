@@ -19,6 +19,12 @@ import {
 import { redis } from "./redis";
 import { computeContributorScore } from "./contributor-score";
 import { getCachedAuthorDossier, setCachedAuthorDossier } from "./repo-data-cache";
+import type {
+	NotificationEnrichedItem,
+	NotificationEntityRef,
+	NotificationStatusKind,
+	NotificationItem,
+} from "./github-types";
 
 export type RepoPermissions = {
 	admin: boolean;
@@ -2099,6 +2105,231 @@ export async function getNotifications(perPage = 20) {
 		jobType: "notifications",
 		jobPayload: { perPage },
 		fetchRemote: (octokit) => fetchNotificationsFromGitHub(octokit, perPage),
+	});
+}
+
+type RawNotification = NotificationItem & {
+	subject: NotificationItem["subject"] & { latest_comment_url?: string | null };
+};
+
+function parseEntityFromNotification(notif: RawNotification): NotificationEntityRef {
+	const [owner = "", repo = ""] = notif.repository.full_name.split("/");
+	const subjectUrl = notif.subject.url ?? "";
+	const match = subjectUrl.match(/repos\/[^/]+\/[^/]+\/(pulls|issues)\/(\d+)/);
+	if (!match) {
+		return { owner, repo, type: owner && repo ? "repo" : "unknown" };
+	}
+	return {
+		owner,
+		repo,
+		type: match[1] === "pulls" ? "pull" : "issue",
+		number: Number(match[2]),
+	};
+}
+
+function buildNotificationHref(notif: RawNotification, entity: NotificationEntityRef): string {
+	if (!entity.owner || !entity.repo) return "/dashboard?panel=notifications";
+	if (entity.type === "pull" && entity.number) {
+		return `/${entity.owner}/${entity.repo}/pulls/${entity.number}`;
+	}
+	if (entity.type === "issue" && entity.number) {
+		return `/${entity.owner}/${entity.repo}/issues/${entity.number}`;
+	}
+	return `/${entity.owner}/${entity.repo}`;
+}
+
+function pickPrimaryRunId(
+	checks: Array<{
+		state: "success" | "failure" | "pending" | "error" | "neutral" | "skipped";
+		runId: number | null;
+	}>,
+): number | null {
+	const priority: Array<(typeof checks)[number]["state"]> = [
+		"failure",
+		"error",
+		"pending",
+		"success",
+	];
+	for (const state of priority) {
+		const match = checks.find((check) => check.state === state && check.runId != null);
+		if (match?.runId != null) return match.runId;
+	}
+	return checks.find((check) => check.runId != null)?.runId ?? null;
+}
+
+function computeStatusKind(
+	notif: RawNotification,
+	ciState?: string | null,
+): NotificationStatusKind {
+	if (notif.reason === "ci_activity" || notif.subject.type === "CheckSuite") {
+		if (ciState === "failure" || ciState === "error") return "failed";
+		if (ciState === "pending") return "running";
+		if (ciState === "success") return "passed";
+		return "info";
+	}
+	if (notif.reason === "review_requested") return "review_requested";
+	if (notif.reason === "mention" || notif.reason === "team_mention") return "mention";
+	if (notif.reason === "comment") return "comment";
+	if (notif.reason === "security_alert") return "security";
+	if (notif.reason === "state_change") return "state_change";
+	return "info";
+}
+
+function buildContextLine(
+	notif: RawNotification,
+	entity: NotificationEntityRef,
+	actor?: { login?: string } | null,
+): string {
+	const chunks: string[] = [notif.repository.full_name];
+	if (entity.type === "pull" && entity.number) chunks.push(`PR #${entity.number}`);
+	if (entity.type === "issue" && entity.number) chunks.push(`Issue #${entity.number}`);
+	if (actor?.login) chunks.push(`@${actor.login}`);
+	return chunks.join(" · ");
+}
+
+async function fetchActorFromLatestComment(
+	octokit: Awaited<ReturnType<typeof getOctokit>>,
+	url?: string | null,
+): Promise<{ login: string; avatarUrl?: string } | null> {
+	if (!octokit || !url) return null;
+
+	try {
+		if (url.includes("/issues/comments/")) {
+			const match = url.match(/repos\/([^/]+)\/([^/]+)\/issues\/comments\/(\d+)/);
+			if (!match) return null;
+			const { data } = await octokit.issues.getComment({
+				owner: match[1],
+				repo: match[2],
+				comment_id: Number(match[3]),
+			});
+			if (!data.user?.login) return null;
+			return {
+				login: data.user.login,
+				avatarUrl: data.user.avatar_url || undefined,
+			};
+		}
+
+		if (url.includes("/pulls/comments/")) {
+			const match = url.match(/repos\/([^/]+)\/([^/]+)\/pulls\/comments\/(\d+)/);
+			if (!match) return null;
+			const { data } = await octokit.pulls.getReviewComment({
+				owner: match[1],
+				repo: match[2],
+				comment_id: Number(match[3]),
+			});
+			if (!data.user?.login) return null;
+			return {
+				login: data.user.login,
+				avatarUrl: data.user.avatar_url || undefined,
+			};
+		}
+	} catch {
+		return null;
+	}
+
+	return null;
+}
+
+export async function getEnrichedNotifications(perPage = 20): Promise<NotificationEnrichedItem[]> {
+	const notifications = (await getNotifications(perPage)) as RawNotification[];
+	if (notifications.length === 0) return [];
+
+	const octokit = await getOctokit();
+	const parsed = notifications.map((notif) => {
+		const entity = parseEntityFromNotification(notif);
+		return {
+			notif,
+			entity,
+			href: buildNotificationHref(notif, entity),
+		};
+	});
+
+	const perRepoPRs = new Map<string, Set<number>>();
+	for (const row of parsed) {
+		if (row.entity.type !== "pull" || !row.entity.number) continue;
+		const key = `${row.entity.owner}/${row.entity.repo}`;
+		const set = perRepoPRs.get(key) ?? new Set<number>();
+		set.add(row.entity.number);
+		perRepoPRs.set(key, set);
+	}
+
+	const ciByRepoAndPr = new Map<
+		string,
+		Map<number, Awaited<ReturnType<typeof batchFetchCheckStatuses>>[number]>
+	>();
+	for (const [key, numbers] of perRepoPRs) {
+		const [owner, repo] = key.split("/");
+		if (!owner || !repo) continue;
+		try {
+			const result = await batchFetchCheckStatuses(
+				owner,
+				repo,
+				[...numbers].map((number) => ({ number })),
+			);
+			ciByRepoAndPr.set(
+				key,
+				new Map(Object.entries(result).map(([k, v]) => [Number(k), v])),
+			);
+		} catch {
+			// Best effort only.
+		}
+	}
+
+	const actorPromises = parsed.map(async ({ notif }) => {
+		if (!["comment", "mention", "team_mention"].includes(notif.reason)) return null;
+		return fetchActorFromLatestComment(octokit, notif.subject.latest_comment_url);
+	});
+	const actors = await Promise.all(actorPromises);
+
+	return parsed.map(({ notif, entity, href }, index) => {
+		const repoKey = `${entity.owner}/${entity.repo}`;
+		const checkStatus =
+			entity.type === "pull" && entity.number
+				? (ciByRepoAndPr.get(repoKey)?.get(entity.number) ?? null)
+				: null;
+		const primaryRunId = checkStatus ? pickPrimaryRunId(checkStatus.checks) : null;
+		const ci = checkStatus
+			? {
+					state: checkStatus.state,
+					total: checkStatus.total,
+					success: checkStatus.success,
+					failure: checkStatus.failure,
+					pending: checkStatus.pending,
+					primaryRunId,
+				}
+			: null;
+		const statusKind = computeStatusKind(notif, ci?.state ?? null);
+		const actor = actors[index];
+		const contextLine = buildContextLine(notif, entity, actor);
+
+		let primaryAction = { label: "Open", href };
+		if (ci?.primaryRunId && entity.owner && entity.repo) {
+			primaryAction = {
+				label: "View run",
+				href: `/${entity.owner}/${entity.repo}/actions/${ci.primaryRunId}`,
+			};
+		} else if (entity.type === "pull") {
+			primaryAction = { label: "Open PR", href };
+		} else if (entity.type === "issue") {
+			primaryAction = { label: "Open issue", href };
+		}
+
+		return {
+			id: notif.id,
+			unread: notif.unread,
+			updatedAt: notif.updated_at,
+			reason: notif.reason,
+			subjectType: notif.subject.type,
+			title: notif.subject.title,
+			repoFullName: notif.repository.full_name,
+			href,
+			entity,
+			actor,
+			statusKind,
+			ci,
+			contextLine,
+			primaryAction,
+		};
 	});
 }
 

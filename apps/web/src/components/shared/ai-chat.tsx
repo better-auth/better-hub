@@ -1085,7 +1085,8 @@ export function AIChat({
 								repos: "/repos",
 								prs: "/prs",
 								issues: "/issues",
-								notifications: "/notifications",
+								notifications:
+									"/dashboard?panel=notifications",
 								settings: "/settings",
 								search: "/search",
 								trending: "/trending",
