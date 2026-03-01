@@ -2331,6 +2331,19 @@ export async function getRepoTagsPage(owner: string, repo: string, page: number)
 export async function getRepoReleaseByTag(owner: string, repo: string, tag: string) {
 	const authCtx = await getGitHubAuthContext();
 	if (!authCtx?.octokit) return null;
+
+	if (tag === "latest") {
+		try {
+			const { data } = await authCtx.octokit.repos.getLatestRelease({
+				owner,
+				repo,
+			});
+			return data;
+		} catch {
+			return null;
+		}
+	}
+
 	try {
 		const { data } = await authCtx.octokit.repos.getReleaseByTag({ owner, repo, tag });
 		return data;
