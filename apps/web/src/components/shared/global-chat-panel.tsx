@@ -426,7 +426,7 @@ export function GlobalChatPanel() {
 		contexts.length > 0 ? (
 			<div className="flex items-center gap-1.5 px-2.5 pt-2">
 				{contexts.length === 1 ? (
-					<span className="inline-flex items-center gap-1 pl-1.5 pr-0.5 py-0.5 rounded bg-muted text-[10px] font-mono text-muted-foreground/70 max-w-[200px]">
+					<span className="inline-flex items-center gap-1 pl-1.5 pr-0.5 py-0.5 rounded bg-muted text-[10px] font-mono text-muted-foreground max-w-[200px]">
 						<Code2 className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
 						<span className="truncate">
 							{contexts[0].filename.split("/").pop()}
@@ -440,24 +440,24 @@ export function GlobalChatPanel() {
 						<button
 							type="button"
 							onClick={() => setContexts([])}
-							className="p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground transition-colors cursor-pointer shrink-0"
+							className="p-0.5 rounded text-muted-foreground hover:text-muted-foreground transition-colors cursor-pointer shrink-0"
 						>
 							<X className="w-2 h-2" />
 						</button>
 					</span>
 				) : (
-					<span className="inline-flex items-center gap-1.5 pl-1.5 pr-0.5 py-0.5 rounded bg-muted text-[10px] font-mono text-muted-foreground/70">
+					<span className="inline-flex items-center gap-1.5 pl-1.5 pr-0.5 py-0.5 rounded bg-muted text-[10px] font-mono text-muted-foreground">
 						<Code2 className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
-						<span className="size-4 rounded-full bg-foreground/10 flex items-center justify-center text-[9px] font-semibold text-muted-foreground/80 tabular-nums">
+						<span className="size-4 rounded-full bg-foreground/10 flex items-center justify-center text-[9px] font-semibold text-muted-foreground tabular-nums">
 							{contexts.length}
 						</span>
-						<span className="text-muted-foreground/50">
+						<span className="text-muted-foreground">
 							{contexts.length} files
 						</span>
 						<button
 							type="button"
 							onClick={() => setContexts([])}
-							className="p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground transition-colors cursor-pointer shrink-0"
+							className="p-0.5 rounded text-muted-foreground hover:text-muted-foreground transition-colors cursor-pointer shrink-0"
 						>
 							<X className="w-2 h-2" />
 						</button>
@@ -544,7 +544,7 @@ export function GlobalChatPanel() {
 										tab.id ===
 											activeTabId
 											? "border-foreground/60 text-foreground/70"
-											: "border-transparent text-muted-foreground hover:text-muted-foreground/60",
+											: "border-transparent text-muted-foreground hover:text-muted-foreground",
 									)}
 								>
 									<span className="truncate max-w-[120px]">
