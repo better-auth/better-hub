@@ -39,6 +39,7 @@ import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { markNotificationDone, markAllNotificationsRead } from "@/app/(app)/repos/actions";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
+import type { TabId } from "@/components/settings/settings-content";
 import { NavbarGhostButton } from "@/components/shared/floating-ghost-button";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { $Session } from "@/lib/auth";
@@ -80,6 +81,7 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 	const { subscribe, emit } = useMutationEvents();
 	const gh = session.githubUser;
 	const [settingsOpen, setSettingsOpen] = useState(false);
+	const [settingsTab, setSettingsTab] = useState<TabId | undefined>();
 	const [notifOpen, setNotifOpen] = useState(false);
 	const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
 	const [markingAll, startMarkAll] = useTransition();
@@ -91,6 +93,9 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 				setDoneIds((prev) => new Set([...prev, event.id]));
 			} else if (event.type === "notification:all-read") {
 				setDoneIds((prev) => new Set([...prev, ...event.ids]));
+			} else if (event.type === "settings:open") {
+				setSettingsTab(event.tab as TabId | undefined);
+				setSettingsOpen(true);
 			}
 		});
 	}, [subscribe]);
@@ -630,7 +635,11 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 
 			<SettingsDialog
 				open={settingsOpen}
-				onOpenChange={setSettingsOpen}
+				onOpenChange={(open) => {
+					setSettingsOpen(open);
+					if (!open) setSettingsTab(undefined);
+				}}
+				initialTab={settingsTab}
 				user={{
 					name: session.user.name || "",
 					email: session.user.email,

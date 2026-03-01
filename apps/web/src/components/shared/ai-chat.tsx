@@ -5,6 +5,7 @@ import type { UIMessage } from "ai";
 import { DefaultChatTransport } from "ai";
 import { useEffect, useMemo, useRef, useState, useCallback, memo } from "react";
 import { BILLING_ERROR } from "@/lib/billing/config";
+import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { HighlightedCodeBlock } from "@/components/shared/highlighted-code-block";
 import {
 	ArrowUp,
@@ -47,6 +48,7 @@ import {
 	Copy,
 	X,
 	AlertCircle,
+	CreditCard,
 } from "lucide-react";
 
 function GithubIcon({ className }: { className?: string }) {
@@ -527,6 +529,7 @@ export function AIChat({
 	onNavigateToFile,
 }: AIChatProps) {
 	const { data: session } = useSession();
+	const { emit } = useMutationEvents();
 	const globalChat = useGlobalChatOptional();
 	const [input, setInput] = useState("");
 	const scrollRef = useRef<HTMLDivElement>(null);
@@ -1688,6 +1691,22 @@ export function AIChat({
 													? "Adjust your spending limit in Settings → Billing to continue."
 													: "Subscribe or add your own API key in Settings to continue."}
 											</p>
+											<button
+												type="button"
+												onClick={() =>
+													emit(
+														{
+															type: "settings:open",
+															tab: "billing",
+														},
+													)
+												}
+												className="mt-1 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-medium bg-foreground text-background hover:bg-foreground/85 transition-colors cursor-pointer"
+											>
+												<CreditCard className="w-3 h-3" />
+												Manage
+												Billing
+											</button>
 										</div>
 									) : (
 										<div className="flex flex-col items-center gap-2 max-w-[300px]">
