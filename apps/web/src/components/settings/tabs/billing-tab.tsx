@@ -543,35 +543,38 @@ export function BillingTab({ settings, onNavigate }: BillingTabProps) {
 				)}
 			</div>
 
-			{/* Manage Billing */}
-			<div className="px-4 py-4">
-				<label className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
-					Manage
-				</label>
-				<p className="mt-1 text-[10px] text-muted-foreground/50 font-mono">
-					Payment methods, invoices, subscription details, and
-					cancellation.
-				</p>
-				<button
-					type="button"
-					onClick={async () => {
-						const res =
-							await authClient.subscription.billingPortal(
-								{
-									returnUrl: window.location
-										.href,
-								},
-							);
-						if (res.data?.url) {
-							window.location.href = res.data.url;
-						}
-					}}
-					className="mt-2 flex items-center gap-1.5 border border-border px-3 py-1.5 text-xs font-mono text-muted-foreground hover:text-foreground hover:bg-muted/50 dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
-				>
-					<ExternalLink className="w-3 h-3" />
-					Manage billing
-				</button>
-			</div>
+			{/* Manage Billing — only shown when the user has an active subscription */}
+			{activeSubscription && (
+				<div className="px-4 py-4">
+					<label className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
+						Manage
+					</label>
+					<p className="mt-1 text-[10px] text-muted-foreground/50 font-mono">
+						Payment methods, invoices, subscription details, and
+						cancellation.
+					</p>
+					<button
+						type="button"
+						onClick={async () => {
+							const res =
+								await authClient.subscription.billingPortal(
+									{
+										returnUrl: window
+											.location
+											.href,
+									},
+								);
+							if (res.data?.url) {
+								window.location.href = res.data.url;
+							}
+						}}
+						className="mt-2 flex items-center gap-1.5 border border-border px-3 py-1.5 text-xs font-mono text-muted-foreground hover:text-foreground hover:bg-muted/50 dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
+					>
+						<ExternalLink className="w-3 h-3" />
+						Manage billing
+					</button>
+				</div>
+			)}
 		</div>
 	);
 }
