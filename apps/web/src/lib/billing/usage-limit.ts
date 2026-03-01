@@ -1,7 +1,7 @@
 import { prisma } from "../db";
 import { getCreditBalance } from "./credit";
 import { getActiveSubscription, getCurrentPeriodUsage, getSpendingLimit } from "./spending-limit";
-import { stripeClient } from "./stripe";
+import { getStripeClient } from "./stripe";
 
 // Lazy migration for users created before the Stripe plugin was installed.
 // Creates a Stripe customer on first AI usage.
@@ -13,7 +13,7 @@ async function ensureStripeCustomer(userId: string): Promise<string | null> {
 	if (!user?.email) return null;
 
 	try {
-		const customer = await stripeClient.customers.create({
+		const customer = await getStripeClient().customers.create({
 			email: user.email,
 			name: user.name ?? undefined,
 			metadata: { userId, customerType: "user" },
