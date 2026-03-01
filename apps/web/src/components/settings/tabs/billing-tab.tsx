@@ -559,7 +559,8 @@ export function BillingTab({ settings, onNavigate }: BillingTabProps) {
 							const res =
 								await authClient.subscription.billingPortal(
 									{
-										returnUrl: window.location
+										returnUrl: window
+											.location
 											.href,
 									},
 								);
