@@ -248,6 +248,33 @@ function linkifyIssueReferences(html: string, owner: string, repo: string): stri
 	return parts.join("");
 }
 
+/** Convert full commit SHAs (40 hex chars) to commit links */
+function linkifyCommits(html: string, owner: string, repo: string): string {
+	const parts = html.split(/(<[^>]+>)/);
+	let inCode = 0;
+	let inLink = 0;
+
+	for (let i = 0; i < parts.length; i++) {
+		const part = parts[i];
+		if (part.startsWith("<")) {
+			const lower = part.toLowerCase();
+			if (lower.startsWith("<code") || lower.startsWith("<pre")) inCode++;
+			else if (lower.startsWith("</code") || lower.startsWith("</pre")) inCode--;
+			else if (lower.startsWith("<a ") || lower.startsWith("<a>")) inLink++;
+			else if (lower.startsWith("</a")) inLink--;
+			continue;
+		}
+		if (inCode > 0 || inLink > 0) continue;
+		// Match 40-character commit SHA
+		parts[i] = part.replace(
+			/\b([a-f0-9]{40})\b/g,
+			(sha) =>
+				`<a href="/${owner}/${repo}/commit/${sha}" class="ghmd-commit-ref">${sha.slice(0, 7)}</a>`,
+		);
+	}
+	return parts.join("");
+}
+
 /** Convert @username mentions (outside of code/links) to profile links */
 function linkifyMentions(html: string): string {
 	// Split on tags to avoid replacing inside <a>, <code>, <pre> content
@@ -506,6 +533,11 @@ export async function renderMarkdownToHtml(
 		(repoContext ? { owner: repoContext.owner, repo: repoContext.repo } : undefined);
 	if (refCtx) {
 		html = linkifyIssueReferences(html, refCtx.owner, refCtx.repo);
+	}
+
+	// Linkify commit hashes when repo context is available
+	if (repoContext) {
+		html = linkifyCommits(html, repoContext.owner, repoContext.repo);
 	}
 
 	return html;

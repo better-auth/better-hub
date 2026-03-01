@@ -488,6 +488,14 @@ tr.diff-search-match-active > td {
 	white-space: nowrap;
 }
 
+/* commit hashes */
+.ghmd a.ghmd-commit-ref {
+	text-decoration: none;
+	color: var(--primary);
+	font-weight: 500;
+	white-space: nowrap;
+}
+
 /* Bold / italic */
 .ghmd strong {
 	font-weight: 600;
