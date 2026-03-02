@@ -16,6 +16,7 @@ import {
 	vesper,
 	zinc,
 	catppuccin,
+	rosePine,
 	LEGACY_THEME_MAP,
 } from "./themes";
 
@@ -36,6 +37,7 @@ const themes: ThemeDefinition[] = [
 	noir,
 	forest,
 	catppuccin,
+	rosePine,
 ];
 
 export type { ThemeColors, ThemeDefinition, ThemeVariant, ShikiTheme };

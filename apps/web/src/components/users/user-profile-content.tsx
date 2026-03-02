@@ -18,7 +18,6 @@ import {
 	MapPin,
 	Search,
 	Star,
-	Twitter,
 	Users,
 	X,
 } from "lucide-react";
@@ -31,6 +30,7 @@ import { computeUserProfileScore } from "@/lib/user-profile-score";
 import { UserProfileScoreRing } from "@/components/users/user-profile-score-ring";
 import { UserProfileActivityTimeline } from "@/components/users/user-profile-activity-timeline";
 import { UserProfileActivityTimelineBoundary } from "@/components/users/user-profile-activity-timeline-boundary";
+import { XIcon } from "@/components/shared/icons/x-icon";
 
 export interface UserProfile {
 	login: string;
@@ -460,7 +460,7 @@ export function UserProfileContent({
 							rel="noreferrer"
 							className="inline-flex items-center gap-2 text-xs text-muted-foreground font-mono hover:text-foreground transition-colors"
 						>
-							<Twitter className="w-3 h-3 shrink-0 text-muted-foreground/50" />
+							<XIcon className="w-3 h-3 shrink-0 text-muted-foreground/50" />
 							@{user.twitter_username}
 						</a>
 					)}
