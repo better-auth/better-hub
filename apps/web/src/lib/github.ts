@@ -2739,8 +2739,8 @@ const PR_BUNDLE_QUERY = `
             commit {
               oid
               message
-              author { name date }
-              committer { name date }
+              author { name date user { login avatarUrl } }
+              committer { name date user { login avatarUrl } }
             }
             resourcePath
           }
@@ -2864,8 +2864,16 @@ interface GQLCommitNode {
 	commit: {
 		oid: string;
 		message: string;
-		author: { name: string; date: string } | null;
-		committer: { name: string; date: string } | null;
+		author: {
+			name: string;
+			date: string;
+			user?: { login: string; avatarUrl: string } | null;
+		} | null;
+		committer: {
+			name: string;
+			date: string;
+			user?: { login: string; avatarUrl: string } | null;
+		} | null;
 	};
 	resourcePath: string;
 }
@@ -3024,6 +3032,8 @@ function transformGraphQLPRBundle(node: GQLPRNode): PRBundleData {
 
 	const commits = (node.commits?.nodes ?? []).map((n) => {
 		const c = n.commit;
+		const authorUser = c.author?.user;
+		const committerUser = c.committer?.user;
 		return {
 			sha: c.oid,
 			commit: {
@@ -3035,7 +3045,15 @@ function transformGraphQLPRBundle(node: GQLPRNode): PRBundleData {
 					? { name: c.committer.name, date: c.committer.date }
 					: null,
 			},
-			author: null,
+			author: authorUser
+				? { login: authorUser.login, avatar_url: authorUser.avatarUrl }
+				: null,
+			committer: committerUser
+				? {
+						login: committerUser.login,
+						avatar_url: committerUser.avatarUrl,
+					}
+				: null,
 		};
 	});
 	type PRStateEvent = PRBundleData["stateEvents"][number]["event"];
@@ -5813,10 +5831,10 @@ export async function getOrgMembers(org: string, perPage = 100) {
  * GitHub stats endpoints return 202 while computing data in the background.
  * Retry with exponential backoff until we get a 200 with actual data.
  */
-async function retryStatsRequest<T>(
-	request: () => Promise<{ status: number; data: T }>,
+async function retryStatsRequest<T extends { status: number; data: unknown }>(
+	request: () => Promise<T>,
 	maxRetries = 4,
-): Promise<{ status: number; data: T }> {
+): Promise<T> {
 	let response = await request();
 	let attempt = 0;
 	while (response.status === 202 && attempt < maxRetries) {

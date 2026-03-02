@@ -30,6 +30,7 @@ const nextConfig: NextConfig = {
 			static: 180,
 		},
 	},
+	reactCompiler: true,
 	images: {
 		...(process.env.NODE_ENV === "development" && {
 			dangerouslyAllowLocalIP: true,
