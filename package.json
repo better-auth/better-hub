@@ -19,18 +19,22 @@
 		"type": "git",
 		"url": "https://github.com/better-auth/better-hub.git"
 	},
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
 	"type": "module",
 	"scripts": {
-		"go": "pnpm run",
-		"build": "pnpm -r run build",
-		"dev": "pnpm -r run dev",
+		"go": "bun run",
+		"build": "bun run --workspaces build",
+		"dev": "bun run --workspaces dev",
 		"lint": "oxlint apps packages",
 		"lint:fix": "oxlint --fix apps packages",
 		"fmt": "oxfmt --ignore-path .oxfmtignore apps packages *.json *.yaml",
 		"fmt:check": "oxfmt --ignore-path .oxfmtignore --check apps packages *.json *.yaml",
-		"typecheck": "pnpm -r exec tsc --noEmit",
-		"check": "pnpm lint && pnpm fmt:check && pnpm typecheck",
-		"fix": "pnpm lint:fix && pnpm fmt",
+		"typecheck": "bun -r exec tsc --noEmit",
+		"check": "bun lint && bun fmt:check && bun typecheck",
+		"fix": "bun lint:fix && bun fmt",
 		"prepare": "simple-git-hooks"
 	},
 	"devDependencies": {
@@ -42,7 +46,7 @@
 		"typescript": "^5.7.0"
 	},
 	"simple-git-hooks": {
-		"pre-commit": "pnpm lint-staged"
+		"pre-commit": "bun lint-staged"
 	},
 	"lint-staged": {
 		"*.{ts,tsx,js,jsx}": [
@@ -53,5 +57,5 @@
 			"oxfmt --write"
 		]
 	},
-	"packageManager": "pnpm@10.10.0"
+	"packageManager": "bun@1.3.5"
 }
