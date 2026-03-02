@@ -21,7 +21,7 @@ import { ReactionDisplay, type Reactions } from "@/components/shared/reaction-di
 import { CollapsibleDescription } from "./collapsible-description";
 import { ChatMessageWrapper } from "./chat-message-wrapper";
 import { PRChecksPanel } from "./pr-checks-panel";
-import type { CheckStatus } from "@/lib/github";
+import type { CheckStatus, ReviewThread } from "@/lib/github";
 import { UserTooltip } from "@/components/shared/user-tooltip";
 
 interface BaseUser {
@@ -175,12 +175,14 @@ export async function PRConversation({
 	repo,
 	pullNumber,
 	checkStatus,
+	reviewThreads,
 }: {
 	entries: TimelineEntry[];
 	owner: string;
 	repo: string;
 	pullNumber: number;
 	checkStatus?: CheckStatus;
+	reviewThreads?: ReviewThread[];
 }) {
 	const grouped = groupEntries(entries);
 
@@ -220,6 +222,12 @@ export async function PRConversation({
 												}
 												repo={
 													repo
+												}
+												pullNumber={
+													pullNumber
+												}
+												reviewThreads={
+													reviewThreads
 												}
 											/>
 										);
@@ -312,6 +320,8 @@ export async function PRConversation({
 							entry={entry}
 							owner={owner}
 							repo={repo}
+							pullNumber={pullNumber}
+							reviewThreads={reviewThreads}
 						/>
 					);
 				}
@@ -516,16 +526,30 @@ function ReviewCardWrapper({
 	entry,
 	owner,
 	repo,
+	pullNumber,
+	reviewThreads,
 }: {
 	entry: ReviewEntry;
 	owner: string;
 	repo: string;
+	pullNumber: number;
+	reviewThreads?: ReviewThread[];
 }) {
 	const hasBody = entry.body && entry.body.trim().length > 0;
 
 	// Skip COMMENTED reviews with no body and no comments
 	if (entry.state === "COMMENTED" && !hasBody && entry.comments.length === 0) {
 		return null;
+	}
+
+	// Build a map of comment databaseId -> thread for resolve/unresolve
+	const commentThreadMap = new Map<number, ReviewThread>();
+	if (reviewThreads) {
+		for (const thread of reviewThreads) {
+			for (const tc of thread.comments) {
+				commentThreadMap.set(tc.databaseId, thread);
+			}
+		}
 	}
 
 	// Pre-render the markdown body on the server
@@ -548,6 +572,8 @@ function ReviewCardWrapper({
 			bodyContent={bodyContent}
 			owner={owner}
 			repo={repo}
+			pullNumber={pullNumber}
+			commentThreadMap={commentThreadMap}
 		/>
 	);
 }

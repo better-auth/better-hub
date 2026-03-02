@@ -650,6 +650,7 @@ export default async function PRDetailPage({
 									? checkStatus
 									: undefined
 							}
+							reviewThreads={threads}
 						/>
 					</>
 				}
