@@ -314,7 +314,7 @@ export function CreateDiscussionDialog({
 										)
 									}
 									className={cn(
-										"flex items-center gap-2 w-full px-3 py-1.5 text-xs border rounded-md transition-colors cursor-pointer text-left",
+										"flex items-center gap-2 w-full px-3 py-1.5 text-xs border rounded-md transition-colors cursor-pointer text-left bg-muted/20 dark:bg-white/[0.01] hover:bg-muted/30 dark:hover:bg-white/[0.02]",
 										selectedCategory
 											? "border-border/50 dark:border-white/6 text-foreground"
 											: "border-border/40 dark:border-white/5 text-muted-foreground/50",
@@ -343,7 +343,7 @@ export function CreateDiscussionDialog({
 								</button>
 
 								{showCategoryPicker && (
-									<div className="absolute z-10 top-full left-0 right-0 mt-1 border border-border/50 dark:border-white/6 rounded-lg bg-popover shadow-lg overflow-hidden">
+									<div className="absolute z-10 top-full left-0 right-0 mt-1 border border-border/50 dark:border-white/6 rounded-lg bg-background/95 backdrop-blur-sm shadow-lg overflow-hidden">
 										<div className="max-h-52 overflow-y-auto">
 											{categories.map(
 												(
