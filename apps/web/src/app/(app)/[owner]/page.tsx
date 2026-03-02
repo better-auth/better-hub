@@ -9,10 +9,43 @@ import {
 	getUserOrgTopRepos,
 	getContributionData,
 	getUserEvents,
+	getUserFollowers,
+	getUserFollowing,
+	type UserRelationshipConnectionRaw,
 } from "@/lib/github";
 import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { OrgDetailContent } from "@/components/orgs/org-detail-content";
-import { UserProfileContent } from "@/components/users/user-profile-content";
+import {
+	UserProfileContent,
+	type UserRelationshipData,
+} from "@/components/users/user-profile-content";
+
+const profileTabs = ["repositories", "activity", "followers", "following"] as const;
+type ProfileTab = (typeof profileTabs)[number];
+
+function parseProfileTab(tab: string | undefined): ProfileTab {
+	if (!tab) return "repositories";
+	return profileTabs.includes(tab as ProfileTab) ? (tab as ProfileTab) : "repositories";
+}
+
+function normalizeRelationshipData(
+	data: UserRelationshipConnectionRaw | null,
+): UserRelationshipData {
+	return {
+		totalCount: data?.totalCount ?? 0,
+		nodes: (data?.nodes ?? []).map((node) => ({
+			login: node.login,
+			name: node.name,
+			avatar_url: node.avatarUrl,
+			html_url:
+				node.url ?? `https://github.com/${encodeURIComponent(node.login)}`,
+			bio: node.bio,
+			company: node.company,
+			location: node.location,
+			created_at: node.createdAt,
+		})),
+	};
+}
 
 export async function generateMetadata({
 	params,
@@ -49,8 +82,16 @@ export async function generateMetadata({
 	};
 }
 
-export default async function OwnerPage({ params }: { params: Promise<{ owner: string }> }) {
+export default async function OwnerPage({
+	params,
+	searchParams,
+}: {
+	params: Promise<{ owner: string }>;
+	searchParams: Promise<{ tab?: string }>;
+}) {
 	const { owner } = await params;
+	const sp = await searchParams;
+	const initialTab = parseProfileTab(sp.tab);
 
 	// Resolve actor first to avoid noisy /orgs/:user 404 calls for user handles.
 	const actorData = await getUser(owner).catch(() => null);
@@ -116,6 +157,8 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 	let contributionData: Awaited<ReturnType<typeof getContributionData>> = null;
 	let orgTopRepos: Awaited<ReturnType<typeof getUserOrgTopRepos>> = [];
 	let activityEvents: Awaited<ReturnType<typeof getUserEvents>> = [];
+	let followersData: UserRelationshipData | null = null;
+	let followingData: UserRelationshipData | null = null;
 
 	if (!isBot) {
 		try {
@@ -138,9 +181,25 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 					orgsData.map((o) => o.login),
 				);
 			}
+
+			if (initialTab === "followers") {
+				const followers = await getUserFollowers(userData.login, 50);
+				followersData = normalizeRelationshipData(followers);
+			}
+			if (initialTab === "following") {
+				const following = await getUserFollowing(userData.login, 50);
+				followingData = normalizeRelationshipData(following);
+			}
 		} catch {
 			// Show profile with whatever we have
 		}
+	}
+
+	if (initialTab === "followers" && followersData === null) {
+		followersData = { totalCount: 0, nodes: [] };
+	}
+	if (initialTab === "following" && followingData === null) {
+		followingData = { totalCount: 0, nodes: [] };
 	}
 
 	return (
@@ -184,6 +243,9 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 			}))}
 			contributions={contributionData}
 			activityEvents={activityEvents}
+			initialTab={initialTab}
+			followersData={followersData}
+			followingData={followingData}
 			orgTopRepos={orgTopRepos.map((r) => ({
 				name: r.name,
 				full_name: r.full_name,
