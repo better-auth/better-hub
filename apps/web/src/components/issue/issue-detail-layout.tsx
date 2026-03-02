@@ -76,7 +76,7 @@ export function IssueDetailLayout({
 							<div className="space-y-3">{timeline}</div>
 
 							{commentForm && (
-								<div className="mt-6 pt-4 border-t border-border/40">
+								<div className="mt-6 pt-4">
 									{commentForm}
 								</div>
 							)}

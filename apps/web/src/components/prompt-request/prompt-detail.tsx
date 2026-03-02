@@ -16,6 +16,7 @@ import {
 	Check,
 	RotateCcw,
 	Ghost,
+	CornerDownLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ClientMarkdown } from "@/components/shared/client-markdown";
@@ -505,13 +506,14 @@ export function PromptDetail({
 						)}
 
 						{currentUser && (
-							<div className="space-y-1.5">
+							<div className="space-y-1.5 rounded-md border">
 								<MarkdownEditor
 									value={commentBody}
 									onChange={setCommentBody}
 									placeholder="Leave a comment..."
-									compact
 									rows={4}
+									className="border-none"
+									resizeYIndicator={false}
 									onKeyDown={(e) => {
 										if (
 											e.key ===
@@ -524,7 +526,7 @@ export function PromptDetail({
 										}
 									}}
 								/>
-								<div className="flex justify-end">
+								<div className="flex justify-end mb-3 pr-3">
 									<button
 										onClick={
 											handleAddComment
@@ -533,7 +535,13 @@ export function PromptDetail({
 											!commentBody.trim() ||
 											isSubmittingComment
 										}
-										className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium bg-foreground text-background rounded-sm hover:opacity-90 transition-opacity disabled:opacity-40 cursor-pointer"
+										className={cn(
+											"flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md",
+											"border border-border",
+											"text-foreground/80 hover:text-foreground hover:bg-muted/50",
+											"transition-colors cursor-pointer",
+											"disabled:opacity-40 disabled:cursor-not-allowed",
+										)}
 									>
 										{isSubmittingComment ? (
 											<Loader2 className="w-3 h-3 animate-spin" />
