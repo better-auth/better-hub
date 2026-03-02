@@ -70,7 +70,7 @@ export const auth = betterAuth({
 					}),
 				]
 			: []),
-		...(process.env.VERCEL
+		...(process.env.RAILWAY_PROJECT_NAME
 			? [oAuthProxy({ productionURL: "https://hub.thalles.me" })]
 			: []),
 	],
