@@ -41,3 +41,6 @@ next-env.d.ts
 
 # certificates
 certificates
+
+# GitHub images
+.github-images

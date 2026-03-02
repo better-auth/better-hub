@@ -289,6 +289,7 @@ export default function NewPullRequestPage() {
 	const [head, setHead] = useState(searchParams.get("head") ?? "");
 
 	const [title, setTitle] = useState(searchParams.get("title") ?? "");
+	const titleEdited = useRef(false);
 	const [body, setBody] = useState(searchParams.get("body") ?? "");
 	const [bodyTab, setBodyTab] = useState<"write" | "preview">("write");
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -452,6 +453,19 @@ export default function NewPullRequestPage() {
 
 		return () => controller.abort();
 	}, [owner, repo, base, head]);
+
+	useEffect(() => {
+		if (
+			compare &&
+			compare.commits.length > 0 &&
+			!titleEdited.current &&
+			!searchParams.get("title")
+		) {
+			const firstCommitMessage = compare.commits[0].message;
+			const titleFromCommit = firstCommitMessage.split("\n")[0].trim();
+			setTitle(titleFromCommit);
+		}
+	}, [compare, searchParams]);
 
 	const handleSubmit = (draft = false) => {
 		if (!title.trim()) {
@@ -621,9 +635,10 @@ export default function NewPullRequestPage() {
 								spellCheck={false}
 								type="text"
 								value={title}
-								onChange={(e) =>
-									setTitle(e.target.value)
-								}
+								onChange={(e) => {
+									titleEdited.current = true;
+									setTitle(e.target.value);
+								}}
 								placeholder="Pull request title"
 								autoFocus
 								className="w-full bg-transparent text-base font-medium placeholder:text-muted-foreground/30 focus:outline-none"

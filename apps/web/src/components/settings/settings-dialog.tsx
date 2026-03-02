@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { SettingsContent } from "./settings-content";
+import type { TabId } from "./settings-content";
 import type { UserSettings } from "@/lib/user-settings-store";
 
 export interface GitHubProfile {
@@ -24,6 +25,7 @@ export interface GitHubProfile {
 interface SettingsDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	initialTab?: TabId;
 	user: { name: string; email: string; image: string | null };
 	githubProfile: GitHubProfile;
 }
@@ -40,7 +42,13 @@ async function fetchUserSettings(): Promise<UserSettings> {
 	return data as UserSettings;
 }
 
-export function SettingsDialog({ open, onOpenChange, user, githubProfile }: SettingsDialogProps) {
+export function SettingsDialog({
+	open,
+	onOpenChange,
+	initialTab,
+	user,
+	githubProfile,
+}: SettingsDialogProps) {
 	const {
 		data: settings,
 		isPending,
@@ -90,7 +98,9 @@ export function SettingsDialog({ open, onOpenChange, user, githubProfile }: Sett
 				<div className="flex flex-col max-h-[85vh] min-h-[26rem]">
 					{settings && !isError ? (
 						<SettingsContent
+							key={initialTab}
 							initialSettings={settings}
+							initialTab={initialTab}
 							user={user}
 							githubProfile={githubProfile}
 							onThemeTransition={onThemeTransition}

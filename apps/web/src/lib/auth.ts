@@ -28,9 +28,13 @@ async function getOctokitUser(token: string) {
 }
 
 export const auth = betterAuth({
+	appName: "Better Hub",
 	database: prismaAdapter(prisma, {
 		provider: "postgresql",
 	}),
+	experimental: {
+		joins: true,
+	},
 	plugins: [
 		dash({
 			activityTracking: {
@@ -113,6 +117,7 @@ export const auth = betterAuth({
 		cookieCache: {
 			enabled: true,
 			maxAge: 60 * 60 * 24 * 7,
+			strategy: "jwe",
 		},
 	},
 	trustedOrigins: [
@@ -123,6 +128,11 @@ export const auth = betterAuth({
 		// Beta site
 		"https://beta.better-hub.com",
 	],
+	advanced: {
+		ipAddress: {
+			ipAddressHeaders: ["x-vercel-forwarded-for", "x-forwarded-for"],
+		},
+	},
 });
 
 export const getServerSession = cache(async () => {
