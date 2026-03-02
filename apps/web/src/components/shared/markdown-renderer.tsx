@@ -5,6 +5,7 @@ import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import rehypeStringify from "rehype-stringify";
+import { isGitHubUserAttachmentAssetUrl } from "@/lib/github-user-attachments";
 
 /**
  * GitHub-compatible sanitization schema.
@@ -59,6 +60,8 @@ const sanitizeSchema: typeof defaultSchema = {
 import { highlightCode } from "@/lib/shiki";
 import { toInternalUrl } from "@/lib/github-utils";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";
+import { ReactiveCodeBlocks } from "@/components/shared/reactive-code-blocks";
+import { MarkdownMentionTooltips } from "@/components/shared/markdown-mention-tooltips";
 
 interface RepoContext {
 	owner: string;
@@ -201,14 +204,19 @@ function processAlerts(html: string): string {
 	return html;
 }
 
-/** Add id anchors to headings */
+/** Add id anchors to headings, handling duplicates with -1, -2 suffixes */
 function addHeadingAnchors(html: string): string {
+	const seen = new Map<string, number>();
 	return html.replace(/<(h[1-6])>([\s\S]*?)<\/\1>/gi, (_match, tag, content) => {
 		const text = content.replace(/<[^>]+>/g, "").trim();
-		const id = text
-			.toLowerCase()
-			.replace(/[^\w\s-]/g, "")
-			.replace(/\s+/g, "-");
+		let id =
+			text
+				.toLowerCase()
+				.replace(/[^\w\s-]/g, "")
+				.replace(/\s+/g, "-") || `heading`;
+		const count = seen.get(id) ?? 0;
+		seen.set(id, count + 1);
+		if (count > 0) id = `${id}-${count}`;
 		return `<${tag} id="${id}">${content}</${tag}>`;
 	});
 }
@@ -235,6 +243,33 @@ function linkifyIssueReferences(html: string, owner: string, repo: string): stri
 			/(^|[^&\w])#(\d+)\b/g,
 			(_m, prefix, num) =>
 				`${prefix}<a href="/${owner}/${repo}/issues/${num}" class="ghmd-issue-ref">#${num}</a>`,
+		);
+	}
+	return parts.join("");
+}
+
+/** Convert full commit SHAs (40 hex chars) to commit links */
+function linkifyCommits(html: string, owner: string, repo: string): string {
+	const parts = html.split(/(<[^>]+>)/);
+	let inCode = 0;
+	let inLink = 0;
+
+	for (let i = 0; i < parts.length; i++) {
+		const part = parts[i];
+		if (part.startsWith("<")) {
+			const lower = part.toLowerCase();
+			if (lower.startsWith("<code") || lower.startsWith("<pre")) inCode++;
+			else if (lower.startsWith("</code") || lower.startsWith("</pre")) inCode--;
+			else if (lower.startsWith("<a ") || lower.startsWith("<a>")) inLink++;
+			else if (lower.startsWith("</a")) inLink--;
+			continue;
+		}
+		if (inCode > 0 || inLink > 0) continue;
+		// Match 40-character commit SHA
+		parts[i] = part.replace(
+			/\b([a-f0-9]{40})\b/g,
+			(sha) =>
+				`<a href="/${owner}/${repo}/commit/${sha}" class="ghmd-commit-ref">${sha.slice(0, 7)}</a>`,
 		);
 	}
 	return parts.join("");
@@ -285,6 +320,25 @@ function markBadgeParagraphs(html: string): string {
 				return `<p${newAttrs}>${content}</p>`;
 			}
 			return `<p${existing} class="ghmd-badges">${content}</p>`;
+		},
+	);
+}
+
+/** Render standalone GitHub user-attachment links as inline video players */
+function embedUserAttachmentVideos(html: string): string {
+	return html.replace(
+		/<p>\s*<a\s+[^>]*href="(https:\/\/github\.com\/user-attachments\/assets\/[^"\s]+)"[^>]*>([\s\S]*?)<\/a>\s*<\/p>/gi,
+		(_match, href: string, labelHtml: string) => {
+			const normalizedHref = href.replaceAll("&amp;", "&").trim();
+			const label = labelHtml.replace(/<[^>]+>/g, "").trim();
+			if (
+				!isGitHubUserAttachmentAssetUrl(normalizedHref) ||
+				label !== normalizedHref
+			) {
+				return _match;
+			}
+
+			return `<video class="ghmd-user-attachment-video" controls preload="metadata" src="${normalizedHref}"><a href="${normalizedHref}" target="_blank" rel="noopener noreferrer">${normalizedHref}</a></video>`;
 		},
 	);
 }
@@ -366,6 +420,15 @@ function escapeHtml(str: string): string {
 		.replace(/"/g, "&quot;");
 }
 
+function escapeDataAttr(str: string): string {
+	return str
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/\n/g, "&#10;");
+}
+
 function buildInstallTabsHtml(variants: PkgVariant[], id: number): string {
 	const name = `pkgtab-${id}`;
 	let html = '<div class="ghmd-pkg-tabs">';
@@ -425,12 +488,15 @@ export async function renderMarkdownToHtml(
 	const renderedBlocks = await Promise.all(
 		codeBlocks.map(async (block) => ({
 			id: block.id,
+			code: block.code,
+			lang: block.lang,
 			html: await highlightCode(block.code, block.lang),
 		})),
 	);
 
 	for (const block of renderedBlocks) {
-		html = html.replace(`<div data-code-block="${block.id}"></div>`, block.html);
+		const wrappedHtml = `<div class="ghmd-reactive-code" data-code="${escapeDataAttr(block.code)}" data-lang="${escapeHtml(block.lang)}">${block.html}</div>`;
+		html = html.replace(`<div data-code-block="${block.id}"></div>`, wrappedHtml);
 	}
 
 	for (const block of installBlocks) {
@@ -440,6 +506,7 @@ export async function renderMarkdownToHtml(
 	html = processAlerts(html);
 	html = addHeadingAnchors(html);
 	html = markBadgeParagraphs(html);
+	html = embedUserAttachmentVideos(html);
 
 	if (repoContext) {
 		html = resolveUrls(html, repoContext);
@@ -468,6 +535,11 @@ export async function renderMarkdownToHtml(
 		html = linkifyIssueReferences(html, refCtx.owner, refCtx.repo);
 	}
 
+	// Linkify commit hashes when repo context is available
+	if (repoContext) {
+		html = linkifyCommits(html, repoContext.owner, repoContext.repo);
+	}
+
 	return html;
 }
 
@@ -486,10 +558,14 @@ export async function MarkdownRenderer({
 
 	return (
 		<MarkdownCopyHandler>
-			<div
-				className={`ghmd ${className || ""}`}
-				dangerouslySetInnerHTML={{ __html: html }}
-			/>
+			<ReactiveCodeBlocks>
+				<MarkdownMentionTooltips>
+					<div
+						className={`ghmd ${className || ""}`}
+						dangerouslySetInnerHTML={{ __html: html }}
+					/>
+				</MarkdownMentionTooltips>
+			</ReactiveCodeBlocks>
 		</MarkdownCopyHandler>
 	);
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useTransition } from "react";
+import { useState, useEffect, useCallback, useRef, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
 	Check,
@@ -17,6 +17,123 @@ import { cn, getErrorMessage } from "@/lib/utils";
 import type { MergeHunk, ConflictFileData } from "@/lib/three-way-merge";
 import { commitMergeConflictResolution } from "@/app/(app)/repos/[owner]/[repo]/pulls/pr-actions";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
+import { highlightCodeClient } from "@/lib/shiki-client";
+import { useColorTheme } from "@/components/theme/theme-provider";
+
+const EXT_TO_LANG: Record<string, string> = {
+	ts: "typescript",
+	tsx: "tsx",
+	js: "javascript",
+	jsx: "jsx",
+	py: "python",
+	rb: "ruby",
+	go: "go",
+	rs: "rust",
+	java: "java",
+	kt: "kotlin",
+	swift: "swift",
+	c: "c",
+	cpp: "cpp",
+	h: "c",
+	hpp: "cpp",
+	cs: "csharp",
+	php: "php",
+	sh: "bash",
+	bash: "bash",
+	zsh: "bash",
+	md: "markdown",
+	mdx: "mdx",
+	json: "json",
+	yaml: "yaml",
+	yml: "yaml",
+	toml: "toml",
+	xml: "xml",
+	html: "html",
+	css: "css",
+	scss: "scss",
+	less: "less",
+	vue: "vue",
+	svelte: "svelte",
+	sql: "sql",
+	graphql: "graphql",
+	gql: "graphql",
+	dockerfile: "dockerfile",
+	makefile: "makefile",
+	r: "r",
+	lua: "lua",
+	dart: "dart",
+	zig: "zig",
+};
+
+function getLangFromPath(path: string): string {
+	const name = path.split("/").pop()?.toLowerCase() || "";
+	if (name === "dockerfile") return "dockerfile";
+	if (name === "makefile") return "makefile";
+	const ext = name.split(".").pop() || "";
+	return EXT_TO_LANG[ext] || ext || "text";
+}
+
+function escapeHtml(str: string): string {
+	return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function useHighlightedLines(code: string, lang: string): string[] | null {
+	const { themeId } = useColorTheme();
+	const [lines, setLines] = useState<string[] | null>(null);
+
+	useEffect(() => {
+		if (!code) {
+			setLines(null);
+			return;
+		}
+		let cancelled = false;
+		highlightCodeClient(code, lang, themeId).then((html) => {
+			if (cancelled) return;
+			if (typeof window === "undefined") {
+				setLines(null);
+				return;
+			}
+			const parser = new DOMParser();
+			const doc = parser.parseFromString(html, "text/html");
+			const lineSpans = doc.querySelectorAll(".shiki .line");
+			if (lineSpans.length > 0) {
+				setLines(Array.from(lineSpans).map((l) => l.innerHTML));
+			} else {
+				setLines(null);
+			}
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, [code, lang, themeId]);
+
+	return lines;
+}
+
+function HighlightedLine({
+	html,
+	fallback,
+	className,
+}: {
+	html?: string;
+	fallback: string;
+	className?: string;
+}) {
+	if (html) {
+		return (
+			<div
+				className={className}
+				style={{ minHeight: "20px", lineHeight: "20px" }}
+				dangerouslySetInnerHTML={{ __html: html }}
+			/>
+		);
+	}
+	return (
+		<div className={className} style={{ minHeight: "20px", lineHeight: "20px" }}>
+			{fallback || "\u00a0"}
+		</div>
+	);
+}
 
 // ── Types ───────────────────────────────────────────────────────
 
@@ -52,6 +169,8 @@ interface PRConflictResolverProps {
 	pullNumber: number;
 	baseBranch: string;
 	headBranch: string;
+	headRepoOwner?: string | null;
+	headRepoName?: string | null;
 }
 
 // ── Component ───────────────────────────────────────────────────
@@ -62,6 +181,8 @@ export function PRConflictResolver({
 	pullNumber,
 	baseBranch,
 	headBranch,
+	headRepoOwner,
+	headRepoName,
 }: PRConflictResolverProps) {
 	const router = useRouter();
 	const { emit } = useMutationEvents();
@@ -84,8 +205,12 @@ export function PRConflictResolver({
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
+				const headParam =
+					headRepoOwner && headRepoOwner !== owner
+						? `${headRepoOwner}:${headBranch}`
+						: headBranch;
 				const res = await fetch(
-					`/api/merge-conflicts?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&base=${encodeURIComponent(baseBranch)}&head=${encodeURIComponent(headBranch)}`,
+					`/api/merge-conflicts?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&base=${encodeURIComponent(baseBranch)}&head=${encodeURIComponent(headParam)}`,
 				);
 				if (!res.ok) {
 					const body = await res.json().catch(() => ({}));
@@ -357,6 +482,8 @@ export function PRConflictResolver({
 				baseBranch,
 				resolvedFiles,
 				commitMessage,
+				headRepoOwner,
+				headRepoName,
 			);
 			if (result.error) {
 				setCommitResult({ type: "error", message: result.error });
@@ -629,12 +756,12 @@ export function PRConflictResolver({
 					)}
 				</div>
 
-				{/* Main hunk viewer */}
+				{/* Main inline viewer */}
 				<div className="flex-1 min-w-0 flex flex-col overflow-y-auto">
 					{activeFileData && activeFileRes ? (
 						<>
 							{/* File header */}
-							<div className="shrink-0 sticky top-0 z-10 flex items-center justify-between px-4 py-2 relative after:absolute after:bottom-0 after:left-[3%] after:right-[3%] after:h-px after:bg-gradient-to-r after:from-transparent after:via-border after:to-transparent bg-background/95 backdrop-blur-sm">
+							<div className="shrink-0 sticky top-0 z-10 flex items-center justify-between px-4 py-2 border-b border-border bg-background/95 backdrop-blur-sm">
 								<div className="flex items-center gap-2 min-w-0">
 									<FileCode2 className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
 									<span className="text-xs font-mono truncate">
@@ -687,7 +814,7 @@ export function PRConflictResolver({
 														activeFile!,
 													)
 												}
-												className="px-2 py-1 text-[10px] font-mono rounded-sm bg-muted/50 dark:bg-white/[0.04] text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-white/[0.08] transition-colors cursor-pointer"
+												className="px-2 py-1 text-[10px] font-mono rounded-sm bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
 											>
 												Accept
 												all
@@ -699,7 +826,7 @@ export function PRConflictResolver({
 														activeFile!,
 													)
 												}
-												className="px-2 py-1 text-[10px] font-mono rounded-sm bg-muted/50 dark:bg-white/[0.04] text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-white/[0.08] transition-colors cursor-pointer"
+												className="px-2 py-1 text-[10px] font-mono rounded-sm bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
 											>
 												Accept
 												all
@@ -709,83 +836,45 @@ export function PRConflictResolver({
 									)}
 							</div>
 
-							{/* Hunks */}
-							<div className="flex-1 p-4 space-y-3">
-								{activeFileData.hunks.map(
-									(hunk, idx) => (
-										<HunkView
-											key={idx}
-											hunk={hunk}
-											hunkIdx={
-												idx
-											}
-											filePath={
-												activeFileData.path
-											}
-											resolution={
-												activeFileRes
-													.hunkResolutions[
-													idx
-												]
-											}
-											isActive={
-												activeHunkIdx ===
-												idx
-											}
-											onFocus={() =>
-												setActiveHunkIdx(
-													idx,
-												)
-											}
-											onAcceptBase={(
-												lines,
-											) =>
-												acceptBase(
-													activeFileData.path,
-													idx,
-													lines,
-												)
-											}
-											onAcceptHead={(
-												lines,
-											) =>
-												acceptHead(
-													activeFileData.path,
-													idx,
-													lines,
-												)
-											}
-											onAcceptBoth={(
-												base,
-												head,
-											) =>
-												acceptBoth(
-													activeFileData.path,
-													idx,
-													base,
-													head,
-												)
-											}
-											onCustom={(
-												lines,
-											) =>
-												updateHunkResolution(
-													activeFileData.path,
-													idx,
-													"custom",
-													lines,
-												)
-											}
-											baseBranch={
-												baseBranch
-											}
-											headBranch={
-												headBranch
-											}
-										/>
-									),
-								)}
-							</div>
+							{/* Unified inline view */}
+							<InlineFileView
+								fileData={activeFileData}
+								fileRes={activeFileRes}
+								baseBranch={baseBranch}
+								headBranch={headBranch}
+								onAcceptBase={(idx, lines) =>
+									acceptBase(
+										activeFileData.path,
+										idx,
+										lines,
+									)
+								}
+								onAcceptHead={(idx, lines) =>
+									acceptHead(
+										activeFileData.path,
+										idx,
+										lines,
+									)
+								}
+								onAcceptBoth={(idx, base, head) =>
+									acceptBoth(
+										activeFileData.path,
+										idx,
+										base,
+										head,
+									)
+								}
+								onCustom={(idx, lines) =>
+									updateHunkResolution(
+										activeFileData.path,
+										idx,
+										"custom",
+										lines,
+									)
+								}
+								activeHunkIdx={activeHunkIdx}
+								onFocusHunk={setActiveHunkIdx}
+							/>
 						</>
 					) : (
 						<div className="flex-1 flex items-center justify-center text-xs font-mono text-muted-foreground">
@@ -875,323 +964,342 @@ export function PRConflictResolver({
 
 // ── HunkView sub-component ──────────────────────────────────────
 
-interface HunkViewProps {
-	hunk: MergeHunk;
-	hunkIdx: number;
-	filePath: string;
-	resolution: HunkResolution;
-	isActive: boolean;
-	onFocus: () => void;
-	onAcceptBase: (lines: string[]) => void;
-	onAcceptHead: (lines: string[]) => void;
-	onAcceptBoth: (base: string[], head: string[]) => void;
-	onCustom: (lines: string[]) => void;
+interface InlineFileViewProps {
+	fileData: ConflictFileData;
+	fileRes: FileResolution;
 	baseBranch: string;
 	headBranch: string;
+	onAcceptBase: (hunkIdx: number, lines: string[]) => void;
+	onAcceptHead: (hunkIdx: number, lines: string[]) => void;
+	onAcceptBoth: (hunkIdx: number, base: string[], head: string[]) => void;
+	onCustom: (hunkIdx: number, lines: string[]) => void;
+	activeHunkIdx: number;
+	onFocusHunk: (idx: number) => void;
 }
 
-function HunkView({
-	hunk,
+function InlineConflictBlock({
 	hunkIdx,
-	filePath,
-	resolution,
-	isActive,
-	onFocus,
+	hunk,
+	res,
+	baseBranch,
+	headBranch,
+	highlighted,
+	baseHlStart,
+	headHlStart,
 	onAcceptBase,
 	onAcceptHead,
 	onAcceptBoth,
 	onCustom,
-	baseBranch,
-	headBranch,
-}: HunkViewProps) {
+}: {
+	hunkIdx: number;
+	hunk: MergeHunk;
+	res: HunkResolution;
+	baseBranch: string;
+	headBranch: string;
+	highlighted: string[] | null;
+	baseHlStart: number;
+	headHlStart: number;
+	onAcceptBase: (hunkIdx: number, lines: string[]) => void;
+	onAcceptHead: (hunkIdx: number, lines: string[]) => void;
+	onAcceptBoth: (hunkIdx: number, base: string[], head: string[]) => void;
+	onCustom: (hunkIdx: number, lines: string[]) => void;
+}) {
 	const [editing, setEditing] = useState(false);
 	const [editText, setEditText] = useState("");
-	const [collapsed, setCollapsed] = useState(false);
+	const baseLines = hunk.baseLines || [];
+	const headLines = hunk.headLines || [];
+	const isResolved = res.status !== "pending";
 
-	if (hunk.type === "clean") {
-		const lines = hunk.resolvedLines || [];
-		if (lines.length === 0) return null;
-
-		// Collapsible context block
-		const MAX_PREVIEW = 3;
-		const isLong = lines.length > MAX_PREVIEW * 2;
-
+	if (isResolved && !editing) {
 		return (
-			<div className="group">
-				<button
-					onClick={() => setCollapsed((c) => !c)}
-					className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-muted-foreground/70 transition-colors cursor-pointer mb-0.5"
-				>
-					{collapsed ? (
-						<ChevronRight className="w-2.5 h-2.5" />
-					) : (
-						<ChevronDown className="w-2.5 h-2.5" />
-					)}
-					{lines.length} unchanged line{lines.length !== 1 ? "s" : ""}
-				</button>
-				{!collapsed && (
-					<pre className="text-[11px] font-mono leading-relaxed text-muted-foreground overflow-x-auto max-h-40 overflow-y-auto bg-muted/20 px-3 py-1.5 border border-border/30 rounded-sm">
-						{isLong ? (
-							<>
-								{lines
-									.slice(0, MAX_PREVIEW)
-									.map((l, i) => (
-										<div key={i}>
-											{l || " "}
-										</div>
-									))}
-								<div className="text-muted-foreground/20 my-0.5">
-									···{" "}
-									{lines.length -
-										MAX_PREVIEW *
-											2}{" "}
-									lines ···
-								</div>
-								{lines
-									.slice(-MAX_PREVIEW)
-									.map((l, i) => (
-										<div
-											key={`end-${i}`}
-										>
-											{l || " "}
-										</div>
-									))}
-							</>
-						) : (
-							lines.map((l, i) => (
-								<div key={i}>{l || " "}</div>
-							))
-						)}
-					</pre>
-				)}
+			<div className="border-y border-blue-500/20">
+				<div className="flex items-center justify-between px-3 py-1 bg-blue-500/5">
+					<div className="flex items-center gap-2">
+						<Check className="w-3 h-3 text-blue-500" />
+						<span className="text-[10px] font-mono text-blue-500">
+							Resolved
+							{res.status === "accepted-base" &&
+								" — using base"}
+							{res.status === "accepted-head" &&
+								" — using head"}
+							{res.status === "accepted-both" &&
+								" — using both"}
+							{res.status === "custom" &&
+								" — custom edit"}
+						</span>
+					</div>
+					<div className="flex items-center gap-1">
+						<button
+							onClick={() => {
+								setEditText(
+									res.resolvedLines.join(
+										"\n",
+									),
+								);
+								setEditing(true);
+							}}
+							className="px-2 py-0.5 text-[10px] font-mono text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-sm transition-colors cursor-pointer"
+						>
+							Edit
+						</button>
+					</div>
+				</div>
+				{res.resolvedLines.map((l, i) => (
+					<div
+						key={i}
+						className="flex bg-blue-500/[0.03] hover:bg-blue-500/[0.06] transition-colors"
+					>
+						<span className="select-none text-right pr-3 pl-3 text-blue-400/25 w-12 shrink-0 border-r border-blue-500/10">
+							{i + 1}
+						</span>
+						<div className="flex-1 pl-3 pr-4 whitespace-pre-wrap break-all">
+							<HighlightedLine
+								html={undefined}
+								fallback={l}
+							/>
+						</div>
+					</div>
+				))}
 			</div>
 		);
 	}
 
-	// ── Conflict hunk ─────────────────────────────────────────
-
-	const baseLines = hunk.baseLines || [];
-	const headLines = hunk.headLines || [];
-	const isResolved = resolution.status !== "pending";
-
-	const statusLabel: Record<HunkResolutionStatus, string> = {
-		pending: "",
-		"accepted-base": "base accepted",
-		"accepted-head": "head accepted",
-		"accepted-both": "both accepted",
-		custom: "custom edit",
-	};
-
-	return (
-		<div
-			onClick={onFocus}
-			className={cn(
-				"border rounded-sm transition-colors",
-				isActive
-					? "border-blue-500/40 ring-1 ring-blue-500/20"
-					: "border-border",
-				isResolved && !isActive ? "opacity-60" : "",
-			)}
-		>
-			{/* Action bar */}
-			<div className="flex items-center justify-between px-3 py-1.5 bg-muted/30 relative after:absolute after:bottom-0 after:left-[5%] after:right-[5%] after:h-px after:bg-gradient-to-r after:from-transparent after:via-border/50 after:to-transparent">
-				<div className="flex items-center gap-2">
-					{isResolved ? (
-						<Check className="w-3 h-3 text-blue-500" />
-					) : (
-						<AlertTriangle className="w-3 h-3 text-amber-500" />
-					)}
-					<span className="text-[10px] font-mono text-muted-foreground">
-						Conflict hunk
-						{isResolved && (
-							<span className="ml-2 text-blue-500">
-								— {statusLabel[resolution.status]}
-							</span>
-						)}
+	if (editing) {
+		return (
+			<div className="border-y border-amber-500/20">
+				<div className="flex items-center justify-between px-3 py-1.5 bg-amber-500/5">
+					<span className="text-[10px] font-mono text-amber-600 dark:text-amber-400">
+						Editing conflict
 					</span>
-				</div>
-				<div className="flex items-center gap-1">
-					<button
-						onClick={(e) => {
-							e.stopPropagation();
-							onAcceptBase(baseLines);
-						}}
-						className={cn(
-							"px-2 py-0.5 text-[10px] font-mono rounded-sm transition-colors cursor-pointer",
-							resolution.status === "accepted-base"
-								? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-								: "bg-muted/50 dark:bg-white/[0.04] text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-white/[0.08]",
-						)}
-						title="Accept base (1)"
-					>
-						Base
-					</button>
-					<button
-						onClick={(e) => {
-							e.stopPropagation();
-							onAcceptHead(headLines);
-						}}
-						className={cn(
-							"px-2 py-0.5 text-[10px] font-mono rounded-sm transition-colors cursor-pointer",
-							resolution.status === "accepted-head"
-								? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-								: "bg-muted/50 dark:bg-white/[0.04] text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-white/[0.08]",
-						)}
-						title="Accept head (2)"
-					>
-						Head
-					</button>
-					<button
-						onClick={(e) => {
-							e.stopPropagation();
-							onAcceptBoth(baseLines, headLines);
-						}}
-						className={cn(
-							"px-2 py-0.5 text-[10px] font-mono rounded-sm transition-colors cursor-pointer",
-							resolution.status === "accepted-both"
-								? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-								: "bg-muted/50 dark:bg-white/[0.04] text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-white/[0.08]",
-						)}
-						title="Accept both (3)"
-					>
-						Both
-					</button>
-					<button
-						onClick={(e) => {
-							e.stopPropagation();
-							if (!editing) {
-								const current =
-									resolution.status !==
-									"pending"
-										? resolution.resolvedLines.join(
-												"\n",
-											)
-										: baseLines.join(
-												"\n",
-											);
-								setEditText(current);
-								setEditing(true);
-							} else {
-								setEditing(false);
-							}
-						}}
-						className={cn(
-							"px-2 py-0.5 text-[10px] font-mono rounded-sm transition-colors cursor-pointer",
-							editing || resolution.status === "custom"
-								? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-								: "bg-muted/50 dark:bg-white/[0.04] text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-white/[0.08]",
-						)}
-						title="Edit manually (e)"
-					>
-						Edit
-					</button>
-				</div>
-			</div>
-
-			{/* Side-by-side diff */}
-			{!editing && (
-				<div className="grid grid-cols-2 relative after:absolute after:top-[10%] after:bottom-[10%] after:left-1/2 after:w-px after:bg-gradient-to-b after:from-transparent after:via-border/50 after:to-transparent">
-					{/* Base side */}
-					<div className="min-w-0">
-						<div className="px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-muted-foreground/50 bg-red-500/5 relative after:absolute after:bottom-0 after:left-[8%] after:right-[8%] after:h-px after:bg-gradient-to-r after:from-transparent after:via-border/30 after:to-transparent">
-							{baseBranch} (base)
-						</div>
-						<pre className="text-[11px] font-mono leading-relaxed overflow-x-auto px-3 py-1.5 bg-red-500/[0.03] min-h-[2rem]">
-							{baseLines.length > 0 ? (
-								baseLines.map((l, i) => (
-									<div
-										key={i}
-										className="text-red-700/70 dark:text-red-400/60"
-									>
-										{l || " "}
-									</div>
-								))
-							) : (
-								<div className="text-muted-foreground/30 italic">
-									empty
-								</div>
-							)}
-						</pre>
-					</div>
-
-					{/* Head side */}
-					<div className="min-w-0">
-						<div className="px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-muted-foreground/50 bg-green-500/5 relative after:absolute after:bottom-0 after:left-[8%] after:right-[8%] after:h-px after:bg-gradient-to-r after:from-transparent after:via-border/30 after:to-transparent">
-							{headBranch} (head)
-						</div>
-						<pre className="text-[11px] font-mono leading-relaxed overflow-x-auto px-3 py-1.5 bg-green-500/[0.03] min-h-[2rem]">
-							{headLines.length > 0 ? (
-								headLines.map((l, i) => (
-									<div
-										key={i}
-										className="text-green-700/70 dark:text-green-400/60"
-									>
-										{l || " "}
-									</div>
-								))
-							) : (
-								<div className="text-muted-foreground/30 italic">
-									empty
-								</div>
-							)}
-						</pre>
-					</div>
-				</div>
-			)}
-
-			{/* Edit mode */}
-			{editing && (
-				<div className="p-3 space-y-2">
-					<textarea
-						value={editText}
-						onChange={(e) => setEditText(e.target.value)}
-						className="w-full min-h-[6rem] bg-transparent border border-border px-3 py-2 text-[11px] font-mono leading-relaxed placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/20 transition-colors resize-y"
-						placeholder="Enter resolved content..."
-					/>
-					<div className="flex items-center gap-2 justify-end">
+					<div className="flex items-center gap-1.5">
 						<button
 							onClick={() => setEditing(false)}
-							className="px-2 py-1 text-[10px] font-mono rounded-sm bg-muted/50 dark:bg-white/[0.04] text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-white/[0.08] transition-colors cursor-pointer"
+							className="px-2 py-0.5 text-[10px] font-mono text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-sm transition-colors cursor-pointer"
 						>
 							Cancel
 						</button>
 						<button
 							onClick={() => {
-								onCustom(editText.split("\n"));
+								onCustom(
+									hunkIdx,
+									editText.split("\n"),
+								);
 								setEditing(false);
 							}}
-							className="px-2 py-1 text-[10px] font-mono bg-foreground text-background hover:bg-foreground/90 transition-colors cursor-pointer"
+							className="px-2 py-0.5 text-[10px] font-mono bg-foreground text-background hover:bg-foreground/90 rounded-sm transition-colors cursor-pointer"
 						>
 							Apply
 						</button>
 					</div>
 				</div>
-			)}
+				<textarea
+					value={editText}
+					onChange={(e) => setEditText(e.target.value)}
+					className="w-full min-h-24 bg-transparent px-4 py-2 text-[12px] font-mono leading-[22px] focus:outline-none resize-y border-0"
+					autoFocus
+				/>
+			</div>
+		);
+	}
 
-			{/* Resolved preview */}
-			{isResolved && !editing && (
-				<div className="relative before:absolute before:top-0 before:left-[5%] before:right-[5%] before:h-px before:bg-gradient-to-r before:from-transparent before:via-border/30 before:to-transparent">
-					<div className="px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-blue-500/60 bg-blue-500/5 relative after:absolute after:bottom-0 after:left-[8%] after:right-[8%] after:h-px after:bg-gradient-to-r after:from-transparent after:via-border/30 after:to-transparent">
-						Resolved
+	return (
+		<div className="border-y-2 border-amber-500/30">
+			{/* Base (current) section */}
+			<div className="flex items-center justify-between px-3 py-1 bg-red-500/8 border-b border-red-500/10">
+				<span className="text-[10px] font-mono text-red-500 dark:text-red-400 font-medium">
+					{baseBranch} (current)
+				</span>
+				<button
+					onClick={() => onAcceptBase(hunkIdx, baseLines)}
+					className="px-2 py-0.5 text-[10px] font-mono text-red-600 dark:text-red-400 hover:bg-red-500/15 rounded-sm transition-colors cursor-pointer"
+				>
+					Accept current
+				</button>
+			</div>
+			{baseLines.map((l, i) => (
+				<div
+					key={`b-${i}`}
+					className="flex bg-red-500/[0.06] hover:bg-red-500/10 transition-colors"
+				>
+					<span className="select-none text-right pr-3 pl-3 text-red-400/25 w-12 shrink-0 border-r border-red-500/10">
+						{i + 1}
+					</span>
+					<span className="select-none w-5 text-center text-red-500/40 shrink-0">
+						−
+					</span>
+					<div className="flex-1 pl-1 pr-4 whitespace-pre-wrap break-all">
+						<HighlightedLine
+							html={highlighted?.[baseHlStart + i]}
+							fallback={l}
+						/>
 					</div>
-					<pre className="text-[11px] font-mono leading-relaxed overflow-x-auto px-3 py-1.5 bg-blue-500/[0.02] max-h-40 overflow-y-auto">
-						{resolution.resolvedLines.length > 0 ? (
-							resolution.resolvedLines.map((l, i) => (
-								<div
-									key={i}
-									className="text-foreground/70"
-								>
-									{l || " "}
-								</div>
-							))
-						) : (
-							<div className="text-muted-foreground/30 italic">
-								empty (lines removed)
-							</div>
-						)}
-					</pre>
 				</div>
-			)}
+			))}
+
+			{/* Separator with actions */}
+			<div className="flex items-center justify-center gap-2 px-3 py-1.5 bg-muted/30 border-y border-border/30">
+				<button
+					onClick={() => onAcceptBoth(hunkIdx, baseLines, headLines)}
+					className="px-2 py-0.5 text-[10px] font-mono text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-sm transition-colors cursor-pointer"
+				>
+					Accept both
+				</button>
+				<span className="text-muted-foreground/20">|</span>
+				<button
+					onClick={() => {
+						setEditText(
+							[...baseLines, ...headLines].join("\n"),
+						);
+						setEditing(true);
+					}}
+					className="px-2 py-0.5 text-[10px] font-mono text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-sm transition-colors cursor-pointer"
+				>
+					Edit manually
+				</button>
+			</div>
+
+			{/* Head (incoming) section */}
+			<div className="flex items-center justify-between px-3 py-1 bg-green-500/8 border-b border-green-500/10">
+				<span className="text-[10px] font-mono text-green-500 dark:text-green-400 font-medium">
+					{headBranch} (incoming)
+				</span>
+				<button
+					onClick={() => onAcceptHead(hunkIdx, headLines)}
+					className="px-2 py-0.5 text-[10px] font-mono text-green-600 dark:text-green-400 hover:bg-green-500/15 rounded-sm transition-colors cursor-pointer"
+				>
+					Accept incoming
+				</button>
+			</div>
+			{headLines.map((l, i) => (
+				<div
+					key={`h-${i}`}
+					className="flex bg-green-500/[0.06] hover:bg-green-500/10 transition-colors"
+				>
+					<span className="select-none text-right pr-3 pl-3 text-green-400/25 w-12 shrink-0 border-r border-green-500/10">
+						{i + 1}
+					</span>
+					<span className="select-none w-5 text-center text-green-500/40 shrink-0">
+						+
+					</span>
+					<div className="flex-1 pl-1 pr-4 whitespace-pre-wrap break-all">
+						<HighlightedLine
+							html={highlighted?.[headHlStart + i]}
+							fallback={l}
+						/>
+					</div>
+				</div>
+			))}
+		</div>
+	);
+}
+
+function InlineFileView({
+	fileData,
+	fileRes,
+	baseBranch,
+	headBranch,
+	onAcceptBase,
+	onAcceptHead,
+	onAcceptBoth,
+	onCustom,
+	activeHunkIdx,
+	onFocusHunk,
+}: InlineFileViewProps) {
+	const lang = useMemo(() => getLangFromPath(fileData.path), [fileData.path]);
+
+	const fullCode = useMemo(() => {
+		const parts: string[] = [];
+		for (const hunk of fileData.hunks) {
+			if (hunk.type === "clean") {
+				parts.push(...(hunk.resolvedLines || []));
+			} else {
+				parts.push(...(hunk.baseLines || []));
+				parts.push(...(hunk.headLines || []));
+			}
+		}
+		return parts.join("\n");
+	}, [fileData.hunks]);
+
+	const highlighted = useHighlightedLines(fullCode, lang);
+
+	const hunkHlOffsets = useMemo(() => {
+		const offsets: { baseStart: number; headStart: number; cleanStart: number }[] = [];
+		let idx = 0;
+		for (const hunk of fileData.hunks) {
+			if (hunk.type === "clean") {
+				const len = (hunk.resolvedLines || []).length;
+				offsets.push({ baseStart: idx, headStart: idx, cleanStart: idx });
+				idx += len;
+			} else {
+				const bLen = (hunk.baseLines || []).length;
+				const hLen = (hunk.headLines || []).length;
+				offsets.push({
+					baseStart: idx,
+					headStart: idx + bLen,
+					cleanStart: idx,
+				});
+				idx += bLen + hLen;
+			}
+		}
+		return offsets;
+	}, [fileData.hunks]);
+
+	let lineNum = 0;
+
+	return (
+		<div className="flex-1 overflow-auto text-[12px] font-mono leading-[22px]">
+			{fileData.hunks.map((hunk, hIdx) => {
+				const res = fileRes.hunkResolutions[hIdx];
+				const offsets = hunkHlOffsets[hIdx];
+
+				if (hunk.type === "clean") {
+					const lines = res?.resolvedLines?.length
+						? res.resolvedLines
+						: hunk.resolvedLines || [];
+					return lines.map((l, i) => {
+						lineNum++;
+						return (
+							<div
+								key={`${hIdx}-${i}`}
+								className="flex hover:bg-muted/30 transition-colors"
+							>
+								<span className="select-none text-right pr-3 pl-3 text-muted-foreground/25 w-12 shrink-0 border-r border-border/20">
+									{lineNum}
+								</span>
+								<div className="flex-1 pl-3 pr-4 whitespace-pre-wrap break-all">
+									<HighlightedLine
+										html={
+											highlighted?.[
+												offsets.cleanStart +
+													i
+											]
+										}
+										fallback={l}
+									/>
+								</div>
+							</div>
+						);
+					});
+				}
+
+				return (
+					<InlineConflictBlock
+						key={`conflict-${hIdx}`}
+						hunkIdx={hIdx}
+						hunk={hunk}
+						res={res}
+						baseBranch={baseBranch}
+						headBranch={headBranch}
+						highlighted={highlighted}
+						baseHlStart={offsets.baseStart}
+						headHlStart={offsets.headStart}
+						onAcceptBase={onAcceptBase}
+						onAcceptHead={onAcceptHead}
+						onAcceptBoth={onAcceptBoth}
+						onCustom={onCustom}
+					/>
+				);
+			})}
 		</div>
 	);
 }

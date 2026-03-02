@@ -61,6 +61,7 @@ import { ClientMarkdown } from "@/components/shared/client-markdown";
 import { CheckStatusBadge } from "@/components/pr/check-status-badge";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { UserTooltip } from "@/components/shared/user-tooltip";
+import { getDiffPreferences, setSplitView, setWordWrap } from "@/lib/diff-preferences";
 
 interface DiffFile {
 	filename: string;
@@ -158,8 +159,8 @@ export function PRDiffViewer({
 		}
 		return 0;
 	});
-	const [wordWrap, setWordWrap] = useState(true);
-	const [splitView, setSplitView] = useState(false);
+	const [wordWrap, setWordWrapState] = useState(() => getDiffPreferences().wordWrap);
+	const [splitView, setSplitViewState] = useState(() => getDiffPreferences().splitView);
 	const [sidebarWidth, setSidebarWidth] = useState(220);
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 	const [isDragging, setIsDragging] = useState(false);
@@ -543,8 +544,18 @@ export function PRDiffViewer({
 						total={files.length}
 						wordWrap={wordWrap}
 						splitView={splitView}
-						onToggleWrap={() => setWordWrap((w) => !w)}
-						onToggleSplit={() => setSplitView((s) => !s)}
+						onToggleWrap={() => {
+							setWordWrapState((w) => {
+								setWordWrap(!w);
+								return !w;
+							});
+						}}
+						onToggleSplit={() => {
+							setSplitViewState((s) => {
+								setSplitView(!s);
+								return !s;
+							});
+						}}
 						sidebarCollapsed={sidebarCollapsed}
 						onToggleSidebar={() =>
 							setSidebarCollapsed((c) => !c)
@@ -4024,14 +4035,14 @@ function SplitDiffTable({
 									)}
 								</tr>
 
-								{/* Inline review comments - left side */}
+								{/* Inline review comments - left side (shown on left half only) */}
 								{leftComments.map((comment) => (
 									<tr
 										key={`lrc-${comment.id}`}
 									>
 										<td
-											colSpan={6}
-											className="p-0"
+											colSpan={3}
+											className="p-0 align-top"
 										>
 											<InlineCommentDisplay
 												comment={
@@ -4057,17 +4068,25 @@ function SplitDiffTable({
 												}
 											/>
 										</td>
+										<td
+											colSpan={3}
+											className="p-0"
+										/>
 									</tr>
 								))}
 
-								{/* Inline review comments - right side */}
+								{/* Inline review comments - right side (shown on right half only) */}
 								{rightComments.map((comment) => (
 									<tr
 										key={`rrc-${comment.id}`}
 									>
 										<td
-											colSpan={6}
+											colSpan={3}
 											className="p-0"
+										/>
+										<td
+											colSpan={3}
+											className="p-0 align-top"
 										>
 											<InlineCommentDisplay
 												comment={
@@ -4101,57 +4120,128 @@ function SplitDiffTable({
 									rightIsCommentForm) &&
 									commentRange && (
 										<tr>
-											<td
-												colSpan={
-													6
-												}
-												className="p-0"
-											>
-												<InlineCommentForm
-													owner={
-														owner!
-													}
-													repo={
-														repo!
-													}
-													pullNumber={
-														pullNumber!
-													}
-													headSha={
-														headSha!
-													}
-													headBranch={
-														headBranch
-													}
-													filename={
-														filename
-													}
-													line={
-														commentRange.endLine
-													}
-													side={
-														commentRange.side
-													}
-													startLine={
-														commentStartLine
-													}
-													selectedLinesContent={
-														selectedLinesContent
-													}
-													selectedCodeForAI={
-														selectedCodeForAI
-													}
-													onClose={
-														onCloseComment
-													}
-													onAddContext={
-														onAddContext
-													}
-													participants={
-														participants
-													}
-												/>
-											</td>
+											{commentRange.side ===
+											"LEFT" ? (
+												<>
+													<td
+														colSpan={
+															3
+														}
+														className="p-0 align-top"
+													>
+														<InlineCommentForm
+															owner={
+																owner!
+															}
+															repo={
+																repo!
+															}
+															pullNumber={
+																pullNumber!
+															}
+															headSha={
+																headSha!
+															}
+															headBranch={
+																headBranch
+															}
+															filename={
+																filename
+															}
+															line={
+																commentRange.endLine
+															}
+															side={
+																commentRange.side
+															}
+															startLine={
+																commentStartLine
+															}
+															selectedLinesContent={
+																selectedLinesContent
+															}
+															selectedCodeForAI={
+																selectedCodeForAI
+															}
+															onClose={
+																onCloseComment
+															}
+															onAddContext={
+																onAddContext
+															}
+															participants={
+																participants
+															}
+														/>
+													</td>
+													<td
+														colSpan={
+															3
+														}
+														className="p-0"
+													/>
+												</>
+											) : (
+												<>
+													<td
+														colSpan={
+															3
+														}
+														className="p-0"
+													/>
+													<td
+														colSpan={
+															3
+														}
+														className="p-0 align-top"
+													>
+														<InlineCommentForm
+															owner={
+																owner!
+															}
+															repo={
+																repo!
+															}
+															pullNumber={
+																pullNumber!
+															}
+															headSha={
+																headSha!
+															}
+															headBranch={
+																headBranch
+															}
+															filename={
+																filename
+															}
+															line={
+																commentRange.endLine
+															}
+															side={
+																commentRange.side
+															}
+															startLine={
+																commentStartLine
+															}
+															selectedLinesContent={
+																selectedLinesContent
+															}
+															selectedCodeForAI={
+																selectedCodeForAI
+															}
+															onClose={
+																onCloseComment
+															}
+															onAddContext={
+																onAddContext
+															}
+															participants={
+																participants
+															}
+														/>
+													</td>
+												</>
+											)}
 										</tr>
 									)}
 							</React.Fragment>
@@ -4714,6 +4804,7 @@ function SidebarCommits({
 						<CheckStatusBadge
 							checkStatus={checkStatus}
 							align="right"
+							usePortal
 							owner={owner}
 							repo={repo}
 						/>
@@ -4794,6 +4885,7 @@ function SidebarCommits({
 														commitCheck
 													}
 													align="right"
+													usePortal
 													owner={
 														owner
 													}

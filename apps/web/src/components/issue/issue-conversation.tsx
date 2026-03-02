@@ -1,6 +1,13 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { RotateCcw } from "lucide-react";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";
+import { EditableIssueDescription } from "@/components/issue/editable-issue-description";
+import { ReactiveCodeBlocks } from "@/components/shared/reactive-code-blocks";
+import { MarkdownMentionTooltips } from "@/components/shared/markdown-mention-tooltips";
+import { ClientMarkdown } from "@/components/shared/client-markdown";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { BotActivityGroup } from "@/components/pr/bot-activity-group";
@@ -35,6 +42,7 @@ export interface IssueCommentEntry {
 	created_at: string;
 	author_association?: string;
 	reactions?: Reactions;
+	_optimisticStatus?: "pending" | "failed";
 }
 
 export type IssueTimelineEntry = IssueDescriptionEntry | IssueCommentEntry;
@@ -108,18 +116,31 @@ export function IssueConversation({
 	owner,
 	repo,
 	issueNumber,
+	canEdit,
+	issueTitle,
+	currentUserLogin,
+	viewerHasWriteAccess,
+	hasMoreAfter = false,
+	onRetryComment,
 }: {
 	entries: IssueTimelineEntry[];
 	owner: string;
 	repo: string;
 	issueNumber: number;
+	canEdit?: boolean;
+	issueTitle?: string;
+	currentUserLogin?: string;
+	viewerHasWriteAccess?: boolean;
+	hasMoreAfter?: boolean;
+	onRetryComment?: (entry: IssueCommentEntry) => void;
 }) {
 	const grouped = groupEntries(entries);
+	const showLine = grouped.length > 1 || hasMoreAfter;
 
 	return (
 		<div className="relative">
 			{/* Timeline connector line */}
-			{grouped.length > 1 && (
+			{showLine && (
 				<div className="absolute left-[19px] top-10 bottom-4 w-px bg-border/50" />
 			)}
 
@@ -166,6 +187,15 @@ export function IssueConversation({
 													}
 													issueNumber={
 														issueNumber
+													}
+													currentUserLogin={
+														currentUserLogin
+													}
+													viewerHasWriteAccess={
+														viewerHasWriteAccess
+													}
+													onRetryComment={
+														onRetryComment
 													}
 												/>
 											),
@@ -218,6 +248,15 @@ export function IssueConversation({
 												issueNumber={
 													issueNumber
 												}
+												currentUserLogin={
+													currentUserLogin
+												}
+												viewerHasWriteAccess={
+													viewerHasWriteAccess
+												}
+												onRetryComment={
+													onRetryComment
+												}
 											/>
 										),
 									)}
@@ -241,6 +280,11 @@ export function IssueConversation({
 							owner={owner}
 							repo={repo}
 							issueNumber={issueNumber}
+							canEdit={canEdit}
+							issueTitle={issueTitle}
+							currentUserLogin={currentUserLogin}
+							viewerHasWriteAccess={viewerHasWriteAccess}
+							onRetryComment={onRetryComment}
 						/>
 					);
 				})}
@@ -263,23 +307,43 @@ function ThreadEntry({
 	owner,
 	repo,
 	issueNumber,
+	canEdit,
+	issueTitle,
+	currentUserLogin,
+	viewerHasWriteAccess,
+	onRetryComment,
 }: {
 	entry: IssueTimelineEntry;
 	isDescription: boolean;
 	owner: string;
 	repo: string;
 	issueNumber: number;
+	canEdit?: boolean;
+	issueTitle?: string;
+	currentUserLogin?: string;
+	viewerHasWriteAccess?: boolean;
+	onRetryComment?: (entry: IssueCommentEntry) => void;
 }) {
 	const hasBody = Boolean(entry.body && entry.body.trim().length > 0);
 	const isLong = hasBody && entry.body.length > 800;
+	const canEditComment = !!(
+		currentUserLogin &&
+		(currentUserLogin === entry.user?.login || viewerHasWriteAccess)
+	);
 
 	const renderedBody = entry.bodyHtml ? (
 		<MarkdownCopyHandler>
-			<div
-				className="ghmd"
-				dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
-			/>
+			<ReactiveCodeBlocks>
+				<MarkdownMentionTooltips>
+					<div
+						className="ghmd"
+						dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
+					/>
+				</MarkdownMentionTooltips>
+			</ReactiveCodeBlocks>
 		</MarkdownCopyHandler>
+	) : entry.body ? (
+		<ClientMarkdown content={entry.body} />
 	) : null;
 
 	return (
@@ -311,15 +375,25 @@ function ThreadEntry({
 			{/* Content */}
 			<div className="flex-1 min-w-0">
 				{isDescription ? (
-					<DescriptionBlock
-						entry={entry}
-						hasBody={hasBody}
-						isLong={isLong}
-						renderedBody={renderedBody}
-						owner={owner}
-						repo={repo}
-						issueNumber={issueNumber}
-					/>
+					canEdit && issueTitle !== undefined ? (
+						<EditableIssueDescription
+							entry={entry}
+							issueTitle={issueTitle}
+							owner={owner}
+							repo={repo}
+							issueNumber={issueNumber}
+						/>
+					) : (
+						<DescriptionBlock
+							entry={entry}
+							hasBody={hasBody}
+							isLong={isLong}
+							renderedBody={renderedBody}
+							owner={owner}
+							repo={repo}
+							issueNumber={issueNumber}
+						/>
+					)
 				) : (
 					<CommentBlock
 						entry={entry as IssueCommentEntry}
@@ -329,6 +403,8 @@ function ThreadEntry({
 						owner={owner}
 						repo={repo}
 						issueNumber={issueNumber}
+						canEditComment={canEditComment}
+						onRetry={onRetryComment}
 					/>
 				)}
 			</div>
@@ -408,6 +484,8 @@ function CommentBlock({
 	owner,
 	repo,
 	issueNumber,
+	canEditComment,
+	onRetry,
 }: {
 	entry: IssueCommentEntry;
 	hasBody: boolean;
@@ -416,7 +494,12 @@ function CommentBlock({
 	owner: string;
 	repo: string;
 	issueNumber: number;
+	canEditComment?: boolean;
+	onRetry?: (entry: IssueCommentEntry) => void;
 }) {
+	const { _optimisticStatus } = entry;
+	const isOptimistic = !!_optimisticStatus;
+
 	const headerContent = (
 		<>
 			{entry.user ? (
@@ -438,9 +521,27 @@ function CommentBlock({
 					{entry.author_association.toLowerCase()}
 				</span>
 			)}
-			<span className="text-[11px] text-muted-foreground/50">
-				commented <TimeAgo date={entry.created_at} />
-			</span>
+			{_optimisticStatus === "pending" ? (
+				<span className="text-[11px] text-muted-foreground/40 italic">
+					commenting…
+				</span>
+			) : _optimisticStatus === "failed" ? (
+				<span className="flex items-center gap-1 text-[11px] text-destructive/70">
+					failed to comment
+					<button
+						type="button"
+						onClick={() => onRetry?.(entry)}
+						className="inline-flex items-center gap-0.5 hover:text-destructive transition-colors cursor-pointer"
+						title="Retry"
+					>
+						<RotateCcw className="w-3 h-3" />
+					</button>
+				</span>
+			) : (
+				<span className="text-[11px] text-muted-foreground/50">
+					commented <TimeAgo date={entry.created_at} />
+				</span>
+			)}
 		</>
 	);
 
@@ -475,13 +576,14 @@ function CommentBlock({
 		<ChatMessageWrapper
 			headerContent={headerContent}
 			bodyContent={bodyContent}
-			reactionsContent={reactionsContent}
+			reactionsContent={isOptimistic ? null : reactionsContent}
 			owner={owner}
 			repo={repo}
 			contentType="issue"
 			issueNumber={issueNumber}
 			commentId={entry.id}
 			body={entry.body}
+			canEdit={isOptimistic ? false : canEditComment}
 		/>
 	);
 }
@@ -491,22 +593,38 @@ function ThreadComment({
 	owner,
 	repo,
 	issueNumber,
+	currentUserLogin,
+	viewerHasWriteAccess,
+	onRetryComment,
 }: {
 	entry: IssueTimelineEntry;
 	owner: string;
 	repo: string;
 	issueNumber: number;
+	currentUserLogin?: string;
+	viewerHasWriteAccess?: boolean;
+	onRetryComment?: (entry: IssueCommentEntry) => void;
 }) {
 	const hasBody = Boolean(entry.body && entry.body.trim().length > 0);
 	const isLong = hasBody && entry.body.length > 800;
+	const canEditComment = !!(
+		currentUserLogin &&
+		(currentUserLogin === entry.user?.login || viewerHasWriteAccess)
+	);
 
 	const renderedBody = entry.bodyHtml ? (
 		<MarkdownCopyHandler>
-			<div
-				className="ghmd ghmd-sm"
-				dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
-			/>
+			<ReactiveCodeBlocks>
+				<MarkdownMentionTooltips>
+					<div
+						className="ghmd ghmd-sm"
+						dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
+					/>
+				</MarkdownMentionTooltips>
+			</ReactiveCodeBlocks>
 		</MarkdownCopyHandler>
+	) : entry.body ? (
+		<ClientMarkdown content={entry.body} />
 	) : null;
 
 	if (entry.type === "description") {
@@ -532,6 +650,8 @@ function ThreadComment({
 			owner={owner}
 			repo={repo}
 			issueNumber={issueNumber}
+			canEditComment={canEditComment}
+			onRetry={onRetryComment}
 		/>
 	);
 }

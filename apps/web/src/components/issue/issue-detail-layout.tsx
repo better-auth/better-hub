@@ -63,7 +63,7 @@ export function IssueDetailLayout({
 					/>
 					<div
 						ref={scrollRef}
-						className="h-full overflow-y-auto pb-8 pr-4"
+						className="h-full overflow-y-auto pb-8 pl-1 pr-4"
 					>
 						<div>
 							{/* Mobile sidebar */}

@@ -10,6 +10,9 @@ import { cache } from "react";
 import { dash, sentinel } from "@better-auth/infra";
 import { createHash } from "@better-auth/utils/hash";
 import { admin, oAuthProxy } from "better-auth/plugins";
+import { stripe } from "@better-auth/stripe";
+import { getStripeClient, isStripeEnabled } from "./billing/stripe";
+import { grantSignupCredits } from "./billing/credit";
 import { patSignIn } from "./auth-plugins/pat-signin";
 
 async function getOctokitUser(token: string) {
@@ -34,9 +37,39 @@ export const auth = betterAuth({
 				enabled: true,
 			},
 		}),
+		sentinel(),
 		admin(),
 		patSignIn(),
-		sentinel(),
+		...(isStripeEnabled
+			? [
+					stripe({
+						stripeClient: getStripeClient(),
+						stripeWebhookSecret:
+							process.env.STRIPE_WEBHOOK_SECRET!,
+						createCustomerOnSignUp: true,
+						onCustomerCreate: async ({ user }) => {
+							await grantSignupCredits(user.id);
+						},
+						subscription: {
+							enabled: true,
+							plans: [
+								{
+									name: "base",
+									priceId: process.env
+										.STRIPE_BASE_PRICE_ID!,
+									lineItems: [
+										{
+											price: process
+												.env
+												.STRIPE_METERED_PRICE_ID!,
+										},
+									],
+								},
+							],
+						},
+					}),
+				]
+			: []),
 		...(process.env.VERCEL
 			? [oAuthProxy({ productionURL: "https://hub.thalles.me" })]
 			: []),
@@ -87,6 +120,8 @@ export const auth = betterAuth({
 		"https://hub.thalles.me",
 		// Vercel preview
 		"https://better-hub-*-better-auth.vercel.app",
+		// Beta site
+		"https://beta.better-hub.com",
 	],
 });
 
@@ -110,15 +145,25 @@ export const getServerSession = cache(async () => {
 		if (!session || !account?.accessToken) {
 			return null;
 		}
-		const githubUser = await getOctokitUser(account.accessToken);
-		if (!githubUser?.data) {
-			return null;
+		let githubUserData: Record<string, unknown> | null = null;
+		try {
+			const githubUser = await getOctokitUser(account.accessToken);
+			githubUserData = githubUser?.data ?? null;
+		} catch {
+			// GitHub API may be rate-limited; don't treat as unauthenticated.
+		}
+		if (!githubUserData) {
+			return {
+				user: session.user,
+				session,
+				githubUser: { accessToken: account.accessToken } as any,
+			};
 		}
 		return {
 			user: session.user,
 			session,
 			githubUser: {
-				...githubUser.data,
+				...githubUserData,
 				accessToken: account.accessToken,
 			},
 		};

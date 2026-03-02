@@ -12,7 +12,13 @@ function DropdownMenu({ ...props }: React.ComponentProps<typeof DropdownMenuPrim
 function DropdownMenuTrigger({
 	...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
-	return <DropdownMenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />;
+	return (
+		<DropdownMenuPrimitive.Trigger
+			data-slot="dropdown-menu-trigger"
+			{...props}
+			className={cn("rounded-sm", props.className)}
+		/>
+	);
 }
 
 function DropdownMenuContent({

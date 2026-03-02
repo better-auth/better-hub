@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 export interface MarkdownEditorRef {
 	focus: () => void;
 	getTextarea: () => HTMLTextAreaElement | null;
+	clear: () => void;
 }
 
 interface MarkdownEditorProps {
@@ -137,6 +138,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
 		useImperativeHandle(ref, () => ({
 			focus: () => editor?.commands.focus(),
 			getTextarea: () => null,
+			clear: () => {
+				if (!editor) return;
+				editor.commands.clearContent(true);
+				lastReportedMd.current = "";
+			},
 		}));
 
 		const toolbarActions = compact

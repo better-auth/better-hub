@@ -1,9 +1,12 @@
-import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
 import { auth } from "@/lib/auth";
 import { getErrorMessage } from "@/lib/utils";
+import { getInternalModel } from "@/lib/billing/ai-models.server";
 import { headers } from "next/headers";
-import { checkAiLimit, incrementAiUsage } from "@/lib/ai-usage";
+import { checkUsageLimit } from "@/lib/billing/usage-limit";
+import { getBillingErrorCode } from "@/lib/billing/config";
+import { logTokenUsage } from "@/lib/billing/token-usage";
+import { waitUntil } from "@vercel/functions";
 
 export async function POST(req: Request) {
 	const session = await auth.api.getSession({ headers: await headers() });
@@ -11,14 +14,16 @@ export async function POST(req: Request) {
 		return new Response("Unauthorized", { status: 401 });
 	}
 
-	const { allowed, current, limit } = await checkAiLimit(session.user.id);
-	if (!allowed) {
-		return new Response(
-			JSON.stringify({ error: "MESSAGE_LIMIT_REACHED", current, limit }),
-			{ status: 429, headers: { "Content-Type": "application/json" } },
-		);
+	const { model, modelId, isCustomApiKey } = await getInternalModel(session.user.id);
+
+	const limitResult = await checkUsageLimit(session.user.id, isCustomApiKey);
+	if (!limitResult.allowed) {
+		const errorCode = getBillingErrorCode(limitResult);
+		return new Response(JSON.stringify({ error: errorCode, ...limitResult }), {
+			status: 429,
+			headers: { "Content-Type": "application/json" },
+		});
 	}
-	await incrementAiUsage(session.user.id);
 
 	const body = await req.json();
 	const { prompt, owner, repo } = body;
@@ -27,8 +32,8 @@ export async function POST(req: Request) {
 	}
 
 	try {
-		const { text } = await generateText({
-			model: anthropic("claude-haiku-4-5-20251001"),
+		const { text, usage } = await generateText({
+			model,
 			system: `You are a prompt engineer helping users write clear, actionable prompts for AI coding tools. The prompt is for the repository ${owner}/${repo}.
 
 Rewrite the user's prompt to be:
@@ -40,6 +45,17 @@ Rewrite the user's prompt to be:
 Only output the improved prompt, nothing else. Do not wrap it in quotes or add meta-commentary.`,
 			prompt,
 		});
+
+		waitUntil(
+			logTokenUsage({
+				userId: session.user.id,
+				provider: "openrouter",
+				modelId,
+				taskType: "rewrite-prompt",
+				usage,
+				isCustomApiKey,
+			}).catch((e) => console.error("[billing] logTokenUsage failed:", e)),
+		);
 
 		return Response.json({ text: text.trim() });
 	} catch (e: unknown) {

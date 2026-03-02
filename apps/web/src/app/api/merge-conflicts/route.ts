@@ -38,6 +38,16 @@ export async function GET(request: NextRequest) {
 		});
 
 		const mergeBaseSha = comparison.merge_base_commit.sha;
+		const baseSha = comparison.base_commit.sha;
+		const headSha =
+			comparison.commits.length > 0
+				? comparison.commits[comparison.commits.length - 1].sha
+				: mergeBaseSha;
+
+		// For fork PRs, head content lives in the fork repo
+		const isFork = head.includes(":");
+		const headOwner = isFork ? head.split(":")[0] : owner;
+
 		const diffFiles = (comparison.files || []).slice(0, MAX_FILES);
 
 		if (diffFiles.length === 0) {
@@ -49,37 +59,36 @@ export async function GET(request: NextRequest) {
 			});
 		}
 
+		const fetchContent = async (
+			contentOwner: string,
+			contentRepo: string,
+			filePath: string,
+			ref: string,
+		): Promise<string | null> => {
+			try {
+				const { data } = await octokit.repos.getContent({
+					owner: contentOwner,
+					repo: contentRepo,
+					path: filePath,
+					ref,
+				});
+				if (Array.isArray(data) || data.type !== "file") return null;
+				const fileContent = data as GitHubFileContent;
+				return Buffer.from(fileContent.content, "base64").toString("utf-8");
+			} catch {
+				return null;
+			}
+		};
+
 		const files: ConflictFileData[] = await Promise.all(
 			diffFiles.map(async (file) => {
 				const filePath = file.filename;
 
-				const fetchContent = async (
-					ref: string,
-				): Promise<string | null> => {
-					try {
-						const { data } = await octokit.repos.getContent({
-							owner,
-							repo,
-							path: filePath,
-							ref,
-						});
-						if (Array.isArray(data) || data.type !== "file")
-							return null;
-						const fileContent = data as GitHubFileContent;
-						return Buffer.from(
-							fileContent.content,
-							"base64",
-						).toString("utf-8");
-					} catch {
-						return null;
-					}
-				};
-
 				const [ancestorContent, baseContent, headContent] =
 					await Promise.all([
-						fetchContent(mergeBaseSha),
-						fetchContent(base),
-						fetchContent(head),
+						fetchContent(owner, repo, filePath, mergeBaseSha),
+						fetchContent(owner, repo, filePath, baseSha),
+						fetchContent(headOwner, repo, filePath, headSha),
 					]);
 
 				if (
@@ -191,9 +200,22 @@ export async function GET(request: NextRequest) {
 			files,
 		});
 	} catch (e: unknown) {
-		return NextResponse.json(
-			{ error: getErrorMessage(e) || "Failed to compute merge conflicts" },
-			{ status: 500 },
-		);
+		const msg = getErrorMessage(e) || "Failed to compute merge conflicts";
+		const status =
+			e &&
+			typeof e === "object" &&
+			"status" in e &&
+			typeof (e as { status: unknown }).status === "number"
+				? (e as { status: number }).status
+				: 500;
+		if (status === 404) {
+			return NextResponse.json(
+				{
+					error: `Could not compare branches. The branch may not exist or you may not have access. If this is a fork PR, ensure the head branch is accessible.`,
+				},
+				{ status: 404 },
+			);
+		}
+		return NextResponse.json({ error: msg }, { status });
 	}
 }

@@ -3,6 +3,12 @@
 export type PRMergedEvent = { type: "pr:merged"; owner: string; repo: string; number: number };
 export type PRClosedEvent = { type: "pr:closed"; owner: string; repo: string; number: number };
 export type PRReopenedEvent = { type: "pr:reopened"; owner: string; repo: string; number: number };
+export type PRConvertedToDraftEvent = {
+	type: "pr:converted_to_draft";
+	owner: string;
+	repo: string;
+	number: number;
+};
 export type PRCommentedEvent = {
 	type: "pr:commented";
 	owner: string;
@@ -126,12 +132,16 @@ export type PinRemovedEvent = { type: "pin:removed"; owner: string; repo: string
 
 // ── Settings Events ───────────────────────────────────────────
 
+export type SettingsOpenEvent = { type: "settings:open"; tab?: string };
 export type SettingsUpdatedEvent = { type: "settings:updated" };
-export type CodeThemeCreatedEvent = { type: "code-theme:created" };
-export type CodeThemeDeletedEvent = { type: "code-theme:deleted" };
 export type GitHubAccountAddedEvent = { type: "github-account:added" };
 export type GitHubAccountRemovedEvent = { type: "github-account:removed" };
 export type GitHubAccountSwitchedEvent = { type: "github-account:switched" };
+
+// ── Notification Events ──────────────────────────────────────
+
+export type NotificationReadEvent = { type: "notification:read"; id: string };
+export type NotificationAllReadEvent = { type: "notification:all-read"; ids: string[] };
 
 // ── Discriminated Union ───────────────────────────────────────
 
@@ -139,6 +149,7 @@ export type MutationEvent =
 	| PRMergedEvent
 	| PRClosedEvent
 	| PRReopenedEvent
+	| PRConvertedToDraftEvent
 	| PRCommentedEvent
 	| PRReviewedEvent
 	| PRRenamedEvent
@@ -167,12 +178,13 @@ export type MutationEvent =
 	| RepoBranchDeletedEvent
 	| PinAddedEvent
 	| PinRemovedEvent
+	| SettingsOpenEvent
 	| SettingsUpdatedEvent
-	| CodeThemeCreatedEvent
-	| CodeThemeDeletedEvent
 	| GitHubAccountAddedEvent
 	| GitHubAccountRemovedEvent
-	| GitHubAccountSwitchedEvent;
+	| GitHubAccountSwitchedEvent
+	| NotificationReadEvent
+	| NotificationAllReadEvent;
 
 export type MutationEventType = MutationEvent["type"];
 

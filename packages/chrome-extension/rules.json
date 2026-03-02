@@ -70,6 +70,20 @@
 		}
 	},
 	{
+		"id": 6,
+		"priority": 3,
+		"action": {
+			"type": "redirect",
+			"redirect": {
+				"regexSubstitution": "https://better-hub.com/\\1/\\2\\3"
+			}
+		},
+		"condition": {
+			"regexFilter": "^https://github\\.com/([^/]+)/([^/]+)\\.git(.*)$",
+			"resourceTypes": ["main_frame"]
+		}
+	},
+	{
 		"id": 11,
 		"priority": 5,
 		"action": { "type": "allow" },

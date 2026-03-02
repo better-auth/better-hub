@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
@@ -11,23 +11,17 @@ import {
 	CircleOff,
 	CircleDot,
 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { TimeAgo } from "@/components/ui/time-ago";
 import {
 	addIssueComment,
 	closeIssue,
 	reopenIssue,
 } from "@/app/(app)/repos/[owner]/[repo]/issues/issue-actions";
-import { MarkdownEditor } from "@/components/shared/markdown-editor";
-import { ClientMarkdown } from "@/components/shared/client-markdown";
+import { MarkdownEditor, type MarkdownEditorRef } from "@/components/shared/markdown-editor";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
-
-interface OptimisticComment {
-	id: number;
-	body: string;
-	created_at: string;
-}
+import type { IssueComment } from "@/components/issue/issue-comments-client";
 
 type CloseReason = "completed" | "not_planned";
 
@@ -36,6 +30,8 @@ interface IssueCommentFormProps {
 	repo: string;
 	issueNumber: number;
 	issueState: string;
+	canClose?: boolean;
+	canReopen?: boolean;
 	userAvatarUrl?: string;
 	userName?: string;
 	participants?: Array<{ login: string; avatar_url: string }>;
@@ -46,21 +42,48 @@ export function IssueCommentForm({
 	repo,
 	issueNumber,
 	issueState,
+	canClose = false,
+	canReopen = false,
 	userAvatarUrl,
 	userName,
 	participants,
 }: IssueCommentFormProps) {
 	const router = useRouter();
-	const [body, setBody] = useState("");
+	const queryClient = useQueryClient();
+	const draftKey = `better-hub:draft:comment:${owner}/${repo}/${issueNumber}`;
+
+	// Restore draft on mount
+	const [body, setBody] = useState(() => {
+		if (typeof window === "undefined") return "";
+		try {
+			const raw = localStorage.getItem(draftKey);
+			return raw ? (JSON.parse(raw) as string) : "";
+		} catch {
+			return "";
+		}
+	});
 	const [isPending, startTransition] = useTransition();
 	const [error, setError] = useState<string | null>(null);
-	const [optimisticComments, setOptimisticComments] = useState<OptimisticComment[]>([]);
 	const [closeDropdownOpen, setCloseDropdownOpen] = useState(false);
 	const [selectedReason, setSelectedReason] = useState<CloseReason>("completed");
 	const dropdownRef = useRef<HTMLDivElement>(null);
+	const editorRef = useRef<MarkdownEditorRef>(null);
 	const { emit } = useMutationEvents();
 
 	useClickOutside(dropdownRef, () => setCloseDropdownOpen(false));
+
+	// Persist draft when body changes (debounced)
+	useEffect(() => {
+		if (!body.trim()) return;
+		const t = setTimeout(() => {
+			try {
+				localStorage.setItem(draftKey, JSON.stringify(body));
+			} catch {
+				/* ignore */
+			}
+		}, 500);
+		return () => clearTimeout(t);
+	}, [body, draftKey]);
 
 	const isOpen = issueState === "open";
 
@@ -70,34 +93,48 @@ export function IssueCommentForm({
 		setError(null);
 
 		const optimisticId = Date.now();
-		setOptimisticComments((prev) => [
+		const queryKey = ["issue-comments", owner, repo, issueNumber];
+		const optimisticComment: IssueComment = {
+			id: optimisticId,
+			body: commentBody,
+			user: userName
+				? { login: userName, avatar_url: userAvatarUrl ?? "" }
+				: null,
+			created_at: new Date().toISOString(),
+			_optimisticStatus: "pending",
+		};
+
+		queryClient.setQueryData<IssueComment[]>(queryKey, (prev = []) => [
 			...prev,
-			{
-				id: optimisticId,
-				body: commentBody,
-				created_at: new Date().toISOString(),
-			},
+			optimisticComment,
 		]);
+
 		setBody("");
+		editorRef.current?.clear();
+		try {
+			localStorage.removeItem(draftKey);
+		} catch {
+			/* ignore */
+		}
 
 		(async () => {
 			const res = await addIssueComment(owner, repo, issueNumber, commentBody);
 			if (res.error) {
 				setError(res.error);
-				setOptimisticComments((prev) =>
-					prev.filter((c) => c.id !== optimisticId),
+				queryClient.setQueryData<IssueComment[]>(queryKey, (prev = []) =>
+					prev.map((c) =>
+						c.id === optimisticId
+							? {
+									...c,
+									_optimisticStatus:
+										"failed" as const,
+								}
+							: c,
+					),
 				);
-				setBody(commentBody);
 			} else {
 				emit({ type: "issue:commented", owner, repo, number: issueNumber });
 				router.refresh();
-				setTimeout(
-					() =>
-						setOptimisticComments((prev) =>
-							prev.filter((c) => c.id !== optimisticId),
-						),
-					2000,
-				);
 			}
 		})();
 	};
@@ -117,6 +154,11 @@ export function IssueCommentForm({
 				setError(res.error);
 			} else {
 				setBody("");
+				try {
+					localStorage.removeItem(draftKey);
+				} catch {
+					/* ignore */
+				}
 				emit({ type: "issue:closed", owner, repo, number: issueNumber });
 				router.refresh();
 			}
@@ -144,37 +186,6 @@ export function IssueCommentForm({
 
 	return (
 		<div className="space-y-3">
-			{/* Optimistic comments */}
-			{optimisticComments.map((c) => (
-				<div
-					key={c.id}
-					className="border border-border/60 rounded-lg overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200"
-				>
-					<div className="flex items-center gap-2 px-3 py-1.5 border-b border-border/60 bg-muted/40">
-						{userAvatarUrl ? (
-							<Image
-								src={userAvatarUrl}
-								alt=""
-								width={16}
-								height={16}
-								className="rounded-full shrink-0"
-							/>
-						) : (
-							<div className="w-4 h-4 rounded-full bg-muted-foreground shrink-0" />
-						)}
-						<span className="text-xs font-medium text-foreground/80">
-							{userName || "You"}
-						</span>
-						<span className="text-[10px] text-muted-foreground ml-auto shrink-0">
-							<TimeAgo date={c.created_at} />
-						</span>
-					</div>
-					<div className="px-3 py-2.5 text-sm">
-						<ClientMarkdown content={c.body} />
-					</div>
-				</div>
-			))}
-
 			{/* Comment form */}
 			<div className="border border-border/60 rounded-md overflow-hidden">
 				<div className="px-3.5 py-2 border-b border-border/60 bg-muted/40">
@@ -195,6 +206,7 @@ export function IssueCommentForm({
 				</div>
 				<div className="p-2.5">
 					<MarkdownEditor
+						ref={editorRef}
 						value={body}
 						onChange={setBody}
 						placeholder="Leave a comment..."
@@ -221,7 +233,7 @@ export function IssueCommentForm({
 						</div>
 						<div className="flex items-center gap-2">
 							{/* Close / Reopen button */}
-							{isOpen ? (
+							{canClose && isOpen ? (
 								<div
 									className="relative"
 									ref={dropdownRef}
@@ -351,7 +363,7 @@ export function IssueCommentForm({
 										</div>
 									)}
 								</div>
-							) : (
+							) : canReopen && !isOpen ? (
 								<button
 									onClick={handleReopen}
 									disabled={isPending}
@@ -372,7 +384,7 @@ export function IssueCommentForm({
 										? "Reopen with comment"
 										: "Reopen issue"}
 								</button>
-							)}
+							) : null}
 
 							{/* Comment button */}
 							<button

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, WrapText } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,7 @@ import { useGlobalChat, type InlineContext } from "@/components/shared/global-ch
 import { CommitDialog } from "@/components/shared/commit-dialog";
 import { commitFileEdit } from "@/app/(app)/repos/[owner]/[repo]/blob/blob-actions";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
+import { DocumentOutline } from "@/components/repo/document-outline";
 
 export function MarkdownBlobView({
 	rawView,
@@ -47,6 +48,7 @@ export function MarkdownBlobView({
 	const [commitDialogOpen, setCommitDialogOpen] = useState(false);
 	const [currentSha, setCurrentSha] = useState(initialSha);
 	const [wordWrap, setWordWrap] = useState(false);
+	const previewContainerRef = useRef<HTMLDivElement>(null);
 
 	const displayName = filePath || filename;
 
@@ -199,7 +201,15 @@ export function MarkdownBlobView({
 			>
 				{rawView}
 			</div>
-			<div className={mode === "preview" ? "block" : "hidden"}>{previewView}</div>
+			<div className={cn(mode === "preview" ? "flex gap-0" : "hidden")}>
+				<div ref={previewContainerRef} className="flex-1 min-w-0">
+					{previewView}
+				</div>
+				<DocumentOutline
+					contentRef={previewContainerRef}
+					visible={mode === "preview"}
+				/>
+			</div>
 			{mode === "edit" && (
 				<div className="border border-border rounded-md">
 					<textarea

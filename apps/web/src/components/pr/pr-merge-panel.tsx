@@ -12,6 +12,9 @@ import {
 	Check,
 	Ghost,
 	Sparkles,
+	GitBranch,
+	FilePenLine,
+	Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGlobalChat } from "@/components/shared/global-chat-provider";
@@ -23,10 +26,13 @@ import {
 	DialogDescription,
 	DialogFooter,
 } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
 	mergePullRequest,
 	closePullRequest,
 	reopenPullRequest,
+	updatePRBranch,
+	convertPRToDraft,
 	type MergeMethod,
 } from "@/app/(app)/repos/[owner]/[repo]/pulls/pr-actions";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
@@ -47,8 +53,11 @@ interface PRMergePanelProps {
 	allowRebaseMerge: boolean;
 	headBranch: string;
 	baseBranch: string;
+	draft?: boolean;
 	canWrite?: boolean;
 	canTriage?: boolean;
+	isAuthor?: boolean;
+	branchBehindBase?: boolean;
 }
 
 const mergeMethodLabels: Record<MergeMethod, { short: string; description: string }> = {
@@ -81,9 +90,13 @@ export function PRMergePanel({
 	allowRebaseMerge,
 	headBranch,
 	baseBranch,
+	draft = false,
 	canWrite = true,
 	canTriage = true,
+	isAuthor = false,
+	branchBehindBase = false,
 }: PRMergePanelProps) {
+	const hasPermission = canTriage || isAuthor;
 	const availableMethods: MergeMethod[] = [
 		...(allowSquashMerge ? ["squash" as const] : []),
 		...(allowMergeCommit ? ["merge" as const] : []),
@@ -100,19 +113,34 @@ export function PRMergePanel({
 	const [commitTitle, setCommitTitle] = useState("");
 	const [commitMessage, setCommitMessage] = useState("");
 	const [isPending, startTransition] = useTransition();
-	const [pendingAction, setPendingAction] = useState<"merge" | "close" | "reopen" | null>(
-		null,
-	);
+	const [pendingAction, setPendingAction] = useState<
+		"merge" | "close" | "reopen" | "draft" | "updateBranch" | null
+	>(null);
 	const [result, setResult] = useState<{ type: "success" | "error"; message: string } | null>(
 		null,
 	);
+	const [mergeError, setMergeError] = useState<string | null>(null);
+	const [mergeErrorDialogOpen, setMergeErrorDialogOpen] = useState(false);
 	const [isMerged, setIsMerged] = useState(false);
 	const [isGenerating, setIsGenerating] = useState(false);
+	const [toolsDropdownOpen, setToolsDropdownOpen] = useState(false);
 	const dropdownRef = useRef<HTMLDivElement>(null);
+	const toolsDropdownRef = useRef<HTMLDivElement>(null);
+
+	const isOpen = state === "open" && !merged && !isMerged;
+	const showUpdateBranch =
+		isOpen && hasPermission && (branchBehindBase || mergeable === false);
+	const updateBranchDisabled = mergeable === false;
+	const canConvertToDraft = isOpen && (canWrite || isAuthor) && !draft;
 
 	useClickOutside(
 		dropdownRef,
 		useCallback(() => setDropdownOpen(false), []),
+	);
+
+	useClickOutside(
+		toolsDropdownRef,
+		useCallback(() => setToolsDropdownOpen(false), []),
 	);
 
 	const handleFixWithGhost = () => {
@@ -162,17 +190,36 @@ export function PRMergePanel({
 				}),
 			});
 			const data = await res.json();
+			if (!res.ok) {
+				if (data.error === "CREDIT_EXHAUSTED") {
+					setResult({
+						type: "error",
+						message: "Your credits have been used up",
+					});
+				} else if (data.error === "SPENDING_LIMIT_REACHED") {
+					setResult({
+						type: "error",
+						message: "Monthly spending limit reached",
+					});
+				} else {
+					setResult({
+						type: "error",
+						message: data.error || "Failed to generate",
+					});
+				}
+				return;
+			}
 			if (data.title) setCommitTitle(data.title);
 			if (data.description) setCommitMessage(data.description);
 		} catch {
-			// silently fail
+			setResult({ type: "error", message: "Failed to generate commit message" });
 		} finally {
 			setIsGenerating(false);
 		}
 	};
 
 	useEffect(() => {
-		if (result) {
+		if (result && result.type === "success") {
 			const timer = setTimeout(() => setResult(null), 3000);
 			return () => clearTimeout(timer);
 		}
@@ -185,6 +232,7 @@ export function PRMergePanel({
 
 	const doMerge = (mergeMethod: MergeMethod, title?: string, message?: string) => {
 		setResult(null);
+		setMergeError(null);
 		setPendingAction("merge");
 		startTransition(async () => {
 			const res = await mergePullRequest(
@@ -196,8 +244,12 @@ export function PRMergePanel({
 				message,
 			);
 			if (res.error) {
-				setResult({ type: "error", message: res.error });
+				setMergeError(res.error);
+				if (!squashDialogOpen) {
+					setMergeErrorDialogOpen(true);
+				}
 			} else {
+				setMergeError(null);
 				setResult({ type: "success", message: "Merged" });
 				emit({ type: "pr:merged", owner, repo, number: pullNumber });
 				invalidatePRQueries();
@@ -209,6 +261,7 @@ export function PRMergePanel({
 	};
 
 	const handleMergeClick = () => {
+		setMergeError(null);
 		if (method === "squash") {
 			setCommitTitle(`${prTitle} (#${pullNumber})`);
 			setCommitMessage("");
@@ -254,10 +307,46 @@ export function PRMergePanel({
 		});
 	};
 
+	const handleUpdateBranch = () => {
+		setResult(null);
+		setPendingAction("updateBranch");
+		startTransition(async () => {
+			const res = await updatePRBranch(owner, repo, pullNumber);
+			if (res.error) {
+				setResult({ type: "error", message: res.error });
+			} else {
+				setResult({ type: "success", message: "Branch updated" });
+				invalidatePRQueries();
+				router.refresh();
+			}
+		});
+	};
+
+	const handleConvertToDraft = () => {
+		setResult(null);
+		setPendingAction("draft");
+		startTransition(async () => {
+			const res = await convertPRToDraft(owner, repo, pullNumber);
+			if (res.error) {
+				setResult({ type: "error", message: res.error });
+			} else {
+				setResult({ type: "success", message: "Converted to draft" });
+				emit({
+					type: "pr:converted_to_draft",
+					owner,
+					repo,
+					number: pullNumber,
+				});
+				invalidatePRQueries();
+				router.refresh();
+			}
+		});
+	};
+
 	if (merged || isMerged) return null;
 
 	if (state === "closed") {
-		if (!canTriage) return null;
+		if (!canTriage && !isAuthor) return null;
 		return (
 			<div className="flex items-center gap-2">
 				{result && (
@@ -275,7 +364,7 @@ export function PRMergePanel({
 				<button
 					onClick={handleReopen}
 					disabled={isPending}
-					className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+					className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
 				>
 					{isPending && pendingAction === "reopen" ? (
 						<Loader2 className="w-3 h-3 animate-spin" />
@@ -288,7 +377,7 @@ export function PRMergePanel({
 		);
 	}
 
-	if (!canWrite && !canTriage) return null;
+	if (!canWrite && !canTriage && !isAuthor) return null;
 
 	return (
 		<>
@@ -311,7 +400,7 @@ export function PRMergePanel({
 					<div ref={dropdownRef} className="relative">
 						<div
 							className={cn(
-								"flex items-center divide-x",
+								"flex items-center divide-x rounded-sm overflow-hidden",
 								mergeable === false
 									? "border border-amber-500/40 divide-amber-500/20"
 									: "border border-foreground/80 divide-foreground/20",
@@ -319,24 +408,28 @@ export function PRMergePanel({
 						>
 							<button
 								onClick={
-									mergeable === false
+									mergeable === false || draft
 										? undefined
 										: handleMergeClick
 								}
 								disabled={
 									isPending ||
-									mergeable === false
+									mergeable === false ||
+									draft
 								}
 								className={cn(
-									"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors disabled:cursor-not-allowed",
-									mergeable === false
+									"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider rounded-l-sm transition-colors disabled:cursor-not-allowed",
+									mergeable === false || draft
 										? "bg-amber-500/80 text-background opacity-90"
 										: "bg-foreground text-background hover:bg-foreground/90 cursor-pointer disabled:opacity-50",
 								)}
 								title={
-									mergeable === false
-										? "Resolve conflicts before merging"
-										: undefined
+									draft
+										? "This PR is still a draft"
+										: mergeable ===
+											  false
+											? "Resolve conflicts before merging"
+											: undefined
 								}
 							>
 								{isPending &&
@@ -352,10 +445,13 @@ export function PRMergePanel({
 								) : (
 									<GitMerge className="w-3 h-3" />
 								)}
-								{mergeable === false
-									? "Conflicts"
-									: mergeMethodLabels[method]
-											.short}
+								{draft
+									? "Draft"
+									: mergeable === false
+										? "Conflicts"
+										: mergeMethodLabels[
+												method
+											].short}
 							</button>
 
 							<button
@@ -364,7 +460,7 @@ export function PRMergePanel({
 								}
 								disabled={isPending}
 								className={cn(
-									"flex items-center self-stretch px-1.5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
+									"flex items-center self-stretch px-1.5 rounded-r-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
 									mergeable === false
 										? "bg-amber-500/80 text-background hover:bg-amber-500/70"
 										: "bg-foreground text-background hover:bg-foreground/90",
@@ -375,7 +471,7 @@ export function PRMergePanel({
 						</div>
 
 						{dropdownOpen && (
-							<div className="absolute top-full right-0 mt-1 w-52 bg-background border border-border shadow-lg dark:shadow-2xl z-50 py-1">
+							<div className="absolute top-full right-0 mt-1 w-52 bg-background border border-border shadow-lg dark:shadow-2xl z-50 py-1 rounded-sm">
 								{availableMethods.map((m) => {
 									const disabled =
 										mergeable === false;
@@ -473,12 +569,117 @@ export function PRMergePanel({
 					</div>
 				)}
 
+				{/* Tools dropdown */}
+				{(showUpdateBranch || canConvertToDraft) && (
+					<div ref={toolsDropdownRef} className="relative">
+						<button
+							onClick={() =>
+								setToolsDropdownOpen((o) => !o)
+							}
+							disabled={isPending}
+							className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border rounded-sm text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+						>
+							<Wrench className="w-3 h-3" />
+							Actions
+							<ChevronDown className="w-3 h-3" />
+						</button>
+
+						{toolsDropdownOpen && (
+							<div className="absolute top-full right-0 mt-1 w-52 bg-background border border-border shadow-lg dark:shadow-2xl z-50 py-1 rounded-sm">
+								{showUpdateBranch &&
+									(updateBranchDisabled ? (
+										<Tooltip
+											delayDuration={
+												0
+											}
+										>
+											<TooltipTrigger
+												asChild
+											>
+												<div className="w-full flex items-center gap-2 px-3 py-1.5 text-left opacity-50 cursor-not-allowed text-amber-600 dark:text-amber-400">
+													<GitBranch className="w-3 h-3 shrink-0" />
+													<span className="text-xs">
+														Update
+														branch
+													</span>
+												</div>
+											</TooltipTrigger>
+											<TooltipContent
+												side="left"
+												className="text-xs font-mono max-w-[240px]"
+											>
+												Update
+												branch
+												is
+												unavailable
+												while
+												there
+												are
+												merge
+												conflicts.
+											</TooltipContent>
+										</Tooltip>
+									) : (
+										<button
+											onClick={() => {
+												setToolsDropdownOpen(
+													false,
+												);
+												handleUpdateBranch();
+											}}
+											disabled={
+												isPending
+											}
+											className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-muted-foreground hover:bg-muted/40 dark:hover:bg-white/[0.03] hover:text-foreground transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+										>
+											{isPending &&
+											pendingAction ===
+												"updateBranch" ? (
+												<Loader2 className="w-3 h-3 shrink-0 animate-spin" />
+											) : (
+												<GitBranch className="w-3 h-3 shrink-0" />
+											)}
+											<span className="text-xs">
+												Update
+												branch
+											</span>
+										</button>
+									))}
+								{canConvertToDraft && (
+									<button
+										onClick={() => {
+											setToolsDropdownOpen(
+												false,
+											);
+											handleConvertToDraft();
+										}}
+										disabled={isPending}
+										className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-muted-foreground hover:bg-muted/40 dark:hover:bg-white/[0.03] hover:text-foreground transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+									>
+										{isPending &&
+										pendingAction ===
+											"draft" ? (
+											<Loader2 className="w-3 h-3 shrink-0 animate-spin" />
+										) : (
+											<FilePenLine className="w-3 h-3 shrink-0" />
+										)}
+										<span className="text-xs">
+											Convert to
+											draft
+										</span>
+									</button>
+								)}
+							</div>
+						)}
+					</div>
+				)}
+
 				{/* Close button */}
-				{canTriage && (
+				{isOpen && (canTriage || isAuthor) && (
 					<button
 						onClick={handleClose}
 						disabled={isPending}
-						className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-red-300/40 dark:border-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+						className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-red-300/40 dark:border-red-500/20 rounded-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						{isPending && pendingAction === "close" ? (
 							<Loader2 className="w-3 h-3 animate-spin" />
@@ -489,6 +690,49 @@ export function PRMergePanel({
 					</button>
 				)}
 			</div>
+
+			{/* Merge error dialog (for non-squash merges) */}
+			<Dialog
+				open={mergeErrorDialogOpen}
+				onOpenChange={(open) => {
+					setMergeErrorDialogOpen(open);
+					if (!open) setMergeError(null);
+				}}
+			>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle className="flex items-center gap-2 text-sm font-mono text-destructive">
+							<XCircle className="w-4 h-4" />
+							Merge failed
+						</DialogTitle>
+						<DialogDescription className="text-xs text-muted-foreground">
+							{mergeError}
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<button
+							onClick={() => {
+								setMergeErrorDialogOpen(false);
+								setMergeError(null);
+							}}
+							className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer"
+						>
+							Dismiss
+						</button>
+						<button
+							onClick={() => {
+								setMergeErrorDialogOpen(false);
+								setMergeError(null);
+								handleMergeClick();
+							}}
+							className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider bg-foreground text-background hover:bg-foreground/90 border border-foreground/80 rounded transition-colors cursor-pointer"
+						>
+							<RotateCcw className="w-3 h-3" />
+							Retry
+						</button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 
 			{/* Squash merge dialog */}
 			<Dialog open={squashDialogOpen} onOpenChange={setSquashDialogOpen}>
@@ -503,7 +747,7 @@ export function PRMergePanel({
 						</DialogDescription>
 					</DialogHeader>
 					{mergeable === false && (
-						<div className="flex items-center gap-2.5 px-3 py-2.5 border border-amber-500/30 bg-amber-500/5 rounded-md">
+						<div className="flex items-center gap-2.5 px-3 py-2.5 border border-amber-500/30 bg-amber-500/5 rounded-sm">
 							<GitMerge className="w-3.5 h-3.5 text-amber-500 shrink-0" />
 							<div className="flex-1 min-w-0">
 								<p className="text-xs font-medium text-amber-600 dark:text-amber-400">
@@ -522,10 +766,30 @@ export function PRMergePanel({
 									setSquashDialogOpen(false);
 									handleFixWithGhost();
 								}}
-								className="flex items-center gap-1 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer rounded shrink-0"
+								className="flex items-center gap-1 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer rounded-sm shrink-0"
 							>
 								<Ghost className="w-3 h-3" />
 								Fix
+							</button>
+						</div>
+					)}
+					{mergeError && (
+						<div className="flex items-start gap-2.5 px-3 py-2.5 border border-destructive/30 bg-destructive/5 rounded-sm">
+							<XCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+							<div className="flex-1 min-w-0">
+								<p className="text-xs font-medium text-destructive">
+									Merge failed
+								</p>
+								<p className="text-[11px] text-muted-foreground mt-0.5">
+									{mergeError}
+								</p>
+							</div>
+							<button
+								type="button"
+								onClick={() => setMergeError(null)}
+								className="p-0.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer rounded-sm shrink-0"
+							>
+								<XCircle className="w-3.5 h-3.5" />
 							</button>
 						</div>
 					)}
@@ -544,7 +808,7 @@ export function PRMergePanel({
 												.value,
 										)
 									}
-									className="w-full bg-transparent border border-border px-3 py-2 pr-8 text-sm font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/20 focus:ring-[3px] focus:ring-ring/50 transition-colors rounded-md"
+									className="w-full bg-transparent border border-border px-3 py-2 pr-8 text-sm font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/20 focus:ring-[3px] focus:ring-ring/50 transition-colors rounded-sm"
 									placeholder="Commit title"
 								/>
 								<button
@@ -590,7 +854,7 @@ export function PRMergePanel({
 					<DialogFooter>
 						<button
 							onClick={() => setSquashDialogOpen(false)}
-							className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer"
+							className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer"
 						>
 							Cancel
 						</button>
@@ -599,11 +863,12 @@ export function PRMergePanel({
 							disabled={
 								isPending ||
 								!commitTitle.trim() ||
-								mergeable === false
+								mergeable === false ||
+								draft
 							}
 							className={cn(
-								"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
-								mergeable === false
+								"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
+								mergeable === false || draft
 									? "bg-amber-500/80 text-background border border-amber-500/40 cursor-not-allowed"
 									: "bg-foreground text-background hover:bg-foreground/90 border border-foreground/80 cursor-pointer",
 							)}

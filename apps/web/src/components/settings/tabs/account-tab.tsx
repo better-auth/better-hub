@@ -5,7 +5,6 @@ import {
 	LogOut,
 	Trash2,
 	Github,
-	Users,
 	Shield,
 	Check,
 	Lock,
@@ -16,7 +15,6 @@ import {
 	Link as LinkIcon,
 	Calendar,
 } from "lucide-react";
-import { formatForDisplay } from "@tanstack/react-hotkeys";
 import { cn } from "@/lib/utils";
 import { signIn, signOut } from "@/lib/auth-client";
 import { SCOPE_GROUPS, scopesToGroupIds } from "@/lib/github-scopes";
@@ -430,26 +428,6 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 						</div>
 					</>
 				)}
-			</div>
-
-			{/* GitHub Accounts */}
-			<div className="px-4 py-4">
-				<label className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
-					GitHub Accounts
-				</label>
-				<p className="mt-1 text-[10px] text-muted-foreground/50 font-mono">
-					Add extra GitHub accounts via PAT and switch between them.
-				</p>
-				<div className="mt-2 flex items-center gap-2">
-					<Users className="w-3.5 h-3.5 text-muted-foreground" />
-					<span className="text-[10px] font-mono text-muted-foreground/50">
-						Use the command menu (
-						<kbd className="border border-border/60 px-1 py-0.5 rounded-sm text-[9px] font-mono">
-							{formatForDisplay("Mod+K")}
-						</kbd>{" "}
-						&rarr; Switch Account) to manage accounts.
-					</span>
-				</div>
 			</div>
 
 			{/* Sign Out */}

@@ -1,7 +1,8 @@
 "use client";
 
 import { RepoBreadcrumb } from "@/components/repo/repo-breadcrumb";
-import { useState, useCallback, useRef, useTransition } from "react";
+import { useState, useCallback, useRef, useTransition, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { PanelLeft } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { setRepoSidebarState } from "./repo-sidebar-actions";
@@ -12,11 +13,14 @@ interface RepoLayoutWrapperProps {
 	owner: string;
 	repo: string;
 	ownerType: string;
+	ownerAvatarUrl?: string;
 	initialCollapsed?: boolean;
 	initialWidth?: number;
 }
 
-const DEFAULT_WIDTH = 260;
+const DEFAULT_WIDTH = 340;
+const MAX_WIDTH = 400;
+const MIN_WIDTH = 200;
 const SNAP_THRESHOLD = 120;
 const SPRING = { type: "spring" as const, stiffness: 500, damping: 35 };
 
@@ -28,14 +32,32 @@ export function RepoLayoutWrapper({
 	initialCollapsed = false,
 	initialWidth = DEFAULT_WIDTH,
 	ownerType,
+	ownerAvatarUrl,
 }: RepoLayoutWrapperProps) {
-	const [sidebarWidth, setSidebarWidth] = useState(initialCollapsed ? 0 : initialWidth);
+	const pathname = usePathname();
+	const isPrPage = pathname.includes("/pulls/");
+	const effectiveInitialCollapsed = isPrPage ? true : initialCollapsed;
+
+	const [sidebarWidth, setSidebarWidth] = useState(
+		effectiveInitialCollapsed ? 0 : initialWidth,
+	);
 	const lastOpenWidthRef = useRef(initialWidth);
 	const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
 	const isDraggingRef = useRef(false);
 	const [isDragging, setIsDragging] = useState(false);
 	const [, startTransition] = useTransition();
 	const collapsed = sidebarWidth === 0;
+	const prevIsPrPageRef = useRef(isPrPage);
+
+	useEffect(() => {
+		const wasOnPrPage = prevIsPrPageRef.current;
+		prevIsPrPageRef.current = isPrPage;
+
+		if (isPrPage && !wasOnPrPage && sidebarWidth > 0) {
+			lastOpenWidthRef.current = sidebarWidth;
+			setSidebarWidth(0);
+		}
+	}, [isPrPage, sidebarWidth]);
 
 	const persistState = useCallback((isCollapsed: boolean, width: number) => {
 		startTransition(() => {
@@ -75,7 +97,10 @@ export function RepoLayoutWrapper({
 				if (raw < SNAP_THRESHOLD) {
 					setSidebarWidth(0);
 				} else {
-					const clamped = Math.max(180, Math.min(DEFAULT_WIDTH, raw));
+					const clamped = Math.max(
+						MIN_WIDTH,
+						Math.min(MAX_WIDTH, raw),
+					);
 					setSidebarWidth(clamped);
 					lastOpenWidthRef.current = clamped;
 				}
@@ -196,17 +221,20 @@ export function RepoLayoutWrapper({
 				className="flex-1 min-w-0 flex flex-col min-h-0"
 				style={
 					{
-						"--repo-pr": collapsed ? "0.5rem" : "1rem",
+						"--repo-pr": collapsed
+							? "calc(var(--spacing) * 4)"
+							: "1rem",
 					} as React.CSSProperties
 				}
 			>
 				<div
-					className={`hidden lg:flex pl-7 pr-2 pt-3 pb-1 ${collapsed ? "visible" : "invisible"}`}
+					className={`hidden lg:flex pl-4 pr-2 pt-3 pb-1 ${collapsed ? "visible" : "invisible"}`}
 				>
 					<RepoBreadcrumb
 						owner={owner}
 						repoName={repo}
 						ownerType={ownerType}
+						ownerAvatarUrl={ownerAvatarUrl}
 					/>
 				</div>
 				{children}

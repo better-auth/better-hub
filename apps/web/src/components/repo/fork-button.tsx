@@ -39,7 +39,7 @@ export function ForkButton({ owner, repo, forkCount, disabled = false }: ForkBut
 				onClick={handleFork}
 				disabled={isPending || disabled}
 				className={cn(
-					"flex items-center justify-center gap-1.5 text-[11px] font-mono py-1.5 text-muted-foreground transition-colors w-full",
+					"flex items-center justify-center gap-1.5 text-[11px] font-mono py-1.5 text-muted-foreground rounded-md transition-colors w-full",
 					!(isPending || disabled) &&
 						"cursor-pointer hover:text-foreground",
 					(isPending || disabled) &&

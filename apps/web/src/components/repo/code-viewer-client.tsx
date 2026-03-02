@@ -20,6 +20,8 @@ import { useGlobalChat, type InlineContext } from "@/components/shared/global-ch
 import { CommitDialog } from "@/components/shared/commit-dialog";
 import { commitFileEdit } from "@/app/(app)/repos/[owner]/[repo]/blob/blob-actions";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
+import { useColorTheme } from "@/components/theme/theme-provider";
+import { highlightCodeClient } from "@/lib/shiki-client";
 
 interface CodeViewerClientProps {
 	html: string;
@@ -114,6 +116,32 @@ export function CodeViewerClient({
 	branch,
 }: CodeViewerClientProps) {
 	const { addCodeContext } = useGlobalChat();
+	const { themeId } = useColorTheme();
+
+	// Theme-reactive highlighting: use server HTML initially, re-highlight on theme change
+	const [currentHtml, setCurrentHtml] = useState(html);
+	const initialThemeRef = useRef<string | null>(null);
+
+	useEffect(() => {
+		if (initialThemeRef.current === null) {
+			initialThemeRef.current = themeId;
+			return;
+		}
+		if (themeId === initialThemeRef.current) return;
+
+		let cancelled = false;
+		highlightCodeClient(content, language, themeId).then((newHtml) => {
+			if (!cancelled) {
+				setCurrentHtml(newHtml);
+				initialThemeRef.current = themeId;
+			}
+		});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [themeId, content, language]);
+
 	const codeRef = useRef<HTMLDivElement>(null);
 	const [toolbarPos, setToolbarPos] = useState<{ x: number; y: number } | null>(null);
 	const [selectedRange, setSelectedRange] = useState<{
@@ -169,7 +197,7 @@ export function CodeViewerClient({
 		lines.forEach((el, i) => {
 			el.id = `L${i + 1}`;
 		});
-	}, [html]);
+	}, [currentHtml]);
 
 	// Apply highlight classes when highlightedLines changes
 	useEffect(() => {
@@ -187,7 +215,7 @@ export function CodeViewerClient({
 				el.classList.remove("line-highlighted");
 			}
 		});
-	}, [highlightedLines, html]);
+	}, [highlightedLines, currentHtml]);
 
 	// Read hash on mount and scroll to line
 	useEffect(() => {
@@ -977,7 +1005,9 @@ export function CodeViewerClient({
 					>
 						<div
 							className="code-content"
-							dangerouslySetInnerHTML={{ __html: html }}
+							dangerouslySetInnerHTML={{
+								__html: currentHtml,
+							}}
 						/>
 						<button
 							onClick={() => {

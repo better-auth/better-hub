@@ -153,15 +153,69 @@ export function RunDetail({
 	repo,
 	run,
 	jobs,
+	initialJobId,
 }: {
 	owner: string;
 	repo: string;
 	run: WorkflowRun;
 	jobs: Job[];
+	initialJobId?: number;
 }) {
-	const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
+	const [expandedSteps, setExpandedSteps] = useState<Set<string>>(() => {
+		if (!initialJobId) return new Set<string>();
+		const job = jobs.find((j) => j.id === initialJobId);
+		if (!job?.steps) return new Set<string>();
+		return new Set(job.steps.map((s) => `${initialJobId}-${s.number}`));
+	});
 	const jobLogsRef = useRef<Map<number, JobLogsState>>(new Map());
 	const [, forceUpdate] = useState(0);
+
+	// Auto-load logs for the initial job
+	const initialLoadRef = useRef(false);
+	if (initialJobId && !initialLoadRef.current) {
+		initialLoadRef.current = true;
+		const job = jobs.find((j) => j.id === initialJobId);
+		if (job && !jobLogsRef.current.has(initialJobId)) {
+			jobLogsRef.current.set(initialJobId, {
+				steps: [],
+				loading: true,
+				error: null,
+			});
+			fetch(
+				`/api/job-logs?${new URLSearchParams({ owner, repo, job_id: String(initialJobId) })}`,
+			)
+				.then(async (res) => {
+					if (!res.ok) {
+						const body = await res.json().catch(() => ({}));
+						jobLogsRef.current.set(initialJobId, {
+							steps: [],
+							loading: false,
+							error:
+								res.status === 410
+									? "Logs are no longer available"
+									: (body.error ??
+										"Failed to fetch logs"),
+						});
+					} else {
+						const data = await res.json();
+						jobLogsRef.current.set(initialJobId, {
+							steps: data.steps ?? [],
+							loading: false,
+							error: null,
+						});
+					}
+					forceUpdate((n) => n + 1);
+				})
+				.catch(() => {
+					jobLogsRef.current.set(initialJobId, {
+						steps: [],
+						loading: false,
+						error: "Failed to fetch logs",
+					});
+					forceUpdate((n) => n + 1);
+				});
+		}
+	}
 
 	const toggleStep = useCallback(
 		async (jobId: number, stepNumber: number) => {

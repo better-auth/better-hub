@@ -100,7 +100,7 @@ function Section({
 	children: React.ReactNode;
 }) {
 	return (
-		<div className="border border-dashed border-border/60 p-4">
+		<div className="border border-dashed border-border/60 p-4 rounded-md">
 			<div className="flex items-baseline gap-2 mb-4">
 				<h3 className="text-sm font-medium text-foreground">{title}</h3>
 				{subtitle && (
@@ -117,7 +117,7 @@ function Section({
 // --- Stat card ---
 function Stat({ label, value }: { label: string; value: string }) {
 	return (
-		<div className="flex flex-col gap-1 px-3 py-2.5 border border-dashed border-border/60">
+		<div className="flex flex-col gap-1 px-3 py-2.5 border border-dashed border-border/60 rounded-md">
 			<span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/60">
 				{label}
 			</span>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MoreHorizontal, Link, Copy, Quote, Check, Trash2, Loader2 } from "lucide-react";
+import { MoreHorizontal, Link, Copy, Quote, Check, Trash2, Loader2, Pencil } from "lucide-react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -18,6 +18,7 @@ type MessageActionsMenuProps = {
 	commentId: number;
 	body: string;
 	onDelete?: () => void;
+	onEdit?: () => void;
 } & (
 	| { contentType: "pr"; pullNumber: number; issueNumber?: never }
 	| { contentType: "issue"; issueNumber: number; pullNumber?: never }
@@ -32,6 +33,7 @@ export function MessageActionsMenu({
 	commentId,
 	body,
 	onDelete,
+	onEdit,
 }: MessageActionsMenuProps) {
 	const [copied, setCopied] = useState(false);
 	const [open, setOpen] = useState(false);
@@ -119,6 +121,21 @@ export function MessageActionsMenu({
 					<Quote className="w-3.5 h-3.5" />
 					<span>Quote reply</span>
 				</DropdownMenuItem>
+				{onEdit && (
+					<>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem
+							onSelect={(e) => {
+								e.preventDefault();
+								setOpen(false);
+								onEdit();
+							}}
+						>
+							<Pencil className="w-3.5 h-3.5" />
+							<span>Edit</span>
+						</DropdownMenuItem>
+					</>
+				)}
 				<DropdownMenuSeparator />
 				<DropdownMenuItem
 					onSelect={handleDelete}
