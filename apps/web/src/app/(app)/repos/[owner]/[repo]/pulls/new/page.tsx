@@ -1,54 +1,54 @@
 "use client";
 
-import { useState, useTransition, useRef, useMemo, useEffect, useCallback } from "react";
-import { useRouter, useParams, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import {
-	Loader2,
-	ChevronDown,
 	AlertCircle,
+	ArrowLeft,
 	Bold,
-	Italic,
+	ChevronDown,
 	Code,
+	CornerDownLeft,
+	Eye,
+	FileText,
+	GitBranch,
+	GitCommit,
+	GitCommitHorizontal,
+	Image as ImageIcon,
+	Italic,
 	Link as LinkIcon,
 	List,
 	ListOrdered,
-	Quote,
-	CornerDownLeft,
-	Eye,
-	Pencil,
-	GitBranch,
-	ArrowLeft,
-	Search,
-	FileText,
-	Plus,
+	Loader2,
 	Minus,
-	GitCommitHorizontal,
-	GitCommit,
-	Image as ImageIcon,
+	Pencil,
+	Plus,
+	Quote,
+	Search,
 } from "lucide-react";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import ReactMarkdown from "react-markdown";
-import { TimeAgo } from "@/components/ui/time-ago";
-import {
-	createPullRequest,
-	compareBranches,
-	fetchBranches,
-	highlightDiffFiles,
-	type CompareResult,
-	type BranchInfo,
-} from "./actions";
-import type { SyntaxToken } from "@/lib/shiki";
 import { uploadImage } from "@/app/(app)/repos/[owner]/[repo]/issues/actions";
-import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { PRDiffList } from "@/components/pr/pr-diff-list";
+import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { TimeAgo } from "@/components/ui/time-ago";
+import type { SyntaxToken } from "@/lib/shiki";
+import { cn } from "@/lib/utils";
+import {
+	type BranchInfo,
+	type CompareResult,
+	compareBranches,
+	createPullRequest,
+	fetchBranches,
+	highlightDiffFiles,
+} from "./actions";
 
 function branchKey(b: BranchInfo, repoOwner: string) {
 	return b.owner === repoOwner ? b.name : `${b.owner}:${b.name}`;
@@ -563,7 +563,7 @@ export default function NewPullRequestPage() {
 	const canSubmit = title.trim() && base && head && base !== head;
 
 	return (
-		<div className="max-w-5xl px-4 py-6">
+		<div className="mx-auto max-w-5xl px-4 py-6">
 			<div className="flex items-center gap-3 mb-6">
 				<Link
 					href={`/repos/${owner}/${repo}/pulls`}
