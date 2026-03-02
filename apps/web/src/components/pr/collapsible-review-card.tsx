@@ -524,7 +524,8 @@ function ResolveThreadButton({
 				);
 				if (!result.error) {
 					setResolved(true);
-					onResolved?.();
+					// Schedule collapse outside the transition so it's not deferred
+					setTimeout(() => onResolved?.(), 0);
 				}
 			}
 		});
