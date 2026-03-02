@@ -1,4 +1,5 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { createOpenAI } from "@ai-sdk/openai";
 import type { UIMessage } from "ai";
 import { convertToModelMessages, generateId, stepCountIs, streamText, tool } from "ai";
 import { z } from "zod";
@@ -31,7 +32,8 @@ import {
 } from "@/lib/github";
 import Supermemory from "supermemory";
 
-export const maxDuration = 800;
+// Vercel Hobby serverless limit is 300 seconds.
+export const maxDuration = 300;
 
 // ─── Model Config ───────────────────────────────────────────────────────────
 // Central config for "auto" mode. Swap models here — no other changes needed.
@@ -3365,6 +3367,11 @@ export async function POST(req: Request) {
 
 	const modelId = resolveModel(userModelChoice, taskType);
 
+	// Check if user configured an OpenAI-compatible endpoint
+	const useOpenAiCompatible = !!(settings.openaiApiUrl && settings.openaiApiKey);
+	const openaiApiUrl = settings.openaiApiUrl;
+	const openaiApiKey = settings.openaiApiKey;
+
 	// Custom models (not in MODEL_PRICING) require the user's own API key.
 	if (!isCustomApiKey && !hasModelPricing(modelId)) {
 		return new Response(
@@ -3421,8 +3428,15 @@ export async function POST(req: Request) {
 	}
 
 	try {
+		const provider = useOpenAiCompatible
+			? createOpenAI({
+					baseURL: openaiApiUrl!,
+					apiKey: openaiApiKey!,
+				})
+			: createOpenRouter({ apiKey });
+
 		const result = streamText({
-			model: createOpenRouter({ apiKey })(modelId),
+			model: provider(modelId),
 			system: systemPrompt,
 			messages: await convertToModelMessages(messages),
 			tools: tools as Parameters<typeof streamText>[0]["tools"],

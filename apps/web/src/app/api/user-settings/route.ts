@@ -18,6 +18,8 @@ const settingsUpdateSchema = z
 		ghostModel: z.string().max(100).optional(),
 		useOwnApiKey: z.boolean().optional(),
 		openrouterApiKey: z.string().max(500).nullable().optional(),
+		openaiApiUrl: z.string().max(500).nullable().optional(),
+		openaiApiKey: z.string().max(500).nullable().optional(),
 		githubPat: z.string().max(500).nullable().optional(),
 		codeThemeLight: z.string().max(100).optional(),
 		codeThemeDark: z.string().max(100).optional(),
@@ -38,6 +40,7 @@ export async function GET() {
 	return Response.json({
 		...settings,
 		openrouterApiKey: maskApiKey(settings.openrouterApiKey),
+		openaiApiKey: maskApiKey(settings.openaiApiKey),
 		githubPat: maskApiKey(settings.githubPat),
 	});
 }
@@ -71,6 +74,7 @@ export async function PATCH(request: Request) {
 	return Response.json({
 		...settings,
 		openrouterApiKey: maskApiKey(settings.openrouterApiKey),
+		openaiApiKey: maskApiKey(settings.openaiApiKey),
 		githubPat: maskApiKey(settings.githubPat),
 	});
 }

@@ -70,8 +70,8 @@ export const auth = betterAuth({
 					}),
 				]
 			: []),
-		...(process.env.VERCEL
-			? [oAuthProxy({ productionURL: "https://www.better-hub.com" })]
+		...(process.env.RAILWAY_PROJECT_NAME
+			? [oAuthProxy({ productionURL: "https://hub.thalles.me" })]
 			: []),
 	],
 	user: {
@@ -117,7 +117,7 @@ export const auth = betterAuth({
 	},
 	trustedOrigins: [
 		// Production
-		"https://www.better-hub.com",
+		"https://hub.thalles.me",
 		// Vercel preview
 		"https://better-hub-*-better-auth.vercel.app",
 		// Beta site

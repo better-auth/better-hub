@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo, memo } from "react";
+import { useState, useCallback, useEffect, useMemo, memo, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronDown, FileCode2 } from "lucide-react";
+import { ChevronDown, FileCode2, CheckCircle2, Circle, Loader2 } from "lucide-react";
 import type { Highlighter, BundledLanguage } from "shiki";
 import { cn } from "@/lib/utils";
 import { getLanguageFromFilename } from "@/lib/github-utils";
@@ -11,6 +11,11 @@ import { TimeAgo } from "@/components/ui/time-ago";
 import { ClientMarkdown } from "@/components/shared/client-markdown";
 import { ReactionDisplay, type Reactions } from "@/components/shared/reaction-display";
 import { UserTooltip } from "@/components/shared/user-tooltip";
+import type { ReviewThread } from "@/lib/github";
+import {
+	resolveReviewThread,
+	unresolveReviewThread,
+} from "@/app/(app)/repos/[owner]/[repo]/pulls/pr-actions";
 
 const reviewStateBadge: Record<string, { label: string; className: string }> = {
 	APPROVED: {
@@ -48,6 +53,8 @@ interface CollapsibleReviewCardProps {
 	bodyContent: React.ReactNode;
 	owner: string;
 	repo: string;
+	pullNumber?: number;
+	commentThreadMap?: Map<number, ReviewThread>;
 }
 
 // ── Client-side Shiki singleton (shared with highlighted-code-block) ──
@@ -271,6 +278,8 @@ export function CollapsibleReviewCard({
 	bodyContent,
 	owner,
 	repo,
+	pullNumber,
+	commentThreadMap,
 }: CollapsibleReviewCardProps) {
 	const [expanded, setExpanded] = useState(true);
 	const badge = reviewStateBadge[state] || reviewStateBadge.COMMENTED;
@@ -370,70 +379,178 @@ export function CollapsibleReviewCard({
 									"border-t border-border/40",
 							)}
 						>
-							{comments.map((comment) => (
-								<div
-									key={comment.id}
-									className="px-3 py-2 border-b border-border/30 last:border-b-0"
-								>
-									<div className="flex items-center gap-1.5 mb-1">
-										<button
-											onClick={() =>
-												navigateToFile(
-													comment.path,
-													comment.line,
-												)
-											}
-											className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/50 hover:text-info transition-colors truncate font-mono cursor-pointer"
-											title={`Go to ${comment.path}${comment.line !== null ? `:${comment.line}` : ""} in diff`}
-										>
-											<FileCode2 className="w-3 h-3 shrink-0" />
-											{
-												comment.path
-											}
-											{comment.line !==
-												null &&
-												`:${comment.line}`}
-										</button>
+							{comments.map((comment) => {
+								const thread =
+									commentThreadMap?.get(
+										comment.id,
+									);
+								// Show resolve button only on the first comment in the thread
+								const showResolve = thread
+									? thread.comments[0]
+											?.databaseId ===
+										comment.id
+									: false;
+
+								return (
+									<div
+										key={comment.id}
+										className="px-3 py-2 border-b border-border/30 last:border-b-0"
+									>
+										<div className="flex items-center gap-1.5 mb-1">
+											<button
+												onClick={() =>
+													navigateToFile(
+														comment.path,
+														comment.line,
+													)
+												}
+												className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/50 hover:text-info transition-colors truncate font-mono cursor-pointer"
+												title={`Go to ${comment.path}${comment.line !== null ? `:${comment.line}` : ""} in diff`}
+											>
+												<FileCode2 className="w-3 h-3 shrink-0" />
+												{
+													comment.path
+												}
+												{comment.line !==
+													null &&
+													`:${comment.line}`}
+											</button>
+										</div>
+										{comment.diff_hunk && (
+											<DiffHunkSnippet
+												diffHunk={
+													comment.diff_hunk
+												}
+												filename={
+													comment.path
+												}
+											/>
+										)}
+										<div className="text-xs text-foreground/70">
+											<ClientMarkdown
+												content={
+													comment.body
+												}
+											/>
+										</div>
+										<div className="mt-1">
+											<ReactionDisplay
+												reactions={
+													comment.reactions ??
+													{}
+												}
+												owner={
+													owner
+												}
+												repo={
+													repo
+												}
+												contentType="pullRequestReviewComment"
+												contentId={
+													comment.id
+												}
+											/>
+										</div>
+										{showResolve &&
+											thread &&
+											pullNumber !=
+												null && (
+												<div className="mt-2 flex justify-end">
+													<ResolveThreadButton
+														thread={
+															thread
+														}
+														owner={
+															owner
+														}
+														repo={
+															repo
+														}
+														pullNumber={
+															pullNumber
+														}
+														onResolved={() =>
+															setExpanded(
+																false,
+															)
+														}
+													/>
+												</div>
+											)}
 									</div>
-									{comment.diff_hunk && (
-										<DiffHunkSnippet
-											diffHunk={
-												comment.diff_hunk
-											}
-											filename={
-												comment.path
-											}
-										/>
-									)}
-									<div className="text-xs text-foreground/70">
-										<ClientMarkdown
-											content={
-												comment.body
-											}
-										/>
-									</div>
-									<div className="mt-1">
-										<ReactionDisplay
-											reactions={
-												comment.reactions ??
-												{}
-											}
-											owner={
-												owner
-											}
-											repo={repo}
-											contentType="pullRequestReviewComment"
-											contentId={
-												comment.id
-											}
-										/>
-									</div>
-								</div>
-							))}
+								);
+							})}
 						</div>
 					)}
 				</div>
 			</div>
 		</div>
+	);
+}
+
+function ResolveThreadButton({
+	thread,
+	owner,
+	repo,
+	pullNumber,
+	onResolved,
+}: {
+	thread: ReviewThread;
+	owner: string;
+	repo: string;
+	pullNumber: number;
+	onResolved?: () => void;
+}) {
+	const [isPending, startTransition] = useTransition();
+	const [resolved, setResolved] = useState(thread.isResolved);
+
+	const handleToggle = (e: React.MouseEvent) => {
+		e.stopPropagation();
+		startTransition(async () => {
+			if (resolved) {
+				const result = await unresolveReviewThread(
+					thread.id,
+					owner,
+					repo,
+					pullNumber,
+				);
+				if (!result.error) setResolved(false);
+			} else {
+				const result = await resolveReviewThread(
+					thread.id,
+					owner,
+					repo,
+					pullNumber,
+				);
+				if (!result.error) {
+					setResolved(true);
+					// Schedule collapse outside the transition so it's not deferred
+					setTimeout(() => onResolved?.(), 0);
+				}
+			}
+		});
+	};
+
+	return (
+		<button
+			onClick={handleToggle}
+			disabled={isPending}
+			className={cn(
+				"inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md border transition-colors cursor-pointer",
+				isPending && "opacity-50 pointer-events-none",
+				resolved
+					? "text-success border-success/30 bg-success/5 hover:bg-success/10"
+					: "text-muted-foreground border-border hover:text-foreground hover:bg-muted/60",
+			)}
+		>
+			{isPending ? (
+				<Loader2 className="w-3.5 h-3.5 animate-spin" />
+			) : resolved ? (
+				<CheckCircle2 className="w-3.5 h-3.5" />
+			) : (
+				<Circle className="w-3.5 h-3.5" />
+			)}
+			{resolved ? "Resolved" : "Resolve conversation"}
+		</button>
 	);
 }

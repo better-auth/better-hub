@@ -9,6 +9,8 @@ export interface UserSettings {
 	ghostModel: string;
 	useOwnApiKey: boolean;
 	openrouterApiKey: string | null;
+	openaiApiUrl: string | null;
+	openaiApiKey: string | null;
 	githubPat: string | null;
 	codeThemeLight: string;
 	codeThemeDark: string;
@@ -27,6 +29,8 @@ function toSettings(row: {
 	ghostModel: string;
 	useOwnApiKey: boolean;
 	openrouterApiKey: string | null;
+	openaiApiUrl: string | null;
+	openaiApiKey: string | null;
 	githubPat: string | null;
 	codeThemeLight: string;
 	codeThemeDark: string;
@@ -44,6 +48,8 @@ function toSettings(row: {
 		ghostModel: row.ghostModel,
 		useOwnApiKey: row.useOwnApiKey,
 		openrouterApiKey: row.openrouterApiKey,
+		openaiApiUrl: row.openaiApiUrl,
+		openaiApiKey: row.openaiApiKey,
 		githubPat: row.githubPat,
 		codeThemeLight: row.codeThemeLight ?? "vitesse-light",
 		codeThemeDark: row.codeThemeDark ?? "vitesse-black",
@@ -83,6 +89,8 @@ export async function updateUserSettings(
 			| "ghostModel"
 			| "useOwnApiKey"
 			| "openrouterApiKey"
+			| "openaiApiUrl"
+			| "openaiApiKey"
 			| "githubPat"
 			| "codeThemeLight"
 			| "codeThemeDark"
@@ -110,6 +118,8 @@ export async function updateUserSettings(
 	if (updates.useOwnApiKey !== undefined) data.useOwnApiKey = updates.useOwnApiKey;
 	if (updates.openrouterApiKey !== undefined)
 		data.openrouterApiKey = updates.openrouterApiKey;
+	if (updates.openaiApiUrl !== undefined) data.openaiApiUrl = updates.openaiApiUrl;
+	if (updates.openaiApiKey !== undefined) data.openaiApiKey = updates.openaiApiKey;
 	if (updates.githubPat !== undefined) data.githubPat = updates.githubPat;
 	if (updates.codeThemeLight !== undefined) data.codeThemeLight = updates.codeThemeLight;
 	if (updates.codeThemeDark !== undefined) data.codeThemeDark = updates.codeThemeDark;

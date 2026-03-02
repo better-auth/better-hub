@@ -22,6 +22,11 @@ export function AIModelTab({ settings, onUpdate }: AIModelTabProps) {
 	const [testing, setTesting] = useState(false);
 	const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
 
+	const [openaiUrl, setOpenaiUrl] = useState("");
+	const [openaiKey, setOpenaiKey] = useState("");
+	const [openaiTesting, setOpenaiTesting] = useState(false);
+	const [openaiTestResult, setOpenaiTestResult] = useState<"success" | "error" | null>(null);
+
 	const isCustom = !MODELS.some((m) => m.id === settings.ghostModel);
 
 	async function testApiKey() {
@@ -37,6 +42,26 @@ export function AIModelTab({ settings, onUpdate }: AIModelTabProps) {
 			setTestResult("error");
 		} finally {
 			setTesting(false);
+		}
+	}
+
+	async function testOpenaiKey() {
+		if (!openaiUrl.trim() && !settings.openaiApiUrl) return;
+		if (!openaiKey.trim() && !settings.openaiApiKey) return;
+		setOpenaiTesting(true);
+		setOpenaiTestResult(null);
+		try {
+			const baseUrl = openaiUrl.trim() || settings.openaiApiUrl || "";
+			const key = openaiKey.trim();
+			const url = baseUrl.replace(/\/+$/, "") + "/models";
+			const res = await fetch(url, {
+				headers: key ? { Authorization: `Bearer ${key}` } : {},
+			});
+			setOpenaiTestResult(res.ok ? "success" : "error");
+		} catch {
+			setOpenaiTestResult("error");
+		} finally {
+			setOpenaiTesting(false);
 		}
 	}
 
@@ -220,6 +245,124 @@ export function AIModelTab({ settings, onUpdate }: AIModelTabProps) {
 						</div>
 					</div>
 				)}
+			</div>
+
+			{/* OpenAI-Compatible API */}
+			<div className="px-4 py-4">
+				<label className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
+					OpenAI-Compatible API
+				</label>
+				<p className="text-[10px] text-muted-foreground/50 font-mono mt-0.5 mb-3">
+					Connect your own OpenAI-compatible endpoint (e.g. Azure
+					OpenAI, local LLMs, etc). When configured, this overrides
+					OpenRouter.
+				</p>
+
+				<div className="space-y-2">
+					<div>
+						<label className="text-[10px] text-muted-foreground/50 font-mono">
+							Base URL
+						</label>
+						<input
+							type="text"
+							value={openaiUrl}
+							onChange={(e) => {
+								setOpenaiUrl(e.target.value);
+								setOpenaiTestResult(null);
+							}}
+							placeholder={
+								settings.openaiApiUrl
+									? `Current: ${settings.openaiApiUrl}`
+									: "https://api.openai.com/v1"
+							}
+							className="w-full max-w-sm bg-transparent border border-border px-3 py-1.5 text-xs font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/20 focus:ring-[3px] focus:ring-ring/50 transition-colors rounded-md mt-1"
+						/>
+					</div>
+					<div>
+						<label className="text-[10px] text-muted-foreground/50 font-mono">
+							API Key
+						</label>
+						<input
+							type="password"
+							value={openaiKey}
+							onChange={(e) => {
+								setOpenaiKey(e.target.value);
+								setOpenaiTestResult(null);
+							}}
+							placeholder={
+								settings.openaiApiKey
+									? `Current: ${settings.openaiApiKey}`
+									: "sk-..."
+							}
+							className="w-full max-w-sm bg-transparent border border-border px-3 py-1.5 text-xs font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/20 focus:ring-[3px] focus:ring-ring/50 transition-colors rounded-md mt-1"
+						/>
+					</div>
+					<div className="flex gap-2 pt-1">
+						<button
+							onClick={async () => {
+								const updates: Partial<UserSettings> =
+									{};
+								if (openaiUrl.trim())
+									updates.openaiApiUrl =
+										openaiUrl.trim();
+								if (openaiKey.trim())
+									updates.openaiApiKey =
+										openaiKey.trim();
+								if (
+									Object.keys(updates)
+										.length > 0
+								) {
+									await onUpdate(updates);
+								}
+							}}
+							className="border border-border px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/50 dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
+						>
+							Save
+						</button>
+						<button
+							onClick={testOpenaiKey}
+							disabled={
+								openaiTesting ||
+								(!openaiUrl.trim() &&
+									!settings.openaiApiUrl)
+							}
+							className="border border-border px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/50 dark:hover:bg-white/[0.04] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+						>
+							{openaiTesting ? (
+								<Loader2 className="w-3 h-3 animate-spin" />
+							) : (
+								"Test"
+							)}
+						</button>
+						{(settings.openaiApiUrl ||
+							settings.openaiApiKey) && (
+							<button
+								onClick={async () => {
+									await onUpdate({
+										openaiApiUrl: null,
+										openaiApiKey: null,
+									});
+									setOpenaiUrl("");
+									setOpenaiKey("");
+									setOpenaiTestResult(null);
+								}}
+								className="border border-border px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-destructive/70 hover:text-destructive hover:bg-destructive/5 transition-colors cursor-pointer"
+							>
+								Clear
+							</button>
+						)}
+					</div>
+					{openaiTestResult === "success" && (
+						<p className="text-[10px] font-mono text-green-500">
+							Connection successful.
+						</p>
+					)}
+					{openaiTestResult === "error" && (
+						<p className="text-[10px] font-mono text-destructive">
+							Connection failed. Check URL and key.
+						</p>
+					)}
+				</div>
 			</div>
 		</div>
 	);
