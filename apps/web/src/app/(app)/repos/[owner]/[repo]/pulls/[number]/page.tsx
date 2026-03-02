@@ -326,13 +326,14 @@ export default async function PRDetailPage({
 	}
 
 	for (const c of commits) {
+		const commitUser = c.author;
 		const entry: CommitEntry = {
 			type: "commit",
 			id: c.sha,
 			sha: c.sha,
 			message: c.commit?.message || "",
-			user: c.author
-				? { login: c.author.login, avatar_url: c.author.avatar_url }
+			user: commitUser
+				? { login: commitUser.login, avatar_url: commitUser.avatar_url }
 				: null,
 			committer_name: c.commit?.author?.name || c.commit?.committer?.name || null,
 			created_at: c.commit?.author?.date || c.commit?.committer?.date || "",
