@@ -2,6 +2,7 @@
 
 import { RepoBreadcrumb } from "@/components/repo/repo-breadcrumb";
 import { useState, useCallback, useRef, useTransition, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { PanelLeft } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -48,6 +49,12 @@ export function RepoLayoutWrapper({
 	const [, startTransition] = useTransition();
 	const collapsed = sidebarWidth === 0;
 	const prevIsPrPageRef = useRef(isPrPage);
+	const [navbarSlot, setNavbarSlot] = useState<HTMLElement | null>(null);
+
+	useEffect(() => {
+		const el = document.getElementById("navbar-breadcrumb");
+		setNavbarSlot(el);
+	}, []);
 
 	useEffect(() => {
 		const wasOnPrPage = prevIsPrPageRef.current;
@@ -227,18 +234,23 @@ export function RepoLayoutWrapper({
 					} as React.CSSProperties
 				}
 			>
-				<div
-					className={`hidden lg:flex pl-4 pr-2 pt-3 pb-1 ${collapsed ? "visible" : "invisible"}`}
-				>
-					<RepoBreadcrumb
-						owner={owner}
-						repoName={repo}
-						ownerType={ownerType}
-						ownerAvatarUrl={ownerAvatarUrl}
-					/>
-				</div>
 				{children}
 			</div>
+
+			{/* Portal breadcrumb to navbar when sidebar collapsed */}
+			{collapsed &&
+				navbarSlot &&
+				createPortal(
+					<div className="hidden lg:flex items-center gap-1.5 ml-3 pl-3 ">
+						<RepoBreadcrumb
+							owner={owner}
+							repoName={repo}
+							ownerType={ownerType}
+							ownerAvatarUrl={ownerAvatarUrl}
+						/>
+					</div>,
+					navbarSlot,
+				)}
 		</div>
 	);
 }

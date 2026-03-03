@@ -1029,12 +1029,44 @@ async function fetchContributionsFromGitHub(token: string, username: string) {
 	};
 }
 
-async function fetchStarredReposFromGitHub(octokit: Octokit, perPage: number) {
+function isStarredRepoEnvelope(item: unknown): item is { repo: UserPublicRepo } {
+	return (
+		typeof item === "object" &&
+		item !== null &&
+		"repo" in item &&
+		typeof (item as { repo?: unknown }).repo === "object" &&
+		(item as { repo?: unknown }).repo !== null
+	);
+}
+
+function normalizeStarredRepos(items: unknown[]): UserPublicRepo[] {
+	return items.map((item) =>
+		isStarredRepoEnvelope(item) ? item.repo : (item as UserPublicRepo),
+	);
+}
+
+async function fetchStarredReposFromGitHub(
+	octokit: Octokit,
+	perPage: number,
+): Promise<UserPublicRepo[]> {
 	const { data } = await octokit.activity.listReposStarredByAuthenticatedUser({
 		per_page: perPage,
 		sort: "updated",
 	});
-	return data;
+	return normalizeStarredRepos(data);
+}
+
+async function fetchUserStarredReposFromGitHub(
+	octokit: Octokit,
+	username: string,
+	perPage: number,
+): Promise<UserPublicRepo[]> {
+	const { data } = await octokit.activity.listReposStarredByUser({
+		username,
+		per_page: perPage,
+		sort: "updated",
+	});
+	return normalizeStarredRepos(data);
 }
 
 async function fetchTrendingReposFromGitHub(
@@ -2530,7 +2562,7 @@ export async function getContributionData(username: string) {
 	});
 }
 
-export async function getStarredRepos(perPage = 10) {
+export async function getStarredRepos(perPage = 10): Promise<UserPublicRepo[]> {
 	const authCtx = await getGitHubAuthContext();
 	return readLocalFirstGitData({
 		authCtx,
@@ -2541,6 +2573,15 @@ export async function getStarredRepos(perPage = 10) {
 		jobPayload: { perPage },
 		fetchRemote: (octokit) => fetchStarredReposFromGitHub(octokit, perPage),
 	});
+}
+
+export async function getUserStarredRepos(
+	username: string,
+	perPage = 50,
+): Promise<UserPublicRepo[]> {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx) return [];
+	return fetchUserStarredReposFromGitHub(authCtx.octokit, username, perPage);
 }
 
 export async function getTrendingRepos(
@@ -2717,6 +2758,19 @@ export async function getRepoTagsPage(owner: string, repo: string, page: number)
 export async function getRepoReleaseByTag(owner: string, repo: string, tag: string) {
 	const authCtx = await getGitHubAuthContext();
 	if (!authCtx?.octokit) return null;
+
+	if (tag === "latest") {
+		try {
+			const { data } = await authCtx.octokit.repos.getLatestRelease({
+				owner,
+				repo,
+			});
+			return data;
+		} catch {
+			return null;
+		}
+	}
+
 	try {
 		const { data } = await authCtx.octokit.repos.getReleaseByTag({ owner, repo, tag });
 		return data;
