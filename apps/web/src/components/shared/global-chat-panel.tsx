@@ -19,7 +19,6 @@ const KNOWN_PREFIXES = new Set([
 	"repos",
 	"prs",
 	"issues",
-	"notifications",
 	"settings",
 	"search",
 	"trending",
@@ -107,14 +106,6 @@ function getPageHints(pathname: string) {
 		};
 	}
 
-	if (pathname.startsWith("/notifications")) {
-		return {
-			suggestions: ["Show unread", "Mark all as read", "Go to PRs"],
-			placeholder: "Ask about notifications...",
-			description: "Manage your GitHub notifications",
-		};
-	}
-
 	if (pathname.startsWith("/repos")) {
 		return {
 			suggestions: ["Search repos", "Find trending repos", "Go to notifications"],
@@ -151,7 +142,6 @@ function getTabLabelFromPathname(pathname: string): string {
 	if (userMatch) return userMatch[1];
 	if (pathname.startsWith("/prs")) return "My PRs";
 	if (pathname.startsWith("/issues")) return "My Issues";
-	if (pathname.startsWith("/notifications")) return "Notifs";
 	if (pathname.startsWith("/repos")) return "Repos";
 	if (pathname.startsWith("/trending")) return "Trending";
 	if (pathname.startsWith("/search")) return "Search";

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import {
 	getUserRepos,
 	searchIssues,
-	getNotifications,
+	getEnrichedNotifications,
 	getUserEvents,
 	getTrendingRepos,
 } from "@/lib/github";
@@ -34,7 +34,7 @@ export default async function DashboardPage() {
 					10,
 				),
 			repos: async () => await getUserRepos("updated", 30),
-			notifications: async () => await getNotifications(20),
+			notifications: async () => await getEnrichedNotifications(20),
 			activity: async () => await getUserEvents(githubUser.login, 20),
 			trending: async () => await getTrendingRepos(undefined, "weekly", 8),
 		});

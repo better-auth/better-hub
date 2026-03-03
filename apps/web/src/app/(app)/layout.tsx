@@ -5,9 +5,9 @@ import { GlobalChatProvider } from "@/components/shared/global-chat-provider";
 import { GlobalChatPanel } from "@/components/shared/global-chat-panel";
 import { NavigationProgress } from "@/components/shared/navigation-progress";
 import { getServerSession } from "@/lib/auth";
-import { getNotifications, checkIsStarred } from "@/lib/github";
+import { getEnrichedNotifications, checkIsStarred } from "@/lib/github";
 import { type GhostTabState } from "@/lib/chat-store";
-import type { NotificationItem } from "@/lib/github-types";
+import type { NotificationEnrichedItem } from "@/lib/github-types";
 import { ColorThemeProvider } from "@/components/theme/theme-provider";
 import { GitHubLinkInterceptor } from "@/components/shared/github-link-interceptor";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -28,9 +28,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 		return redirect(redirectTo);
 	}
 
-	let notifications: NotificationItem[] = [];
+	let notifications: NotificationEnrichedItem[] = [];
 	try {
-		notifications = (await getNotifications(20)) as NotificationItem[];
+		notifications = await getEnrichedNotifications(20);
 	} catch {
 		// Swallow rate-limit / network errors so the layout still renders.
 		// Individual pages will throw their own errors caught by error.tsx.

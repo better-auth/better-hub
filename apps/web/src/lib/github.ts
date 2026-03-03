@@ -19,6 +19,12 @@ import {
 import { redis } from "./redis";
 import { computeContributorScore } from "./contributor-score";
 import { getCachedAuthorDossier, setCachedAuthorDossier } from "./repo-data-cache";
+import type {
+	NotificationEnrichedItem,
+	NotificationEntityRef,
+	NotificationStatusKind,
+	NotificationItem,
+} from "./github-types";
 
 export type RepoPermissions = {
 	admin: boolean;
@@ -2534,6 +2540,649 @@ export async function getNotifications(perPage = 20) {
 		jobPayload: { perPage },
 		fetchRemote: (octokit) => fetchNotificationsFromGitHub(octokit, perPage),
 	});
+}
+
+type RawNotification = NotificationItem & {
+	subject: NotificationItem["subject"] & { latest_comment_url?: string | null };
+};
+
+function parseEntityFromNotification(notif: RawNotification): NotificationEntityRef {
+	const [owner = "", repo = ""] = notif.repository.full_name.split("/");
+	const subjectUrl = notif.subject.url ?? "";
+	const match = subjectUrl.match(/repos\/[^/]+\/[^/]+\/(pulls|issues)\/(\d+)/);
+	if (!match) {
+		return { owner, repo, type: owner && repo ? "repo" : "unknown" };
+	}
+	return {
+		owner,
+		repo,
+		type: match[1] === "pulls" ? "pull" : "issue",
+		number: Number(match[2]),
+	};
+}
+
+function buildNotificationHref(notif: RawNotification, entity: NotificationEntityRef): string {
+	if (!entity.owner || !entity.repo) return "/dashboard?panel=notifications";
+	if (entity.type === "pull" && entity.number) {
+		return `/${entity.owner}/${entity.repo}/pulls/${entity.number}`;
+	}
+	if (entity.type === "issue" && entity.number) {
+		return `/${entity.owner}/${entity.repo}/issues/${entity.number}`;
+	}
+	return `/${entity.owner}/${entity.repo}`;
+}
+
+function pickPrimaryRunId(
+	checks: Array<{
+		state: "success" | "failure" | "pending" | "error" | "neutral" | "skipped";
+		runId: number | null;
+	}>,
+): number | null {
+	const priority: Array<(typeof checks)[number]["state"]> = [
+		"failure",
+		"error",
+		"pending",
+		"success",
+	];
+	for (const state of priority) {
+		const match = checks.find((check) => check.state === state && check.runId != null);
+		if (match?.runId != null) return match.runId;
+	}
+	return checks.find((check) => check.runId != null)?.runId ?? null;
+}
+
+function computeStatusKind(
+	notif: RawNotification,
+	ciState?: string | null,
+): NotificationStatusKind {
+	if (notif.reason === "ci_activity" || notif.subject.type === "CheckSuite") {
+		if (ciState === "failure" || ciState === "error") return "failed";
+		if (ciState === "pending") return "running";
+		if (ciState === "success") return "passed";
+		return "info";
+	}
+	if (notif.reason === "review_requested") return "review_requested";
+	if (notif.reason === "mention" || notif.reason === "team_mention") return "mention";
+	if (notif.reason === "comment") return "comment";
+	if (notif.reason === "security_alert") return "security";
+	if (notif.reason === "state_change") return "state_change";
+	return "info";
+}
+
+function buildContextLine(
+	notif: RawNotification,
+	entity: NotificationEntityRef,
+	actor?: { login?: string } | null,
+): string {
+	const chunks: string[] = [notif.repository.full_name];
+	if (entity.type === "pull" && entity.number) chunks.push(`PR #${entity.number}`);
+	if (entity.type === "issue" && entity.number) chunks.push(`Issue #${entity.number}`);
+	if (actor?.login) chunks.push(`@${actor.login}`);
+	return chunks.join(" · ");
+}
+
+async function fetchActorFromLatestComment(
+	octokit: Awaited<ReturnType<typeof getOctokit>>,
+	url?: string | null,
+): Promise<{ login: string; avatarUrl?: string } | null> {
+	if (!octokit || !url) return null;
+
+	try {
+		if (url.includes("/issues/comments/")) {
+			const match = url.match(/repos\/([^/]+)\/([^/]+)\/issues\/comments\/(\d+)/);
+			if (!match) return null;
+			const { data } = await octokit.issues.getComment({
+				owner: match[1],
+				repo: match[2],
+				comment_id: Number(match[3]),
+			});
+			if (!data.user?.login) return null;
+			return {
+				login: data.user.login,
+				avatarUrl: data.user.avatar_url || undefined,
+			};
+		}
+
+		if (url.includes("/pulls/comments/")) {
+			const match = url.match(/repos\/([^/]+)\/([^/]+)\/pulls\/comments\/(\d+)/);
+			if (!match) return null;
+			const { data } = await octokit.pulls.getReviewComment({
+				owner: match[1],
+				repo: match[2],
+				comment_id: Number(match[3]),
+			});
+			if (!data.user?.login) return null;
+			return {
+				login: data.user.login,
+				avatarUrl: data.user.avatar_url || undefined,
+			};
+		}
+	} catch {
+		return null;
+	}
+
+	return null;
+}
+
+export async function getEnrichedNotifications(perPage = 20): Promise<NotificationEnrichedItem[]> {
+	const notifications = (await getNotifications(perPage)) as RawNotification[];
+	if (notifications.length === 0) {
+		// Dev-only fallback so notification UX can be exercised without live GitHub notifications.
+		// This keeps production behavior unchanged.
+		if (process.env.NODE_ENV !== "production") {
+			return buildDemoEnrichedNotifications();
+		}
+		return [];
+	}
+
+	const octokit = await getOctokit();
+	const parsed = notifications.map((notif) => {
+		const entity = parseEntityFromNotification(notif);
+		return {
+			notif,
+			entity,
+			href: buildNotificationHref(notif, entity),
+		};
+	});
+
+	const perRepoPRs = new Map<string, Set<number>>();
+	for (const row of parsed) {
+		if (row.entity.type !== "pull" || !row.entity.number) continue;
+		const key = `${row.entity.owner}/${row.entity.repo}`;
+		const set = perRepoPRs.get(key) ?? new Set<number>();
+		set.add(row.entity.number);
+		perRepoPRs.set(key, set);
+	}
+
+	const ciByRepoAndPr = new Map<
+		string,
+		Map<number, Awaited<ReturnType<typeof batchFetchCheckStatuses>>[number]>
+	>();
+	for (const [key, numbers] of perRepoPRs) {
+		const [owner, repo] = key.split("/");
+		if (!owner || !repo) continue;
+		try {
+			const result = await batchFetchCheckStatuses(
+				owner,
+				repo,
+				[...numbers].map((number) => ({ number })),
+			);
+			ciByRepoAndPr.set(
+				key,
+				new Map(Object.entries(result).map(([k, v]) => [Number(k), v])),
+			);
+		} catch {
+			// Best effort only.
+		}
+	}
+
+	const actorPromises = parsed.map(async ({ notif }) => {
+		if (!["comment", "mention", "team_mention"].includes(notif.reason)) return null;
+		return fetchActorFromLatestComment(octokit, notif.subject.latest_comment_url);
+	});
+	const actors = await Promise.all(actorPromises);
+
+	return parsed.map(({ notif, entity, href }, index) => {
+		const repoKey = `${entity.owner}/${entity.repo}`;
+		const checkStatus =
+			entity.type === "pull" && entity.number
+				? (ciByRepoAndPr.get(repoKey)?.get(entity.number) ?? null)
+				: null;
+		const primaryRunId = checkStatus ? pickPrimaryRunId(checkStatus.checks) : null;
+		const ci = checkStatus
+			? {
+					state: checkStatus.state,
+					total: checkStatus.total,
+					success: checkStatus.success,
+					failure: checkStatus.failure,
+					pending: checkStatus.pending,
+					primaryRunId,
+				}
+			: null;
+		const statusKind = computeStatusKind(notif, ci?.state ?? null);
+		const actor = actors[index];
+		const contextLine = buildContextLine(notif, entity, actor);
+
+		let primaryAction = { label: "Open", href };
+		if (ci?.primaryRunId && entity.owner && entity.repo) {
+			primaryAction = {
+				label: "View run",
+				href: `/${entity.owner}/${entity.repo}/actions/${ci.primaryRunId}`,
+			};
+		} else if (entity.type === "pull") {
+			primaryAction = { label: "Open PR", href };
+		} else if (entity.type === "issue") {
+			primaryAction = { label: "Open issue", href };
+		}
+
+		return {
+			id: notif.id,
+			unread: notif.unread,
+			updatedAt: notif.updated_at,
+			reason: notif.reason,
+			subjectType: notif.subject.type,
+			title: notif.subject.title,
+			repoFullName: notif.repository.full_name,
+			href,
+			entity,
+			actor,
+			statusKind,
+			ci,
+			contextLine,
+			primaryAction,
+		};
+	});
+}
+
+function buildDemoEnrichedNotifications(): NotificationEnrichedItem[] {
+	const now = Date.now();
+	const mins = (n: number) => new Date(now - n * 60_000).toISOString();
+
+	return [
+		{
+			id: "demo-ci-failed",
+			unread: true,
+			updatedAt: mins(6),
+			reason: "ci_activity",
+			subjectType: "PullRequest",
+			title: "fix(auth): harden token refresh retry path",
+			repoFullName: "acme/better-hub",
+			href: "/acme/better-hub/pulls/482",
+			entity: { owner: "acme", repo: "better-hub", type: "pull", number: 482 },
+			actor: { login: "ci-bot" },
+			statusKind: "failed",
+			ci: {
+				state: "failure",
+				total: 18,
+				success: 15,
+				failure: 2,
+				pending: 1,
+				primaryRunId: 9821345,
+			},
+			contextLine: "2 checks failed on PR #482 in acme/better-hub",
+			primaryAction: {
+				label: "View run",
+				href: "/acme/better-hub/actions/9821345",
+			},
+		},
+		{
+			id: "demo-pr-closed",
+			unread: true,
+			updatedAt: mins(9),
+			reason: "state_change",
+			subjectType: "PullRequest",
+			title: "fix(build): disable flaky edge cache test (closed)",
+			repoFullName: "equicord/equicord",
+			href: "/equicord/equicord/pulls/5102",
+			entity: { owner: "equicord", repo: "equicord", type: "pull", number: 5102 },
+			actor: { login: "maintainer-bot" },
+			statusKind: "state_change",
+			ci: null,
+			contextLine: "PR #5102 was closed in equicord/equicord",
+			primaryAction: {
+				label: "Open PR",
+				href: "/equicord/equicord/pulls/5102",
+			},
+		},
+		{
+			id: "demo-pr-comment",
+			unread: true,
+			updatedAt: mins(14),
+			reason: "comment",
+			subjectType: "PullRequest",
+			title: "refactor: remove notifications page and unify sidebar flow",
+			repoFullName: "acme/better-hub",
+			href: "/acme/better-hub/pulls/487",
+			entity: { owner: "acme", repo: "better-hub", type: "pull", number: 487 },
+			actor: { login: "design-reviewer" },
+			statusKind: "comment",
+			ci: null,
+			contextLine: "design-reviewer commented on PR #487",
+			primaryAction: {
+				label: "Open PR",
+				href: "/acme/better-hub/pulls/487",
+			},
+		},
+		{
+			id: "demo-ci-running",
+			unread: true,
+			updatedAt: mins(17),
+			reason: "ci_activity",
+			subjectType: "PullRequest",
+			title: "feat(ui): align command palette navigation states",
+			repoFullName: "acme/design-system",
+			href: "/acme/design-system/pulls/133",
+			entity: { owner: "acme", repo: "design-system", type: "pull", number: 133 },
+			actor: { login: "ci-bot" },
+			statusKind: "running",
+			ci: {
+				state: "pending",
+				total: 12,
+				success: 8,
+				failure: 0,
+				pending: 4,
+				primaryRunId: 9823002,
+			},
+			contextLine: "4 checks running on PR #133 in acme/design-system",
+			primaryAction: {
+				label: "View run",
+				href: "/acme/design-system/actions/9823002",
+			},
+		},
+		{
+			id: "demo-review-requested",
+			unread: true,
+			updatedAt: mins(22),
+			reason: "review_requested",
+			subjectType: "PullRequest",
+			title: "feat(search): add semantic ranking to repo search",
+			repoFullName: "acme/better-hub",
+			href: "/acme/better-hub/pulls/490",
+			entity: { owner: "acme", repo: "better-hub", type: "pull", number: 490 },
+			actor: { login: "product-lead" },
+			statusKind: "review_requested",
+			ci: {
+				state: "pending",
+				total: 9,
+				success: 6,
+				failure: 0,
+				pending: 3,
+				primaryRunId: 9822201,
+			},
+			contextLine: "Review requested from you on PR #490",
+			primaryAction: {
+				label: "Open PR",
+				href: "/acme/better-hub/pulls/490",
+			},
+		},
+		{
+			id: "demo-team-mention",
+			unread: true,
+			updatedAt: mins(31),
+			reason: "team_mention",
+			subjectType: "Issue",
+			title: "P95 latency regression on /dashboard API route",
+			repoFullName: "acme/platform",
+			href: "/acme/platform/issues/142",
+			entity: { owner: "acme", repo: "platform", type: "issue", number: 142 },
+			actor: { login: "perf-ops" },
+			statusKind: "mention",
+			ci: null,
+			contextLine: "Your team was mentioned in issue #142",
+			primaryAction: {
+				label: "Open issue",
+				href: "/acme/platform/issues/142",
+			},
+		},
+		{
+			id: "demo-pr-comment-docs",
+			unread: true,
+			updatedAt: mins(43),
+			reason: "comment",
+			subjectType: "PullRequest",
+			title: "docs: rewrite onboarding flow for contributor setup",
+			repoFullName: "acme/docs",
+			href: "/acme/docs/pulls/78",
+			entity: { owner: "acme", repo: "docs", type: "pull", number: 78 },
+			actor: { login: "tech-writer" },
+			statusKind: "comment",
+			ci: null,
+			contextLine: "tech-writer commented on PR #78",
+			primaryAction: {
+				label: "Open PR",
+				href: "/acme/docs/pulls/78",
+			},
+		},
+		{
+			id: "demo-pr-merged",
+			unread: true,
+			updatedAt: mins(57),
+			reason: "state_change",
+			subjectType: "PullRequest",
+			title: "feat(nav): support keyboard navigation in board (merged)",
+			repoFullName: "acme/web-core",
+			href: "/acme/web-core/pulls/311",
+			entity: { owner: "acme", repo: "web-core", type: "pull", number: 311 },
+			actor: { login: "repo-admin" },
+			statusKind: "state_change",
+			ci: null,
+			contextLine: "PR #311 was merged in acme/web-core",
+			primaryAction: {
+				label: "Open PR",
+				href: "/acme/web-core/pulls/311",
+			},
+		},
+		{
+			id: "demo-mention-issue",
+			unread: true,
+			updatedAt: mins(70),
+			reason: "mention",
+			subjectType: "Issue",
+			title: "Intermittent 500 on dashboard route in edge runtime",
+			repoFullName: "acme/platform",
+			href: "/acme/platform/issues/138",
+			entity: { owner: "acme", repo: "platform", type: "issue", number: 138 },
+			actor: { login: "sre-oncall" },
+			statusKind: "mention",
+			ci: null,
+			contextLine: "You were mentioned in issue #138",
+			primaryAction: {
+				label: "Open issue",
+				href: "/acme/platform/issues/138",
+			},
+		},
+		{
+			id: "demo-pr-review-requested-equicord",
+			unread: true,
+			updatedAt: mins(95),
+			reason: "review_requested",
+			subjectType: "PullRequest",
+			title: "feat(plugin): add MessageDeleter plugin",
+			repoFullName: "equicord/equicord",
+			href: "/equicord/equicord/pulls/5091",
+			entity: { owner: "equicord", repo: "equicord", type: "pull", number: 5091 },
+			actor: { login: "core-maintainer" },
+			statusKind: "review_requested",
+			ci: null,
+			contextLine: "Review requested from you on PR #5091",
+			primaryAction: {
+				label: "Open PR",
+				href: "/equicord/equicord/pulls/5091",
+			},
+		},
+		{
+			id: "demo-ci-passed",
+			unread: false,
+			updatedAt: mins(130),
+			reason: "ci_activity",
+			subjectType: "PullRequest",
+			title: "perf: optimize notification enrichment batching",
+			repoFullName: "acme/better-hub",
+			href: "/acme/better-hub/pulls/471",
+			entity: { owner: "acme", repo: "better-hub", type: "pull", number: 471 },
+			actor: { login: "ci-bot" },
+			statusKind: "passed",
+			ci: {
+				state: "success",
+				total: 14,
+				success: 14,
+				failure: 0,
+				pending: 0,
+				primaryRunId: 9819932,
+			},
+			contextLine: "All checks passed on PR #471",
+			primaryAction: {
+				label: "View run",
+				href: "/acme/better-hub/actions/9819932",
+			},
+		},
+		{
+			id: "demo-pr-reopened",
+			unread: false,
+			updatedAt: mins(190),
+			reason: "state_change",
+			subjectType: "PullRequest",
+			title: "fix(ci): rerun matrix only on changed packages (reopened)",
+			repoFullName: "acme/better-hub",
+			href: "/acme/better-hub/pulls/476",
+			entity: { owner: "acme", repo: "better-hub", type: "pull", number: 476 },
+			actor: { login: "release-bot" },
+			statusKind: "state_change",
+			ci: null,
+			contextLine: "PR #476 was reopened in acme/better-hub",
+			primaryAction: {
+				label: "Open PR",
+				href: "/acme/better-hub/pulls/476",
+			},
+		},
+		{
+			id: "demo-comment-platform",
+			unread: false,
+			updatedAt: mins(340),
+			reason: "comment",
+			subjectType: "Issue",
+			title: "Cache invalidation race when syncing installations",
+			repoFullName: "acme/platform",
+			href: "/acme/platform/issues/131",
+			entity: { owner: "acme", repo: "platform", type: "issue", number: 131 },
+			actor: { login: "infra-eng" },
+			statusKind: "comment",
+			ci: null,
+			contextLine: "infra-eng commented on issue #131",
+			primaryAction: {
+				label: "Open issue",
+				href: "/acme/platform/issues/131",
+			},
+		},
+		{
+			id: "demo-ci-failed-mobile",
+			unread: false,
+			updatedAt: mins(780),
+			reason: "ci_activity",
+			subjectType: "PullRequest",
+			title: "fix(android): resolve crash in notification deep-link",
+			repoFullName: "acme/mobile",
+			href: "/acme/mobile/pulls/921",
+			entity: { owner: "acme", repo: "mobile", type: "pull", number: 921 },
+			actor: { login: "ci-bot" },
+			statusKind: "failed",
+			ci: {
+				state: "failure",
+				total: 10,
+				success: 8,
+				failure: 2,
+				pending: 0,
+				primaryRunId: 9818011,
+			},
+			contextLine: "2 checks failed on PR #921 in acme/mobile",
+			primaryAction: {
+				label: "View run",
+				href: "/acme/mobile/actions/9818011",
+			},
+		},
+		{
+			id: "demo-security-alert-mobile",
+			unread: false,
+			updatedAt: mins(1100),
+			reason: "security_alert",
+			subjectType: "RepositoryVulnerabilityAlert",
+			title: "Dependabot alert: high vulnerability in minimist",
+			repoFullName: "acme/mobile",
+			href: "/acme/mobile/security",
+			entity: { owner: "acme", repo: "mobile", type: "repo" },
+			actor: { login: "dependabot[bot]" },
+			statusKind: "security",
+			ci: null,
+			contextLine: "Security alert opened in acme/mobile",
+			primaryAction: {
+				label: "Open",
+				href: "/acme/mobile/security",
+			},
+		},
+		{
+			id: "demo-equicord-comment",
+			unread: false,
+			updatedAt: mins(1600),
+			reason: "comment",
+			subjectType: "PullRequest",
+			title: "fix(BetterSettings): fix context menu",
+			repoFullName: "equicord/equicord",
+			href: "/equicord/equicord/pulls/5066",
+			entity: { owner: "equicord", repo: "equicord", type: "pull", number: 5066 },
+			actor: { login: "justjxke" },
+			statusKind: "comment",
+			ci: null,
+			contextLine: "justjxke commented on PR #5066",
+			primaryAction: {
+				label: "Open PR",
+				href: "/equicord/equicord/pulls/5066",
+			},
+		},
+		{
+			id: "demo-ci-passed-web-core",
+			unread: false,
+			updatedAt: mins(1780),
+			reason: "ci_activity",
+			subjectType: "PullRequest",
+			title: "chore: upgrade cache layer to redis cluster",
+			repoFullName: "acme/web-core",
+			href: "/acme/web-core/pulls/287",
+			entity: { owner: "acme", repo: "web-core", type: "pull", number: 287 },
+			actor: { login: "ci-bot" },
+			statusKind: "passed",
+			ci: {
+				state: "success",
+				total: 22,
+				success: 22,
+				failure: 0,
+				pending: 0,
+				primaryRunId: 9817722,
+			},
+			contextLine: "All checks passed on PR #287",
+			primaryAction: {
+				label: "View run",
+				href: "/acme/web-core/actions/9817722",
+			},
+		},
+		{
+			id: "demo-mention-legacy",
+			unread: false,
+			updatedAt: mins(2500),
+			reason: "mention",
+			subjectType: "Issue",
+			title: "Legacy worker timeout when parsing archived artifacts",
+			repoFullName: "acme/infra-tools",
+			href: "/acme/infra-tools/issues/64",
+			entity: { owner: "acme", repo: "infra-tools", type: "issue", number: 64 },
+			actor: { login: "ops-oncall" },
+			statusKind: "mention",
+			ci: null,
+			contextLine: "You were mentioned in issue #64",
+			primaryAction: {
+				label: "Open issue",
+				href: "/acme/infra-tools/issues/64",
+			},
+		},
+		{
+			id: "demo-security-alert",
+			unread: false,
+			updatedAt: mins(3200),
+			reason: "security_alert",
+			subjectType: "RepositoryVulnerabilityAlert",
+			title: "Dependabot alert: moderate vulnerability in ws",
+			repoFullName: "acme/web-core",
+			href: "/acme/web-core/security",
+			entity: { owner: "acme", repo: "web-core", type: "repo" },
+			actor: { login: "dependabot[bot]" },
+			statusKind: "security",
+			ci: null,
+			contextLine: "Security alert opened in acme/web-core",
+			primaryAction: {
+				label: "Open",
+				href: "/acme/web-core/security",
+			},
+		},
+	];
 }
 
 export async function searchIssues(query: string, perPage = 20) {

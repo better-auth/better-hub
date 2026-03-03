@@ -90,8 +90,13 @@ export async function markNotificationDone(threadId: string) {
 	const octokit = await getOctokit();
 	if (!octokit) return { error: "Not authenticated" };
 	try {
-		await octokit.activity.markThreadAsRead({ thread_id: Number(threadId) });
-		revalidatePath("/notifications");
+		// Demo notifications use non-numeric ids (e.g. "demo-pr-comment") and should
+		// be handled locally in the UI without calling GitHub's thread endpoint.
+		const parsedThreadId = Number(threadId);
+		if (!Number.isFinite(parsedThreadId) || parsedThreadId <= 0) {
+			return { success: true };
+		}
+		await octokit.activity.markThreadAsRead({ thread_id: parsedThreadId });
 		revalidatePath("/dashboard", "layout");
 		return { success: true };
 	} catch (e: unknown) {
@@ -104,7 +109,6 @@ export async function markAllNotificationsRead() {
 	if (!octokit) return { error: "Not authenticated" };
 	try {
 		await octokit.activity.markNotificationsAsRead();
-		revalidatePath("/notifications");
 		revalidatePath("/dashboard", "layout");
 		return { success: true };
 	} catch (e: unknown) {
