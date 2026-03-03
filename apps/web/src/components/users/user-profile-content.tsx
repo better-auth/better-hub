@@ -1,9 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
-import Image from "next/image";
-import Link from "next/link";
+import { ContributionChart } from "@/components/dashboard/contribution-chart";
+import { RepoBadge } from "@/components/repo/repo-badge";
+import { XIcon } from "@/components/shared/icons/x-icon";
+import { TimeAgo } from "@/components/ui/time-ago";
+import { UserProfileScoreRing } from "@/components/users/user-profile-score-ring";
+import { getLanguageColor } from "@/lib/github-utils";
+import { computeUserProfileScore } from "@/lib/user-profile-score";
+import { cn, formatNumber } from "@/lib/utils";
 import {
 	ArrowUpDown,
 	Building2,
@@ -12,22 +16,17 @@ import {
 	ExternalLink,
 	FolderGit2,
 	GitFork,
-	Globe,
 	Link2,
-	Lock,
 	MapPin,
 	Search,
 	Star,
 	Users,
 	X,
 } from "lucide-react";
-import { cn, formatNumber } from "@/lib/utils";
-import { getLanguageColor } from "@/lib/github-utils";
-import { TimeAgo } from "@/components/ui/time-ago";
-import { ContributionChart } from "@/components/dashboard/contribution-chart";
-import { computeUserProfileScore } from "@/lib/user-profile-score";
-import { UserProfileScoreRing } from "@/components/users/user-profile-score-ring";
-import { XIcon } from "@/components/shared/icons/x-icon";
+import Image from "next/image";
+import Link from "next/link";
+import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export interface UserProfile {
 	login: string;
@@ -800,25 +799,15 @@ export function UserProfileContent({
 										{repo.name}
 									</span>
 									{repo.private ? (
-										<span className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 border border-border text-muted-foreground/60 rounded-sm">
-											<Lock className="w-2.5 h-2.5" />
-											Private
-										</span>
+										<RepoBadge type="private" />
 									) : (
-										<span className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 border border-border text-muted-foreground/60 rounded-sm">
-											<Globe className="w-2.5 h-2.5" />
-											Public
-										</span>
+										<RepoBadge type="public" />
 									)}
 									{repo.archived && (
-										<span className="text-[9px] font-mono px-1.5 py-0.5 border border-warning/30 text-warning rounded-sm">
-											Archived
-										</span>
+										<RepoBadge type="archived" />
 									)}
 									{repo.fork && (
-										<span className="text-[9px] font-mono px-1.5 py-0.5 border border-border text-muted-foreground/60 rounded-sm">
-											Fork
-										</span>
+										<RepoBadge type="fork" />
 									)}
 								</div>
 
