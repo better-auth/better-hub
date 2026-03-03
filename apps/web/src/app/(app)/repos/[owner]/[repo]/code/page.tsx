@@ -6,15 +6,13 @@ import {
 	getRepoTags,
 	getRepoReadme,
 	getRepoPullRequests,
-	getOctokit,
 } from "@/lib/github";
 import { BranchSelector } from "@/components/repo/branch-selector";
 import { FileList } from "@/components/repo/file-list";
 import { CodeToolbar } from "@/components/repo/code-toolbar";
-import { ForkSyncStrip } from "@/components/repo/fork-sync-strip";
 import { MarkdownRenderer } from "@/components/shared/markdown-renderer";
 import { TrackView } from "@/components/shared/track-view";
-import { deleteBranch, syncForkWithUpstream, discardForkCommits } from "../actions";
+import { deleteBranch } from "../actions";
 
 export async function generateMetadata({
 	params,
@@ -40,14 +38,6 @@ export default async function CodePage({
 	if (!repoData) return null;
 
 	const defaultBranch = repoData.default_branch;
-	const parent = repoData.parent;
-	const isFork = Boolean(repoData.fork && parent);
-	const canSyncFork = Boolean(
-		repoData.permissions?.admin ||
-		repoData.permissions?.maintain ||
-		repoData.permissions?.push,
-	);
-
 	const [branches, tags, contents, openPRs, closedPRs] = await Promise.all([
 		branchesPromise,
 		tagsPromise,
@@ -55,27 +45,6 @@ export default async function CodePage({
 		getRepoPullRequests(owner, repo, "open"),
 		getRepoPullRequests(owner, repo, "closed"),
 	]);
-
-	let forkSyncStatus: { aheadBy: number; behindBy: number } | null = null;
-	if (isFork && canSyncFork && parent?.owner?.login && parent?.default_branch) {
-		const octokit = await getOctokit();
-		if (octokit) {
-			try {
-				const { data } = await octokit.repos.compareCommits({
-					owner,
-					repo,
-					base: `${parent.owner.login}:${parent.default_branch}`,
-					head: `${owner}:${defaultBranch}`,
-				});
-				forkSyncStatus = {
-					aheadBy: data.ahead_by ?? 0,
-					behindBy: data.behind_by ?? 0,
-				};
-			} catch {
-				forkSyncStatus = null;
-			}
-		}
-	}
 
 	const hasReadme =
 		Array.isArray(contents) &&
@@ -183,27 +152,6 @@ export default async function CodePage({
 					/>
 				</div>
 			</div>
-
-			{isFork &&
-				canSyncFork &&
-				parent?.owner?.login &&
-				parent?.default_branch &&
-				forkSyncStatus && (
-					<ForkSyncStrip
-						owner={owner}
-						repo={repo}
-						defaultBranch={defaultBranch}
-						upstream={{
-							owner: parent.owner.login,
-							repo: parent.name,
-							defaultBranch: parent.default_branch,
-						}}
-						aheadBy={forkSyncStatus.aheadBy}
-						behindBy={forkSyncStatus.behindBy}
-						onSyncFork={syncForkWithUpstream}
-						onDiscardFork={discardForkCommits}
-					/>
-				)}
 
 			<FileList
 				items={items}
