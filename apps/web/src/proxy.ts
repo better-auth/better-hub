@@ -9,6 +9,7 @@ const APP_ROUTES = new Set([
 	"repos",
 	"issues",
 	"prs",
+	"stars",
 	"settings",
 	"search",
 	"trending",
