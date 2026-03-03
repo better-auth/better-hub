@@ -690,7 +690,12 @@ async function fetchUserEventsPublicUnauthenticated(username: string, perPage: n
 }
 
 async function fetchContributionsFromGitHub(token: string, username: string) {
-	const query = `
+	const headers = {
+		Authorization: `Bearer ${token}`,
+		"Content-Type": "application/json",
+	};
+
+	const calendarAndCommitsQuery = `
 	    query($username: String!) {
 	      user(login: $username) {
 	        contributionsCollection {
@@ -720,92 +725,6 @@ async function fetchContributionsFromGitHub(token: string, username: string) {
 	              }
 	            }
 	          }
-		          pullRequestContributionsByRepository(maxRepositories: 100) {
-	            repository {
-	              nameWithOwner
-	              url
-	              primaryLanguage {
-	                name
-	              }
-	            }
-	            contributions(first: 100) {
-	              totalCount
-		              nodes {
-		                occurredAt
-		                pullRequest {
-		                  number
-		                  title
-		                  url
-		                  state
-		                  merged
-		                  comments {
-		                    totalCount
-		                  }
-		                  additions
-		                  deletions
-		                  changedFiles
-		                  commits {
-		                    totalCount
-		                  }
-		                }
-		              }
-		            }
-		          }
-	          pullRequestReviewContributionsByRepository(maxRepositories: 100) {
-	            repository {
-	              nameWithOwner
-	              url
-	              primaryLanguage {
-	                name
-	              }
-	            }
-	            contributions(first: 100) {
-	              totalCount
-		              nodes {
-		                occurredAt
-		                pullRequest {
-		                  number
-		                  title
-		                  url
-		                  state
-		                  merged
-		                  comments {
-		                    totalCount
-		                  }
-		                  additions
-		                  deletions
-		                  changedFiles
-		                  commits {
-		                    totalCount
-		                  }
-		                }
-		              }
-		            }
-		          }
-	          issueContributionsByRepository(maxRepositories: 100) {
-	            repository {
-	              nameWithOwner
-	              url
-	              primaryLanguage {
-	                name
-	              }
-	            }
-	            contributions(first: 100) {
-	              totalCount
-		              nodes {
-		                occurredAt
-		                issue {
-		                  number
-		                  title
-		                  url
-		                  state
-		                  comments {
-		                    totalCount
-		                  }
-		                }
-		              }
-		            }
-		          }
 	          repositoryContributions(first: 100) {
 	            totalCount
 	            nodes {
@@ -824,19 +743,168 @@ async function fetchContributionsFromGitHub(token: string, username: string) {
 	    }
 	  `;
 
-	const response = await fetch("https://api.github.com/graphql", {
-		method: "POST",
-		headers: {
-			Authorization: `Bearer ${token}`,
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify({ query, variables: { username } }),
-	});
+	const prContributionsQuery = `
+	    query($username: String!) {
+	      user(login: $username) {
+	        contributionsCollection {
+	          pullRequestContributionsByRepository(maxRepositories: 50) {
+	            repository {
+	              nameWithOwner
+	              url
+	              primaryLanguage {
+	                name
+	              }
+	            }
+	            contributions(first: 50) {
+	              totalCount
+	              nodes {
+	                occurredAt
+	                pullRequest {
+	                  number
+	                  title
+	                  url
+	                  state
+	                  merged
+	                  comments {
+	                    totalCount
+	                  }
+	                  additions
+	                  deletions
+	                  changedFiles
+	                  commits {
+	                    totalCount
+	                  }
+	                }
+	              }
+	            }
+	          }
+	        }
+	      }
+	    }
+	  `;
 
-	if (!response.ok) return null;
-	const json = await response.json();
-	const collection = json.data?.user?.contributionsCollection;
+	const prReviewContributionsQuery = `
+	    query($username: String!) {
+	      user(login: $username) {
+	        contributionsCollection {
+	          pullRequestReviewContributionsByRepository(maxRepositories: 50) {
+	            repository {
+	              nameWithOwner
+	              url
+	              primaryLanguage {
+	                name
+	              }
+	            }
+	            contributions(first: 50) {
+	              totalCount
+	              nodes {
+	                occurredAt
+	                pullRequest {
+	                  number
+	                  title
+	                  url
+	                  state
+	                  merged
+	                  comments {
+	                    totalCount
+	                  }
+	                  additions
+	                  deletions
+	                  changedFiles
+	                  commits {
+	                    totalCount
+	                  }
+	                }
+	              }
+	            }
+	          }
+	        }
+	      }
+	    }
+	  `;
+
+	const issueContributionsQuery = `
+	    query($username: String!) {
+	      user(login: $username) {
+	        contributionsCollection {
+	          issueContributionsByRepository(maxRepositories: 50) {
+	            repository {
+	              nameWithOwner
+	              url
+	              primaryLanguage {
+	                name
+	              }
+	            }
+	            contributions(first: 50) {
+	              totalCount
+	              nodes {
+	                occurredAt
+	                issue {
+	                  number
+	                  title
+	                  url
+	                  state
+	                  comments {
+	                    totalCount
+	                  }
+	                }
+	              }
+	            }
+	          }
+	        }
+	      }
+	    }
+	  `;
+
+	const [calendarResponse, prResponse, prReviewResponse, issueResponse] = await Promise.all([
+		fetch("https://api.github.com/graphql", {
+			method: "POST",
+			headers,
+			body: JSON.stringify({
+				query: calendarAndCommitsQuery,
+				variables: { username },
+			}),
+		}),
+		fetch("https://api.github.com/graphql", {
+			method: "POST",
+			headers,
+			body: JSON.stringify({
+				query: prContributionsQuery,
+				variables: { username },
+			}),
+		}),
+		fetch("https://api.github.com/graphql", {
+			method: "POST",
+			headers,
+			body: JSON.stringify({
+				query: prReviewContributionsQuery,
+				variables: { username },
+			}),
+		}),
+		fetch("https://api.github.com/graphql", {
+			method: "POST",
+			headers,
+			body: JSON.stringify({
+				query: issueContributionsQuery,
+				variables: { username },
+			}),
+		}),
+	]);
+
+	if (!calendarResponse.ok) return null;
+
+	const [calendarJson, prJson, prReviewJson, issueJson] = await Promise.all([
+		calendarResponse.json(),
+		prResponse.ok ? prResponse.json() : null,
+		prReviewResponse.ok ? prReviewResponse.json() : null,
+		issueResponse.ok ? issueResponse.json() : null,
+	]);
+
+	const collection = calendarJson.data?.user?.contributionsCollection;
 	const calendar = collection?.contributionCalendar;
+	const prCollection = prJson?.data?.user?.contributionsCollection;
+	const prReviewCollection = prReviewJson?.data?.user?.contributionsCollection;
+	const issueCollection = issueJson?.data?.user?.contributionsCollection;
 	if (!calendar) return null;
 
 	let contributionYears: number[] = [];
@@ -1012,15 +1080,17 @@ async function fetchContributionsFromGitHub(token: string, username: string) {
 	return {
 		...calendar,
 		timelineWeeks,
+		contributionYears: contributionYears.sort((a, b) => b - a),
 		activity: {
 			commitContributionsByRepository:
 				collection?.commitContributionsByRepository ?? [],
 			pullRequestContributionsByRepository:
-				collection?.pullRequestContributionsByRepository ?? [],
+				prCollection?.pullRequestContributionsByRepository ?? [],
 			pullRequestReviewContributionsByRepository:
-				collection?.pullRequestReviewContributionsByRepository ?? [],
+				prReviewCollection?.pullRequestReviewContributionsByRepository ??
+				[],
 			issueContributionsByRepository:
-				collection?.issueContributionsByRepository ?? [],
+				issueCollection?.issueContributionsByRepository ?? [],
 			repositoryContributions: collection?.repositoryContributions ?? {
 				totalCount: 0,
 				nodes: [],
@@ -2550,7 +2620,7 @@ export async function getContributionData(username: string) {
 	const authCtx = await getGitHubAuthContext();
 	return readLocalFirstGitData({
 		authCtx,
-		cacheKey: buildContributionsCacheKey(username),
+		cacheKey: buildContributionsCacheKey(username) + Date.now(),
 		cacheType: "contributions",
 		fallback: null,
 		jobType: "contributions",
