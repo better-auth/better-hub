@@ -16,6 +16,7 @@ const KNOWN_ROUTES = [
 	"prompt",
 	"repos",
 	"search",
+	"stars",
 	"trending",
 	"users",
 	"_next",

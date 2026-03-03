@@ -33,7 +33,6 @@ import {
 	Eye,
 	EyeOff,
 	Code2,
-	Lightbulb,
 	Check,
 	CheckCircle2,
 	Circle,
@@ -62,6 +61,7 @@ import { CheckStatusBadge } from "@/components/pr/check-status-badge";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { UserTooltip } from "@/components/shared/user-tooltip";
 import { getDiffPreferences, setSplitView, setWordWrap } from "@/lib/diff-preferences";
+import { DiffFileTree } from "./diff-file-tree";
 
 interface DiffFile {
 	filename: string;
@@ -148,7 +148,6 @@ export function PRDiffViewer({
 	const globalChat = useGlobalChatOptional();
 	const onAddContext = globalChat?.addCodeContext;
 	const searchParams = useSearchParams();
-	const router = useRouter();
 
 	// Resolve initial index from ?file= query param
 	const [activeIndex, setActiveIndex] = useState(() => {
@@ -161,7 +160,7 @@ export function PRDiffViewer({
 	});
 	const [wordWrap, setWordWrapState] = useState(() => getDiffPreferences().wordWrap);
 	const [splitView, setSplitViewState] = useState(() => getDiffPreferences().splitView);
-	const [sidebarWidth, setSidebarWidth] = useState(220);
+	const [sidebarWidth, setSidebarWidth] = useState(300);
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 	const [isDragging, setIsDragging] = useState(false);
 	const [viewedFiles, setViewedFiles] = useState<Set<string>>(new Set());
@@ -271,7 +270,7 @@ export function PRDiffViewer({
 			{!sidebarCollapsed && (
 				<>
 					<div
-						className="hidden lg:flex flex-col shrink-0 border-r border-border"
+						className="hidden lg:flex flex-col shrink-0 border-r border-border pr-3"
 						style={{
 							width: sidebarWidth,
 							transition: isDragging
@@ -377,118 +376,19 @@ export function PRDiffViewer({
 						)}
 
 						{/* Sidebar content */}
-						<div className="flex-1 overflow-y-auto overscroll-contain py-1">
+						<div className="flex-1 overflow-y-auto overscroll-contain min-h-0">
 							{sidebarMode === "files" ? (
-								<>
-									{files.map((file, i) => {
-										const name =
-											file.filename
-												.split(
-													"/",
-												)
-												.pop() ||
-											file.filename;
-										const dir =
-											file.filename.includes(
-												"/",
-											)
-												? file.filename.slice(
-														0,
-														file.filename.lastIndexOf(
-															"/",
-														),
-													)
-												: "";
-										const Icon =
-											getFileIcon(
-												file.status,
-											);
-										const isViewed =
-											viewedFiles.has(
-												file.filename,
-											);
-										const fileThreads =
-											threadsByFile.get(
-												file.filename,
-											);
-
-										return (
-											<button
-												key={
-													file.filename
-												}
-												onClick={() =>
-													setActiveIndex(
-														i,
-													)
-												}
-												className={cn(
-													"w-full flex items-center gap-1.5 px-3 py-1 text-left transition-colors cursor-pointer group/file",
-													activeIndex ===
-														i
-														? "bg-muted/60"
-														: "hover:bg-muted/50",
-													isViewed &&
-														"opacity-50",
-												)}
-											>
-												{isViewed ? (
-													<Check className="w-3 h-3 shrink-0 text-success" />
-												) : (
-													<Icon
-														className={cn(
-															"w-3 h-3 shrink-0",
-															getFileIconColor(
-																file.status,
-															),
-														)}
-													/>
-												)}
-												<div className="flex-1 min-w-0 truncate">
-													<span
-														className={cn(
-															"text-[11px] font-mono group-hover/file:text-foreground",
-															isViewed
-																? "text-muted-foreground/60 line-through"
-																: "text-foreground/80",
-														)}
-													>
-														{
-															name
-														}
-													</span>
-													{dir && (
-														<span className="block text-[9px] font-mono text-muted-foreground/50 truncate">
-															{
-																dir
-															}
-														</span>
-													)}
-												</div>
-												{fileThreads &&
-													fileThreads.length >
-														0 && (
-														<span
-															className="w-1.5 h-1.5 rounded-full bg-warning/60 shrink-0"
-															title={`${fileThreads.length} review thread${fileThreads.length !== 1 ? "s" : ""}`}
-														/>
-													)}
-												<span className="text-[10px] font-mono text-success tabular-nums shrink-0">
-													+
-													{
-														file.additions
-													}
-												</span>
-												<span className="text-[10px] font-mono text-destructive tabular-nums shrink-0">
-													-
-													{
-														file.deletions
-													}
-												</span>
-											</button>
-										);
-									})}
-								</>
+								<DiffFileTree
+									files={files}
+									activeIndex={activeIndex}
+									onSelectFile={
+										setActiveIndex
+									}
+									viewedFiles={viewedFiles}
+									threadsByFile={
+										threadsByFile
+									}
+								/>
 							) : sidebarMode === "commits" ? (
 								<SidebarCommits
 									commits={commits}
