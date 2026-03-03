@@ -4,8 +4,11 @@ import { ContributionChart } from "@/components/dashboard/contribution-chart";
 import { RepoBadge } from "@/components/repo/repo-badge";
 import { XIcon } from "@/components/shared/icons/x-icon";
 import { TimeAgo } from "@/components/ui/time-ago";
+import { UserProfileActivityTimelineBoundary } from "@/components/users/user-profile-activity-timeline-boundary";
+import { UserProfileActivityTimeline } from "@/components/users/user-profile-activity-timeline";
 import { UserProfileScoreRing } from "@/components/users/user-profile-score-ring";
 import { getLanguageColor } from "@/lib/github-utils";
+import type { ActivityEvent } from "@/lib/github-types";
 import { computeUserProfileScore } from "@/lib/user-profile-score";
 import { cn, formatNumber } from "@/lib/utils";
 import {
