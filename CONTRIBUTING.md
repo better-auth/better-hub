@@ -5,7 +5,7 @@ Thanks for your interest in contributing! This guide covers what you need to get
 ## Prerequisites
 
 - **Node.js** 22+
-- **pnpm** 10+
+- **Bun**
 - **Docker** (for PostgreSQL)
 - A **GitHub OAuth App** ([create one here](https://github.com/settings/developers))
 
@@ -27,13 +27,13 @@ cp apps/web/.env.example apps/web/.env
 # └─ Fill in required values
 
 # 5. Install dependencies
-pnpm install
+bun install
 
 # 6. Run database migrations
-cd apps/web && npx prisma migrate dev && cd ../..
+cd apps/web && npx prisma migrate dev && npx prisma generate && cd ../..
 
 # 7. Start dev server
-pnpm dev
+bun dev
 ```
 
 ## Development Scripts
@@ -41,27 +41,27 @@ pnpm dev
 Run from the repo root:
 
 ```bash
-pnpm dev          # Start all apps in dev mode
-pnpm lint         # Run oxlint
-pnpm lint:fix     # Run oxlint with auto-fix
-pnpm fmt          # Format with oxfmt
-pnpm fmt:check    # Check formatting
-pnpm typecheck    # TypeScript type checking
-pnpm check        # Run lint + fmt:check + typecheck
+bun dev          # Start all apps in dev mode
+bun lint         # Run oxlint
+bun lint:fix     # Run oxlint with auto-fix
+bun fmt          # Format with oxfmt
+bun fmt:check    # Check formatting
+bun typecheck    # TypeScript type checking
+bun check        # Run lint + fmt:check + typecheck
 ```
 
 ## Pull Request Workflow
 
 1. Fork the repo and create a branch from `main`
 2. Make your changes
-3. Run `pnpm check` to verify lint, format, and types pass
+3. Run `bun check` to verify lint, format, and types pass
 4. Push your branch and open a PR against `main`
 5. Fill out the PR description — explain what changed and why
 
 ## Code Style
 
-- **Linter**: oxlint (run `pnpm lint`)
-- **Formatter**: oxfmt (run `pnpm fmt`)
+- **Linter**: oxlint (run `bun lint`)
+- **Formatter**: oxfmt (run `bun fmt`)
 - No manual style decisions — let the tools handle it
 
 ## Commit Conventions
