@@ -59,17 +59,20 @@ export async function compareBranches(
 					patch: f.patch,
 					previous_filename: f.previous_filename,
 				})),
-				commits: data.commits.map((c) => ({
-					sha: c.sha,
-					message: c.commit.message,
-					author: c.author
-						? {
-								login: c.author.login,
-								avatar_url: c.author.avatar_url,
-							}
-						: null,
-					date: c.commit.author?.date ?? "",
-				})),
+				commits: data.commits.map((c) => {
+					const commitUser = c.author || c.committer;
+					return {
+						sha: c.sha,
+						message: c.commit.message,
+						author: commitUser
+							? {
+									login: commitUser.login,
+									avatar_url: commitUser.avatar_url,
+								}
+							: null,
+						date: c.commit.author?.date ?? "",
+					};
+				}),
 			},
 		};
 	} catch (err: unknown) {
