@@ -195,7 +195,7 @@ export function PromptList({ owner, repo, promptRequests }: PromptListProps) {
 							placeholder="Search prompt requests..."
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							className="w-full h-8 bg-transparent border border-border rounded-lg pl-9 pr-4 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-foreground/20 transition-colors"
+							className="w-full h-8 bg-transparent border border-border rounded-sm pl-9 pr-4 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-foreground/20 transition-colors"
 						/>
 					</div>
 
@@ -210,7 +210,7 @@ export function PromptList({ owner, repo, promptRequests }: PromptListProps) {
 							)
 						}
 						className={cn(
-							"flex items-center gap-1.5 h-8 px-3 rounded-lg border text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
+							"flex items-center gap-1.5 h-8 px-3 rounded-sm border text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
 							sort !== "newest"
 								? "border-foreground/20 bg-muted/50 dark:bg-white/4 text-foreground"
 								: "border-border text-muted-foreground/60 hover:text-foreground hover:bg-muted/40 dark:hover:bg-white/3",
@@ -222,7 +222,7 @@ export function PromptList({ owner, repo, promptRequests }: PromptListProps) {
 
 					<button
 						onClick={() => setSuggestDialogOpen(true)}
-						className="ml-auto flex items-center gap-1.5 h-8 px-3 text-xs font-medium bg-primary text-background rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
+						className="ml-auto flex items-center gap-1.5 h-8 px-3 text-xs font-medium bg-primary text-background rounded-sm hover:bg-primary/90 transition-colors cursor-pointer"
 					>
 						<Sparkles className="w-3 h-3" />
 						Suggest Prompt
