@@ -804,73 +804,160 @@ export function UserProfileContent({
 							href={`/${repo.full_name}`}
 							className="group flex items-center gap-4 px-4 py-3 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors"
 						>
-							<FolderGit2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-							<div className="flex-1 min-w-0">
-								<div className="flex items-center gap-2 w-full justify-between">
-									<span className="text-sm text-foreground group-hover:text-foreground transition-colors font-mono">
-										{repo.name}
-									</span>
-									{repo.private ? (
-										<RepoBadge type="private" />
-									) : (
-										<RepoBadge type="public" />
-									)}
-									{repo.archived && (
-										<RepoBadge type="archived" />
-									)}
-									{repo.fork && (
-										<RepoBadge type="fork" />
+							{/* Desktop: Original layout exactly as in git */}
+							<div className="hidden sm:contents">
+								<FolderGit2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+								<div className="flex-1 min-w-0">
+									<div className="flex items-center gap-2">
+										<span className="text-sm text-foreground group-hover:text-foreground transition-colors font-mono">
+											{repo.name}
+										</span>
+										{repo.private ? (
+											<RepoBadge type="private" />
+										) : (
+											<RepoBadge type="public" />
+										)}
+										{repo.archived && (
+											<RepoBadge type="archived" />
+										)}
+										{repo.fork && (
+											<RepoBadge type="fork" />
+										)}
+									</div>
+
+									{repo.description && (
+										<p className="text-[11px] text-muted-foreground/60 mt-1 truncate max-w-lg">
+											{
+												repo.description
+											}
+										</p>
 									)}
 								</div>
 
-								{repo.description && (
-									<p className="text-[11px] text-muted-foreground/60 mt-1 truncate max-w-lg">
-										{repo.description}
-									</p>
-								)}
+								<div className="flex items-center gap-4 shrink-0">
+									{repo.language && (
+										<span className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60 font-mono">
+											<span
+												className="w-2 h-2 rounded-full"
+												style={{
+													backgroundColor:
+														getLanguageColor(
+															repo.language,
+														),
+												}}
+											/>
+											{
+												repo.language
+											}
+										</span>
+									)}
+									{repo.stargazers_count >
+										0 && (
+										<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
+											<Star className="w-3 h-3" />
+											{formatNumber(
+												repo.stargazers_count,
+											)}
+										</span>
+									)}
+									{repo.forks_count > 0 && (
+										<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
+											<GitFork className="w-3 h-3" />
+											{formatNumber(
+												repo.forks_count,
+											)}
+										</span>
+									)}
+									{repo.updated_at && (
+										<span className="text-[11px] text-muted-foreground font-mono w-14 text-right">
+											<TimeAgo
+												date={
+													repo.updated_at
+												}
+											/>
+										</span>
+									)}
+									<ChevronRight className="w-3 h-3 text-foreground/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+								</div>
 							</div>
 
-							<div className="flex items-center gap-4 shrink-0">
-								{repo.language && (
-									<span className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60 font-mono">
-										<span
-											className="w-2 h-2 rounded-full"
-											style={{
-												backgroundColor:
-													getLanguageColor(
-														repo.language,
-													),
-											}}
-										/>
-										{repo.language}
-									</span>
-								)}
-								{repo.stargazers_count > 0 && (
-									<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
-										<Star className="w-3 h-3" />
-										{formatNumber(
-											repo.stargazers_count,
-										)}
-									</span>
-								)}
-								{repo.forks_count > 0 && (
-									<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
-										<GitFork className="w-3 h-3" />
-										{formatNumber(
-											repo.forks_count,
-										)}
-									</span>
-								)}
-								{repo.updated_at && (
-									<span className="text-[11px] text-muted-foreground font-mono w-14 text-right">
-										<TimeAgo
-											date={
-												repo.updated_at
+							{/* Mobile: Stacked layout */}
+							<div className="sm:hidden flex items-start gap-3 w-full">
+								<FolderGit2 className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
+								<div className="flex-1 min-w-0">
+									<div className="flex flex-col gap-1">
+										<span className="text-sm text-foreground group-hover:text-foreground transition-colors font-mono truncate">
+											{repo.name}
+										</span>
+										<div className="flex items-center gap-1.5">
+											{repo.private ? (
+												<RepoBadge type="private" />
+											) : (
+												<RepoBadge type="public" />
+											)}
+											{repo.archived && (
+												<RepoBadge type="archived" />
+											)}
+											{repo.fork && (
+												<RepoBadge type="fork" />
+											)}
+										</div>
+									</div>
+
+									{repo.description && (
+										<p className="text-[11px] text-muted-foreground/60 mt-1 line-clamp-2">
+											{
+												repo.description
 											}
-										/>
-									</span>
-								)}
-								<ChevronRight className="w-3 h-3 text-foreground/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+										</p>
+									)}
+
+									<div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
+										{repo.language && (
+											<span className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60 font-mono">
+												<span
+													className="w-2 h-2 rounded-full"
+													style={{
+														backgroundColor:
+															getLanguageColor(
+																repo.language,
+															),
+													}}
+												/>
+												{
+													repo.language
+												}
+											</span>
+										)}
+										{repo.stargazers_count >
+											0 && (
+											<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
+												<Star className="w-3 h-3" />
+												{formatNumber(
+													repo.stargazers_count,
+												)}
+											</span>
+										)}
+										{repo.forks_count >
+											0 && (
+											<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
+												<GitFork className="w-3 h-3" />
+												{formatNumber(
+													repo.forks_count,
+												)}
+											</span>
+										)}
+										{repo.updated_at && (
+											<span className="text-[11px] text-muted-foreground font-mono">
+												<TimeAgo
+													date={
+														repo.updated_at
+													}
+												/>
+											</span>
+										)}
+									</div>
+								</div>
 							</div>
 						</Link>
 					))}
