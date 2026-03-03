@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import "katex/dist/katex.min.css";
 import { ClientMarkdown } from "@/components/shared/client-markdown";
 import { HighlightedCodeBlock } from "@/components/shared/highlighted-code-block";
 import { cn } from "@/lib/utils";
@@ -39,10 +40,7 @@ function preprocessJupyterMarkdown(source: string) {
 
 	// 1. Upgrade inline math ($...$) containing \tag{} to block math ($$...$$).
 	// KaTeX strictly forbids \tag{} in inline mode and will crash/fail to style it.
-	text = text.replace(
-		/(^|[^$])\$([^$]+?\\tag\{[^}]+\}[^$]*?)\$([^$]|$)/g,
-		"$1$$$$$2$$$$$3",
-	);
+	text = text.replace(/(^|[^$])\$([^$]+?\\tag\{[^}]+\}[^$]*?)\$([^$]|$)/g, "$1$$$$$2$$$$$3");
 
 	// 2. Wrap naked LaTeX environments (like \begin{equation}...\end{equation}) in $$...$$
 	// remark-math completely ignores these otherwise.
