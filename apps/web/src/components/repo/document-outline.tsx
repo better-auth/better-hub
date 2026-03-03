@@ -16,8 +16,6 @@ interface HeadingNode {
 }
 
 interface DocumentOutlineProps {
-	/** Ref to the container element that holds the rendered markdown (.ghmd) */
-	contentRef: React.RefObject<HTMLDivElement | null>;
 	/** Whether the outline should be visible (only in preview mode) */
 	visible: boolean;
 }
@@ -168,7 +166,7 @@ function FlatOutlineItem({
 // Main component
 // ---------------------------------------------------------------------------
 
-export function DocumentOutline({ contentRef, visible }: DocumentOutlineProps) {
+export function DocumentOutline({ visible }: DocumentOutlineProps) {
 	const [headings, setHeadings] = useState<HeadingNode[]>([]);
 	const [activeId, setActiveId] = useState<string | null>(null);
 	const [isExpanded, setIsExpanded] = useState(() => {
@@ -179,6 +177,12 @@ export function DocumentOutline({ contentRef, visible }: DocumentOutlineProps) {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [focusedIndex, setFocusedIndex] = useState(-1);
 	const [mobileOpen, setMobileOpen] = useState(false);
+
+	const scrollContainerRef = useRef<HTMLElement | null>(null);
+	useEffect(() => {
+		scrollContainerRef.current =
+			document.querySelector<HTMLElement>("[data-scroll-container]") ?? null;
+	}, []);
 
 	const outlineRef = useRef<HTMLDivElement>(null);
 	const listRef = useRef<HTMLDivElement>(null);
@@ -195,7 +199,7 @@ export function DocumentOutline({ contentRef, visible }: DocumentOutlineProps) {
 	// Extract headings from rendered content
 	useEffect(() => {
 		if (!visible) return;
-		const container = contentRef.current;
+		const container = scrollContainerRef.current;
 		if (!container) return;
 
 		// Wait for next frame to ensure markdown is rendered
@@ -207,27 +211,46 @@ export function DocumentOutline({ contentRef, visible }: DocumentOutlineProps) {
 		});
 
 		return () => cancelAnimationFrame(raf);
-	}, [contentRef, visible]);
+	}, [visible]);
 
 	// Deep-link: scroll to hash on mount
 	useEffect(() => {
-		if (!visible || headings.length === 0) return;
+		if (!visible) return;
 		const hash = window.location.hash.slice(1);
-		if (hash) {
+		if (!hash) return;
+
+		const container = scrollContainerRef.current;
+		if (!container) return;
+
+		const scrollParent =
+			container.closest<HTMLElement>("[data-scroll-container]") ?? null;
+
+		const raf = requestAnimationFrame(() => {
 			const el = document.getElementById(hash);
-			if (el) {
-				setTimeout(() => {
-					el.scrollIntoView({ behavior: "smooth", block: "start" });
-				}, 100);
-				setActiveId(hash);
+			if (!el) return;
+
+			if (scrollParent) {
+				const containerRect = scrollParent.getBoundingClientRect();
+				const elRect = el.getBoundingClientRect();
+				scrollParent.scrollTop =
+					scrollParent.scrollTop +
+					elRect.top -
+					containerRect.top -
+					SCROLL_OFFSET;
+			} else {
+				el.scrollIntoView({ block: "start" });
 			}
-		}
-	}, [visible, headings]);
+
+			setActiveId(hash);
+		});
+
+		return () => cancelAnimationFrame(raf);
+	}, [visible]);
 
 	// Scroll tracking with IntersectionObserver
 	useEffect(() => {
 		if (!visible || headings.length === 0) return;
-		const container = contentRef.current;
+		const container = scrollContainerRef.current;
 		if (!container) return;
 
 		const flat = flattenTree(headings);
@@ -240,7 +263,7 @@ export function DocumentOutline({ contentRef, visible }: DocumentOutlineProps) {
 
 		// Find the scroll parent
 		const scrollParent =
-			container.closest<HTMLElement>("[class*='overflow-y-auto']") ?? window;
+			container.closest<HTMLElement>("[data-scroll-container]") ?? window;
 
 		if ("IntersectionObserver" in window) {
 			const rootEl = scrollParent instanceof HTMLElement ? scrollParent : null;
@@ -366,7 +389,7 @@ export function DocumentOutline({ contentRef, visible }: DocumentOutlineProps) {
 			clearTimeout(timer);
 			target.removeEventListener("scroll", handleScroll);
 		};
-	}, [visible, headings, contentRef]);
+	}, [visible, headings]);
 
 	// Auto-scroll outline to keep active item visible
 	useEffect(() => {
@@ -391,14 +414,30 @@ export function DocumentOutline({ contentRef, visible }: DocumentOutlineProps) {
 		const el = document.getElementById(id);
 		if (!el) return;
 
+		const container = scrollContainerRef.current;
+		if (!container) return;
+
+		const scrollParent =
+			container.closest<HTMLElement>("[data-scroll-container]") ?? null;
+
+		if (scrollParent) {
+			const containerRect = scrollParent.getBoundingClientRect();
+			const elRect = el.getBoundingClientRect();
+			const targetScrollTop =
+				scrollParent.scrollTop +
+				elRect.top -
+				containerRect.top -
+				SCROLL_OFFSET;
+			scrollParent.scrollTop = targetScrollTop;
+		} else {
+			el.scrollIntoView({ behavior: "smooth", block: "start" });
+		}
+
 		setActiveId(id);
 		setMobileOpen(false);
 
 		// Update hash without full reload
 		history.replaceState(null, "", `#${id}`);
-
-		// Smooth scroll
-		el.scrollIntoView({ behavior: "smooth", block: "start" });
 	}, []);
 
 	// Keyboard navigation
