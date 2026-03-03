@@ -38,7 +38,6 @@ export default async function CodePage({
 	if (!repoData) return null;
 
 	const defaultBranch = repoData.default_branch;
-
 	const [branches, tags, contents, openPRs, closedPRs] = await Promise.all([
 		branchesPromise,
 		tagsPromise,
