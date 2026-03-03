@@ -1,18 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import {
-	GitFork,
-	Eye,
-	Lock,
-	Globe,
-	Scale,
-	Archive,
-	Link as LinkIcon,
-	HardDrive,
-} from "lucide-react";
+import { GitFork, Eye, Scale, HardDrive, LinkIcon } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { formatBytes } from "@/lib/github-utils";
+import { RepoBadge, RepoBadgeProps } from "@/components/repo/repo-badge";
 import { StarButton } from "@/components/repo/star-button";
 import { ForkButton } from "@/components/repo/fork-button";
 import { ForkSyncButton } from "@/components/repo/fork-sync-button";
@@ -93,11 +85,11 @@ export function RepoSidebar({
 	isOwnFork,
 	forkSyncStatus,
 }: RepoSidebarProps) {
-	const badges = [
-		isPrivate ? { label: "Private", icon: Lock } : { label: "Public", icon: Globe },
-		...(archived ? [{ label: "Archived", icon: Archive }] : []),
-		...(fork ? [{ label: "Fork", icon: GitFork }] : []),
-		...(homepage ? [{ label: "Website", icon: LinkIcon, href: homepage }] : []),
+	const badges: Array<RepoBadgeProps> = [
+		{ type: isPrivate ? "private" : "public" },
+		...(archived ? [{ type: "archived" } as const] : []),
+		...(fork ? [{ type: "fork" } as const] : []),
+		...(homepage ? [{ type: "website" as const, href: homepage }] : []),
 	];
 
 	return (
@@ -125,34 +117,14 @@ export function RepoSidebar({
 						</p>
 					)}
 					<div className="flex flex-wrap gap-1.5">
-						{badges.map((b) => {
-							const content = (
-								<>
-									<b.icon className="w-2.5 h-2.5" />
-									{b.label}
-								</>
-							);
-							const className =
-								"flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 border border-dashed border-border rounded-full text-muted-foreground";
-							return "href" in b && b.href ? (
-								<a
-									key={b.label}
-									href={b.href}
-									target="_blank"
-									rel="noopener noreferrer"
-									className={`${className} hover:text-foreground transition-colors`}
-								>
-									{content}
-								</a>
-							) : (
-								<span
-									key={b.label}
-									className={className}
-								>
-									{content}
-								</span>
-							);
-						})}
+						{badges.map((b, i) => (
+							<RepoBadge
+								key={i}
+								type={b.type}
+								href={b.href}
+								style="dashed"
+							/>
+						))}
 					</div>
 					{fork && parent && (
 						<p className="text-[11px] text-muted-foreground/60">
@@ -326,34 +298,14 @@ export function RepoSidebar({
 						</p>
 					)}
 					<div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-						{badges.map((b) => {
-							const content = (
-								<>
-									<b.icon className="w-2.5 h-2.5" />
-									{b.label}
-								</>
-							);
-							const className =
-								"flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 border border-dashed border-border rounded-full text-muted-foreground";
-							return "href" in b && b.href ? (
-								<a
-									key={b.label}
-									href={b.href}
-									target="_blank"
-									rel="noopener noreferrer"
-									className={`${className} hover:text-foreground transition-colors`}
-								>
-									{content}
-								</a>
-							) : (
-								<span
-									key={b.label}
-									className={className}
-								>
-									{content}
-								</span>
-							);
-						})}
+						{badges.map((b, i) => (
+							<RepoBadge
+								key={i}
+								type={b.type}
+								href={b.href}
+								style="dashed"
+							/>
+						))}
 						<StarButton
 							owner={owner}
 							repo={repoName}
