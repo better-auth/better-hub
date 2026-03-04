@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
 import { ShieldAlert } from "lucide-react";
-import { getRepoSecurityTabData, getFileContent } from "@/lib/github";
+import { getRepoSecurityTabData, getFileContent, getRepo } from "@/lib/github";
 import { renderMarkdownToHtml } from "@/components/shared/markdown-renderer";
 import { SecurityView } from "@/components/security/security-view";
 
-async function fetchSecurityPolicy(owner: string, repo: string): Promise<string | null> {
+async function fetchSecurityPolicy(
+	owner: string,
+	repo: string,
+	isEmptyRepo: boolean,
+): Promise<string | null> {
+	if (isEmptyRepo) return null;
 	const paths = ["SECURITY.md", ".github/SECURITY.md", "docs/SECURITY.md"];
 	const results = await Promise.all(paths.map((path) => getFileContent(owner, repo, path)));
 	const file = results.find((r) => r?.content);
@@ -33,10 +38,14 @@ export default async function SecurityPage({
 	params: Promise<{ owner: string; repo: string }>;
 }) {
 	const { owner, repo } = await params;
+	const repoData = await getRepo(owner, repo);
+	if (!repoData) return null;
+
+	const isEmptyRepo = repoData.size === 0;
 
 	const [data, policyHtml] = await Promise.all([
 		getRepoSecurityTabData(owner, repo),
-		fetchSecurityPolicy(owner, repo),
+		fetchSecurityPolicy(owner, repo, isEmptyRepo),
 	]);
 
 	const hasSecurityAccess = !!data && (data.permissions.admin || data.permissions.maintain);

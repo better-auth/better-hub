@@ -205,10 +205,7 @@ export function MarkdownBlobView({
 				<div ref={previewContainerRef} className="flex-1 min-w-0">
 					{previewView}
 				</div>
-				<DocumentOutline
-					contentRef={previewContainerRef}
-					visible={mode === "preview"}
-				/>
+				<DocumentOutline visible={mode === "preview"} />
 			</div>
 			{mode === "edit" && (
 				<div className="border border-border rounded-md">

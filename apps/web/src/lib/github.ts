@@ -118,6 +118,7 @@ const SHAREABLE_CACHE_TYPES: ReadonlySet<string> = new Set([
 	"user_profile",
 	"user_public_repos",
 	"user_public_orgs",
+	"user_events",
 	"org",
 	"org_repos",
 	"org_members",
@@ -360,7 +361,7 @@ function buildStarredReposCacheKey(perPage: number): string {
 }
 
 function buildContributionsCacheKey(username: string): string {
-	return `contributions:${username.toLowerCase()}`;
+	return `contributions:v3:${username.toLowerCase()}`;
 }
 
 function buildTrendingReposCacheKey(since: string, perPage: number, language?: string): string {
@@ -663,45 +664,446 @@ async function fetchSearchIssuesFromGitHub(octokit: Octokit, query: string, perP
 }
 
 async function fetchUserEventsFromGitHub(octokit: Octokit, username: string, perPage: number) {
-	const { data } = await octokit.activity.listEventsForAuthenticatedUser({
+	const { data } = await octokit.activity.listPublicEventsForUser({
 		username,
 		per_page: perPage,
 	});
 	return data;
 }
 
-async function fetchContributionsFromGitHub(token: string, username: string) {
-	const query = `
-    query($username: String!) {
-      user(login: $username) {
-        contributionsCollection {
-          contributionCalendar {
-            totalContributions
-            weeks {
-              contributionDays {
-                contributionCount
-                date
-                color
-              }
-            }
-          }
-        }
-      }
-    }
-  `;
-
-	const response = await fetch("https://api.github.com/graphql", {
-		method: "POST",
-		headers: {
-			Authorization: `Bearer ${token}`,
-			"Content-Type": "application/json",
+async function fetchUserEventsPublicUnauthenticated(username: string, perPage: number) {
+	const response = await fetch(
+		`https://api.github.com/users/${encodeURIComponent(username)}/events/public?per_page=${perPage}`,
+		{
+			headers: {
+				Accept: "application/vnd.github+json",
+				"User-Agent": "better-hub",
+			},
 		},
-		body: JSON.stringify({ query, variables: { username } }),
-	});
+	);
+	if (!response.ok) {
+		throw new Error(
+			`GitHub API ${response.status}: failed to fetch public user events`,
+		);
+	}
+	return await response.json();
+}
 
-	if (!response.ok) return null;
-	const json = await response.json();
-	return json.data?.user?.contributionsCollection?.contributionCalendar ?? null;
+async function fetchContributionsFromGitHub(token: string, username: string) {
+	const headers = {
+		Authorization: `Bearer ${token}`,
+		"Content-Type": "application/json",
+	};
+
+	const calendarAndCommitsQuery = `
+	    query($username: String!) {
+	      user(login: $username) {
+	        contributionsCollection {
+	          contributionCalendar {
+	            totalContributions
+	            weeks {
+	              contributionDays {
+	                contributionCount
+	                date
+	                color
+	              }
+	            }
+	          }
+	          commitContributionsByRepository(maxRepositories: 100) {
+	            repository {
+	              nameWithOwner
+	              url
+	              primaryLanguage {
+	                name
+	              }
+	            }
+	            contributions(first: 100) {
+	              totalCount
+	              nodes {
+	                occurredAt
+	                commitCount
+	              }
+	            }
+	          }
+	          repositoryContributions(first: 100) {
+	            totalCount
+	            nodes {
+	              occurredAt
+	              repository {
+	                nameWithOwner
+	                url
+	                primaryLanguage {
+	                  name
+	                }
+	              }
+	            }
+	          }
+	        }
+	      }
+	    }
+	  `;
+
+	const prContributionsQuery = `
+	    query($username: String!) {
+	      user(login: $username) {
+	        contributionsCollection {
+	          pullRequestContributionsByRepository(maxRepositories: 50) {
+	            repository {
+	              nameWithOwner
+	              url
+	              primaryLanguage {
+	                name
+	              }
+	            }
+	            contributions(first: 50) {
+	              totalCount
+	              nodes {
+	                occurredAt
+	                pullRequest {
+	                  number
+	                  title
+	                  url
+	                  state
+	                  merged
+	                  comments {
+	                    totalCount
+	                  }
+	                  additions
+	                  deletions
+	                  changedFiles
+	                  commits {
+	                    totalCount
+	                  }
+	                }
+	              }
+	            }
+	          }
+	        }
+	      }
+	    }
+	  `;
+
+	const prReviewContributionsQuery = `
+	    query($username: String!) {
+	      user(login: $username) {
+	        contributionsCollection {
+	          pullRequestReviewContributionsByRepository(maxRepositories: 50) {
+	            repository {
+	              nameWithOwner
+	              url
+	              primaryLanguage {
+	                name
+	              }
+	            }
+	            contributions(first: 50) {
+	              totalCount
+	              nodes {
+	                occurredAt
+	                pullRequest {
+	                  number
+	                  title
+	                  url
+	                  state
+	                  merged
+	                  comments {
+	                    totalCount
+	                  }
+	                  additions
+	                  deletions
+	                  changedFiles
+	                  commits {
+	                    totalCount
+	                  }
+	                }
+	              }
+	            }
+	          }
+	        }
+	      }
+	    }
+	  `;
+
+	const issueContributionsQuery = `
+	    query($username: String!) {
+	      user(login: $username) {
+	        contributionsCollection {
+	          issueContributionsByRepository(maxRepositories: 50) {
+	            repository {
+	              nameWithOwner
+	              url
+	              primaryLanguage {
+	                name
+	              }
+	            }
+	            contributions(first: 50) {
+	              totalCount
+	              nodes {
+	                occurredAt
+	                issue {
+	                  number
+	                  title
+	                  url
+	                  state
+	                  comments {
+	                    totalCount
+	                  }
+	                }
+	              }
+	            }
+	          }
+	        }
+	      }
+	    }
+	  `;
+
+	const [calendarResponse, prResponse, prReviewResponse, issueResponse] = await Promise.all([
+		fetch("https://api.github.com/graphql", {
+			method: "POST",
+			headers,
+			body: JSON.stringify({
+				query: calendarAndCommitsQuery,
+				variables: { username },
+			}),
+		}),
+		fetch("https://api.github.com/graphql", {
+			method: "POST",
+			headers,
+			body: JSON.stringify({
+				query: prContributionsQuery,
+				variables: { username },
+			}),
+		}),
+		fetch("https://api.github.com/graphql", {
+			method: "POST",
+			headers,
+			body: JSON.stringify({
+				query: prReviewContributionsQuery,
+				variables: { username },
+			}),
+		}),
+		fetch("https://api.github.com/graphql", {
+			method: "POST",
+			headers,
+			body: JSON.stringify({
+				query: issueContributionsQuery,
+				variables: { username },
+			}),
+		}),
+	]);
+
+	if (!calendarResponse.ok) return null;
+
+	const [calendarJson, prJson, prReviewJson, issueJson] = await Promise.all([
+		calendarResponse.json(),
+		prResponse.ok ? prResponse.json() : null,
+		prReviewResponse.ok ? prReviewResponse.json() : null,
+		issueResponse.ok ? issueResponse.json() : null,
+	]);
+
+	const collection = calendarJson.data?.user?.contributionsCollection;
+	const calendar = collection?.contributionCalendar;
+	const prCollection = prJson?.data?.user?.contributionsCollection;
+	const prReviewCollection = prReviewJson?.data?.user?.contributionsCollection;
+	const issueCollection = issueJson?.data?.user?.contributionsCollection;
+	if (!calendar) return null;
+
+	let contributionYears: number[] = [];
+	try {
+		const yearsQueryUser = `
+			query($username: String!) {
+				user(login: $username) {
+					contributionYears
+				}
+			}
+		`;
+		const yearsResponse = await fetch("https://api.github.com/graphql", {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				query: yearsQueryUser,
+				variables: { username },
+			}),
+		});
+		if (yearsResponse.ok) {
+			const yearsJson = await yearsResponse.json();
+			const contributionYearsRaw = yearsJson.data?.user?.contributionYears;
+			if (Array.isArray(contributionYearsRaw)) {
+				contributionYears = contributionYearsRaw
+					.map((year: unknown) => Number(year))
+					.filter(
+						(year: number) =>
+							Number.isInteger(year) && year >= 2008,
+					);
+			}
+		}
+	} catch {
+		// Best-effort only; we still return current-year calendar data.
+	}
+
+	// Some GitHub GraphQL schemas expose contributionYears on contributionsCollection instead.
+	if (contributionYears.length === 0) {
+		try {
+			const yearsQueryCollection = `
+				query($username: String!) {
+					user(login: $username) {
+						contributionsCollection {
+							contributionYears
+						}
+					}
+				}
+			`;
+			const yearsResponse = await fetch("https://api.github.com/graphql", {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${token}`,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					query: yearsQueryCollection,
+					variables: { username },
+				}),
+			});
+			if (yearsResponse.ok) {
+				const yearsJson = await yearsResponse.json();
+				const contributionYearsRaw =
+					yearsJson.data?.user?.contributionsCollection
+						?.contributionYears;
+				if (Array.isArray(contributionYearsRaw)) {
+					contributionYears = contributionYearsRaw
+						.map((year: unknown) => Number(year))
+						.filter(
+							(year: number) =>
+								Number.isInteger(year) &&
+								year >= 2008,
+						);
+				}
+			}
+		} catch {
+			// Best-effort only; we still return current-year calendar data.
+		}
+	}
+
+	const currentYear = new Date().getUTCFullYear();
+
+	// Ensure current year is always in the list
+	if (!contributionYears.includes(currentYear)) {
+		contributionYears.push(currentYear);
+	}
+
+	const historicalYears = contributionYears
+		.filter((year) => year !== currentYear)
+		.sort((a, b) => b - a);
+
+	let timelineWeeks = calendar.weeks ?? [];
+	if (historicalYears.length > 0) {
+		const historicalQuery = `
+			query($username: String!) {
+				user(login: $username) {
+					${historicalYears
+						.map(
+							(year) => `
+					y${year}: contributionsCollection(
+						from: "${year}-01-01T00:00:00Z"
+						to: "${year}-12-31T23:59:59Z"
+					) {
+						contributionCalendar {
+							weeks {
+								contributionDays {
+									contributionCount
+									date
+									color
+								}
+							}
+						}
+					}`,
+						)
+						.join("\n")}
+				}
+			}
+		`;
+
+		const historicalResponse = await fetch("https://api.github.com/graphql", {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				query: historicalQuery,
+				variables: { username },
+			}),
+		});
+
+		if (historicalResponse.ok) {
+			const historicalJson = await historicalResponse.json();
+			const historicalUser = historicalJson.data?.user ?? {};
+			const mergedDays = new Map<
+				string,
+				{ contributionCount: number; date: string; color: string }
+			>();
+			for (const week of calendar.weeks ?? []) {
+				for (const day of week.contributionDays ?? []) {
+					if (!day?.date) continue;
+					mergedDays.set(day.date, day);
+				}
+			}
+			for (const year of historicalYears) {
+				const yearWeeks =
+					historicalUser?.[`y${year}`]?.contributionCalendar?.weeks ??
+					[];
+				for (const week of yearWeeks) {
+					for (const day of week?.contributionDays ?? []) {
+						if (!day?.date || mergedDays.has(day.date))
+							continue;
+						mergedDays.set(day.date, day);
+					}
+				}
+			}
+			const orderedDays = [...mergedDays.values()].sort((a, b) =>
+				a.date.localeCompare(b.date),
+			);
+			const rebuiltWeeks: Array<{
+				contributionDays: Array<{
+					contributionCount: number;
+					date: string;
+					color: string;
+				}>;
+			}> = [];
+			for (let i = 0; i < orderedDays.length; i += 7) {
+				rebuiltWeeks.push({
+					contributionDays: orderedDays.slice(i, i + 7),
+				});
+			}
+			if (rebuiltWeeks.length > 0) {
+				timelineWeeks = rebuiltWeeks;
+			}
+		}
+	}
+
+	return {
+		...calendar,
+		weeks: timelineWeeks.length > 0 ? timelineWeeks : calendar.weeks,
+		timelineWeeks,
+		contributionYears: contributionYears.sort((a, b) => b - a),
+		activity: {
+			commitContributionsByRepository:
+				collection?.commitContributionsByRepository ?? [],
+			pullRequestContributionsByRepository:
+				prCollection?.pullRequestContributionsByRepository ?? [],
+			pullRequestReviewContributionsByRepository:
+				prReviewCollection?.pullRequestReviewContributionsByRepository ??
+				[],
+			issueContributionsByRepository:
+				issueCollection?.issueContributionsByRepository ?? [],
+			repositoryContributions: collection?.repositoryContributions ?? {
+				totalCount: 0,
+				nodes: [],
+			},
+		},
+	};
 }
 
 function isStarredRepoEnvelope(item: unknown): item is { repo: UserPublicRepo } {
@@ -2149,22 +2551,83 @@ export async function searchIssues(query: string, perPage = 20) {
 
 export async function getUserEvents(username: string, perPage = 30) {
 	const authCtx = await getGitHubAuthContext();
-	return readLocalFirstGitData({
+	const cacheKey = buildUserEventsCacheKey(username, perPage);
+	if (!authCtx) {
+		const shared =
+			await getSharedCacheEntry<
+				Awaited<ReturnType<typeof fetchUserEventsFromGitHub>>
+			>(cacheKey);
+		if (shared && Array.isArray(shared.data) && shared.data.length > 0) {
+			touchSharedCacheEntrySyncedAt(cacheKey).catch(() => {});
+			return shared.data;
+		}
+		try {
+			const data = await fetchUserEventsPublicUnauthenticated(username, perPage);
+			if (Array.isArray(data) && data.length > 0) {
+				upsertSharedCacheEntry(cacheKey, data).catch(() => {});
+				return data;
+			}
+			if (shared) return shared.data;
+			return [];
+		} catch {
+			if (shared) return shared.data;
+			return [];
+		}
+	}
+
+	const data = await readLocalFirstGitData({
 		authCtx,
-		cacheKey: buildUserEventsCacheKey(username, perPage),
+		cacheKey,
 		cacheType: "user_events",
 		fallback: [],
 		jobType: "user_events",
 		jobPayload: { username, perPage },
 		fetchRemote: (octokit) => fetchUserEventsFromGitHub(octokit, username, perPage),
 	});
+	if (data.length > 0) return data;
+
+	// Avoid silently rendering an empty timeline from stale cached fallback data.
+	// If we have no events, retry synchronously against the public events endpoint.
+	try {
+		const fresh = await fetchUserEventsFromGitHub(authCtx.octokit, username, perPage);
+		if (fresh.length > 0) {
+			upsertGithubCacheEntry(
+				authCtx.userId,
+				cacheKey,
+				"user_events",
+				fresh,
+			).catch(() => {});
+			upsertSharedCacheEntry(cacheKey, fresh).catch(() => {});
+			return fresh;
+		}
+	} catch {
+		// Fall through to unauthenticated public endpoint below
+	}
+
+	try {
+		const freshPublic = await fetchUserEventsPublicUnauthenticated(username, perPage);
+		if (Array.isArray(freshPublic) && freshPublic.length > 0) {
+			upsertGithubCacheEntry(
+				authCtx.userId,
+				cacheKey,
+				"user_events",
+				freshPublic,
+			).catch(() => {});
+			upsertSharedCacheEntry(cacheKey, freshPublic).catch(() => {});
+			return freshPublic;
+		}
+	} catch {
+		// Keep existing empty result
+	}
+
+	return data;
 }
 
 export async function getContributionData(username: string) {
 	const authCtx = await getGitHubAuthContext();
 	return readLocalFirstGitData({
 		authCtx,
-		cacheKey: buildContributionsCacheKey(username),
+		cacheKey: buildContributionsCacheKey(username) + Date.now(),
 		cacheType: "contributions",
 		fallback: null,
 		jobType: "contributions",

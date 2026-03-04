@@ -342,6 +342,7 @@ export function CodeContentWrapper({
 					</div>
 				)}
 				<div
+					data-scroll-container
 					className={cn(
 						"flex-1 min-h-0",
 						isDetailRoute

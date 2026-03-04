@@ -4,21 +4,11 @@ import { useRef, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
-import {
-	MapPin,
-	Building2,
-	Users,
-	BookOpen,
-	Calendar,
-	Star,
-	Link as LinkIcon,
-	ShieldCheck,
-} from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import type { ScoreResult } from "@/lib/contributor-score";
 import { UserTooltip } from "@/components/shared/user-tooltip";
-import { XIcon } from "@/components/shared/icons/x-icon";
 
 interface AuthorOrg {
 	login: string;
@@ -66,36 +56,9 @@ interface PRAuthorDossierProps {
 	openedAt?: string;
 }
 
-function fmtAge(d: string): string {
-	const m = (Date.now() - new Date(d).getTime()) / 2.628e9; // months
-	if (m < 1) return "<1mo";
-	if (m < 12) return `${Math.floor(m)}mo`;
-	const y = Math.floor(m / 12);
-	const r = Math.floor(m % 12);
-	return r > 0 ? `${y}y ${r}mo` : `${y}y`;
-}
-
 function fmtN(n: number): string {
 	return n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k` : String(n);
 }
-
-const LC: Record<string, string> = {
-	TypeScript: "#3178c6",
-	JavaScript: "#f1e05a",
-	Python: "#3572A5",
-	Rust: "#dea584",
-	Go: "#00ADD8",
-	Java: "#b07219",
-	Ruby: "#701516",
-	"C++": "#f34b7d",
-	C: "#555555",
-	Swift: "#F05138",
-	Kotlin: "#A97BFF",
-	PHP: "#4F5D95",
-	Shell: "#89e051",
-	"C#": "#178600",
-	Vue: "#41b883",
-};
 
 function scoreColor(total: number): string {
 	if (total >= 80) return "text-emerald-400";
@@ -153,8 +116,8 @@ function ScoreRing({ score }: { score: ScoreResult }) {
 			onMouseEnter={handleMouseEnter}
 			onMouseLeave={() => setTooltipPos(null)}
 		>
-			<div className="relative w-9 h-9 flex items-center justify-center">
-				<svg className="w-9 h-9 -rotate-90" viewBox="0 0 36 36">
+			<div className="relative size-11 flex items-center justify-center">
+				<svg className="size-11 -rotate-90" viewBox="0 0 36 36">
 					<circle
 						cx="18"
 						cy="18"
@@ -259,7 +222,7 @@ function ScoreRing({ score }: { score: ScoreResult }) {
 export function PRAuthorDossier({
 	author,
 	orgs,
-	topRepos,
+	topRepos: _topRepos,
 	isOrgMember,
 	score,
 	contributionCount,
@@ -269,181 +232,213 @@ export function PRAuthorDossier({
 	const isBot = author.type === "Bot";
 	const isFirstTime = !contributionCount || contributionCount === 0;
 
-	// Normalize blog URL
-	const rawBlog = author.blog?.trim() || null;
-	const blogUrl = rawBlog
-		? rawBlog.startsWith("http")
-			? rawBlog
-			: `https://${rawBlog}`
-		: null;
-	const blogLabel = rawBlog ? rawBlog.replace(/^https?:\/\//, "").replace(/\/$/, "") : null;
+	const hasActivity =
+		repoActivity &&
+		(repoActivity.commits > 0 ||
+			repoActivity.prs > 0 ||
+			repoActivity.reviews > 0 ||
+			repoActivity.issues > 0 ||
+			(contributionCount ?? 0) > 0);
 
 	return (
-		<div className="mb-1">
+		<div className="mb-4">
 			{/* Author summary row */}
-			<div className="flex items-center gap-2 px-1 py-1.5">
-				<UserTooltip username={author.login} side="bottom" align="start">
-					<Link
-						href={`/users/${author.login}`}
-						className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-					>
-						<Image
-							src={author.avatar_url}
-							alt={author.login}
-							width={20}
-							height={20}
-							className="rounded-full shrink-0"
-						/>
-						<span className="text-[11px] font-medium text-foreground/80 truncate hover:underline">
-							{author.name || author.login}
-						</span>
-						{author.name && (
-							<span className="text-[10px] font-mono text-muted-foreground truncate hidden sm:inline">
-								{author.login}
+			<div className="flex items-center gap-2.5 px-1 py-1.5">
+				{score && <ScoreRing score={score} />}
+				<div className="flex-1 min-w-0 gap-0.5 flex flex-col justify-center h-10">
+					{/* Top: User info */}
+					<div className="flex items-center gap-1.5">
+						<UserTooltip
+							username={author.login}
+							side="bottom"
+							align="start"
+						>
+							<Link
+								href={`/users/${author.login}`}
+								className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+							>
+								<Image
+									src={author.avatar_url}
+									alt={author.login}
+									width={20}
+									height={20}
+									className="rounded-full shrink-0 border"
+								/>
+								<span className="text-[11px] font-medium text-foreground/80 truncate hover:underline">
+									{author.name ||
+										author.login}
+								</span>
+								{author.name && (
+									<span className="text-[10px] font-mono text-muted-foreground truncate hidden sm:inline">
+										{author.login}
+									</span>
+								)}
+							</Link>
+						</UserTooltip>
+						{isBot && (
+							<span className="text-[8px] px-1 py-px bg-muted text-muted-foreground rounded-full font-mono uppercase shrink-0">
+								bot
 							</span>
 						)}
-					</Link>
-				</UserTooltip>
-				{isBot && (
-					<span className="text-[8px] px-1 py-px bg-muted text-muted-foreground rounded-full font-mono uppercase shrink-0">
-						bot
-					</span>
-				)}
-				{isOrgMember && (
-					<span className="text-[8px] px-1 py-px border border-success/30 text-success rounded-full font-mono uppercase shrink-0">
-						member
-					</span>
-				)}
-				{isFirstTime && !isBot && (
-					<span className="text-[8px] px-1 py-px border border-blue-400/30 text-blue-400 rounded-full font-mono uppercase shrink-0">
-						new contributor
-					</span>
-				)}
-
-				{openedAt && (
-					<span className="ml-auto text-[10px] text-muted-foreground/50 shrink-0">
-						opened <TimeAgo date={openedAt} />
-					</span>
-				)}
-			</div>
-
-			{/* Detail */}
-			<div className="px-1 py-1.5 space-y-1.5">
-				{/* Score + Bio row */}
-				<div className="flex items-start gap-3">
-					{score && <ScoreRing score={score} />}
-					<div className="flex-1 min-w-0">
-						{author.bio && (
-							<p className="text-[11px] text-foreground/60 leading-snug">
-								{author.bio}
-							</p>
+						{isOrgMember && (
+							<span className="text-[8px] px-1 py-px border border-success/30 text-success rounded-full font-mono uppercase shrink-0">
+								member
+							</span>
 						)}
-						{!author.bio && score && (
-							<p className="text-[10px] text-muted-foreground italic">
-								No bio
-							</p>
+						{isFirstTime && !isBot && (
+							<span className="text-[8px] px-1 py-px border border-blue-400/30 text-blue-400 rounded-full font-mono uppercase shrink-0">
+								new contributor
+							</span>
+						)}
+						{/* Detail */}
+						<div className="px-1 py-1.5 space-y-1.5">
+							{/* Orgs */}
+							{orgs.length > 0 && (
+								<div className="flex items-center gap-1">
+									{orgs
+										.slice(0, 6)
+										.map((o) => (
+											<Link
+												key={
+													o.login
+												}
+												href={`https://github.com/${o.login}`}
+												target="_blank"
+												rel="noopener noreferrer"
+												title={
+													o.login
+												}
+												className="ring-1 ring-border hover:ring-foreground/20 rounded-sm transition-all"
+											>
+												<Image
+													src={
+														o.avatar_url
+													}
+													alt={
+														o.login
+													}
+													width={
+														16
+													}
+													height={
+														16
+													}
+													className="rounded-sm"
+												/>
+											</Link>
+										))}
+									{orgs.length > 6 && (
+										<span className="text-[9px] text-muted-foreground/30 font-mono">
+											+
+											{orgs.length -
+												6}
+										</span>
+									)}
+								</div>
+							)}
+						</div>
+						{openedAt && (
+							<span className="ml-auto text-[10px] text-muted-foreground/50 shrink-0">
+								opened <TimeAgo date={openedAt} />
+							</span>
 						)}
 					</div>
-				</div>
-
-				{/* Meta row */}
-				<div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-mono text-muted-foreground/50">
-					{author.company && (
-						<span className="inline-flex items-center gap-0.5">
-							<Building2 className="w-2.5 h-2.5" />
-							{author.company.replace(/^@/, "")}
-						</span>
-					)}
-					{author.location && (
-						<span className="inline-flex items-center gap-0.5">
-							<MapPin className="w-2.5 h-2.5" />
-							{author.location}
-						</span>
-					)}
-					<span
-						className="inline-flex items-center gap-0.5"
-						title={`Since ${new Date(author.created_at).toLocaleDateString()}`}
-					>
-						<Calendar className="w-2.5 h-2.5" />
-						{fmtAge(author.created_at)}
-					</span>
-					<span className="inline-flex items-center gap-0.5">
-						<Users className="w-2.5 h-2.5" />
-						{fmtN(author.followers)}
-					</span>
-					<span className="inline-flex items-center gap-0.5">
-						<BookOpen className="w-2.5 h-2.5" />
-						{fmtN(author.public_repos)}
-					</span>
-					{author.twitter_username && (
-						<Link
-							href={`https://x.com/${author.twitter_username}`}
-							target="_blank"
-							rel="noopener noreferrer"
-							className="inline-flex items-center gap-0.5 hover:text-foreground/70 transition-colors"
-						>
-							<XIcon className="w-2.5 h-2.5" />@
-							{author.twitter_username}
-						</Link>
-					)}
-					{blogUrl && (
-						<Link
-							href={blogUrl}
-							target="_blank"
-							rel="noopener noreferrer"
-							className="inline-flex items-center gap-0.5 hover:text-foreground/70 transition-colors truncate max-w-[140px]"
-						>
-							<LinkIcon className="w-2.5 h-2.5 shrink-0" />
-							{blogLabel}
-						</Link>
-					)}
-				</div>
-
-				{/* Repo activity */}
-				{repoActivity &&
-					(repoActivity.commits > 0 ||
-						repoActivity.prs > 0 ||
-						repoActivity.reviews > 0 ||
-						repoActivity.issues > 0 ||
-						(contributionCount ?? 0) > 0) && (
-						<div className="flex items-center gap-1.5 flex-wrap">
+					{/* Bottom: Stats */}
+					{hasActivity && (
+						<div className="flex items-center gap-1.5 flex-wrap text-[10px] font-mono text-muted-foreground mt-0.5">
 							{(contributionCount ?? 0) > 0 && (
-								<span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-success/8 text-success/80 border border-success/15">
-									{fmtN(contributionCount!)}{" "}
-									contribution
-									{contributionCount !== 1
-										? "s"
-										: ""}
-								</span>
+								<>
+									<span>
+										{fmtN(
+											contributionCount!,
+										)}{" "}
+										contribution
+										{contributionCount !==
+										1
+											? "s"
+											: ""}
+									</span>
+									{(repoActivity.commits >
+										0 ||
+										repoActivity.prs >
+											0 ||
+										repoActivity.reviews >
+											0 ||
+										repoActivity.issues >
+											0) && (
+										<span className="text-muted-foreground/60">
+											&middot;
+										</span>
+									)}
+								</>
 							)}
 							{repoActivity.commits > 0 && (
-								<span className="text-[10px] font-mono text-muted-foreground">
-									{fmtN(repoActivity.commits)}{" "}
-									commit
-									{repoActivity.commits !== 1
-										? "s"
-										: ""}
-								</span>
+								<>
+									<span>
+										{fmtN(
+											repoActivity.commits,
+										)}{" "}
+										commit
+										{repoActivity.commits !==
+										1
+											? "s"
+											: ""}
+									</span>
+									{(repoActivity.prs > 0 ||
+										repoActivity.reviews >
+											0 ||
+										repoActivity.issues >
+											0) && (
+										<span className="text-muted-foreground/60">
+											&middot;
+										</span>
+									)}
+								</>
 							)}
 							{repoActivity.prs > 0 && (
-								<span className="text-[10px] font-mono text-muted-foreground">
-									{fmtN(repoActivity.prs)} PR
-									{repoActivity.prs !== 1
-										? "s"
-										: ""}
-								</span>
+								<>
+									<span>
+										{fmtN(
+											repoActivity.prs,
+										)}{" "}
+										PR
+										{repoActivity.prs !==
+										1
+											? "s"
+											: ""}
+									</span>
+									{(repoActivity.reviews >
+										0 ||
+										repoActivity.issues >
+											0) && (
+										<span className="text-muted-foreground/60">
+											&middot;
+										</span>
+									)}
+								</>
 							)}
 							{repoActivity.reviews > 0 && (
-								<span className="text-[10px] font-mono text-muted-foreground">
-									{fmtN(repoActivity.reviews)}{" "}
-									review
-									{repoActivity.reviews !== 1
-										? "s"
-										: ""}
-								</span>
+								<>
+									<span>
+										{fmtN(
+											repoActivity.reviews,
+										)}{" "}
+										review
+										{repoActivity.reviews !==
+										1
+											? "s"
+											: ""}
+									</span>
+									{repoActivity.issues >
+										0 && (
+										<span className="text-muted-foreground/60">
+											&middot;
+										</span>
+									)}
+								</>
 							)}
 							{repoActivity.issues > 0 && (
-								<span className="text-[10px] font-mono text-muted-foreground">
+								<span>
 									{fmtN(repoActivity.issues)}{" "}
 									issue
 									{repoActivity.issues !== 1
@@ -453,69 +448,7 @@ export function PRAuthorDossier({
 							)}
 						</div>
 					)}
-
-				{/* Orgs */}
-				{orgs.length > 0 && (
-					<div className="flex items-center gap-1">
-						{orgs.slice(0, 6).map((o) => (
-							<Link
-								key={o.login}
-								href={`https://github.com/${o.login}`}
-								target="_blank"
-								rel="noopener noreferrer"
-								title={o.login}
-								className="hover:ring-1 hover:ring-foreground/20 rounded-sm transition-all"
-							>
-								<Image
-									src={o.avatar_url}
-									alt={o.login}
-									width={16}
-									height={16}
-									className="rounded-sm"
-								/>
-							</Link>
-						))}
-						{orgs.length > 6 && (
-							<span className="text-[9px] text-muted-foreground/30 font-mono">
-								+{orgs.length - 6}
-							</span>
-						)}
-					</div>
-				)}
-
-				{/* Top repos — compact inline list */}
-				{topRepos.length > 0 && (
-					<div className="flex flex-wrap gap-x-2.5 gap-y-0.5 pt-0.5">
-						{topRepos.slice(0, 3).map((r) => (
-							<Link
-								key={r.full_name}
-								href={`/${r.full_name}`}
-								className="inline-flex items-center gap-1 text-[10px] font-mono text-foreground/50 hover:text-foreground transition-colors"
-							>
-								{r.language && (
-									<span
-										className="w-1.5 h-1.5 rounded-full shrink-0"
-										style={{
-											backgroundColor:
-												LC[
-													r
-														.language
-												] ||
-												"#888",
-										}}
-									/>
-								)}
-								<span className="truncate max-w-[100px]">
-									{r.name}
-								</span>
-								<Star className="w-2 h-2 text-muted-foreground/30" />
-								<span className="text-muted-foreground">
-									{fmtN(r.stargazers_count)}
-								</span>
-							</Link>
-						))}
-					</div>
-				)}
+				</div>
 			</div>
 		</div>
 	);
