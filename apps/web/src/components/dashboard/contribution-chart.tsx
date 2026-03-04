@@ -1,6 +1,8 @@
 "use client";
 
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { cn } from "@/lib/utils";
+import { ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface ContributionDay {
@@ -59,10 +61,24 @@ function getMonthFromDate(date: string): number {
 	return parsed.getUTCMonth();
 }
 
+function getYearFromDate(date: string): number {
+	const parts = date.split("-");
+	if (parts.length >= 1) {
+		const year = Number(parts[0]);
+		if (year >= 1970 && year <= 9999) return year;
+	}
+	const parsed = new Date(date);
+	if (Number.isNaN(parsed.getTime())) return new Date().getUTCFullYear();
+	return parsed.getUTCFullYear();
+}
+
 export function ContributionChart({ data }: { data: ContributionData }) {
+	const isMobile = useIsMobile();
 	const [hovered, setHovered] = useState<ContributionDay | null>(null);
 	const [tooltipX, setTooltipX] = useState(0);
 	const [tooltipY, setTooltipY] = useState(0);
+	const [halfYear, setHalfYear] = useState<"h1" | "h2">("h1");
+	const [isHalfTransitioning, setIsHalfTransitioning] = useState(false);
 	const [heldCell, setHeldCell] = useState<{
 		date: string;
 		weekIndex: number;
@@ -72,21 +88,59 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 	const hoveredCellRef = useRef<HTMLDivElement | null>(null);
 	const tooltipRef = useRef<HTMLDivElement | null>(null);
 	const activePointerIdRef = useRef<number | null>(null);
+	const halfTransitionTimeoutRef = useRef<number | null>(null);
+
+	const targetYear = useMemo(() => {
+		const counts = new Map<number, number>();
+
+		for (const week of data.weeks) {
+			for (const day of week.contributionDays) {
+				const year = getYearFromDate(day.date);
+				counts.set(year, (counts.get(year) ?? 0) + 1);
+			}
+		}
+
+		let bestYear = new Date().getUTCFullYear();
+		let bestCount = -1;
+		for (const [year, count] of counts) {
+			if (count > bestCount) {
+				bestCount = count;
+				bestYear = year;
+			}
+		}
+
+		return bestYear;
+	}, [data.weeks]);
+
+	const visibleWeeks = useMemo(() => {
+		if (isMobile !== true) return data.weeks;
+
+		const weeks = data.weeks.filter((week) =>
+			week.contributionDays.some((day) => {
+				const year = getYearFromDate(day.date);
+				if (year !== targetYear) return false;
+				const month = getMonthFromDate(day.date);
+				return halfYear === "h1" ? month <= 5 : month >= 6;
+			}),
+		);
+
+		return weeks.length > 0 ? weeks : data.weeks;
+	}, [data.weeks, halfYear, isMobile, targetYear]);
 
 	const dayByDate = useMemo(() => {
 		const map = new Map<string, ContributionDay>();
-		for (const week of data.weeks) {
+		for (const week of visibleWeeks) {
 			for (const day of week.contributionDays) {
 				map.set(day.date, day);
 			}
 		}
 		return map;
-	}, [data.weeks]);
+	}, [visibleWeeks]);
 
 	const monthPositions = useMemo(() => {
 		const positions: { label: string; col: number }[] = [];
 		let last = -1;
-		data.weeks.forEach((week, i) => {
+		visibleWeeks.forEach((week, i) => {
 			const d = week.contributionDays[0];
 			if (d) {
 				const m = getMonthFromDate(d.date);
@@ -97,7 +151,7 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 			}
 		});
 		return positions;
-	}, [data.weeks]);
+	}, [visibleWeeks]);
 
 	const visibleMonthPositions = useMemo(() => {
 		const candidates = monthPositions.filter((month, index, all) => {
@@ -246,6 +300,23 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 		[dayByDate, updateTooltipPosition],
 	);
 
+	const toggleHalfYear = useCallback(() => {
+		if (isMobile !== true) return;
+		if (isHalfTransitioning) return;
+
+		setIsHalfTransitioning(true);
+		if (halfTransitionTimeoutRef.current !== null) {
+			window.clearTimeout(halfTransitionTimeoutRef.current);
+		}
+
+		halfTransitionTimeoutRef.current = window.setTimeout(() => {
+			setHalfYear((current) => (current === "h1" ? "h2" : "h1"));
+			window.requestAnimationFrame(() => {
+				setIsHalfTransitioning(false);
+			});
+		}, 130);
+	}, [isHalfTransitioning, isMobile]);
+
 	useEffect(() => {
 		if (!hovered || !hoveredCellRef.current) return;
 
@@ -267,6 +338,10 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 			window.removeEventListener("resize", update);
 		};
 	}, [heldCell, hovered, updateTooltipPosition]);
+
+	useEffect(() => {
+		clearHeldCell();
+	}, [clearHeldCell, halfYear]);
 
 	useEffect(() => {
 		if (!heldCell) return;
@@ -420,14 +495,19 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 						</div>
 					)}
 				</div>
-				<div className="overflow-x-auto pr-2" ref={scrollContainerRef}>
+				<div ref={scrollContainerRef}>
 					<div
-						className="inline-grid pt-0"
+						className={cn(
+							"inline-grid pt-0 transition-opacity duration-200",
+							isHalfTransitioning
+								? "opacity-0"
+								: "opacity-100",
+						)}
 						style={{ gridTemplateColumns: `auto 1fr` }}
 					>
 						{/* Day labels column */}
 						<div
-							className="flex flex-col pr-2"
+							className="flex flex-col lg:pr-2"
 							style={{ gap: GAP, paddingTop: 16 + GAP }}
 						>
 							{DAYS.map((day, i) => (
@@ -446,7 +526,7 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 						</div>
 
 						{/* Grid column */}
-						<div className="overflow-hidden">
+						<div className="ml-2 overflow-visible">
 							{/* Month labels — absolutely positioned so they don't clip */}
 							<div className="relative h-4 mb-px">
 								{visibleMonthPositions.map((m) => (
@@ -467,7 +547,7 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 
 							{/* Cells */}
 							<div className="flex" style={{ gap: GAP }}>
-								{data.weeks.map((week, wi) => (
+								{visibleWeeks.map((week, wi) => (
 									<div
 										key={wi}
 										className="flex flex-col"
@@ -615,6 +695,27 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 						</div>
 					</div>
 				</div>
+			</div>
+
+			{/* Mobile half-year toggle row */}
+			<div className="md:hidden mt-3 flex items-center justify-end">
+				<button
+					onClick={toggleHalfYear}
+					aria-label={
+						halfYear === "h1"
+							? "Show July through December"
+							: "Show January through June"
+					}
+					className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground font-mono transition-colors"
+				>
+					{halfYear === "h1" ? "Jan - Jun" : "Jul - Dec"}
+					<ChevronRight
+						className={cn(
+							"w-3 h-3 transition-transform duration-200",
+							halfYear === "h2" && "rotate-180",
+						)}
+					/>
+				</button>
 			</div>
 		</div>
 	);
