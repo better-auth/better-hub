@@ -702,7 +702,7 @@ export function UserProfileContent({
 			</aside>
 
 			{/* ── Main content ── */}
-			<main className="flex-1 min-w-0 flex flex-col min-h-0 pr-1">
+			<main className="flex-1 min-w-0 flex flex-col min-h-0 lg:overflow-y-auto pr-1">
 				{/* Overview stats header */}
 				<div className="shrink-0 mb-4">
 					<div className="flex items-center justify-between mb-3">
@@ -1147,7 +1147,7 @@ export function UserProfileContent({
 						</div>
 
 						{/* Repo list */}
-						<div className="flex-1 min-h-0 overflow-y-auto border border-border rounded-md divide-y divide-border">
+						<div className="flex-1 min-h-[50dvh] lg:min-h-0 overflow-y-auto border border-border rounded-md divide-y divide-border">
 							{filtered.map((repo) => (
 								<Link
 									key={repo.id}
@@ -1331,7 +1331,7 @@ export function UserProfileContent({
 				)}
 
 				{tab === "activity" && (
-					<div className="shrink-0 pb-4">
+					<div className="flex-1 min-h-[50dvh] lg:min-h-0 overflow-y-auto pb-4">
 						<UserProfileActivityTimelineBoundary>
 							<UserProfileActivityTimeline
 								events={activityEvents}
