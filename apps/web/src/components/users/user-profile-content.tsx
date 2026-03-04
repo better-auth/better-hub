@@ -474,7 +474,7 @@ export function UserProfileContent({
 	return (
 		<div className="flex flex-col lg:flex-row gap-8 flex-1 min-h-0">
 			{/* ── Left sidebar ── */}
-			<aside className="shrink-0 lg:w-[280px] lg:sticky lg:top-4 lg:self-start pl-4">
+			<aside className="shrink-0 lg:w-[280px] lg:sticky lg:top-4 lg:self-start px-2 lg:pl-4">
 				{/* Avatar + identity */}
 				<div className="flex flex-col items-center lg:items-start">
 					<div className="relative group">
@@ -702,7 +702,7 @@ export function UserProfileContent({
 			</aside>
 
 			{/* ── Main content ── */}
-			<main className="flex-1 min-w-0 flex flex-col min-h-0 overflow-y-auto pr-1">
+			<main className="flex-1 min-w-0 flex flex-col min-h-0 lg:overflow-y-auto px-2 lg:pr-4 pr-1">
 				{/* Overview stats header */}
 				<div className="shrink-0 mb-4">
 					<div className="flex items-center justify-between mb-3">
@@ -848,11 +848,11 @@ export function UserProfileContent({
 
 				{/* Tab switcher */}
 				<div className="shrink-0 mb-4">
-					<div className="flex items-center border border-border divide-x divide-border rounded-sm w-fit">
+					<div className="flex items-center border border-border divide-x divide-border rounded-sm lg:w-fit">
 						<button
 							onClick={() => setTab("repositories")}
 							className={cn(
-								"flex items-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer rounded-l-md",
+								"flex-1 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer lg:rounded-l-md",
 								tab === "repositories"
 									? "bg-muted/50 dark:bg-white/4 text-foreground"
 									: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
@@ -867,7 +867,7 @@ export function UserProfileContent({
 						<button
 							onClick={() => setTab("activity")}
 							className={cn(
-								"flex items-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer rounded-r-md",
+								"flex-1 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer lg:rounded-r-md",
 								tab === "activity"
 									? "bg-muted/50 dark:bg-white/4 text-foreground"
 									: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
@@ -883,7 +883,7 @@ export function UserProfileContent({
 					<>
 						{/* Search & filters */}
 						<div className="shrink-0">
-							<div className="flex items-center gap-2 mb-3">
+							<div className="flex items-center gap-2 lg:mb-3">
 								<div className="relative flex-1">
 									<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50" />
 									<input
@@ -905,11 +905,11 @@ export function UserProfileContent({
 													null,
 												);
 										}}
-										className="w-full bg-transparent border border-border pl-9 pr-4 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground/20 focus:ring-[3px] focus:ring-ring/50 transition-colors rounded-md font-mono"
+										className="w-full bg-transparent border border-border pl-9 pr-4 py-2 text-base lg:text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground/20 focus:ring-[3px] focus:ring-ring/50 transition-colors rounded-none lg:rounded-md font-mono"
 									/>
 								</div>
 
-								<div className="flex items-center border border-border divide-x divide-border rounded-sm shrink-0">
+								<div className="hidden lg:flex items-center border border-border divide-x divide-border rounded-sm shrink-0">
 									{(
 										[
 											[
@@ -962,7 +962,72 @@ export function UserProfileContent({
 													: "updated",
 										)
 									}
-									className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground border border-border hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer rounded-sm shrink-0"
+									className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground border border-border hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer rounded-sm shrink-0"
+								>
+									<ArrowUpDown className="w-3 h-3" />
+									{sort === "updated"
+										? "Updated"
+										: sort === "stars"
+											? "Stars"
+											: "Name"}
+								</button>
+							</div>
+
+							<div className="lg:hidden flex items-center justify-between border border-border border-t-0 rounded-sm rounded-t-none mb-3">
+								<div className="flex -ml-px">
+									{(
+										[
+											[
+												"all",
+												"All",
+											],
+											[
+												"sources",
+												"Sources",
+											],
+											[
+												"forks",
+												"Forks",
+											],
+											[
+												"archived",
+												"Archived",
+											],
+										] as const
+									).map(([value, label]) => (
+										<button
+											key={value}
+											onClick={() =>
+												setFilter(
+													value,
+												)
+											}
+											className={cn(
+												"px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer border-r border-border -ml-px first:ml-0 first:rounded-l-sm",
+												filter ===
+													value
+													? "bg-muted/50 dark:bg-white/4 text-foreground"
+													: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
+											)}
+										>
+											{label}
+										</button>
+									))}
+								</div>
+
+								<button
+									onClick={() =>
+										setSort((current) =>
+											current ===
+											"updated"
+												? "stars"
+												: current ===
+													  "stars"
+													? "name"
+													: "updated",
+										)
+									}
+									className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer"
 								>
 									<ArrowUpDown className="w-3 h-3" />
 									{sort === "updated"
@@ -975,7 +1040,7 @@ export function UserProfileContent({
 
 							<div className="flex items-start justify-between gap-4 mb-4">
 								{languages.length > 0 && (
-									<div className="flex items-center gap-1.5 flex-wrap flex-1 mt-0.5">
+									<div className="flex items-center gap-1.5 flex-wrap mt-0.5 after:flex-1 after:content-['']">
 										{topLanguages.map(
 											(lang) => (
 												<button
@@ -1107,7 +1172,7 @@ export function UserProfileContent({
 										)}
 									</div>
 								)}
-								<div className="flex items-center gap-3 shrink-0 ml-auto pt-1">
+								<div className="hidden lg:flex items-center gap-3 shrink-0 ml-auto pt-1">
 									{(search ||
 										languageFilter ||
 										filter !==
@@ -1129,6 +1194,28 @@ export function UserProfileContent({
 									</span>
 								</div>
 							</div>
+
+							{/* Mobile counter & clear row */}
+							<div className="lg:hidden flex items-center justify-between mb-4">
+								{(search ||
+									languageFilter ||
+									filter !== "all") && (
+									<button
+										onClick={
+											clearRepoFilters
+										}
+										aria-label="Clear repository filters"
+										className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground font-mono transition-colors"
+									>
+										<X className="w-3 h-3" />
+										Clear
+									</button>
+								)}
+								<span className="text-[11px] text-muted-foreground/30 font-mono tabular-nums ml-auto">
+									{filtered.length}/
+									{repos.length}
+								</span>
+							</div>
 						</div>
 
 						{/* Repo list */}
@@ -1137,83 +1224,87 @@ export function UserProfileContent({
 								<Link
 									key={repo.id}
 									href={`/${repo.full_name}`}
-									className="group flex items-center gap-4 px-4 py-3 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors"
+									className="group flex items-start md:items-center gap-3 md:gap-4 px-4 py-3 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors"
 								>
-									<FolderGit2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-									<div className="flex-1 min-w-0">
-										<div className="flex items-center gap-2">
-											<span className="text-sm text-foreground group-hover:text-foreground transition-colors font-mono">
-												{
-													repo.name
-												}
-											</span>
-											{repo.private ? (
-												<RepoBadge type="private" />
-											) : (
-												<RepoBadge type="public" />
-											)}
-											{repo.archived && (
-												<RepoBadge type="archived" />
-											)}
-											{repo.fork && (
-												<RepoBadge type="fork" />
+									<FolderGit2 className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5 md:mt-0" />
+									<div className="flex-1 min-w-0 flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4">
+										<div className="min-w-0">
+											<div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2">
+												<span className="text-sm text-foreground group-hover:text-foreground transition-colors font-mono leading-snug break-words">
+													{
+														repo.name
+													}
+												</span>
+												<div className="flex items-center gap-1.5 flex-wrap">
+													{repo.private ? (
+														<RepoBadge type="private" />
+													) : (
+														<RepoBadge type="public" />
+													)}
+													{repo.archived && (
+														<RepoBadge type="archived" />
+													)}
+													{repo.fork && (
+														<RepoBadge type="fork" />
+													)}
+												</div>
+											</div>
+
+											{repo.description && (
+												<p className="text-[11px] text-muted-foreground/60 mt-1 truncate max-w-lg">
+													{
+														repo.description
+													}
+												</p>
 											)}
 										</div>
 
-										{repo.description && (
-											<p className="text-[11px] text-muted-foreground/60 mt-1 truncate max-w-lg">
-												{
-													repo.description
-												}
-											</p>
-										)}
-									</div>
-
-									<div className="flex items-center gap-4 shrink-0">
-										{repo.language && (
-											<span className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60 font-mono">
-												<span
-													className="w-2 h-2 rounded-full"
-													style={{
-														backgroundColor:
-															getLanguageColor(
-																repo.language,
-															),
-													}}
-												/>
-												{
-													repo.language
-												}
-											</span>
-										)}
-										{repo.stargazers_count >
-											0 && (
-											<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
-												<Star className="w-3 h-3" />
-												{formatNumber(
-													repo.stargazers_count,
-												)}
-											</span>
-										)}
-										{repo.forks_count >
-											0 && (
-											<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
-												<GitFork className="w-3 h-3" />
-												{formatNumber(
-													repo.forks_count,
-												)}
-											</span>
-										)}
-										{repo.updated_at && (
-											<span className="text-[11px] text-muted-foreground font-mono w-14 text-right">
-												<TimeAgo
-													date={
-														repo.updated_at
+										<div className="flex items-center flex-wrap md:flex-nowrap gap-x-3 gap-y-1 md:gap-4 shrink-0">
+											{repo.language && (
+												<span className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60 font-mono">
+													<span
+														className="w-2 h-2 rounded-full"
+														style={{
+															backgroundColor:
+																getLanguageColor(
+																	repo.language,
+																),
+														}}
+													/>
+													{
+														repo.language
 													}
-												/>
-											</span>
-										)}
-										<ChevronRight className="w-3 h-3 text-foreground/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+												</span>
+											)}
+											{repo.stargazers_count >
+												0 && (
+												<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
+													<Star className="w-3 h-3" />
+													{formatNumber(
+														repo.stargazers_count,
+													)}
+												</span>
+											)}
+											{repo.forks_count >
+												0 && (
+												<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
+													<GitFork className="w-3 h-3" />
+													{formatNumber(
+														repo.forks_count,
+													)}
+												</span>
+											)}
+											{repo.updated_at && (
+												<span className="text-[11px] text-muted-foreground font-mono md:w-14 md:text-right md:ml-auto">
+													<TimeAgo
+														date={
+															repo.updated_at
+														}
+													/>
+												</span>
+											)}
+											<ChevronRight className="hidden md:block w-3 h-3 text-foreground/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+										</div>
 									</div>
 								</Link>
 							))}

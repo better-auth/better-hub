@@ -210,7 +210,7 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 						</div>
 					)}
 				</div>
-				<div className="overflow-x-auto" ref={scrollContainerRef}>
+				<div className="overflow-x-auto pr-2" ref={scrollContainerRef}>
 					<div
 						className="inline-grid pt-0"
 						style={{ gridTemplateColumns: `auto 1fr` }}
