@@ -30,7 +30,7 @@ cp apps/web/.env.example apps/web/.env
 bun install
 
 # 6. Run database migrations
-cd apps/web && npx prisma migrate dev && npx prisma generate && cd ../..
+cd apps/web && bunx prisma migrate dev && bunx prisma generate && cd ../..
 
 # 7. Start dev server
 bun dev
