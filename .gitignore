@@ -44,3 +44,6 @@ certificates
 
 # GitHub images
 .github-images
+
+flake.lock
+flake.nix

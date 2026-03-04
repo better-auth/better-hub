@@ -180,7 +180,7 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 					style={{ left: tooltipX }}
 				>
 					{hovered && (
-						<div className="rounded-lg border border-border/60 dark:border-white/10 bg-background/80 dark:bg-black/80 backdrop-blur-xl shadow-sm dark:shadow-none ring-1 ring-black/[0.03] dark:ring-white/[0.03]">
+						<div className="rounded-sm border border-border/60 dark:border-white/10 bg-background/80 dark:bg-black/80 backdrop-blur-xl shadow-sm dark:shadow-none ring-1 ring-black/[0.03] dark:ring-white/[0.03]">
 							<div className="px-3 py-1.5 text-center">
 								<div className="text-xs font-medium tabular-nums text-foreground">
 									<span className="font-semibold">

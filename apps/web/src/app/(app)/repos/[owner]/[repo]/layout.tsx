@@ -131,6 +131,8 @@ export default async function RepoLayout({
 		!!viewerLogin &&
 		repoData.owner.login.toLowerCase() === viewerLogin.toLowerCase();
 
+	const isEmptyRepo = repoData.size === 0;
+
 	// Fetch fork sync status in parallel (only for own forks)
 	const forkSyncPromise = isViewingOwnFork
 		? getForkSyncStatus(owner, repoName, repoData.default_branch)
@@ -153,7 +155,7 @@ export default async function RepoLayout({
 	}
 
 	let tree: FileTreeNode[] | null = cachedTree;
-	if (!tree) {
+	if (!tree && !isEmptyRepo) {
 		const treeResult = await getRepoTree(
 			owner,
 			repoName,
@@ -222,6 +224,7 @@ export default async function RepoLayout({
 						latestCommit={latestCommit}
 						isOwnFork={isViewingOwnFork}
 						forkSyncStatus={forkSyncStatus}
+						isEmptyRepo={isEmptyRepo}
 					/>
 				}
 			>

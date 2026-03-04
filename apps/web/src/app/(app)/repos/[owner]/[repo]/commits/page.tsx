@@ -17,12 +17,15 @@ export default async function CommitsPage({
 	params: Promise<{ owner: string; repo: string }>;
 }) {
 	const { owner, repo } = await params;
-	const [repoData, commits, branches] = await Promise.all([
-		getRepo(owner, repo),
-		getRepoCommits(owner, repo),
+	const repoData = await getRepo(owner, repo);
+	if (!repoData) return null;
+
+	const isEmptyRepo = repoData.size === 0;
+	const [commits, branches] = await Promise.all([
+		isEmptyRepo ? Promise.resolve([]) : getRepoCommits(owner, repo),
 		getRepoBranches(owner, repo),
 	]);
-	if (!repoData) return null;
+
 	return (
 		<CommitsList
 			owner={owner}

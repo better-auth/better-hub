@@ -53,6 +53,7 @@ interface RepoSidebarProps {
 	disableForkButton?: boolean;
 	isOwnFork?: boolean;
 	forkSyncStatus?: ForkSyncStatus | null;
+	isEmptyRepo?: boolean;
 }
 
 export function RepoSidebar({
@@ -84,6 +85,7 @@ export function RepoSidebar({
 	disableForkButton = false,
 	isOwnFork,
 	forkSyncStatus,
+	isEmptyRepo = false,
 }: RepoSidebarProps) {
 	const badges: Array<RepoBadgeProps> = [
 		{ type: isPrivate ? "private" : "public" },
@@ -148,12 +150,13 @@ export function RepoSidebar({
 					)}
 				</div>
 
-				{/* Latest commit */}
-				<LatestCommitSection
-					owner={owner}
-					repoName={repoName}
-					initialCommit={latestCommit}
-				/>
+				{!isEmptyRepo && (
+					<LatestCommitSection
+						owner={owner}
+						repoName={repoName}
+						initialCommit={latestCommit}
+					/>
+				)}
 
 				{/* Topics */}
 				{topics.length > 0 && (

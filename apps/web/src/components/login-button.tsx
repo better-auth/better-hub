@@ -1,56 +1,17 @@
 "use client";
 
-import { signIn } from "@/lib/auth-client";
-import { useState, useRef, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { cn, safeRedirect } from "@/lib/utils";
-import { SCOPE_GROUPS } from "@/lib/github-scopes";
-import { PlusIcon, ChevronDown } from "lucide-react";
 import { ArrowRightIcon } from "@/components/shared/icons/arrow-right-icon";
-import { CheckIcon } from "@/components/shared/icons/check-icon";
 import { GithubIcon } from "@/components/shared/icons/github-icon";
-import { InfoIcon } from "@/components/shared/icons/info-icon";
 import { KeyIcon } from "@/components/shared/icons/key-icon";
 import { LoadingSpinner } from "@/components/shared/icons/loading-spinner";
-import { LockIcon } from "@/components/shared/icons/lock-icon";
-
-/* ── Component ── */
-
-function InfoPopover({ text, children }: { text: string; children: React.ReactNode }) {
-	const [visible, setVisible] = useState(false);
-	const timeout = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-	const show = useCallback(() => {
-		clearTimeout(timeout.current);
-		timeout.current = setTimeout(() => setVisible(true), 400);
-	}, []);
-
-	const hide = useCallback(() => {
-		clearTimeout(timeout.current);
-		setVisible(false);
-	}, []);
-
-	useEffect(() => () => clearTimeout(timeout.current), []);
-
-	return (
-		<div className="relative inline-flex" onMouseEnter={show} onMouseLeave={hide}>
-			{children}
-			<div
-				className={cn(
-					"absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 px-3 py-2 rounded-md bg-foreground text-background text-[11px] leading-relaxed shadow-lg z-50 pointer-events-none transition-all duration-200 ease-out",
-					visible
-						? "opacity-100 translate-y-0"
-						: "opacity-0 translate-y-1 pointer-events-none",
-				)}
-			>
-				{text}
-				<div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-foreground" />
-			</div>
-		</div>
-	);
-}
-
-/* ── Component ── */
+import { PermissionBadge } from "@/components/shared/permission-badge";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { signIn } from "@/lib/auth-client";
+import { SCOPE_GROUPS } from "@/lib/github-scopes";
+import { cn, safeRedirect } from "@/lib/utils";
+import { CheckIcon, ChevronDown, Info, LockIcon, PlusIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 	const router = useRouter();
@@ -166,99 +127,55 @@ export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 						</button>
 
 						{permsExpanded && (
-							<div className="mt-2 space-y-2.5">
-								<p className="text-[11px] text-foreground/45">
-									Click any permission to
-									include or remove it. Hover
-									the{" "}
-									<InfoIcon className="inline w-3 h-3 -mt-px" />{" "}
-									to learn why each is needed.
-								</p>
-								<div className="flex flex-wrap gap-1.5">
-									{SCOPE_GROUPS.map(
-										(group) => {
-											const isOn =
-												selected.has(
-													group.id,
-												);
-											return (
-												<span
+							<TooltipProvider>
+								<div className="mt-2 space-y-2.5">
+									<p className="text-[11px] text-foreground/45">
+										Click any permission
+										to include or remove
+										it. Hover the{" "}
+										<Info className="inline w-3 h-3 -mt-px" />{" "}
+										to learn why each is
+										needed.
+									</p>
+									<div className="flex flex-wrap gap-1.5">
+										{SCOPE_GROUPS.map(
+											(group) => (
+												<PermissionBadge
 													key={
 														group.id
 													}
-													className={cn(
-														"inline-flex items-stretch rounded-full border text-[12px] transition-colors",
-														isOn
-															? "border-foreground/30 bg-foreground/10 text-foreground"
-															: "border-foreground/10 text-foreground/40",
+													group={
+														group
+													}
+													isSelected={selected.has(
+														group.id,
 													)}
-												>
-													<button
-														type="button"
-														onClick={() =>
-															toggle(
-																group.id,
-															)
-														}
-														disabled={
-															group.required
-														}
-														className={cn(
-															"inline-flex items-center gap-1.5 pl-2.5 pr-1 py-1 transition-colors",
-															!isOn &&
-																"line-through decoration-foreground/20",
-															group.required
-																? "cursor-default"
-																: "cursor-pointer hover:text-foreground/70",
-														)}
-													>
-														{isOn &&
-															(group.required ? (
-																<LockIcon className="w-2.5 h-2.5 shrink-0" />
-															) : (
-																<CheckIcon className="w-2.5 h-2.5 shrink-0" />
-															))}
-														{
-															group.label
-														}
-													</button>
-													<InfoPopover
-														text={
-															group.reason
-														}
-													>
-														<span
-															className={cn(
-																"inline-flex items-center pr-2 pl-1 border-l transition-colors",
-																isOn
-																	? "border-foreground/15 text-foreground/30 hover:text-foreground/60"
-																	: "border-foreground/10 text-foreground/20 hover:text-foreground/50",
-															)}
-														>
-															<InfoIcon className="w-3 h-3" />
-														</span>
-													</InfoPopover>
-												</span>
-											);
-										},
-									)}
+													onToggle={
+														toggle
+													}
+												/>
+											),
+										)}
+									</div>
+									<div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-foreground/40">
+										<span className="inline-flex items-center gap-1">
+											<LockIcon className="w-2.5 h-2.5" />
+											Required
+										</span>
+										<span className="inline-flex items-center gap-1">
+											<CheckIcon className="w-2.5 h-2.5" />
+											Selected
+											optional
+										</span>
+									</div>
+									<p className="text-[11px] text-foreground/50">
+										Only selected
+										permissions are
+										requested on the
+										next screen.
+									</p>
 								</div>
-								<div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-foreground/40">
-									<span className="inline-flex items-center gap-1">
-										<LockIcon className="w-2.5 h-2.5" />
-										Required
-									</span>
-									<span className="inline-flex items-center gap-1">
-										<CheckIcon className="w-2.5 h-2.5" />
-										Selected optional
-									</span>
-								</div>
-								<p className="text-[11px] text-foreground/50">
-									Only selected permissions
-									are requested on the next
-									screen.
-								</p>
-							</div>
+							</TooltipProvider>
 						)}
 					</div>
 				</>
