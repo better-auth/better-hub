@@ -9,6 +9,7 @@ import { TimeAgo } from "@/components/ui/time-ago";
 import { markNotificationDone, markAllNotificationsRead } from "@/app/(app)/repos/actions";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import type { NotificationItem } from "@/lib/github-types";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 
 const reasonLabels: Record<string, string> = {
 	assign: "Assigned",
@@ -51,6 +52,7 @@ export function NotificationSheet({
 	doneIds,
 	setDoneIds,
 }: NotificationSheetProps) {
+	const isMobile = useIsMobile();
 	const { emit } = useMutationEvents();
 	const [markingAll, startMarkAll] = useTransition();
 	const [markingId, setMarkingId] = useState<string | null>(null);
@@ -70,9 +72,9 @@ export function NotificationSheet({
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
 			<SheetContent
-				side="bottom"
+				side={isMobile ? "bottom" : "right"}
 				showCloseButton={false}
-				className="p-0 rounded-t-xl max-h-[70vh] flex flex-col border-t border-border"
+				className="p-0 rounded-t-xl max-sm:max-h-[70vh] flex flex-col border-t border-border"
 				title="Notifications"
 			>
 				{/* Header */}
