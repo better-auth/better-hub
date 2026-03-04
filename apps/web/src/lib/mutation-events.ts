@@ -9,6 +9,12 @@ export type PRConvertedToDraftEvent = {
 	repo: string;
 	number: number;
 };
+export type PRReadyForReviewEvent = {
+	type: "pr:ready_for_review";
+	owner: string;
+	repo: string;
+	number: number;
+};
 export type PRCommentedEvent = {
 	type: "pr:commented";
 	owner: string;
@@ -150,6 +156,7 @@ export type MutationEvent =
 	| PRClosedEvent
 	| PRReopenedEvent
 	| PRConvertedToDraftEvent
+	| PRReadyForReviewEvent
 	| PRCommentedEvent
 	| PRReviewedEvent
 	| PRRenamedEvent

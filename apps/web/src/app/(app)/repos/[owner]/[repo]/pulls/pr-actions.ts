@@ -19,6 +19,7 @@ const PR_ACTION_SCOPES: Record<string, PRMutationScope[]> = {
 	close: ["detail", "list", "layout"],
 	reopen: ["detail", "list", "layout"],
 	convertToDraft: ["detail", "list", "layout"],
+	markReadyForReview: ["detail", "list", "layout"],
 	rename: ["detail", "list"],
 	updateBase: ["detail", "list"],
 	updateBranch: ["detail", "list"],
@@ -211,6 +212,58 @@ export async function convertPRToDraft(owner: string, repo: string, pullNumber: 
 		return { success: true };
 	} catch (e: unknown) {
 		return { error: getErrorMessage(e) || "Failed to convert to draft" };
+	}
+}
+
+export async function markPRReadyForReview(owner: string, repo: string, pullNumber: number) {
+	const token = await getGitHubToken();
+	if (!token) return { error: "Not authenticated" };
+
+	try {
+		const idResponse = await fetch("https://api.github.com/graphql", {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				query: `query($owner: String!, $repo: String!, $number: Int!) {
+					repository(owner: $owner, name: $repo) {
+						pullRequest(number: $number) { id }
+					}
+				}`,
+				variables: { owner, repo, number: pullNumber },
+			}),
+		});
+		const idJson = await idResponse.json();
+		const prId = idJson.data?.repository?.pullRequest?.id;
+		if (!prId) {
+			return { error: "Could not find pull request" };
+		}
+
+		const response = await fetch("https://api.github.com/graphql", {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				query: `mutation($prId: ID!) {
+					markPullRequestReadyForReview(input: { pullRequestId: $prId }) {
+						pullRequest { id isDraft }
+					}
+				}`,
+				variables: { prId },
+			}),
+		});
+		const json = await response.json();
+		if (json.errors?.length) {
+			return { error: json.errors[0].message };
+		}
+		await revalidateAfterPRMutation(owner, repo, pullNumber, "markReadyForReview");
+		return { success: true };
+	} catch (e: unknown) {
+		return { error: getErrorMessage(e) || "Failed to mark as ready for review" };
 	}
 }
 

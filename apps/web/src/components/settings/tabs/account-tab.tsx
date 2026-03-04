@@ -434,8 +434,13 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 			<div className="px-4 py-4">
 				<button
 					onClick={() => {
-						signOut();
-						window.location.href = "/";
+						signOut({
+							fetchOptions: {
+								onSuccess: () => {
+									window.location.href = "/";
+								},
+							},
+						});
 					}}
 					className="flex items-center gap-1.5 border border-border px-3 py-1.5 text-xs font-mono text-muted-foreground hover:text-foreground hover:bg-muted/50 dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
 				>

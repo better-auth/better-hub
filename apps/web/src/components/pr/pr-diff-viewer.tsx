@@ -237,6 +237,17 @@ export function PRDiffViewer({
 		});
 	};
 
+	const setFilesViewed = (filenames: string[], viewed: boolean) => {
+		setViewedFiles((prev) => {
+			const next = new Set(prev);
+			for (const f of filenames) {
+				if (viewed) next.add(f);
+				else next.delete(f);
+			}
+			return next;
+		});
+	};
+
 	const viewedCount = viewedFiles.size;
 
 	// Group review comments by file
@@ -261,7 +272,7 @@ export function PRDiffViewer({
 		if (!containerRef.current) return;
 		const rect = containerRef.current.getBoundingClientRect();
 		const x = clientX - rect.left;
-		setSidebarWidth(Math.max(140, Math.min(400, x)));
+		setSidebarWidth(Math.max(140, Math.min(600, x)));
 	}, []);
 
 	return (
@@ -270,7 +281,7 @@ export function PRDiffViewer({
 			{!sidebarCollapsed && (
 				<>
 					<div
-						className="hidden lg:flex flex-col shrink-0 border-r border-border pr-3"
+						className="hidden lg:flex flex-col shrink-0 border-r border-border pr-2"
 						style={{
 							width: sidebarWidth,
 							transition: isDragging
@@ -364,8 +375,15 @@ export function PRDiffViewer({
 								</button>
 							</div>
 						</div>
-						{viewedCount > 0 && (
-							<div className="shrink-0 h-1 bg-border/60 mx-3 rounded-full overflow-hidden">
+						{
+							<div
+								className={cn(
+									"shrink-0 h-1 mx-3 rounded-full overflow-hidden transition-all duration-300",
+									viewedCount === 0
+										? "bg-border/20"
+										: "bg-border/60",
+								)}
+							>
 								<div
 									className="h-full bg-success/70 transition-all duration-300 rounded-full"
 									style={{
@@ -373,7 +391,7 @@ export function PRDiffViewer({
 									}}
 								/>
 							</div>
-						)}
+						}
 
 						{/* Sidebar content */}
 						<div className="flex-1 overflow-y-auto overscroll-contain min-h-0">
@@ -387,6 +405,12 @@ export function PRDiffViewer({
 									viewedFiles={viewedFiles}
 									threadsByFile={
 										threadsByFile
+									}
+									onToggleViewed={
+										toggleViewed
+									}
+									onSetFilesViewed={
+										setFilesViewed
 									}
 								/>
 							) : sidebarMode === "commits" ? (
