@@ -883,8 +883,8 @@ export function UserProfileContent({
 					<>
 						{/* Search & filters */}
 						<div className="shrink-0">
-							<div className="flex items-center gap-2 mb-3">
-								<div className="relative flex-1">
+							<div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
+								<div className="relative flex-1 w-full">
 									<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50" />
 									<input
 										type="text"
@@ -909,68 +909,83 @@ export function UserProfileContent({
 									/>
 								</div>
 
-								<div className="flex items-center border border-border divide-x divide-border rounded-sm shrink-0">
-									{(
-										[
+								<div className="flex items-center gap-2 w-full justify-between sm:justify-start sm:w-auto">
+									<div className="flex items-center border border-border divide-x divide-border rounded-md shrink-0">
+										{(
 											[
-												"all",
-												"All",
-											],
-											[
-												"sources",
-												"Sources",
-											],
-											[
-												"forks",
-												"Forks",
-											],
-											[
-												"archived",
-												"Archived",
-											],
-										] as const
-									).map(([value, label]) => (
-										<button
-											key={value}
-											onClick={() =>
-												setFilter(
-													value,
-												)
-											}
-											className={cn(
-												"px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
-												filter ===
-													value
-													? "bg-muted/50 dark:bg-white/4 text-foreground"
-													: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
-											)}
-										>
-											{label}
-										</button>
-									))}
-								</div>
+												[
+													"all",
+													"All",
+												],
+												[
+													"sources",
+													"Sources",
+												],
+												[
+													"forks",
+													"Forks",
+												],
+												[
+													"archived",
+													"Archived",
+												],
+											] as const
+										).map(
+											([
+												value,
+												label,
+											]) => (
+												<button
+													key={
+														value
+													}
+													onClick={() =>
+														setFilter(
+															value,
+														)
+													}
+													className={cn(
+														"px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
+														filter ===
+															value
+															? "bg-muted/50 dark:bg-white/4 text-foreground"
+															: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
+													)}
+												>
+													{
+														label
+													}
+												</button>
+											),
+										)}
+									</div>
 
-								<button
-									onClick={() =>
-										setSort((current) =>
-											current ===
-											"updated"
-												? "stars"
-												: current ===
-													  "stars"
-													? "name"
-													: "updated",
-										)
-									}
-									className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground border border-border hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer rounded-sm shrink-0"
-								>
-									<ArrowUpDown className="w-3 h-3" />
-									{sort === "updated"
-										? "Updated"
-										: sort === "stars"
-											? "Stars"
-											: "Name"}
-								</button>
+									<button
+										onClick={() =>
+											setSort(
+												(
+													current,
+												) =>
+													current ===
+													"updated"
+														? "stars"
+														: current ===
+															  "stars"
+															? "name"
+															: "updated",
+											)
+										}
+										className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground border border-border hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer rounded-md shrink-0"
+									>
+										<ArrowUpDown className="w-3 h-3" />
+										{sort === "updated"
+											? "Updated"
+											: sort ===
+												  "stars"
+												? "Stars"
+												: "Name"}
+									</button>
+								</div>
 							</div>
 
 							<div className="flex items-start justify-between gap-4 mb-4">
@@ -1132,14 +1147,14 @@ export function UserProfileContent({
 						</div>
 
 						{/* Repo list */}
-						<div className="shrink-0 min-h-[280px] border border-border rounded-md divide-y divide-border">
+						<div className="flex-1 min-h-96 sm:min-h-0 overflow-y-auto border border-border rounded-md divide-y divide-border">
 							{filtered.map((repo) => (
 								<Link
 									key={repo.id}
 									href={`/${repo.full_name}`}
 									className="group flex items-center gap-4 px-4 py-3 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors"
 								>
-									{/* Desktop: Original layout exactly as in git */}
+									{/* Desktop: Inline layout */}
 									<div className="hidden sm:contents">
 										<FolderGit2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
 										<div className="flex-1 min-w-0">
