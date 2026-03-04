@@ -44,6 +44,9 @@ const MONTH_LABEL_MIN_GAP_PX = 8;
 const MONTH_LABEL_MIN_SPACING_PX = 24 + MONTH_LABEL_MIN_GAP_PX;
 const TOOLTIP_EDGE_PADDING_PX = 8;
 const FALLBACK_TOOLTIP_WIDTH_PX = 120;
+const FALLBACK_TOOLTIP_HEIGHT_PX = 56;
+const TOOLTIP_GAP_PX = 8;
+const HELD_TOOLTIP_GAP_PX = 14;
 
 function getMonthFromDate(date: string): number {
 	const parts = date.split("-");
@@ -59,9 +62,26 @@ function getMonthFromDate(date: string): number {
 export function ContributionChart({ data }: { data: ContributionData }) {
 	const [hovered, setHovered] = useState<ContributionDay | null>(null);
 	const [tooltipX, setTooltipX] = useState(0);
+	const [tooltipY, setTooltipY] = useState(0);
+	const [heldCell, setHeldCell] = useState<{
+		date: string;
+		weekIndex: number;
+		dayIndex: number;
+	} | null>(null);
 	const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 	const hoveredCellRef = useRef<HTMLDivElement | null>(null);
 	const tooltipRef = useRef<HTMLDivElement | null>(null);
+	const activePointerIdRef = useRef<number | null>(null);
+
+	const dayByDate = useMemo(() => {
+		const map = new Map<string, ContributionDay>();
+		for (const week of data.weeks) {
+			for (const day of week.contributionDays) {
+				map.set(day.date, day);
+			}
+		}
+		return map;
+	}, [data.weeks]);
 
 	const monthPositions = useMemo(() => {
 		const positions: { label: string; col: number }[] = [];
@@ -98,7 +118,7 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 		});
 	}, [monthPositions]);
 
-	const updateTooltipPosition = useCallback((cell: HTMLDivElement) => {
+	const updateTooltipPosition = useCallback((cell: HTMLDivElement, held = false) => {
 		const parent = scrollContainerRef.current;
 		if (!parent) return;
 
@@ -112,18 +132,126 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 
 		if (minX >= maxX) {
 			setTooltipX(parent.clientWidth / 2);
+			const tooltipHeight =
+				tooltipRef.current?.offsetHeight ?? FALLBACK_TOOLTIP_HEIGHT_PX;
+			const rawY =
+				cellRect.top -
+				parentRect.top -
+				tooltipHeight -
+				(held ? HELD_TOOLTIP_GAP_PX : TOOLTIP_GAP_PX);
+			setTooltipY(rawY);
 			return;
 		}
 
 		setTooltipX(Math.min(Math.max(rawX, minX), maxX));
+		const tooltipHeight =
+			tooltipRef.current?.offsetHeight ?? FALLBACK_TOOLTIP_HEIGHT_PX;
+		const rawY =
+			cellRect.top -
+			parentRect.top -
+			tooltipHeight -
+			(held ? HELD_TOOLTIP_GAP_PX : TOOLTIP_GAP_PX);
+		setTooltipY(rawY);
 	}, []);
+
+	const clearHeldCell = useCallback(() => {
+		activePointerIdRef.current = null;
+		setHeldCell(null);
+		hoveredCellRef.current = null;
+		setHovered(null);
+	}, []);
+
+	const setHeldFromPointer = useCallback(
+		(
+			day: ContributionDay,
+			weekIndex: number,
+			dayIndex: number,
+			element: HTMLDivElement,
+		) => {
+			hoveredCellRef.current = element;
+			setHeldCell({
+				date: day.date,
+				weekIndex,
+				dayIndex,
+			});
+			setHovered(day);
+			updateTooltipPosition(element, true);
+		},
+		[updateTooltipPosition],
+	);
+
+	const getHeldCellTransform = useCallback(
+		(weekIndex: number, dayIndex: number, date: string) => {
+			if (!heldCell) return null;
+
+			if (heldCell.date === date) {
+				return {
+					zIndex: 30,
+				};
+			}
+
+			const dx = weekIndex - heldCell.weekIndex;
+			const dy = dayIndex - heldCell.dayIndex;
+			const distance = Math.max(Math.abs(dx), Math.abs(dy));
+
+			if (distance > 2 || distance === 0) return null;
+
+			const push = distance === 1 ? 3 : 1.5;
+			const translateX = dx === 0 ? 0 : Math.sign(dx) * push;
+			const translateY = dy === 0 ? 0 : Math.sign(dy) * push;
+
+			return {
+				transform: `translate3d(${translateX}px, ${translateY}px, 0)`,
+				zIndex: distance === 1 ? 20 : 10,
+			};
+		},
+		[heldCell],
+	);
+
+	const updateHeldFromPoint = useCallback(
+		(clientX: number, clientY: number) => {
+			const target = document.elementFromPoint(clientX, clientY);
+			if (!(target instanceof HTMLElement)) return;
+
+			const cell = target.closest<HTMLDivElement>("[data-contrib-cell='true']");
+			if (!cell) return;
+
+			const date = cell.dataset.date;
+			const weekIndex = Number(cell.dataset.weekIndex);
+			const dayIndex = Number(cell.dataset.dayIndex);
+
+			if (!date || Number.isNaN(weekIndex) || Number.isNaN(dayIndex)) return;
+
+			const day = dayByDate.get(date);
+			if (!day) return;
+
+			hoveredCellRef.current = cell;
+			setHeldCell((current) => {
+				if (
+					current?.date === date &&
+					current.weekIndex === weekIndex &&
+					current.dayIndex === dayIndex
+				) {
+					return current;
+				}
+				return {
+					date,
+					weekIndex,
+					dayIndex,
+				};
+			});
+			setHovered((current) => (current?.date === day.date ? current : day));
+			updateTooltipPosition(cell, true);
+		},
+		[dayByDate, updateTooltipPosition],
+	);
 
 	useEffect(() => {
 		if (!hovered || !hoveredCellRef.current) return;
 
 		const update = () => {
 			if (!hoveredCellRef.current) return;
-			updateTooltipPosition(hoveredCellRef.current);
+			updateTooltipPosition(hoveredCellRef.current, Boolean(heldCell));
 		};
 
 		update();
@@ -138,7 +266,60 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 			parent?.removeEventListener("scroll", update);
 			window.removeEventListener("resize", update);
 		};
-	}, [hovered, updateTooltipPosition]);
+	}, [heldCell, hovered, updateTooltipPosition]);
+
+	useEffect(() => {
+		if (!heldCell) return;
+
+		const release = () => clearHeldCell();
+		window.addEventListener("pointerup", release, {
+			passive: true,
+		});
+		window.addEventListener("pointercancel", release, {
+			passive: true,
+		});
+		window.addEventListener("touchend", release, {
+			passive: true,
+		});
+
+		return () => {
+			window.removeEventListener("pointerup", release);
+			window.removeEventListener("pointercancel", release);
+			window.removeEventListener("touchend", release);
+		};
+	}, [clearHeldCell, heldCell]);
+
+	useEffect(() => {
+		if (!heldCell) return;
+
+		const body = document.body;
+		const html = document.documentElement;
+		const prevBodyOverflow = body.style.overflow;
+		const prevHtmlOverflow = html.style.overflow;
+		const prevBodyTouchAction = body.style.touchAction;
+		const prevHtmlTouchAction = html.style.touchAction;
+
+		body.style.overflow = "hidden";
+		html.style.overflow = "hidden";
+		body.style.touchAction = "none";
+		html.style.touchAction = "none";
+
+		const preventTouchMove = (event: TouchEvent) => {
+			event.preventDefault();
+		};
+
+		document.addEventListener("touchmove", preventTouchMove, {
+			passive: false,
+		});
+
+		return () => {
+			body.style.overflow = prevBodyOverflow;
+			html.style.overflow = prevHtmlOverflow;
+			body.style.touchAction = prevBodyTouchAction;
+			html.style.touchAction = prevHtmlTouchAction;
+			document.removeEventListener("touchmove", preventTouchMove);
+		};
+	}, [heldCell]);
 
 	return (
 		<div className="w-full">
@@ -158,7 +339,7 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 						<div
 							key={l}
 							className={cn(
-								"w-[10px] h-[10px] rounded-[2px]",
+								"w-2.5 h-2.5 rounded-xs",
 								LEVEL_CLASSES[l],
 							)}
 						/>
@@ -172,29 +353,55 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 				<div
 					ref={tooltipRef}
 					className={cn(
-						"absolute left-0 bottom-full mb-2 z-10 pointer-events-none -translate-x-1/2 transition-all duration-100",
+						"absolute left-0 z-50 pointer-events-none select-none -translate-x-1/2 transition-all duration-100",
+						heldCell ? "" : "bottom-full mb-2",
 						hovered
 							? "opacity-100 translate-y-0"
 							: "opacity-0 translate-y-1",
 					)}
-					style={{ left: tooltipX }}
+					style={
+						heldCell
+							? {
+									left: tooltipX,
+									top: tooltipY,
+								}
+							: { left: tooltipX }
+					}
 				>
 					{hovered && (
-						<div className="rounded-sm border border-border/60 dark:border-white/10 bg-background/80 dark:bg-black/80 backdrop-blur-xl shadow-sm dark:shadow-none ring-1 ring-black/[0.03] dark:ring-white/[0.03]">
-							<div className="px-3 py-1.5 text-center">
-								<div className="text-xs font-medium tabular-nums text-foreground">
-									<span className="font-semibold">
-										{
-											hovered.contributionCount
-										}
-									</span>{" "}
+						<div
+							className={cn(
+								heldCell
+									? "relative rounded-md border border-border/70 dark:border-white/15 bg-background/95 dark:bg-black/90 backdrop-blur-xl shadow-md dark:shadow-none"
+									: "rounded-sm border border-border/60 dark:border-white/10 bg-background/80 dark:bg-black/80 backdrop-blur-xl shadow-sm dark:shadow-none ring-1 ring-black/3 dark:ring-white/3",
+							)}
+						>
+							<div
+								className={cn(
+									"text-center",
+									heldCell
+										? "px-2.5 py-1.5"
+										: "px-3 py-1.5",
+								)}
+							>
+								<div
+									className={cn(
+										"tabular-nums text-foreground",
+										heldCell
+											? "text-sm font-semibold"
+											: "text-xs font-medium",
+									)}
+								>
+									{hovered.contributionCount}
+								</div>
+								<div className="text-[10px] font-mono text-muted-foreground">
 									contribution
 									{hovered.contributionCount !==
 									1
 										? "s"
 										: ""}
 								</div>
-								<div className="text-[10px] font-mono text-muted-foreground">
+								<div className="text-[10px] font-mono text-muted-foreground/80">
 									{new Date(
 										hovered.date,
 									).toLocaleDateString(
@@ -207,6 +414,9 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 									)}
 								</div>
 							</div>
+							{heldCell && (
+								<span className="absolute left-1/2 -bottom-1.5 h-3 w-3 -translate-x-1/2 rotate-45 border-r border-b border-border/70 dark:border-white/15 bg-background/95 dark:bg-black/90" />
+							)}
 						</div>
 					)}
 				</div>
@@ -264,27 +474,42 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 										style={{ gap: GAP }}
 									>
 										{week.contributionDays.map(
-											(day) => (
+											(
+												day,
+												di,
+											) => (
 												<div
 													key={
 														day.date
 													}
 													className={cn(
-														"rounded-[2px] transition-all duration-75",
+														"relative rounded-xs transition-all duration-100 touch-none select-none",
 														LEVEL_CLASSES[
 															getLevel(
 																day.contributionCount,
 															)
 														],
-														"hover:ring-1 hover:ring-foreground/30",
+														heldCell?.date ===
+															day.date
+															? "ring-1 ring-foreground/35"
+															: "hover:ring-1 hover:ring-foreground/30",
 													)}
 													style={{
 														width: CELL,
 														height: CELL,
+														...getHeldCellTransform(
+															wi,
+															di,
+															day.date,
+														),
 													}}
 													onMouseEnter={(
 														e,
 													) => {
+														if (
+															heldCell
+														)
+															return;
 														hoveredCellRef.current =
 															e.currentTarget;
 														setHovered(
@@ -295,12 +520,92 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 														);
 													}}
 													onMouseLeave={() => {
+														if (
+															heldCell
+														)
+															return;
 														hoveredCellRef.current =
 															null;
 														setHovered(
 															null,
 														);
 													}}
+													onPointerDown={(
+														e,
+													) => {
+														if (
+															e.pointerType ===
+															"mouse"
+														)
+															return;
+														activePointerIdRef.current =
+															e.pointerId;
+														e.currentTarget.setPointerCapture(
+															e.pointerId,
+														);
+														e.preventDefault();
+														setHeldFromPointer(
+															day,
+															wi,
+															di,
+															e.currentTarget,
+														);
+													}}
+													onPointerMove={(
+														e,
+													) => {
+														if (
+															e.pointerType ===
+															"mouse"
+														)
+															return;
+														if (
+															activePointerIdRef.current !==
+															e.pointerId
+														)
+															return;
+														e.preventDefault();
+														updateHeldFromPoint(
+															e.clientX,
+															e.clientY,
+														);
+													}}
+													onPointerUp={(
+														e,
+													) => {
+														if (
+															e.pointerType ===
+															"mouse"
+														)
+															return;
+														if (
+															activePointerIdRef.current !==
+															e.pointerId
+														)
+															return;
+														clearHeldCell();
+													}}
+													onPointerCancel={
+														clearHeldCell
+													}
+													onLostPointerCapture={
+														clearHeldCell
+													}
+													onContextMenu={(
+														e,
+													) =>
+														e.preventDefault()
+													}
+													data-contrib-cell="true"
+													data-date={
+														day.date
+													}
+													data-week-index={
+														wi
+													}
+													data-day-index={
+														di
+													}
 												/>
 											),
 										)}
