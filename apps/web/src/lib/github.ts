@@ -5780,7 +5780,65 @@ export async function getWorkflowRun(owner: string, repo: string, runId: number)
 		repo,
 		run_id: runId,
 	});
-	return data;
+
+	const hasPullRequests = Array.isArray(data.pull_requests) && data.pull_requests.length > 0;
+	let resolvedPullRequests = data.pull_requests;
+
+	if (!hasPullRequests && data.head_sha) {
+		try {
+			const { data: associatedPrs } = await octokit.request(
+				"GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls",
+				{
+					owner,
+					repo,
+					commit_sha: data.head_sha,
+					per_page: 10,
+				},
+			);
+			if (Array.isArray(associatedPrs) && associatedPrs.length > 0) {
+				resolvedPullRequests = associatedPrs;
+			}
+		} catch {
+			// Keep best-effort behavior from the base run payload.
+		}
+	}
+
+	if (
+		(!Array.isArray(resolvedPullRequests) || resolvedPullRequests.length === 0) &&
+		data.head_branch &&
+		data.head_repository?.owner?.login
+	) {
+		try {
+			const { data: branchPrs } = await octokit.pulls.list({
+				owner,
+				repo,
+				state: "all",
+				head: `${data.head_repository.owner.login}:${data.head_branch}`,
+				per_page: 10,
+			});
+			if (Array.isArray(branchPrs) && branchPrs.length > 0) {
+				const shaMatchedPrs =
+					data.head_sha && data.head_sha.length > 0
+						? branchPrs.filter(
+								(pr) =>
+									pr.head?.sha ===
+									data.head_sha,
+							)
+						: branchPrs;
+				if (shaMatchedPrs.length > 0) {
+					resolvedPullRequests = shaMatchedPrs;
+				}
+			}
+		} catch {
+			// Keep best-effort behavior from prior sources.
+		}
+	}
+
+	if (Array.isArray(resolvedPullRequests) && resolvedPullRequests.length > 0) {
+		return { ...data, pull_requests: resolvedPullRequests };
+	}
+
+	return { ...data, pull_requests: resolvedPullRequests };
 }
 
 export async function getWorkflowRunJobs(owner: string, repo: string, runId: number) {
