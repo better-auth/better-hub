@@ -32,6 +32,8 @@ import Link from "next/link";
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+// !TODO: Last item in languages row should take up remaining space on mobile for a cleaner look
+// !TODO: Better input handling of contribution graph on mobile
 export interface UserProfile {
 	login: string;
 	name: string | null;
