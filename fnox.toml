@@ -1,4 +1,0 @@
-[secrets]
-GITHUB_CLIENT_ID= { provider = "keychain", value = "GITHUB_CLIENT_ID" }
-GITHUB_CLIENT_SECRET= { provider = "keychain", value = "GITHUB_CLIENT_SECRET" }
-BETTER_AUTH_SECRET= { provider = "keychain", value = "BETTER_AUTH_SECRET" }
