@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 export interface MarkdownEditorRef {
 	focus: () => void;
 	getTextarea: () => HTMLTextAreaElement | null;
+	clear: () => void;
 }
 
 interface MarkdownEditorProps {
@@ -40,6 +41,7 @@ interface MarkdownEditorProps {
 	participants?: MentionUser[];
 	/** Repo owner (org or user) to prioritize in @mention search */
 	owner?: string;
+	resizeYIndicator?: boolean;
 }
 
 export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>(
@@ -55,6 +57,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
 			className,
 			participants = [],
 			owner = "",
+			resizeYIndicator = true,
 		},
 		ref,
 	) {
@@ -137,6 +140,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
 		useImperativeHandle(ref, () => ({
 			focus: () => editor?.commands.focus(),
 			getTextarea: () => null,
+			clear: () => {
+				if (!editor) return;
+				editor.commands.clearContent(true);
+				lastReportedMd.current = "";
+			},
 		}));
 
 		const toolbarActions = compact
@@ -326,7 +334,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
 			<div
 				className={cn(
 					"border border-border rounded-md overflow-hidden",
-					"focus-within:border-foreground/20 focus-within:ring-1 focus-within:ring-ring/50",
+					"focus-within:border-foreground/20 ",
 					"transition-colors",
 					className,
 				)}
@@ -362,7 +370,10 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
 				{/* Rich text editor */}
 				<div
 					style={{ minHeight, maxHeight: 400 }}
-					className="resize-y overflow-auto"
+					className={cn(
+						"overflow-auto",
+						resizeYIndicator ? "resize-y" : "",
+					)}
 				>
 					<EditorContent editor={editor} />
 				</div>

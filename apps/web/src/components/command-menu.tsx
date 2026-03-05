@@ -35,6 +35,7 @@ import {
 	Code,
 	Eye,
 	Pin,
+	Square,
 } from "lucide-react";
 import { formatForDisplay } from "@tanstack/react-hotkeys";
 import { signOut } from "@/lib/auth-client";
@@ -43,6 +44,7 @@ import { getLanguageColor } from "@/lib/github-utils";
 import { useGlobalChatOptional } from "@/components/shared/global-chat-provider";
 import { getRecentViews, type RecentViewItem } from "@/lib/recent-views";
 import { useColorTheme } from "@/components/theme/theme-provider";
+import { BORDER_RADIUS_PRESETS, type BorderRadiusPreset } from "@/lib/themes/border-radius";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { useMutationSubscription } from "@/hooks/use-mutation-subscription";
 import type { MutationEvent } from "@/lib/mutation-events";
@@ -51,6 +53,7 @@ import {
 	unpinFromOverview,
 	getPinnedUrlsForRepo,
 } from "@/app/(app)/repos/[owner]/[repo]/pin-actions";
+import { SELECTABLE_MODELS } from "@/lib/billing/ai-models";
 
 interface SearchRepo {
 	id: number;
@@ -89,6 +92,7 @@ const KNOWN_PREFIXES = new Set([
 	"trending",
 	"users",
 	"orgs",
+	"stars",
 	"dashboard",
 	"api",
 	"collections",
@@ -102,7 +106,15 @@ function matchRepoFromPathname(pathname: string): [string, string] | null {
 	return [segments[0], segments[1]];
 }
 
-type Mode = "commands" | "search" | "theme" | "accounts" | "settings" | "model" | "files";
+type Mode =
+	| "commands"
+	| "search"
+	| "theme"
+	| "radius"
+	| "accounts"
+	| "settings"
+	| "model"
+	| "files";
 
 export function CommandMenu() {
 	const [open, setOpen] = useState(false);
@@ -119,8 +131,10 @@ export function CommandMenu() {
 	const {
 		themeId: currentThemeId,
 		mode: currentMode,
+		borderRadius: currentBorderRadius,
 		setTheme: setColorTheme,
 		toggleMode,
+		setBorderRadius,
 		themes: colorThemes,
 	} = useColorTheme();
 	const { emit } = useMutationEvents();
@@ -161,45 +175,9 @@ export function CommandMenu() {
 	);
 	const [fileTreeLoading, setFileTreeLoading] = useState(false);
 	const fileTreeRepoRef = useRef<string>("");
+	const prevModeRef = useRef(mode);
 
-	const MODELS = useMemo(
-		() => [
-			{
-				id: "moonshotai/kimi-k2.5",
-				label: "Kimi K2.5",
-				desc: "Moonshot AI — Default",
-			},
-			{
-				id: "anthropic/claude-sonnet-4",
-				label: "Claude Sonnet 4",
-				desc: "Anthropic",
-			},
-			{
-				id: "anthropic/claude-opus-4",
-				label: "Claude Opus 4",
-				desc: "Anthropic",
-			},
-			{ id: "openai/gpt-4.1", label: "GPT-4.1", desc: "OpenAI" },
-			{ id: "openai/o3-mini", label: "o3-mini", desc: "OpenAI" },
-			{
-				id: "google/gemini-2.5-pro-preview",
-				label: "Gemini 2.5 Pro",
-				desc: "Google",
-			},
-			{
-				id: "google/gemini-2.5-flash-preview",
-				label: "Gemini 2.5 Flash",
-				desc: "Google",
-			},
-			{ id: "deepseek/deepseek-chat-v3", label: "DeepSeek V3", desc: "DeepSeek" },
-			{
-				id: "meta-llama/llama-4-maverick",
-				label: "Llama 4 Maverick",
-				desc: "Meta",
-			},
-		],
-		[],
-	);
+	const MODELS = SELECTABLE_MODELS;
 
 	const fetchSettings = useCallback(async () => {
 		setSettingsLoading(true);
@@ -782,6 +760,22 @@ export function CommandMenu() {
 				keepOpen: true,
 			},
 			{
+				name: "Set Border Radius",
+				description: "Adjust corner rounding",
+				keywords: [
+					"radius",
+					"rounded",
+					"corners",
+					"square",
+					"sharp",
+					"soft",
+					"rounding",
+				],
+				action: () => switchMode("radius"),
+				icon: Square,
+				keepOpen: true,
+			},
+			{
 				name: "Account Settings",
 				description: "Profile, accounts & sign out",
 				keywords: [
@@ -831,7 +825,7 @@ export function CommandMenu() {
 				name: "Starred Repos",
 				description: "View your starred repositories",
 				keywords: ["favorites", "bookmarks", "saved", "likes"],
-				action: () => router.push("/starred"),
+				action: () => router.push("/stars"),
 				icon: Star,
 			},
 		],
@@ -1095,24 +1089,64 @@ export function CommandMenu() {
 	}, [search, topUserRepos, filteredUserRepos, dedupedGithubResults, router]);
 
 	// --- Theme mode items ---
-	const filteredThemes = useMemo(() => {
-		if (mode !== "theme") return colorThemes;
-		if (!search.trim()) return colorThemes;
-		const s = search.toLowerCase();
-		return colorThemes.filter(
-			(t) =>
+	const { regularThemes, brandedThemes } = useMemo(() => {
+		const filterFn = (t: (typeof colorThemes)[0]) => {
+			if (!search.trim()) return true;
+			const s = search.toLowerCase();
+			return (
 				t.name.toLowerCase().includes(s) ||
-				t.description.toLowerCase().includes(s),
-		);
+				t.description.toLowerCase().includes(s)
+			);
+		};
+
+		const regular: typeof colorThemes = [];
+		const branded: typeof colorThemes = [];
+
+		for (const theme of colorThemes) {
+			if (!filterFn(theme)) continue;
+			if (theme.icon) {
+				branded.push(theme);
+			} else {
+				regular.push(theme);
+			}
+		}
+
+		return { regularThemes: regular, brandedThemes: branded };
 	}, [mode, search, colorThemes]);
 
 	const themeItems = useMemo(() => {
-		return filteredThemes.map((t) => ({
+		return [...regularThemes, ...brandedThemes].map((t) => ({
 			id: `theme-${t.id}`,
 			action: () => setColorTheme(t.id),
 			keepOpen: true,
 		}));
-	}, [filteredThemes, setColorTheme]);
+	}, [regularThemes, brandedThemes, setColorTheme]);
+
+	// --- Radius mode items ---
+	const RADIUS_OPTIONS: { id: BorderRadiusPreset; label: string; description: string }[] = [
+		{ id: "default", label: "Default", description: "Sharp corners" },
+		{ id: "small", label: "Small", description: "Subtle rounding" },
+		{ id: "medium", label: "Medium", description: "Balanced corners" },
+		{ id: "large", label: "Large", description: "Soft & rounded" },
+	];
+
+	const filteredRadiusOptions = useMemo(() => {
+		if (!search.trim()) return RADIUS_OPTIONS;
+		const s = search.toLowerCase();
+		return RADIUS_OPTIONS.filter(
+			(r) =>
+				r.label.toLowerCase().includes(s) ||
+				r.description.toLowerCase().includes(s),
+		);
+	}, [search]);
+
+	const radiusItems = useMemo(() => {
+		return filteredRadiusOptions.map((r) => ({
+			id: `radius-${r.id}`,
+			action: () => setBorderRadius(r.id),
+			keepOpen: true,
+		}));
+	}, [filteredRadiusOptions, setBorderRadius]);
 
 	// --- Accounts mode items ---
 	const handleSwitchAccount = useCallback(
@@ -1252,6 +1286,11 @@ export function CommandMenu() {
 	const settingsItems = useMemo(() => {
 		const items: { id: string; action: () => void; keepOpen: boolean }[] = [
 			{ id: "settings-theme", action: () => switchMode("theme"), keepOpen: true },
+			{
+				id: "settings-radius",
+				action: () => switchMode("radius"),
+				keepOpen: true,
+			},
 			{ id: "settings-model", action: () => switchMode("model"), keepOpen: true },
 			{
 				id: "settings-accounts",
@@ -1273,7 +1312,7 @@ export function CommandMenu() {
 				m.desc.toLowerCase().includes(s) ||
 				m.id.toLowerCase().includes(s),
 		);
-	}, [mode, search, MODELS]);
+	}, [mode, search]);
 
 	const modelItems = useMemo(() => {
 		return filteredModels.map((m) => ({
@@ -1323,17 +1362,35 @@ export function CommandMenu() {
 				? searchItems
 				: mode === "theme"
 					? themeItems
-					: mode === "accounts"
-						? accountItems
-						: mode === "settings"
-							? settingsItems
-							: mode === "model"
-								? modelItems
-								: fileItems;
+					: mode === "radius"
+						? radiusItems
+						: mode === "accounts"
+							? accountItems
+							: mode === "settings"
+								? settingsItems
+								: mode === "model"
+									? modelItems
+									: fileItems;
 
 	useEffect(() => {
 		setSelectedIndex(0);
 	}, [allItems.length, search]);
+
+	// Auto-select and scroll to current theme when entering theme mode
+	useEffect(() => {
+		const enteredThemeMode = mode === "theme" && prevModeRef.current !== "theme";
+		prevModeRef.current = mode;
+
+		if (enteredThemeMode && !search.trim()) {
+			const allThemes = [...regularThemes, ...brandedThemes];
+			const currentThemeIndex = allThemes.findIndex(
+				(t) => t.id === currentThemeId,
+			);
+			if (currentThemeIndex !== -1) {
+				setSelectedIndex(currentThemeIndex);
+			}
+		}
+	}, [mode, search, regularThemes, brandedThemes, currentThemeId]);
 
 	useEffect(() => {
 		if (!listRef.current) return;
@@ -1348,12 +1405,13 @@ export function CommandMenu() {
 
 	const handleKeyDown = useCallback(
 		(e: React.KeyboardEvent) => {
-			// Tab cycles modes: commands → search → theme → accounts → settings → commands
+			// Tab cycles modes: commands → search → theme → radius → accounts → settings → commands
 			if (e.key === "Tab") {
 				e.preventDefault();
 				if (mode === "commands") switchMode("search");
 				else if (mode === "search") switchMode("theme");
-				else if (mode === "theme") switchMode("accounts");
+				else if (mode === "theme") switchMode("radius");
+				else if (mode === "radius") switchMode("accounts");
 				else if (mode === "accounts") switchMode("settings");
 				else switchMode("commands");
 				return;
@@ -1451,6 +1509,8 @@ export function CommandMenu() {
 									<FileText className="size-4 text-muted-foreground/50 shrink-0" />
 								) : mode === "theme" ? (
 									<Palette className="size-4 text-muted-foreground/50 shrink-0" />
+								) : mode === "radius" ? (
+									<Square className="size-4 text-muted-foreground/50 shrink-0" />
 								) : mode === "accounts" ? (
 									<Users className="size-4 text-muted-foreground/50 shrink-0" />
 								) : mode === "settings" ? (
@@ -1480,15 +1540,18 @@ export function CommandMenu() {
 													  "theme"
 													? "Search themes..."
 													: mode ===
-														  "accounts"
-														? "Filter accounts..."
+														  "radius"
+														? "Select border radius..."
 														: mode ===
-															  "settings"
-															? "Configuration..."
+															  "accounts"
+															? "Filter accounts..."
 															: mode ===
-																  "model"
-																? "Search models..."
-																: "Type a command..."
+																  "settings"
+																? "Configuration..."
+																: mode ===
+																	  "model"
+																	? "Search models..."
+																	: "Type a command..."
 									}
 									className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground py-3 text-sm outline-none"
 								/>
@@ -2051,10 +2114,10 @@ export function CommandMenu() {
 												</span>
 											</button>
 										</div>
-										{filteredThemes.length >
+										{regularThemes.length >
 											0 && (
 											<CommandGroup title="Themes">
-												{filteredThemes.map(
+												{regularThemes.map(
 													(
 														theme,
 													) => {
@@ -2126,12 +2189,146 @@ export function CommandMenu() {
 												)}
 											</CommandGroup>
 										)}
+										{brandedThemes.length >
+											0 && (
+											<CommandGroup title="Brands">
+												{brandedThemes.map(
+													(
+														theme,
+													) => {
+														const idx =
+															getNextIndex();
+														const isActive =
+															currentThemeId ===
+															theme.id;
+														return (
+															<CommandItemButton
+																key={
+																	theme.id
+																}
+																index={
+																	idx
+																}
+																selected={
+																	selectedIndex ===
+																	idx
+																}
+																onClick={() =>
+																	setColorTheme(
+																		theme.id,
+																	)
+																}
+															>
+																{theme.icon && (
+																	<div className="min-w-[28px] flex items-center justify-center">
+																		<theme.icon className="size-4 shrink-0" />
+																	</div>
+																)}
+																<span className="text-[13px] text-foreground flex-1">
+																	{
+																		theme.name
+																	}
+																</span>
+																<span className="text-[11px] text-muted-foreground hidden sm:block">
+																	{
+																		theme.description
+																	}
+																</span>
+																{isActive && (
+																	<Check className="size-3.5 text-success shrink-0" />
+																)}
+															</CommandItemButton>
+														);
+													},
+												)}
+											</CommandGroup>
+										)}
 										{hasQuery &&
-											filteredThemes.length ===
+											regularThemes.length ===
+												0 &&
+											brandedThemes.length ===
 												0 && (
 												<div className="py-8 text-center text-sm text-muted-foreground/70">
 													No
 													themes
+													match
+													&quot;
+													{
+														search
+													}
+													&quot;
+												</div>
+											)}
+									</>
+								) : mode === "radius" ? (
+									/* Border Radius mode */
+									<>
+										<CommandGroup title="Border Radius">
+											{filteredRadiusOptions.map(
+												(
+													option,
+												) => {
+													const idx =
+														getNextIndex();
+													const isActive =
+														currentBorderRadius ===
+														option.id;
+													const presetValues =
+														BORDER_RADIUS_PRESETS[
+															option
+																.id
+														];
+													return (
+														<CommandItemButton
+															key={
+																option.id
+															}
+															index={
+																idx
+															}
+															selected={
+																selectedIndex ===
+																idx
+															}
+															onClick={() =>
+																setBorderRadius(
+																	option.id,
+																)
+															}
+														>
+															<span
+																className="w-6 h-6 border border-border/60 bg-muted/30 shrink-0"
+																style={{
+																	borderRadius:
+																		presetValues[
+																			"--radius-md"
+																		],
+																}}
+															/>
+															<span className="text-[13px] text-foreground flex-1">
+																{
+																	option.label
+																}
+															</span>
+															<span className="text-[11px] text-muted-foreground hidden sm:block">
+																{
+																	option.description
+																}
+															</span>
+															{isActive && (
+																<Check className="size-3.5 text-success shrink-0" />
+															)}
+														</CommandItemButton>
+													);
+												},
+											)}
+										</CommandGroup>
+										{hasQuery &&
+											filteredRadiusOptions.length ===
+												0 && (
+												<div className="py-8 text-center text-sm text-muted-foreground/70">
+													No
+													options
 													match
 													&quot;
 													{
@@ -2637,6 +2834,48 @@ export function CommandMenu() {
 															)
 																?.name ??
 																"Theme"}
+														</span>
+														<ChevronRight className="size-3 text-muted-foreground/30 shrink-0" />
+													</CommandItemButton>
+												);
+											})()}
+											{(() => {
+												const idx =
+													getNextIndex();
+												const radiusLabel =
+													currentBorderRadius
+														.charAt(
+															0,
+														)
+														.toUpperCase() +
+													currentBorderRadius.slice(
+														1,
+													);
+												return (
+													<CommandItemButton
+														key="settings-radius"
+														index={
+															idx
+														}
+														selected={
+															selectedIndex ===
+															idx
+														}
+														onClick={() =>
+															switchMode(
+																"radius",
+															)
+														}
+													>
+														<Square className="size-3.5 text-muted-foreground/50 shrink-0" />
+														<span className="text-[13px] text-foreground flex-1">
+															Border
+															Radius
+														</span>
+														<span className="text-[11px] text-muted-foreground hidden sm:block">
+															{
+																radiusLabel
+															}
 														</span>
 														<ChevronRight className="size-3 text-muted-foreground/30 shrink-0" />
 													</CommandItemButton>

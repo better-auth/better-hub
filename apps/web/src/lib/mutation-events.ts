@@ -9,6 +9,12 @@ export type PRConvertedToDraftEvent = {
 	repo: string;
 	number: number;
 };
+export type PRReadyForReviewEvent = {
+	type: "pr:ready_for_review";
+	owner: string;
+	repo: string;
+	number: number;
+};
 export type PRCommentedEvent = {
 	type: "pr:commented";
 	owner: string;
@@ -132,6 +138,7 @@ export type PinRemovedEvent = { type: "pin:removed"; owner: string; repo: string
 
 // ── Settings Events ───────────────────────────────────────────
 
+export type SettingsOpenEvent = { type: "settings:open"; tab?: string };
 export type SettingsUpdatedEvent = { type: "settings:updated" };
 export type GitHubAccountAddedEvent = { type: "github-account:added" };
 export type GitHubAccountRemovedEvent = { type: "github-account:removed" };
@@ -149,6 +156,7 @@ export type MutationEvent =
 	| PRClosedEvent
 	| PRReopenedEvent
 	| PRConvertedToDraftEvent
+	| PRReadyForReviewEvent
 	| PRCommentedEvent
 	| PRReviewedEvent
 	| PRRenamedEvent
@@ -177,6 +185,7 @@ export type MutationEvent =
 	| RepoBranchDeletedEvent
 	| PinAddedEvent
 	| PinRemovedEvent
+	| SettingsOpenEvent
 	| SettingsUpdatedEvent
 	| GitHubAccountAddedEvent
 	| GitHubAccountRemovedEvent

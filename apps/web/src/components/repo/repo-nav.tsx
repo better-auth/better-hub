@@ -150,6 +150,16 @@ export function RepoNav({
 			count: activeRunsCount,
 		},
 		{
+			label: "Releases",
+			href: `${base}/releases`,
+			active: pathname.startsWith(`${base}/releases`),
+		},
+		{
+			label: "Tags",
+			href: `${base}/tags`,
+			active: pathname.startsWith(`${base}/tags`),
+		},
+		{
 			label: "Security",
 			href: `${base}/security`,
 			active: pathname.startsWith(`${base}/security`),

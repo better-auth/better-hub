@@ -429,7 +429,10 @@ function ActivityItem({ event }: { event: RepoEvent }) {
 					</p>
 				)}
 			</div>
-			<span className="text-[9px] font-mono text-muted-foreground/60 shrink-0 mt-0.5">
+			<span
+				className="text-[9px] font-mono text-muted-foreground/60 shrink-0 mt-0.5"
+				suppressHydrationWarning
+			>
 				{timeAgo(event.created_at)}
 			</span>
 		</div>

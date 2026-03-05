@@ -4,18 +4,12 @@ import {
 	getUserPublicRepos,
 	getUserPublicOrgs,
 	getUserOrgTopRepos,
-	getUserFollowers,
-	getUserFollowing,
 	getContributionData,
+	getUserEvents,
 } from "@/lib/github";
 import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
-import { resolveProfileTab } from "@/lib/utils";
 import { UserProfileContent } from "@/components/users/user-profile-content";
 import { ExternalLink, User } from "lucide-react";
-
-function settledValue<T>(result: PromiseSettledResult<T>, fallback: T): T {
-	return result.status === "fulfilled" ? result.value : fallback;
-}
 
 function UnknownUserPage({ username }: { username: string }) {
 	const githubUrl = `https://github.com/${encodeURIComponent(username)}`;
@@ -69,21 +63,17 @@ export async function generateMetadata({
 
 export default async function UserProfilePage({
 	params,
-	searchParams,
 }: {
 	params: Promise<{ username: string }>;
-	searchParams?: Promise<{ tab?: string }>;
 }) {
 	const { username } = await params;
-	const tab = resolveProfileTab((await searchParams)?.tab);
 
 	let userData: Awaited<ReturnType<typeof getUser>> = null;
 	let reposData: Awaited<ReturnType<typeof getUserPublicRepos>> = [];
 	let orgsData: Awaited<ReturnType<typeof getUserPublicOrgs>> = [];
 	let contributionData: Awaited<ReturnType<typeof getContributionData>> = null;
 	let orgTopRepos: Awaited<ReturnType<typeof getUserOrgTopRepos>> = [];
-	let followersData: Awaited<ReturnType<typeof getUserFollowers>> = [];
-	let followingData: Awaited<ReturnType<typeof getUserFollowing>> = [];
+	let activityEvents: Awaited<ReturnType<typeof getUserEvents>> = [];
 
 	try {
 		userData = await getUser(username);
@@ -95,36 +85,34 @@ export default async function UserProfilePage({
 		return <UnknownUserPage username={username} />;
 	}
 
-	const actorType = (userData as { type?: string }).type;
-	const isBot = actorType === "Bot";
-	const isStandardUser = actorType === "User" || !actorType;
+	const isBot = (userData as { type?: string }).type === "Bot";
 	if (!isBot) {
-		const resolvedLogin = userData.login;
-		const [
-			reposResult,
-			orgsResult,
-			contributionResult,
-			followersResult,
-			followingResult,
-		] = await Promise.allSettled([
-			getUserPublicRepos(resolvedLogin, 100),
-			isStandardUser ? getUserPublicOrgs(resolvedLogin) : Promise.resolve([]),
-			isStandardUser ? getContributionData(resolvedLogin) : Promise.resolve(null),
-			getUserFollowers(resolvedLogin, 100),
-			getUserFollowing(resolvedLogin, 100),
-		]);
+		try {
+			const resolvedLogin = userData.login;
+			const [reposResult, orgsResult, contributionsResult, eventsResult] =
+				await Promise.allSettled([
+					getUserPublicRepos(resolvedLogin, 100),
+					getUserPublicOrgs(resolvedLogin),
+					getContributionData(resolvedLogin),
+					getUserEvents(resolvedLogin, 100),
+				]);
 
-		reposData = settledValue(reposResult, []);
-		orgsData = settledValue(orgsResult, []);
-		contributionData = settledValue(contributionResult, null);
-		followersData = settledValue(followersResult, []);
-		followingData = settledValue(followingResult, []);
+			if (reposResult.status === "fulfilled") reposData = reposResult.value;
+			if (orgsResult.status === "fulfilled") orgsData = orgsResult.value;
+			if (contributionsResult.status === "fulfilled") {
+				contributionData = contributionsResult.value;
+			}
+			if (eventsResult.status === "fulfilled")
+				activityEvents = eventsResult.value;
 
-		// Fetch top repos from orgs if org fetch succeeded
-		if (isStandardUser && orgsData.length > 0) {
-			orgTopRepos = await getUserOrgTopRepos(orgsData.map((o) => o.login)).catch(
-				() => [],
-			);
+			// Fetch top repos from the user's orgs (for scoring)
+			if (orgsData.length > 0) {
+				orgTopRepos = await getUserOrgTopRepos(
+					orgsData.map((o) => o.login),
+				);
+			}
+		} catch {
+			// Show profile with whatever we have
 		}
 	}
 
@@ -159,6 +147,7 @@ export default async function UserProfilePage({
 				stargazers_count: repo.stargazers_count ?? 0,
 				forks_count: repo.forks_count ?? 0,
 				open_issues_count: repo.open_issues_count ?? 0,
+				created_at: repo.created_at ?? null,
 				updated_at: repo.updated_at ?? null,
 				pushed_at: repo.pushed_at ?? null,
 			}))}
@@ -167,9 +156,7 @@ export default async function UserProfilePage({
 				avatar_url: org.avatar_url,
 			}))}
 			contributions={contributionData}
-			followers={followersData}
-			following={followingData}
-			initialTab={tab}
+			activityEvents={activityEvents}
 			orgTopRepos={orgTopRepos.map((r) => ({
 				name: r.name,
 				full_name: r.full_name,

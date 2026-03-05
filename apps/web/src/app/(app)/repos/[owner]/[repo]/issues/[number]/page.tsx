@@ -4,6 +4,7 @@ import {
 	getIssueComments,
 	getRepo,
 	getCrossReferences,
+	getIssueTimelineEvents,
 	getAuthenticatedUser,
 	extractRepoPermissions,
 } from "@/lib/github";
@@ -69,14 +70,16 @@ export default async function IssueDetailPage({
 	const issueNumber = parseInt(numStr, 10);
 
 	const hdrs = await headers();
-	const [issue, rawComments, repoData, crossRefs, currentUser, session] = await Promise.all([
-		getIssue(owner, repo, issueNumber),
-		getIssueComments(owner, repo, issueNumber),
-		getRepo(owner, repo),
-		getCrossReferences(owner, repo, issueNumber),
-		getAuthenticatedUser(),
-		auth.api.getSession({ headers: hdrs }),
-	]);
+	const [issue, rawComments, repoData, crossRefs, currentUser, session, timelineEvents] =
+		await Promise.all([
+			getIssue(owner, repo, issueNumber),
+			getIssueComments(owner, repo, issueNumber),
+			getRepo(owner, repo),
+			getCrossReferences(owner, repo, issueNumber),
+			getAuthenticatedUser(),
+			auth.api.getSession({ headers: hdrs }),
+			getIssueTimelineEvents(owner, repo, issueNumber),
+		]);
 	const comments = rawComments as IssueComment[];
 
 	if (!issue) {
@@ -150,6 +153,17 @@ export default async function IssueDetailPage({
 	]);
 	const issuePinned = await pinnedPromise;
 
+	// Determine permissions and user state
+	const permissions = extractRepoPermissions(repoData ?? {});
+	const currentUserLogin = (currentUser as { login?: string } | null)?.login;
+	const isAuthor = currentUserLogin === issue.user?.login && currentUserLogin != null;
+	const viewerHasWriteAccess = permissions.push || permissions.maintain || permissions.admin;
+	const canTriage = viewerHasWriteAccess || permissions.triage;
+
+	const canEditIssue = !!(currentUserLogin && (isAuthor || viewerHasWriteAccess));
+	const canClose = canTriage || isAuthor;
+	const canReopen = canTriage;
+
 	const commentsWithHtml: IssueComment[] = (comments || []).map((c, i) => ({
 		...c,
 		bodyHtml: commentHtmls[i],
@@ -165,15 +179,6 @@ export default async function IssueDetailPage({
 		reactions:
 			(issue as { reactions?: Record<string, unknown> }).reactions ?? undefined,
 	};
-	const permissions = extractRepoPermissions(repoData ?? {});
-	const canTriage =
-		permissions.push || permissions.admin || permissions.maintain || permissions.triage;
-	const isAuthor =
-		(currentUser as { login?: string } | null)?.login != null &&
-		issue.user?.login != null &&
-		(currentUser as { login?: string }).login === issue.user.login;
-	const canClose = canTriage || isAuthor;
-	const canReopen = canTriage;
 
 	// Extract participants
 	const participants = extractParticipants([
@@ -225,6 +230,11 @@ export default async function IssueDetailPage({
 						issueNumber={issueNumber}
 						initialComments={commentsWithHtml}
 						descriptionEntry={descriptionEntry}
+						canEdit={canEditIssue}
+						issueTitle={issue.title}
+						currentUserLogin={currentUserLogin}
+						viewerHasWriteAccess={viewerHasWriteAccess}
+						timelineEvents={timelineEvents}
 					/>
 				}
 				commentForm={

@@ -260,7 +260,7 @@ export function PRDetailLayout({
 
 					{/* Right panel (conversation) */}
 					<div
-						className="relative min-h-0 flex flex-col overflow-hidden"
+						className="relative min-h-0 overflow-hidden pl-3"
 						style={{
 							width: `${100 - splitRatio}%`,
 							transition: isDragging
@@ -269,8 +269,8 @@ export function PRDetailLayout({
 						}}
 					>
 						{!chatCollapsed && (
-							<>
-								<div className="shrink-0 flex items-center px-2 pt-2">
+							<div className="w-full h-full flex flex-col relative max-w-[1000px] mx-auto">
+								<div className="shrink-0 absolute flex items-center px-2 pt-2 -left-3.5 top-1 z-10">
 									<button
 										onClick={() =>
 											persistSplit(
@@ -283,16 +283,23 @@ export function PRDetailLayout({
 										<ChevronRight className="w-3 h-3" />
 									</button>
 								</div>
-								<div className="flex-1 overflow-y-auto overscroll-contain min-h-0 px-3 pb-3">
+								<div
+									className="flex-1 overflow-y-auto overscroll-contain min-h-0 pr-4 pl-6 pb-12"
+									style={{
+										maskImage: "linear-gradient(to bottom, black calc(100% - 24px), transparent 100%)",
+										WebkitMaskImage:
+											"linear-gradient(to bottom, black calc(100% - 24px), transparent 100%)",
+									}}
+								>
 									{conversationPanel}
 									<PROptimisticCommentsDisplay />
 								</div>
 								{commentForm && (
-									<div className="shrink-0 px-3 pb-3 pt-3">
+									<div className="shrink-0 px-3 pb-6">
 										{commentForm}
 									</div>
 								)}
-							</>
+							</div>
 						)}
 					</div>
 				</div>

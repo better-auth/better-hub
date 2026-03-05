@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef, useCallback } from "react";
+import { useState, useTransition, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import {
@@ -14,6 +14,9 @@ import {
 	Sparkles,
 	GitBranch,
 	FilePenLine,
+	Wrench,
+	ExternalLink,
+	CircleCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGlobalChat } from "@/components/shared/global-chat-provider";
@@ -32,6 +35,7 @@ import {
 	reopenPullRequest,
 	updatePRBranch,
 	convertPRToDraft,
+	markPRReadyForReview,
 	type MergeMethod,
 } from "@/app/(app)/repos/[owner]/[repo]/pulls/pr-actions";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
@@ -96,9 +100,6 @@ export function PRMergePanel({
 	branchBehindBase = false,
 }: PRMergePanelProps) {
 	const hasPermission = canTriage || isAuthor;
-	const showUpdateBranch = hasPermission && (branchBehindBase || mergeable === false);
-	const updateBranchDisabled = mergeable === false;
-	const canConvertToDraft = (canWrite || isAuthor) && !draft;
 	const availableMethods: MergeMethod[] = [
 		...(allowSquashMerge ? ["squash" as const] : []),
 		...(allowMergeCommit ? ["merge" as const] : []),
@@ -116,18 +117,33 @@ export function PRMergePanel({
 	const [commitMessage, setCommitMessage] = useState("");
 	const [isPending, startTransition] = useTransition();
 	const [pendingAction, setPendingAction] = useState<
-		"merge" | "close" | "reopen" | "draft" | "updateBranch" | null
+		"merge" | "close" | "reopen" | "draft" | "ready" | "updateBranch" | null
 	>(null);
-	const [result, setResult] = useState<{ type: "success" | "error"; message: string } | null>(
-		null,
-	);
+	const [mergeError, setMergeError] = useState<string | null>(null);
+	const [mergeErrorDialogOpen, setMergeErrorDialogOpen] = useState(false);
+	const [actionError, setActionError] = useState<string | null>(null);
+	const [actionErrorDialogOpen, setActionErrorDialogOpen] = useState(false);
 	const [isMerged, setIsMerged] = useState(false);
 	const [isGenerating, setIsGenerating] = useState(false);
+	const [toolsDropdownOpen, setToolsDropdownOpen] = useState(false);
 	const dropdownRef = useRef<HTMLDivElement>(null);
+	const toolsDropdownRef = useRef<HTMLDivElement>(null);
+
+	const isOpen = state === "open" && !merged && !isMerged;
+	const showUpdateBranch =
+		isOpen && hasPermission && (branchBehindBase || mergeable === false);
+	const updateBranchDisabled = mergeable === false;
+	const canConvertToDraft = isOpen && (canWrite || isAuthor) && !draft;
+	const canMarkReady = isOpen && (canWrite || isAuthor) && draft;
 
 	useClickOutside(
 		dropdownRef,
 		useCallback(() => setDropdownOpen(false), []),
+	);
+
+	useClickOutside(
+		toolsDropdownRef,
+		useCallback(() => setToolsDropdownOpen(false), []),
 	);
 
 	const handleFixWithGhost = () => {
@@ -177,21 +193,26 @@ export function PRMergePanel({
 				}),
 			});
 			const data = await res.json();
+			if (!res.ok) {
+				let errorMessage = data.error || "Failed to generate";
+				if (data.error === "CREDIT_EXHAUSTED") {
+					errorMessage = "Your credits have been used up";
+				} else if (data.error === "SPENDING_LIMIT_REACHED") {
+					errorMessage = "Monthly spending limit reached";
+				}
+				setActionError(errorMessage);
+				setActionErrorDialogOpen(true);
+				return;
+			}
 			if (data.title) setCommitTitle(data.title);
 			if (data.description) setCommitMessage(data.description);
 		} catch {
-			// silently fail
+			setActionError("Failed to generate commit message");
+			setActionErrorDialogOpen(true);
 		} finally {
 			setIsGenerating(false);
 		}
 	};
-
-	useEffect(() => {
-		if (result) {
-			const timer = setTimeout(() => setResult(null), 3000);
-			return () => clearTimeout(timer);
-		}
-	}, [result]);
 
 	const invalidatePRQueries = useCallback(() => {
 		queryClient.removeQueries({ queryKey: ["prs", owner, repo] });
@@ -199,7 +220,7 @@ export function PRMergePanel({
 	}, [queryClient, owner, repo]);
 
 	const doMerge = (mergeMethod: MergeMethod, title?: string, message?: string) => {
-		setResult(null);
+		setMergeError(null);
 		setPendingAction("merge");
 		startTransition(async () => {
 			const res = await mergePullRequest(
@@ -211,9 +232,12 @@ export function PRMergePanel({
 				message,
 			);
 			if (res.error) {
-				setResult({ type: "error", message: res.error });
+				setMergeError(res.error);
+				if (!squashDialogOpen) {
+					setMergeErrorDialogOpen(true);
+				}
 			} else {
-				setResult({ type: "success", message: "Merged" });
+				setMergeError(null);
 				emit({ type: "pr:merged", owner, repo, number: pullNumber });
 				invalidatePRQueries();
 				setSquashDialogOpen(false);
@@ -224,6 +248,7 @@ export function PRMergePanel({
 	};
 
 	const handleMergeClick = () => {
+		setMergeError(null);
 		if (method === "squash") {
 			setCommitTitle(`${prTitle} (#${pullNumber})`);
 			setCommitMessage("");
@@ -238,14 +263,13 @@ export function PRMergePanel({
 	};
 
 	const handleClose = () => {
-		setResult(null);
 		setPendingAction("close");
 		startTransition(async () => {
 			const res = await closePullRequest(owner, repo, pullNumber);
 			if (res.error) {
-				setResult({ type: "error", message: res.error });
+				setActionError(res.error);
+				setActionErrorDialogOpen(true);
 			} else {
-				setResult({ type: "success", message: "Closed" });
 				emit({ type: "pr:closed", owner, repo, number: pullNumber });
 				invalidatePRQueries();
 				router.refresh();
@@ -254,14 +278,13 @@ export function PRMergePanel({
 	};
 
 	const handleReopen = () => {
-		setResult(null);
 		setPendingAction("reopen");
 		startTransition(async () => {
 			const res = await reopenPullRequest(owner, repo, pullNumber);
 			if (res.error) {
-				setResult({ type: "error", message: res.error });
+				setActionError(res.error);
+				setActionErrorDialogOpen(true);
 			} else {
-				setResult({ type: "success", message: "Reopened" });
 				emit({ type: "pr:reopened", owner, repo, number: pullNumber });
 				invalidatePRQueries();
 				router.refresh();
@@ -270,14 +293,13 @@ export function PRMergePanel({
 	};
 
 	const handleUpdateBranch = () => {
-		setResult(null);
 		setPendingAction("updateBranch");
 		startTransition(async () => {
 			const res = await updatePRBranch(owner, repo, pullNumber);
 			if (res.error) {
-				setResult({ type: "error", message: res.error });
+				setActionError(res.error);
+				setActionErrorDialogOpen(true);
 			} else {
-				setResult({ type: "success", message: "Branch updated" });
 				invalidatePRQueries();
 				router.refresh();
 			}
@@ -285,16 +307,35 @@ export function PRMergePanel({
 	};
 
 	const handleConvertToDraft = () => {
-		setResult(null);
 		setPendingAction("draft");
 		startTransition(async () => {
 			const res = await convertPRToDraft(owner, repo, pullNumber);
 			if (res.error) {
-				setResult({ type: "error", message: res.error });
+				setActionError(res.error);
+				setActionErrorDialogOpen(true);
 			} else {
-				setResult({ type: "success", message: "Converted to draft" });
 				emit({
 					type: "pr:converted_to_draft",
+					owner,
+					repo,
+					number: pullNumber,
+				});
+				invalidatePRQueries();
+				router.refresh();
+			}
+		});
+	};
+
+	const handleMarkReady = () => {
+		setPendingAction("ready");
+		startTransition(async () => {
+			const res = await markPRReadyForReview(owner, repo, pullNumber);
+			if (res.error) {
+				setActionError(res.error);
+				setActionErrorDialogOpen(true);
+			} else {
+				emit({
+					type: "pr:ready_for_review",
 					owner,
 					repo,
 					number: pullNumber,
@@ -310,32 +351,56 @@ export function PRMergePanel({
 	if (state === "closed") {
 		if (!canTriage && !isAuthor) return null;
 		return (
-			<div className="flex items-center gap-2">
-				{result && (
-					<span
-						className={cn(
-							"text-[10px] font-mono",
-							result.type === "error"
-								? "text-destructive"
-								: "text-success",
-						)}
+			<>
+				<div className="flex items-center gap-2">
+					<button
+						onClick={handleReopen}
+						disabled={isPending}
+						className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
 					>
-						{result.message}
-					</span>
-				)}
-				<button
-					onClick={handleReopen}
-					disabled={isPending}
-					className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+						{isPending && pendingAction === "reopen" ? (
+							<Loader2 className="w-3 h-3 animate-spin" />
+						) : (
+							<RotateCcw className="w-3 h-3" />
+						)}
+						Reopen
+					</button>
+				</div>
+
+				{/* Action error dialog */}
+				<Dialog
+					open={actionErrorDialogOpen}
+					onOpenChange={(open) => {
+						setActionErrorDialogOpen(open);
+						if (!open) setActionError(null);
+					}}
 				>
-					{isPending && pendingAction === "reopen" ? (
-						<Loader2 className="w-3 h-3 animate-spin" />
-					) : (
-						<RotateCcw className="w-3 h-3" />
-					)}
-					Reopen
-				</button>
-			</div>
+					<DialogContent className="sm:max-w-md">
+						<DialogHeader>
+							<DialogTitle className="flex items-center gap-2 text-sm font-mono text-destructive">
+								<XCircle className="w-4 h-4" />
+								Action failed
+							</DialogTitle>
+							<DialogDescription className="text-xs text-muted-foreground">
+								{actionError}
+							</DialogDescription>
+						</DialogHeader>
+						<DialogFooter>
+							<button
+								onClick={() => {
+									setActionErrorDialogOpen(
+										false,
+									);
+									setActionError(null);
+								}}
+								className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer"
+							>
+								Dismiss
+							</button>
+						</DialogFooter>
+					</DialogContent>
+				</Dialog>
+			</>
 		);
 	}
 
@@ -344,25 +409,12 @@ export function PRMergePanel({
 	return (
 		<>
 			<div className="flex items-center gap-2">
-				{result && (
-					<span
-						className={cn(
-							"text-[10px] font-mono",
-							result.type === "error"
-								? "text-destructive"
-								: "text-success",
-						)}
-					>
-						{result.message}
-					</span>
-				)}
-
 				{/* Merge button with dropdown */}
 				{canWrite && (
 					<div ref={dropdownRef} className="relative">
 						<div
 							className={cn(
-								"flex items-center divide-x",
+								"flex items-center divide-x rounded-sm overflow-hidden",
 								mergeable === false
 									? "border border-amber-500/40 divide-amber-500/20"
 									: "border border-foreground/80 divide-foreground/20",
@@ -370,24 +422,28 @@ export function PRMergePanel({
 						>
 							<button
 								onClick={
-									mergeable === false
+									mergeable === false || draft
 										? undefined
 										: handleMergeClick
 								}
 								disabled={
 									isPending ||
-									mergeable === false
+									mergeable === false ||
+									draft
 								}
 								className={cn(
-									"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors disabled:cursor-not-allowed",
-									mergeable === false
+									"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider rounded-l-sm transition-colors disabled:cursor-not-allowed",
+									mergeable === false || draft
 										? "bg-amber-500/80 text-background opacity-90"
 										: "bg-foreground text-background hover:bg-foreground/90 cursor-pointer disabled:opacity-50",
 								)}
 								title={
-									mergeable === false
-										? "Resolve conflicts before merging"
-										: undefined
+									draft
+										? "This PR is still a draft"
+										: mergeable ===
+											  false
+											? "Resolve conflicts before merging"
+											: undefined
 								}
 							>
 								{isPending &&
@@ -403,10 +459,13 @@ export function PRMergePanel({
 								) : (
 									<GitMerge className="w-3 h-3" />
 								)}
-								{mergeable === false
-									? "Conflicts"
-									: mergeMethodLabels[method]
-											.short}
+								{draft
+									? "Draft"
+									: mergeable === false
+										? "Conflicts"
+										: mergeMethodLabels[
+												method
+											].short}
 							</button>
 
 							<button
@@ -415,8 +474,8 @@ export function PRMergePanel({
 								}
 								disabled={isPending}
 								className={cn(
-									"flex items-center self-stretch px-1.5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
-									mergeable === false
+									"flex items-center self-stretch px-1.5 rounded-r-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
+									mergeable === false || draft
 										? "bg-amber-500/80 text-background hover:bg-amber-500/70"
 										: "bg-foreground text-background hover:bg-foreground/90",
 								)}
@@ -426,7 +485,7 @@ export function PRMergePanel({
 						</div>
 
 						{dropdownOpen && (
-							<div className="absolute top-full right-0 mt-1 w-52 bg-background border border-border shadow-lg dark:shadow-2xl z-50 py-1">
+							<div className="absolute top-full right-0 mt-1 w-52 bg-background border border-border shadow-lg dark:shadow-2xl z-50 py-1 rounded-sm">
 								{availableMethods.map((m) => {
 									const disabled =
 										mergeable === false;
@@ -524,72 +583,161 @@ export function PRMergePanel({
 					</div>
 				)}
 
-				{showUpdateBranch &&
-					(updateBranchDisabled ? (
-						<Tooltip delayDuration={0}>
-							<TooltipTrigger asChild>
-								<span className="inline-flex">
-									<button
-										disabled
-										className={cn(
-											"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border transition-colors cursor-not-allowed",
-											"border-amber-500/40 text-amber-600 dark:text-amber-400 opacity-70",
-										)}
-									>
-										<GitBranch className="w-3 h-3" />
-										Update branch
-									</button>
-								</span>
-							</TooltipTrigger>
-							<TooltipContent
-								side="bottom"
-								className="text-xs font-mono max-w-[240px]"
-							>
-								Update branch is unavailable while
-								there are merge conflicts.
-							</TooltipContent>
-						</Tooltip>
-					) : (
+				{/* Tools dropdown */}
+				{(showUpdateBranch ||
+					canConvertToDraft ||
+					canMarkReady ||
+					isOpen) && (
+					<div ref={toolsDropdownRef} className="relative">
 						<button
-							onClick={handleUpdateBranch}
+							onClick={() =>
+								setToolsDropdownOpen((o) => !o)
+							}
 							disabled={isPending}
-							title="Merge the latest changes from the base branch into this branch"
-							className={cn(
-								"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
-							)}
+							className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border rounded-sm text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
 						>
-							{isPending &&
-							pendingAction === "updateBranch" ? (
-								<Loader2 className="w-3 h-3 animate-spin" />
-							) : (
-								<GitBranch className="w-3 h-3" />
-							)}
-							Update branch
+							<Wrench className="w-3 h-3" />
+							Actions
+							<ChevronDown className="w-3 h-3" />
 						</button>
-					))}
 
-				{/* Convert to draft */}
-				{canConvertToDraft && (
-					<button
-						onClick={handleConvertToDraft}
-						disabled={isPending}
-						className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-					>
-						{isPending && pendingAction === "draft" ? (
-							<Loader2 className="w-3 h-3 animate-spin" />
-						) : (
-							<FilePenLine className="w-3 h-3" />
+						{toolsDropdownOpen && (
+							<div className="absolute top-full right-0 mt-1 w-52 bg-background border border-border shadow-lg dark:shadow-2xl z-50 py-1 rounded-sm">
+								{showUpdateBranch &&
+									(updateBranchDisabled ? (
+										<Tooltip
+											delayDuration={
+												0
+											}
+										>
+											<TooltipTrigger
+												asChild
+											>
+												<div className="w-full flex items-center gap-2 px-3 py-1.5 text-left opacity-50 cursor-not-allowed text-amber-600 dark:text-amber-400">
+													<GitBranch className="w-3 h-3 shrink-0" />
+													<span className="text-xs">
+														Update
+														branch
+													</span>
+												</div>
+											</TooltipTrigger>
+											<TooltipContent
+												side="left"
+												className="text-xs font-mono max-w-[240px]"
+											>
+												Update
+												branch
+												is
+												unavailable
+												while
+												there
+												are
+												merge
+												conflicts.
+											</TooltipContent>
+										</Tooltip>
+									) : (
+										<button
+											onClick={() => {
+												setToolsDropdownOpen(
+													false,
+												);
+												handleUpdateBranch();
+											}}
+											disabled={
+												isPending
+											}
+											className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-muted-foreground hover:bg-muted/40 dark:hover:bg-white/[0.03] hover:text-foreground transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+										>
+											{isPending &&
+											pendingAction ===
+												"updateBranch" ? (
+												<Loader2 className="w-3 h-3 shrink-0 animate-spin" />
+											) : (
+												<GitBranch className="w-3 h-3 shrink-0" />
+											)}
+											<span className="text-xs">
+												Update
+												branch
+											</span>
+										</button>
+									))}
+								{canMarkReady && (
+									<button
+										onClick={() => {
+											setToolsDropdownOpen(
+												false,
+											);
+											handleMarkReady();
+										}}
+										disabled={isPending}
+										className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-muted-foreground hover:bg-muted/40 dark:hover:bg-white/[0.03] hover:text-foreground transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+									>
+										{isPending &&
+										pendingAction ===
+											"ready" ? (
+											<Loader2 className="w-3 h-3 shrink-0 animate-spin" />
+										) : (
+											<CircleCheck className="w-3 h-3 shrink-0" />
+										)}
+										<span className="text-xs">
+											Mark as
+											ready
+										</span>
+									</button>
+								)}
+								{canConvertToDraft && (
+									<button
+										onClick={() => {
+											setToolsDropdownOpen(
+												false,
+											);
+											handleConvertToDraft();
+										}}
+										disabled={isPending}
+										className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-muted-foreground hover:bg-muted/40 dark:hover:bg-white/[0.03] hover:text-foreground transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+									>
+										{isPending &&
+										pendingAction ===
+											"draft" ? (
+											<Loader2 className="w-3 h-3 shrink-0 animate-spin" />
+										) : (
+											<FilePenLine className="w-3 h-3 shrink-0" />
+										)}
+										<span className="text-xs">
+											Convert to
+											draft
+										</span>
+									</button>
+								)}
+								<div className="border-t border-border/40 my-1" />
+								<a
+									href={`https://github.com/${owner}/${repo}/pull/${pullNumber}`}
+									target="_blank"
+									rel="noopener noreferrer"
+									onClick={() =>
+										setToolsDropdownOpen(
+											false,
+										)
+									}
+									className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-muted-foreground hover:bg-muted/40 dark:hover:bg-white/[0.03] hover:text-foreground transition-colors cursor-pointer"
+								>
+									<ExternalLink className="w-3 h-3 shrink-0" />
+									<span className="text-xs">
+										Open in GitHub
+									</span>
+								</a>
+							</div>
 						)}
-						Convert to draft
-					</button>
+					</div>
 				)}
 
 				{/* Close button */}
-				{(canTriage || isAuthor) && (
+				{isOpen && (canTriage || isAuthor) && (
 					<button
 						onClick={handleClose}
 						disabled={isPending}
-						className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-red-300/40 dark:border-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+						className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-red-300/40 dark:border-red-500/20 rounded-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
 					>
 						{isPending && pendingAction === "close" ? (
 							<Loader2 className="w-3 h-3 animate-spin" />
@@ -600,6 +748,49 @@ export function PRMergePanel({
 					</button>
 				)}
 			</div>
+
+			{/* Merge error dialog (for non-squash merges) */}
+			<Dialog
+				open={mergeErrorDialogOpen}
+				onOpenChange={(open) => {
+					setMergeErrorDialogOpen(open);
+					if (!open) setMergeError(null);
+				}}
+			>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle className="flex items-center gap-2 text-sm font-mono text-destructive">
+							<XCircle className="w-4 h-4" />
+							Merge failed
+						</DialogTitle>
+						<DialogDescription className="text-xs text-muted-foreground">
+							{mergeError}
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<button
+							onClick={() => {
+								setMergeErrorDialogOpen(false);
+								setMergeError(null);
+							}}
+							className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer"
+						>
+							Dismiss
+						</button>
+						<button
+							onClick={() => {
+								setMergeErrorDialogOpen(false);
+								setMergeError(null);
+								handleMergeClick();
+							}}
+							className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider bg-foreground text-background hover:bg-foreground/90 border border-foreground/80 rounded transition-colors cursor-pointer"
+						>
+							<RotateCcw className="w-3 h-3" />
+							Retry
+						</button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 
 			{/* Squash merge dialog */}
 			<Dialog open={squashDialogOpen} onOpenChange={setSquashDialogOpen}>
@@ -614,7 +805,7 @@ export function PRMergePanel({
 						</DialogDescription>
 					</DialogHeader>
 					{mergeable === false && (
-						<div className="flex items-center gap-2.5 px-3 py-2.5 border border-amber-500/30 bg-amber-500/5 rounded-md">
+						<div className="flex items-center gap-2.5 px-3 py-2.5 border border-amber-500/30 bg-amber-500/5 rounded-sm">
 							<GitMerge className="w-3.5 h-3.5 text-amber-500 shrink-0" />
 							<div className="flex-1 min-w-0">
 								<p className="text-xs font-medium text-amber-600 dark:text-amber-400">
@@ -633,10 +824,30 @@ export function PRMergePanel({
 									setSquashDialogOpen(false);
 									handleFixWithGhost();
 								}}
-								className="flex items-center gap-1 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer rounded shrink-0"
+								className="flex items-center gap-1 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer rounded-sm shrink-0"
 							>
 								<Ghost className="w-3 h-3" />
 								Fix
+							</button>
+						</div>
+					)}
+					{mergeError && (
+						<div className="flex items-start gap-2.5 px-3 py-2.5 border border-destructive/30 bg-destructive/5 rounded-sm">
+							<XCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+							<div className="flex-1 min-w-0">
+								<p className="text-xs font-medium text-destructive">
+									Merge failed
+								</p>
+								<p className="text-[11px] text-muted-foreground mt-0.5">
+									{mergeError}
+								</p>
+							</div>
+							<button
+								type="button"
+								onClick={() => setMergeError(null)}
+								className="p-0.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer rounded-sm shrink-0"
+							>
+								<XCircle className="w-3.5 h-3.5" />
 							</button>
 						</div>
 					)}
@@ -655,7 +866,7 @@ export function PRMergePanel({
 												.value,
 										)
 									}
-									className="w-full bg-transparent border border-border px-3 py-2 pr-8 text-sm font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/20 focus:ring-[3px] focus:ring-ring/50 transition-colors rounded-md"
+									className="w-full bg-transparent border border-border px-3 py-2 pr-8 text-sm font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/20 focus:ring-[3px] focus:ring-ring/50 transition-colors rounded-sm"
 									placeholder="Commit title"
 								/>
 								<button
@@ -701,7 +912,7 @@ export function PRMergePanel({
 					<DialogFooter>
 						<button
 							onClick={() => setSquashDialogOpen(false)}
-							className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer"
+							className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer"
 						>
 							Cancel
 						</button>
@@ -710,11 +921,12 @@ export function PRMergePanel({
 							disabled={
 								isPending ||
 								!commitTitle.trim() ||
-								mergeable === false
+								mergeable === false ||
+								draft
 							}
 							className={cn(
-								"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
-								mergeable === false
+								"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
+								mergeable === false || draft
 									? "bg-amber-500/80 text-background border border-amber-500/40 cursor-not-allowed"
 									: "bg-foreground text-background hover:bg-foreground/90 border border-foreground/80 cursor-pointer",
 							)}
@@ -725,6 +937,38 @@ export function PRMergePanel({
 								<GitMerge className="w-3 h-3" />
 							)}
 							Confirm squash and merge
+						</button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* Action error dialog */}
+			<Dialog
+				open={actionErrorDialogOpen}
+				onOpenChange={(open) => {
+					setActionErrorDialogOpen(open);
+					if (!open) setActionError(null);
+				}}
+			>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle className="flex items-center gap-2 text-sm font-mono text-destructive">
+							<XCircle className="w-4 h-4" />
+							Action failed
+						</DialogTitle>
+						<DialogDescription className="text-xs text-muted-foreground">
+							{actionError}
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<button
+							onClick={() => {
+								setActionErrorDialogOpen(false);
+								setActionError(null);
+							}}
+							className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer"
+						>
+							Dismiss
 						</button>
 					</DialogFooter>
 				</DialogContent>

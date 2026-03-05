@@ -40,7 +40,7 @@ export function StarButton({ owner, repo, starred, starCount }: StarButtonProps)
 			onClick={toggle}
 			disabled={isPending}
 			className={cn(
-				"flex items-center justify-center gap-1.5 text-[11px] font-mono py-1.5 border transition-colors cursor-pointer",
+				"flex items-center justify-center gap-1.5 text-[11px] font-mono py-1.5 border rounded-md transition-colors cursor-pointer",
 				isStarred
 					? "border-warning/30 text-warning hover:bg-warning/10"
 					: "border-border text-muted-foreground hover:text-foreground hover:border-border",

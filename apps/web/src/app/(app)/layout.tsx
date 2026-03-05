@@ -28,15 +28,27 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 		return redirect(redirectTo);
 	}
 
-	const notifications = (await getNotifications(20)) as NotificationItem[];
+	let notifications: NotificationItem[] = [];
+	try {
+		notifications = (await getNotifications(20)) as NotificationItem[];
+	} catch {
+		// Swallow rate-limit / network errors so the layout still renders.
+		// Individual pages will throw their own errors caught by error.tsx.
+	}
 
 	const onboardingDone = session?.user?.onboardingDone ?? false;
-	const [initialStarredAuth, initialStarredHub] = onboardingDone
-		? [false, false]
-		: await Promise.all([
+	let initialStarredAuth = false;
+	let initialStarredHub = false;
+	if (!onboardingDone) {
+		try {
+			[initialStarredAuth, initialStarredHub] = await Promise.all([
 				checkIsStarred("better-auth", "better-auth"),
 				checkIsStarred("better-auth", "better-hub"),
 			]);
+		} catch {
+			// Same — don't let secondary API failures crash the shell.
+		}
+	}
 
 	const freshTabId = crypto.randomUUID();
 	const initialTabState: GhostTabState = {
@@ -60,7 +72,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 											notifications
 										}
 									/>
-									<div className="mt-10 lg:h-[calc(100dvh-var(--spacing)*10)] flex flex-col px-2 sm:px-4 pt-2 lg:overflow-auto">
+									<div className="mt-10 lg:h-[calc(100dvh-var(--spacing)*10)] flex flex-col px-2 sm:px-4 pt-2 lg:overflow-auto overflow-x-hidden">
 										{children}
 									</div>
 									<Suspense>

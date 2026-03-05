@@ -1,54 +1,54 @@
 "use client";
 
-import { useState, useTransition, useRef, useMemo, useEffect, useCallback } from "react";
-import { useRouter, useParams, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import {
-	Loader2,
-	ChevronDown,
 	AlertCircle,
+	ArrowLeft,
 	Bold,
-	Italic,
+	ChevronDown,
 	Code,
+	CornerDownLeft,
+	Eye,
+	FileText,
+	GitBranch,
+	GitCommit,
+	GitCommitHorizontal,
+	Image as ImageIcon,
+	Italic,
 	Link as LinkIcon,
 	List,
 	ListOrdered,
-	Quote,
-	CornerDownLeft,
-	Eye,
-	Pencil,
-	GitBranch,
-	ArrowLeft,
-	Search,
-	FileText,
-	Plus,
+	Loader2,
 	Minus,
-	GitCommitHorizontal,
-	GitCommit,
-	Image as ImageIcon,
+	Pencil,
+	Plus,
+	Quote,
+	Search,
 } from "lucide-react";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import ReactMarkdown from "react-markdown";
-import { TimeAgo } from "@/components/ui/time-ago";
-import {
-	createPullRequest,
-	compareBranches,
-	fetchBranches,
-	highlightDiffFiles,
-	type CompareResult,
-	type BranchInfo,
-} from "./actions";
-import type { SyntaxToken } from "@/lib/shiki";
 import { uploadImage } from "@/app/(app)/repos/[owner]/[repo]/issues/actions";
-import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { PRDiffList } from "@/components/pr/pr-diff-list";
+import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { TimeAgo } from "@/components/ui/time-ago";
+import type { SyntaxToken } from "@/lib/shiki";
+import { cn } from "@/lib/utils";
+import {
+	type BranchInfo,
+	type CompareResult,
+	compareBranches,
+	createPullRequest,
+	fetchBranches,
+	highlightDiffFiles,
+} from "./actions";
 
 function branchKey(b: BranchInfo, repoOwner: string) {
 	return b.owner === repoOwner ? b.name : `${b.owner}:${b.name}`;
@@ -289,6 +289,7 @@ export default function NewPullRequestPage() {
 	const [head, setHead] = useState(searchParams.get("head") ?? "");
 
 	const [title, setTitle] = useState(searchParams.get("title") ?? "");
+	const titleEdited = useRef(false);
 	const [body, setBody] = useState(searchParams.get("body") ?? "");
 	const [bodyTab, setBodyTab] = useState<"write" | "preview">("write");
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -453,6 +454,19 @@ export default function NewPullRequestPage() {
 		return () => controller.abort();
 	}, [owner, repo, base, head]);
 
+	useEffect(() => {
+		if (
+			compare &&
+			compare.commits.length > 0 &&
+			!titleEdited.current &&
+			!searchParams.get("title")
+		) {
+			const firstCommitMessage = compare.commits[0].message;
+			const titleFromCommit = firstCommitMessage.split("\n")[0].trim();
+			setTitle(titleFromCommit);
+		}
+	}, [compare, searchParams]);
+
 	const handleSubmit = (draft = false) => {
 		if (!title.trim()) {
 			setError("Title is required");
@@ -549,7 +563,7 @@ export default function NewPullRequestPage() {
 	const canSubmit = title.trim() && base && head && base !== head;
 
 	return (
-		<div className="max-w-5xl px-4 py-6">
+		<div className="mx-auto max-w-5xl px-4 py-6">
 			<div className="flex items-center gap-3 mb-6">
 				<Link
 					href={`/repos/${owner}/${repo}/pulls`}
@@ -621,9 +635,10 @@ export default function NewPullRequestPage() {
 								spellCheck={false}
 								type="text"
 								value={title}
-								onChange={(e) =>
-									setTitle(e.target.value)
-								}
+								onChange={(e) => {
+									titleEdited.current = true;
+									setTitle(e.target.value);
+								}}
 								placeholder="Pull request title"
 								autoFocus
 								className="w-full bg-transparent text-base font-medium placeholder:text-muted-foreground/30 focus:outline-none"

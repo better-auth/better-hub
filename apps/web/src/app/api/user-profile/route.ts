@@ -53,8 +53,8 @@ export async function GET(request: NextRequest) {
 
 		return NextResponse.json(profile, {
 			headers: {
-				"Cache-Control":
-					"public, max-age=3600, stale-while-revalidate=86400",
+				// Prevent shared cache from serving authenticated responses to other users
+				"Cache-Control": "private, no-store",
 			},
 		});
 	} catch (error) {

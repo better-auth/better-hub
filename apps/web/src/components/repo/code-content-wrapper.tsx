@@ -66,6 +66,7 @@ function CloneDownloadButtons({
 				</button>
 				<a
 					href={zipUrl}
+					data-no-github-intercept
 					className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/5 transition-colors"
 				>
 					<Download className="w-3 h-3" />
@@ -341,6 +342,7 @@ export function CodeContentWrapper({
 					</div>
 				)}
 				<div
+					data-scroll-container
 					className={cn(
 						"flex-1 min-h-0",
 						isDetailRoute
@@ -354,7 +356,10 @@ export function CodeContentWrapper({
 											: "pt-3",
 									),
 					)}
-					style={{ paddingRight: "var(--repo-pr, 1rem)" }}
+					style={{
+						paddingRight:
+							"var(--repo-pr, calc(var(--spacing) * 4))",
+					}}
 				>
 					{children}
 				</div>

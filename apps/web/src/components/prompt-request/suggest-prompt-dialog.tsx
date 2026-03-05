@@ -161,8 +161,10 @@ export function SuggestPromptDialog({ owner, repo, open, onOpenChange }: Suggest
 			});
 			const data = await res.json();
 			if (!res.ok) {
-				if (data.error === "MESSAGE_LIMIT_REACHED") {
-					setError("AI message limit reached");
+				if (data.error === "CREDIT_EXHAUSTED") {
+					setError("Your credits have been used up");
+				} else if (data.error === "SPENDING_LIMIT_REACHED") {
+					setError("Monthly spending limit reached");
 				} else {
 					setError(data.error || "Failed to rewrite");
 				}

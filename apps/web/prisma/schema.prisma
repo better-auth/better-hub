@@ -19,15 +19,20 @@ model User {
   createdAt      DateTime
   updatedAt      DateTime
 
-  sessions Session[]
-  accounts Account[]
+  sessions   Session[]
+  accounts   Account[]
+  usageLogs    UsageLog[]
+  aiCallLogs   AiCallLog[]
+  creditLedger CreditLedger[]
 
-  aiMessageCount Int      @default(0)
+  aiMessageCount Int       @default(0)
   lastActiveAt   DateTime?
   role           String?
   banned         Boolean?  @default(false)
   banReason      String?
   banExpires     DateTime?
+
+  stripeCustomerId String?
 
   @@map("user")
   @@index([githubPat, email])
@@ -82,6 +87,28 @@ model Verification {
 
   @@map("verification")
   @@index([identifier, expiresAt])
+}
+
+model Subscription {
+  id                   String    @id
+  plan                 String
+  referenceId          String
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  status               String?   @default("incomplete")
+  periodStart          DateTime?
+  periodEnd            DateTime?
+  trialStart           DateTime?
+  trialEnd             DateTime?
+  cancelAtPeriodEnd    Boolean?  @default(false)
+  cancelAt             DateTime?
+  canceledAt           DateTime?
+  endedAt              DateTime?
+  seats                Int?
+  billingInterval      String?
+  stripeScheduleId     String?
+
+  @@map("subscription")
 }
 
 model GithubCacheEntry {
@@ -169,7 +196,7 @@ model UserSettings {
   userId           String  @id
   displayName      String?
   theme            String  @default("system")
-  colorTheme       String  @default("hub")
+  colorTheme       String  @default("better-auth")
   colorMode        String  @default("dark")
   ghostModel       String  @default("auto")
   useOwnApiKey     Boolean @default(false)
@@ -198,7 +225,6 @@ model CustomCodeTheme {
 
   @@map("custom_code_themes")
 }
-
 
 model SearchEmbedding {
   id            String  @id
@@ -235,6 +261,71 @@ model PinnedItem {
   @@index([userId, owner, repo])
   @@map("pinned_items")
 }
+
+model UsageLog {
+  id              String   @id @default(cuid())
+  userId          String
+  taskType        String
+  costUsd         Decimal  @default(0) @db.Decimal(10, 6)
+  creditUsed      Decimal  @default(0) @db.Decimal(10, 6)
+  aiCallLogId     Int?     @unique
+  stripeReported  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  aiCallLog AiCallLog? @relation(fields: [aiCallLogId], references: [id])
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([stripeReported, createdAt])
+  @@map("usage_logs")
+}
+
+model AiCallLog {
+  id             Int      @id @default(autoincrement())
+  userId         String
+  provider       String
+  modelId        String
+  taskType       String
+  inputTokens    Int      @default(0)
+  outputTokens   Int      @default(0)
+  totalTokens    Int      @default(0)
+  usageJson      String?
+  costJson       String?
+  usingOwnKey    Boolean  @default(false)
+  conversationId String?
+  createdAt      DateTime @default(now())
+
+  usageLog UsageLog?
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("ai_call_logs")
+}
+
+model CreditLedger {
+  id          String    @id @default(cuid())
+  userId      String
+  amount      Decimal   @db.Decimal(10, 6)
+  type        String
+  description String?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("credit_ledger")
+}
+
+model SpendingLimit {
+  userId        String   @id
+  monthlyCapUsd Decimal  @db.Decimal(10, 2) @default(10.00)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("spending_limit")
+}
+
 
 model PromptRequest {
   id             String  @id

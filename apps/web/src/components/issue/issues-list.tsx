@@ -26,6 +26,7 @@ import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { InfiniteScrollSentinel, LoadingOverlay } from "@/components/shared/list-controls";
 import { LabelBadge } from "@/components/shared/label-badge";
 import { useGlobalChat } from "@/components/shared/global-chat-provider";
+import { useHotkey } from "@tanstack/react-hotkeys";
 import { Zap, GitPullRequest } from "lucide-react";
 import { UserTooltip } from "@/components/shared/user-tooltip";
 
@@ -95,7 +96,7 @@ export function IssuesList({
 		tabParam === "closed" || tabParam === "not_planned" ? tabParam : "open";
 	const [state, setState] = useState<TabState>(initialTab);
 	const [search, setSearch] = useState("");
-	const [sort, setSort] = useState<SortType>("updated");
+	const [sort, setSort] = useState<SortType>("newest");
 	const [selectedAuthor, setSelectedAuthor] = useState<string | null>(null);
 	const [authorSearch, setAuthorSearch] = useState("");
 	const [authorDropdownOpen, setAuthorDropdownOpen] = useState(false);
@@ -351,8 +352,67 @@ export function IssuesList({
 		selectedMilestone,
 	]);
 
+	const searchInputRef = useRef<HTMLInputElement>(null);
+	const issueLinksRef = useRef<(HTMLAnchorElement | null)[]>([]);
+	const listContainerRef = useRef<HTMLDivElement>(null);
+
+	// Focus search bar when issues tab is shown (keyboard-first UX)
+	useEffect(() => {
+		searchInputRef.current?.focus();
+	}, []);
+
+	// ArrowDown: search -> first issue; issue N -> issue N+1
+	useHotkey(
+		"ArrowDown",
+		(e: KeyboardEvent) => {
+			if (!listContainerRef.current?.contains(document.activeElement)) return;
+			if (document.activeElement === searchInputRef.current) {
+				if (visible.length > 0) {
+					e.preventDefault();
+					issueLinksRef.current[0]?.focus();
+				}
+			} else {
+				const idx = issueLinksRef.current.findIndex(
+					(el) => el === document.activeElement,
+				);
+				if (idx >= 0 && idx < visible.length - 1) {
+					e.preventDefault();
+					issueLinksRef.current[idx + 1]?.focus();
+				}
+			}
+		},
+		{
+			target: listContainerRef,
+			ignoreInputs: false,
+			preventDefault: false,
+		},
+	);
+
+	// ArrowUp: issue 0 -> search; issue N -> issue N-1
+	useHotkey(
+		"ArrowUp",
+		(e: KeyboardEvent) => {
+			if (!listContainerRef.current?.contains(document.activeElement)) return;
+			const idx = issueLinksRef.current.findIndex(
+				(el) => el === document.activeElement,
+			);
+			if (idx === 0) {
+				e.preventDefault();
+				searchInputRef.current?.focus();
+			} else if (idx > 0) {
+				e.preventDefault();
+				issueLinksRef.current[idx - 1]?.focus();
+			}
+		},
+		{
+			target: listContainerRef,
+			ignoreInputs: false,
+			preventDefault: false,
+		},
+	);
+
 	return (
-		<div>
+		<div ref={listContainerRef}>
 			{/* Toolbar */}
 			<div className="sticky top-0 z-10 bg-background pb-3 pt-4 before:content-[''] before:absolute before:left-0 before:right-0 before:bottom-full before:h-8 before:bg-background">
 				{/* Row 1: Search + Sort + Filter + New Issue */}
@@ -360,11 +420,13 @@ export function IssuesList({
 					<div className="relative flex-1 max-w-sm">
 						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
 						<input
+							ref={searchInputRef}
 							type="text"
 							placeholder="Search issues..."
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							className="w-full h-8 bg-transparent border border-border rounded-lg pl-9 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground/20 transition-colors"
+							className="w-full h-8 bg-transparent border border-border rounded-sm pl-9 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground/20 transition-colors"
+							aria-label="Search issues"
 						/>
 					</div>
 
@@ -379,7 +441,7 @@ export function IssuesList({
 							)
 						}
 						className={cn(
-							"flex items-center gap-1.5 h-8 px-3 rounded-lg border text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
+							"flex items-center gap-1.5 h-8 px-3 rounded-sm border text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
 							sort !== "updated"
 								? "border-foreground/20 bg-muted/50 dark:bg-white/4 text-foreground"
 								: "border-border text-muted-foreground/60 hover:text-foreground hover:bg-muted/40 dark:hover:bg-white/3",
@@ -393,7 +455,7 @@ export function IssuesList({
 						<button
 							onClick={() => setFiltersOpen((v) => !v)}
 							className={cn(
-								"flex items-center gap-1.5 h-8 px-3 rounded-lg border text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
+								"flex items-center gap-1.5 h-8 px-3 rounded-sm border text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
 								filtersOpen || activeFilterCount > 0
 									? "border-foreground/20 bg-muted/50 dark:bg-white/4 text-foreground"
 									: "border-border text-muted-foreground/60 hover:text-foreground hover:bg-muted/40 dark:hover:bg-white/3",
@@ -453,7 +515,7 @@ export function IssuesList({
 														)
 													}
 													className={cn(
-														"px-2.5 py-1 text-[10px] font-mono rounded-md transition-colors cursor-pointer",
+														"px-2.5 py-1 text-[10px] font-mono rounded-sm transition-colors cursor-pointer",
 														activityFilter ===
 															value
 															? "bg-foreground/8 text-foreground"
@@ -510,7 +572,7 @@ export function IssuesList({
 														)
 													}
 													className={cn(
-														"px-2.5 py-1 text-[10px] font-mono rounded-md transition-colors cursor-pointer",
+														"px-2.5 py-1 text-[10px] font-mono rounded-sm transition-colors cursor-pointer",
 														assigneeFilter ===
 															value
 															? "bg-foreground/8 text-foreground"
@@ -702,7 +764,7 @@ export function IssuesList({
 																)
 															}
 															className={cn(
-																"flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-mono rounded-md transition-colors cursor-pointer",
+																"flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-mono rounded-sm transition-colors cursor-pointer",
 																selectedLabel ===
 																	label.name
 																	? "bg-foreground/8 text-foreground"
@@ -755,7 +817,7 @@ export function IssuesList({
 																)
 															}
 															className={cn(
-																"px-2.5 py-1 text-[10px] font-mono rounded-md transition-colors cursor-pointer",
+																"px-2.5 py-1 text-[10px] font-mono rounded-sm transition-colors cursor-pointer",
 																selectedMilestone ===
 																	ms
 																	? "bg-foreground/8 text-foreground"
@@ -820,7 +882,7 @@ export function IssuesList({
 										"Ghost will analyze the repo, make changes, and open a PR with the full conversation.",
 								});
 							}}
-							className="flex items-center gap-1.5 h-8 px-3 rounded-lg border text-xs font-medium transition-colors cursor-pointer border-border text-muted-foreground/70 hover:text-foreground hover:bg-muted/40 dark:hover:bg-white/3"
+							className="flex items-center gap-1.5 h-8 px-3 rounded-sm border text-xs font-medium transition-colors cursor-pointer border-border text-muted-foreground/70 hover:text-foreground hover:bg-muted/40 dark:hover:bg-white/3"
 						>
 							<Zap className="w-3 h-3" />
 							Run with Ghost
@@ -910,14 +972,18 @@ export function IssuesList({
 			{/* Issue List */}
 			<div className="relative flex-1 min-h-0 overflow-y-auto divide-y divide-border">
 				<LoadingOverlay show={isPending} />
-				{visible.map((issue) => {
+				{visible.map((issue, index) => {
 					const reactionCount = issue.reactions?.["+1"] ?? 0;
 
 					return (
 						<Link
 							key={issue.id}
+							ref={(el) => {
+								issueLinksRef.current[index] = el;
+							}}
 							href={`/${owner}/${repo}/issues/${issue.number}`}
-							className="group flex items-start gap-3 px-4 py-3 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors"
+							className="group flex items-start gap-3 px-4 py-3 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background rounded-sm"
+							tabIndex={0}
 						>
 							{issue.state === "open" ? (
 								<CircleDot className="w-3.5 h-3.5 shrink-0 mt-0.5 text-success" />

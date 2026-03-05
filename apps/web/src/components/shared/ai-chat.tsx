@@ -4,7 +4,8 @@ import { useChat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
 import { DefaultChatTransport } from "ai";
 import { useEffect, useMemo, useRef, useState, useCallback, memo } from "react";
-import { HighlightedCodeBlock } from "@/components/shared/highlighted-code-block";
+import { BILLING_ERROR } from "@/lib/billing/config";
+import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import {
 	ArrowUp,
 	Square,
@@ -45,20 +46,13 @@ import {
 	Ghost,
 	Copy,
 	X,
+	AlertCircle,
+	CreditCard,
 } from "lucide-react";
+import { GithubIcon } from "@/components/shared/icons/github-icon";
+import { HighlightedCodeBlock } from "@/components/shared/highlighted-code-block";
 
-function GithubIcon({ className }: { className?: string }) {
-	return (
-		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={className}>
-			<path
-				fill="currentColor"
-				d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489c.5.092.682-.217.682-.482c0-.237-.008-.866-.013-1.7c-2.782.603-3.369-1.342-3.369-1.342c-.454-1.155-1.11-1.462-1.11-1.462c-.908-.62.069-.608.069-.608c1.003.07 1.531 1.03 1.531 1.03c.892 1.529 2.341 1.087 2.91.832c.092-.647.35-1.088.636-1.338c-2.22-.253-4.555-1.11-4.555-4.943c0-1.091.39-1.984 1.029-2.683c-.103-.253-.446-1.27.098-2.647c0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025c.546 1.377.203 2.394.1 2.647c.64.699 1.028 1.592 1.028 2.683c0 3.842-2.339 4.687-4.566 4.935c.359.309.678.919.678 1.852c0 1.336-.012 2.415-.012 2.743c0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10"
-			/>
-		</svg>
-	);
-}
 const GHOST_THINKING_PHRASES = [
-	"Haunting the codebase",
 	"Summoning answers",
 	"Phasing through repos",
 	"Reading the spectral docs",
@@ -67,6 +61,18 @@ const GHOST_THINKING_PHRASES = [
 	"Drifting through issues",
 	"Manifesting a response",
 ];
+
+function parseErrorMessage(error: Error | undefined): string {
+	const raw = error?.message;
+	if (!raw) return "Ghost got lost in the void";
+	try {
+		const parsed = JSON.parse(raw) as Record<string, unknown>;
+		if (typeof parsed.error === "string") return parsed.error;
+	} catch {
+		// not JSON
+	}
+	return raw;
+}
 
 function formatElapsed(ms: number): string {
 	const seconds = ms / 1000;
@@ -113,13 +119,13 @@ function GhostThinkingIndicator({ status }: { status: string }) {
 	return (
 		<div className="flex items-center gap-2 py-2">
 			<div className="ghost-thinking-float">
-				<Ghost className="w-3.5 h-3.5 text-muted-foreground/50" />
+				<Ghost className="w-3.5 h-3.5 text-muted-foreground" />
 			</div>
-			<span className="text-[11px] font-mono text-muted-foreground/50 transition-all duration-300">
+			<span className="text-[11px] font-mono text-muted-foreground transition-all duration-300">
 				{phrase}
 			</span>
 			{elapsed !== null && elapsed >= 1000 && (
-				<span className="text-[10px] font-mono text-muted-foreground/30 tabular-nums">
+				<span className="text-[10px] font-mono text-muted-foreground tabular-nums">
 					{formatElapsed(elapsed)}
 				</span>
 			)}
@@ -157,7 +163,7 @@ function CopyButton({ text }: { text: string }) {
 				"opacity-0 group-hover/code:opacity-100",
 				copied
 					? "bg-success/10 text-success"
-					: "bg-accent text-muted-foreground/60 hover:text-foreground hover:bg-accent/80",
+					: "bg-accent text-muted-foreground hover:text-foreground hover:bg-accent/80",
 			)}
 			title="Copy"
 		>
@@ -375,7 +381,7 @@ function createGhostMarkdownComponents(
 		),
 		th: ({ children, ...props }: React.HTMLAttributes<HTMLTableCellElement>) => (
 			<th
-				className="px-2.5 py-1.5 text-left font-medium text-muted-foreground/70 bg-muted/40 border-b border-border/60"
+				className="px-2.5 py-1.5 text-left font-medium text-muted-foreground bg-muted/40 border-b border-border/60"
 				{...props}
 			>
 				{children}
@@ -513,6 +519,7 @@ export function AIChat({
 	onNavigateToFile,
 }: AIChatProps) {
 	const { data: session } = useSession();
+	const { emit } = useMutationEvents();
 	const globalChat = useGlobalChatOptional();
 	const [input, setInput] = useState("");
 	const scrollRef = useRef<HTMLDivElement>(null);
@@ -973,7 +980,9 @@ export function AIChat({
 	const [welcomeLoading, setWelcomeLoading] = useState(false);
 	const isStreaming = status === "streaming";
 	const isLoading = status === "submitted" || isStreaming || welcomeLoading;
-	const isLimitReached = !!error?.message?.includes("MESSAGE_LIMIT_REACHED");
+	const isLimitReached = Object.values(BILLING_ERROR).some((code) =>
+		error?.message?.includes(code),
+	);
 	const router = useRouter();
 
 	// Report working status to global context (only from the active tab)
@@ -1380,7 +1389,7 @@ export function AIChat({
 									{emptyTitle}
 								</p>
 								<p
-									className="text-[11px] text-muted-foreground/50 max-w-[220px]"
+									className="text-[11px] text-muted-foreground max-w-[220px]"
 									suppressHydrationWarning
 								>
 									{emptyDescription}
@@ -1397,7 +1406,7 @@ export function AIChat({
 													s,
 												)
 											}
-											className="text-[11px] px-3 py-1.5 rounded-lg border border-border/40 dark:border-white/6 bg-muted/20 dark:bg-white/[0.02] text-muted-foreground/60 hover:text-foreground hover:border-foreground/15 hover:bg-muted/40 dark:hover:bg-white/4 transition-all duration-150 cursor-pointer"
+											className="text-[11px] px-3 py-1.5 rounded-lg border border-border/40 dark:border-white/6 bg-muted/20 dark:bg-white/[0.02] text-muted-foreground hover:text-foreground hover:border-foreground/15 hover:bg-muted/40 dark:hover:bg-white/4 transition-all duration-150 cursor-pointer"
 										>
 											{s}
 										</button>
@@ -1456,7 +1465,7 @@ export function AIChat({
 															]
 																.length ===
 															1 ? (
-																<span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted/60 text-[10px] font-mono text-muted-foreground/60">
+																<span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted/60 text-[10px] font-mono text-muted-foreground">
 																	<Code2 className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
 																	<span className="truncate max-w-[140px]">
 																		{messageContexts[
@@ -1467,7 +1476,7 @@ export function AIChat({
 																				"/",
 																			)
 																			.pop()}
-																		<span className="text-muted-foreground/50">
+																		<span className="text-muted-foreground">
 																			:
 																			{
 																				messageContexts[
@@ -1491,9 +1500,9 @@ export function AIChat({
 																	</span>
 																</span>
 															) : (
-																<span className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-muted/60 text-[10px] font-mono text-muted-foreground/60">
+																<span className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-muted/60 text-[10px] font-mono text-muted-foreground">
 																	<Code2 className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
-																	<span className="size-4 rounded-full bg-foreground/10 flex items-center justify-center text-[9px] font-semibold text-muted-foreground/80 tabular-nums">
+																	<span className="size-4 rounded-full bg-foreground/10 flex items-center justify-center text-[9px] font-semibold text-muted-foreground tabular-nums">
 																		{
 																			messageContexts[
 																				message
@@ -1502,7 +1511,7 @@ export function AIChat({
 																				.length
 																		}
 																	</span>
-																	<span className="text-muted-foreground/50">
+																	<span className="text-muted-foreground">
 																		files
 																	</span>
 																</span>
@@ -1628,7 +1637,7 @@ export function AIChat({
 							{historyLoadError &&
 								messages.length === 0 && (
 									<div className="flex flex-col items-center gap-2 py-4">
-										<span className="text-[11px] text-muted-foreground/50 text-center max-w-[260px]">
+										<span className="text-[11px] text-muted-foreground text-center max-w-[260px]">
 											{
 												historyLoadError
 											}
@@ -1651,52 +1660,54 @@ export function AIChat({
 							{/* Error state — stream died, timed out, etc. */}
 							{error && historyLoaded && (
 								<div className="flex flex-col items-center gap-2 py-4">
-									<Ghost className="w-5 h-5 text-muted-foreground/20" />
-									{error.message?.includes(
-										"MESSAGE_LIMIT_REACHED",
-									) ? (
-										<>
-											<span className="text-[11px] text-muted-foreground/50 text-center max-w-[260px]">
-												You&apos;ve
-												used
-												all
-												20
-												free
-												AI
-												messages.
+									<Ghost className="w-5 h-5 text-muted-foreground" />
+									{isLimitReached ? (
+										<div className="flex flex-col items-center gap-1.5 max-w-[300px]">
+											<p className="text-[11px] text-muted-foreground text-center">
+												{error?.message?.includes(
+													BILLING_ERROR.CREDIT_EXHAUSTED,
+												)
+													? "Your credits have been used up."
+													: error?.message?.includes(
+																BILLING_ERROR.SPENDING_LIMIT_REACHED,
+														  )
+														? "You've reached your monthly spending limit."
+														: "You've reached the free message limit."}
+											</p>
+											<p className="text-[10px] text-muted-foreground text-center">
+												{error?.message?.includes(
+													BILLING_ERROR.SPENDING_LIMIT_REACHED,
+												)
+													? "Adjust your spending limit in Settings → Billing to continue."
+													: "Subscribe or add your own API key in Settings to continue."}
+											</p>
+											<button
+												type="button"
+												onClick={() =>
+													emit(
+														{
+															type: "settings:open",
+															tab: "billing",
+														},
+													)
+												}
+												className="mt-1 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-medium bg-foreground text-background hover:bg-foreground/85 transition-colors cursor-pointer"
+											>
+												<CreditCard className="w-3 h-3" />
+												Manage
 												Billing
-												is
-												coming
-												soon.
-											</span>
-											<span className="text-[10px] text-muted-foreground/35 text-center max-w-[240px]">
-												You
-												can
-												add
-												your
-												own
-												OpenRouter
-												API
-												key
-												in
-												Settings
-												to
-												continue
-												using
-												AI
-												features.
-											</span>
-										</>
+											</button>
+										</div>
 									) : (
-										<>
-											<span className="text-[11px] text-muted-foreground/50">
-												Ghost
-												got
-												lost
-												in
-												the
-												void
-											</span>
+										<div className="flex flex-col items-center gap-2 max-w-[300px]">
+											<div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2.5">
+												<AlertCircle className="w-3.5 h-3.5 text-destructive shrink-0 mt-0.5" />
+												<p className="text-[11px] text-destructive/80 leading-relaxed">
+													{parseErrorMessage(
+														error,
+													)}
+												</p>
+											</div>
 											<button
 												type="button"
 												onClick={() => {
@@ -1709,7 +1720,7 @@ export function AIChat({
 												Summon
 												again
 											</button>
-										</>
+										</div>
 									)}
 								</div>
 							)}
@@ -1726,7 +1737,7 @@ export function AIChat({
 				historyItems.length > 0 && (
 					<div className="shrink-0 border-t border-border/30 px-3 py-2">
 						<div className="flex items-center mb-1">
-							<span className="text-[10px] font-medium text-muted-foreground/30 uppercase tracking-wider">
+							<span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
 								Recent
 							</span>
 							<button
@@ -1734,7 +1745,7 @@ export function AIChat({
 								onClick={() =>
 									setHistoryDismissed(true)
 								}
-								className="ml-auto p-0.5 rounded text-muted-foreground/20 hover:text-muted-foreground/50 transition-colors cursor-pointer"
+								className="ml-auto p-0.5 rounded text-muted-foreground hover:text-muted-foreground transition-colors cursor-pointer"
 								title="Dismiss"
 							>
 								<X className="w-3 h-3" />
@@ -1751,13 +1762,13 @@ export function AIChat({
 											item.title,
 										)
 									}
-									className="w-full flex items-center gap-2 px-2 py-1 rounded text-left text-[11px] text-muted-foreground/50 hover:text-foreground hover:bg-muted/30 transition-colors cursor-pointer group"
+									className="w-full flex items-center gap-2 px-2 py-1 rounded text-left text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors cursor-pointer group"
 								>
-									<MessageSquare className="w-3 h-3 shrink-0 text-muted-foreground/25 group-hover:text-muted-foreground/50" />
+									<MessageSquare className="w-3 h-3 shrink-0 text-muted-foreground group-hover:text-muted-foreground" />
 									<span className="truncate flex-1">
 										{item.title}
 									</span>
-									<span className="text-[10px] text-muted-foreground/20 shrink-0">
+									<span className="text-[10px] text-muted-foreground shrink-0">
 										{formatRelativeTime(
 											item.updatedAt,
 										)}
@@ -1808,7 +1819,7 @@ export function AIChat({
 									setConversationId(null);
 								}
 							}}
-							className="flex items-center gap-1 text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors cursor-pointer"
+							className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-muted-foreground transition-colors cursor-pointer"
 						>
 							<RotateCcw className="w-2.5 h-2.5" />
 							New chat
@@ -2082,7 +2093,7 @@ export function AIChat({
 								rows={1}
 								className={cn(
 									"flex-1 resize-none text-[13px] bg-transparent pl-3.5 pr-1.5 py-2.5",
-									"placeholder:text-muted-foreground/35",
+									"placeholder:text-muted-foreground",
 									"focus:outline-none",
 									"min-h-[38px] overflow-y-auto",
 								)}
@@ -2114,7 +2125,7 @@ export function AIChat({
 											input.trim() &&
 												!isLimitReached
 												? "bg-foreground text-background hover:bg-foreground/90 cursor-pointer"
-												: "bg-muted/50 dark:bg-white/5 text-muted-foreground/25 cursor-default",
+												: "bg-muted/50 dark:bg-white/5 text-muted-foreground cursor-default",
 										)}
 										title="Send (Enter)"
 									>
@@ -2125,7 +2136,7 @@ export function AIChat({
 						</div>
 					</div>
 				</div>
-				<p className="text-[10px] text-muted-foreground/25 mt-1.5 text-center">
+				<p className="text-[10px] text-muted-foreground mt-1.5 text-center">
 					AI can make mistakes. Verify important information.
 				</p>
 			</div>
@@ -2486,7 +2497,7 @@ export function ToolInvocationDisplay({
 					? "bg-destructive/[0.06] text-destructive/80"
 					: hasSuccess
 						? "bg-success/[0.06] text-success"
-						: "bg-muted/60 text-muted-foreground/70",
+						: "bg-muted/60 text-muted-foreground",
 			)}
 		>
 			{isLoading ? (

@@ -1,20 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
-import {
-	GitFork,
-	Eye,
-	Lock,
-	Globe,
-	Scale,
-	Archive,
-	Link as LinkIcon,
-	HardDrive,
-} from "lucide-react";
+import { GitFork, Eye, Scale, HardDrive, LinkIcon } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { formatBytes } from "@/lib/github-utils";
+import { RepoBadge, RepoBadgeProps } from "@/components/repo/repo-badge";
 import { StarButton } from "@/components/repo/star-button";
 import { ForkButton } from "@/components/repo/fork-button";
+import { ForkSyncButton } from "@/components/repo/fork-sync-button";
 import { PinButton } from "@/components/repo/pin-button";
 import { SidebarLanguages } from "@/components/repo/sidebar-languages";
 import { SidebarContributors } from "@/components/repo/sidebar-contributors";
@@ -22,6 +15,7 @@ import { SidebarContributors } from "@/components/repo/sidebar-contributors";
 import { LatestCommitSection } from "@/components/repo/latest-commit-section";
 import { RepoBreadcrumb } from "@/components/repo/repo-breadcrumb";
 import type { ContributorAvatarsData } from "@/lib/repo-data-cache";
+import type { ForkSyncStatus } from "@/lib/github";
 
 interface LatestCommit {
 	sha: string;
@@ -57,6 +51,9 @@ interface RepoSidebarProps {
 	latestCommit: LatestCommit | null;
 	isStarred: boolean;
 	disableForkButton?: boolean;
+	isOwnFork?: boolean;
+	forkSyncStatus?: ForkSyncStatus | null;
+	isEmptyRepo?: boolean;
 }
 
 export function RepoSidebar({
@@ -86,31 +83,35 @@ export function RepoSidebar({
 	latestCommit,
 	isStarred,
 	disableForkButton = false,
+	isOwnFork,
+	forkSyncStatus,
+	isEmptyRepo = false,
 }: RepoSidebarProps) {
-	const badges = [
-		isPrivate ? { label: "Private", icon: Lock } : { label: "Public", icon: Globe },
-		...(archived ? [{ label: "Archived", icon: Archive }] : []),
-		...(fork ? [{ label: "Fork", icon: GitFork }] : []),
-		...(homepage ? [{ label: "Website", icon: LinkIcon, href: homepage }] : []),
+	const badges: Array<RepoBadgeProps> = [
+		{ type: isPrivate ? "private" : "public" },
+		...(archived ? [{ type: "archived" } as const] : []),
+		...(fork ? [{ type: "fork" } as const] : []),
+		...(homepage ? [{ type: "website" as const, href: homepage }] : []),
 	];
 
 	return (
 		<>
 			{/* Desktop sidebar */}
-			<aside className="hidden lg:flex w-[260px] shrink-0 overflow-y-auto pt-0 px-4 pb-4 flex-col gap-5">
+			<aside className="hidden lg:flex w-[260px] shrink-0 overflow-y-auto pt-0 pr-2 pl-4 pb-4 flex-col gap-5">
 				{/* Name + Avatar + Description + Badges */}
 				<div className="flex flex-col gap-2">
 					<RepoBreadcrumb
 						owner={owner}
 						repoName={repoName}
 						ownerType={ownerType}
+						ownerAvatarUrl={avatarUrl}
 					/>
 					<Image
 						src={avatarUrl}
 						alt=""
 						width={160}
 						height={160}
-						className="w-32 aspect-square rounded-sm"
+						className="w-32 aspect-square rounded-lg"
 					/>
 					{description && (
 						<p className="text-xs text-muted-foreground leading-relaxed">
@@ -118,34 +119,14 @@ export function RepoSidebar({
 						</p>
 					)}
 					<div className="flex flex-wrap gap-1.5">
-						{badges.map((b) => {
-							const content = (
-								<>
-									<b.icon className="w-2.5 h-2.5" />
-									{b.label}
-								</>
-							);
-							const className =
-								"flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 border border-dashed border-border rounded-full text-muted-foreground";
-							return "href" in b && b.href ? (
-								<a
-									key={b.label}
-									href={b.href}
-									target="_blank"
-									rel="noopener noreferrer"
-									className={`${className} hover:text-foreground transition-colors`}
-								>
-									{content}
-								</a>
-							) : (
-								<span
-									key={b.label}
-									className={className}
-								>
-									{content}
-								</span>
-							);
-						})}
+						{badges.map((b, i) => (
+							<RepoBadge
+								key={i}
+								type={b.type}
+								href={b.href}
+								style="dashed"
+							/>
+						))}
 					</div>
 					{fork && parent && (
 						<p className="text-[11px] text-muted-foreground/60">
@@ -158,14 +139,24 @@ export function RepoSidebar({
 							</Link>
 						</p>
 					)}
+					{isOwnFork && fork && forkSyncStatus && (
+						<ForkSyncButton
+							owner={owner}
+							repo={repoName}
+							defaultBranch={defaultBranch}
+							behind={forkSyncStatus.behind}
+							parentFullName={parent?.fullName}
+						/>
+					)}
 				</div>
 
-				{/* Latest commit */}
-				<LatestCommitSection
-					owner={owner}
-					repoName={repoName}
-					initialCommit={latestCommit}
-				/>
+				{!isEmptyRepo && (
+					<LatestCommitSection
+						owner={owner}
+						repoName={repoName}
+						initialCommit={latestCommit}
+					/>
+				)}
 
 				{/* Topics */}
 				{topics.length > 0 && (
@@ -207,6 +198,7 @@ export function RepoSidebar({
 						forkCount={forks}
 						disabled={disableForkButton}
 					/>
+
 					<span className="flex items-center justify-center gap-1.5 text-[11px] font-mono text-muted-foreground/60">
 						<Eye className="w-3 h-3" />
 						Watchers
@@ -309,34 +301,14 @@ export function RepoSidebar({
 						</p>
 					)}
 					<div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-						{badges.map((b) => {
-							const content = (
-								<>
-									<b.icon className="w-2.5 h-2.5" />
-									{b.label}
-								</>
-							);
-							const className =
-								"flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 border border-dashed border-border rounded-full text-muted-foreground";
-							return "href" in b && b.href ? (
-								<a
-									key={b.label}
-									href={b.href}
-									target="_blank"
-									rel="noopener noreferrer"
-									className={`${className} hover:text-foreground transition-colors`}
-								>
-									{content}
-								</a>
-							) : (
-								<span
-									key={b.label}
-									className={className}
-								>
-									{content}
-								</span>
-							);
-						})}
+						{badges.map((b, i) => (
+							<RepoBadge
+								key={i}
+								type={b.type}
+								href={b.href}
+								style="dashed"
+							/>
+						))}
 						<StarButton
 							owner={owner}
 							repo={repoName}

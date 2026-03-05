@@ -18,6 +18,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { invalidateRepoCache } from "@/lib/repo-data-cache-vc";
 import { all } from "better-all";
+import { renderMarkdownToHtml } from "@/components/shared/markdown-renderer";
 
 export async function refreshPullRequests(owner: string, repo: string) {
 	await invalidateRepoPullRequestsCache(owner, repo);
@@ -64,7 +65,7 @@ export async function fetchPRPage(
 	cursor: string | null,
 ): Promise<{ prs: PRPageResult["prs"]; pageInfo: PRPageResult["pageInfo"] }> {
 	const { prs, pageInfo } = await getRepoPullRequestsWithStats(owner, repo, state, {
-		perPage: 20,
+		perPage: 30,
 		cursor,
 	});
 	return { prs, pageInfo };
@@ -76,6 +77,89 @@ export async function fetchAllCheckStatuses(owner: string, repo: string, prNumbe
 		repo,
 		prNumbers.map((n) => ({ number: n })),
 	);
+}
+
+export type PRPeekData = {
+	title: string;
+	number: number;
+	state: string;
+	bodyHtml: string;
+	user: { login: string; avatar_url: string } | null;
+	merged_at: string | null;
+	draft: boolean;
+	head: { ref: string; sha: string };
+	head_repo_owner?: string | null;
+	base: { ref: string };
+	labels: Array<{ name?: string; color?: string }>;
+	additions: number;
+	deletions: number;
+	changed_files: number;
+	created_at: string;
+	updated_at: string;
+	files: Array<{
+		filename: string;
+		status: string;
+		additions: number;
+		deletions: number;
+	}>;
+	commitsCount: number;
+	commentsCount: number;
+};
+
+export async function fetchPRPeekDetail(
+	owner: string,
+	repo: string,
+	pullNumber: number,
+): Promise<PRPeekData | null> {
+	const { bundle, files } = await all({
+		bundle: () => getPullRequestBundle(owner, repo, pullNumber),
+		files: () => getPullRequestFiles(owner, repo, pullNumber),
+	});
+
+	if (!bundle) return null;
+
+	const { pr, issueComments, commits } = bundle;
+
+	const bodyHtml = pr.body
+		? await renderMarkdownToHtml(pr.body, undefined, { owner, repo })
+		: "";
+
+	return {
+		title: pr.title,
+		number: pr.number,
+		state: pr.state,
+		bodyHtml,
+		user: pr.user ? { login: pr.user.login, avatar_url: pr.user.avatar_url } : null,
+		merged_at: pr.merged_at ?? null,
+		draft: pr.draft || false,
+		head: { ref: pr.head.ref, sha: pr.head.sha },
+		head_repo_owner: pr.head_repo_owner ?? null,
+		base: { ref: pr.base.ref },
+		labels: (pr.labels || []).map((l) => ({
+			name: l.name,
+			color: l.color ?? undefined,
+		})),
+		additions: pr.additions,
+		deletions: pr.deletions,
+		changed_files: pr.changed_files,
+		created_at: pr.created_at,
+		updated_at: (pr as { updated_at?: string }).updated_at ?? pr.created_at,
+		files: (
+			(files ?? []) as Array<{
+				filename: string;
+				status: string;
+				additions: number;
+				deletions: number;
+			}>
+		).map((f) => ({
+			filename: f.filename,
+			status: f.status,
+			additions: f.additions,
+			deletions: f.deletions,
+		})),
+		commitsCount: commits.length,
+		commentsCount: issueComments.length,
+	};
 }
 
 export async function prefetchPRDetail(

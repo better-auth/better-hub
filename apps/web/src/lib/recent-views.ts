@@ -1,5 +1,4 @@
 const STORAGE_KEY = "better-github-recent-views";
-const SEEDED_KEY = "better-github-recent-views-seeded";
 const MAX_ITEMS = 20;
 
 export interface RecentViewItem {
@@ -13,43 +12,9 @@ export interface RecentViewItem {
 	viewedAt: number;
 }
 
-const DEFAULT_RECENT_VIEWS: Omit<RecentViewItem, "viewedAt">[] = [
-	{
-		type: "repo",
-		url: "/better-auth/better-hub",
-		title: "better-hub",
-		subtitle: "better-auth",
-		image: "https://avatars.githubusercontent.com/u/180868717?v=4",
-	},
-	{
-		type: "repo",
-		url: "/better-auth/better-auth",
-		title: "better-auth",
-		subtitle: "better-auth",
-		image: "https://avatars.githubusercontent.com/u/180868717?v=4",
-	},
-];
-
-function seedDefaults() {
-	if (typeof window === "undefined") return;
-	try {
-		if (localStorage.getItem(SEEDED_KEY)) return;
-		const raw = localStorage.getItem(STORAGE_KEY);
-		const existing: RecentViewItem[] = raw ? JSON.parse(raw) : [];
-		for (const item of DEFAULT_RECENT_VIEWS) {
-			if (!existing.some((v) => v.url === item.url)) {
-				existing.push({ ...item, viewedAt: Date.now() - 1000 });
-			}
-		}
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(existing.slice(0, MAX_ITEMS)));
-		localStorage.setItem(SEEDED_KEY, "1");
-	} catch {}
-}
-
 export function getRecentViews(): RecentViewItem[] {
 	if (typeof window === "undefined") return [];
 	try {
-		seedDefaults();
 		const raw = localStorage.getItem(STORAGE_KEY);
 		if (!raw) return [];
 		return JSON.parse(raw) as RecentViewItem[];

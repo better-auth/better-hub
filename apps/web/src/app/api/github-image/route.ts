@@ -62,8 +62,8 @@ export async function GET(request: NextRequest) {
 				headers: {
 					"Content-Type": "image/svg+xml",
 					"Content-Disposition": `attachment; filename="${filename}"`,
-					"Cache-Control":
-						"public, max-age=3600, stale-while-revalidate=86400",
+					// Prevent shared cache from leaking private repo content to unauthorized users
+					"Cache-Control": "private, no-store",
 					"Content-Security-Policy":
 						"default-src 'none'; style-src 'unsafe-inline'",
 					"X-Content-Type-Options": "nosniff",
@@ -79,8 +79,8 @@ export async function GET(request: NextRequest) {
 		return new NextResponse(upstream.body, {
 			headers: {
 				"Content-Type": contentType,
-				"Cache-Control":
-					"public, max-age=3600, stale-while-revalidate=86400",
+				// Prevent shared cache from leaking private repo content to unauthorized users
+				"Cache-Control": "private, no-store",
 				"Content-Security-Policy": "default-src 'none'",
 				"X-Content-Type-Options": "nosniff",
 			},

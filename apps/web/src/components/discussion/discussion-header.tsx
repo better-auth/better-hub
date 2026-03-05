@@ -1,15 +1,19 @@
 import Link from "next/link";
 import Image from "next/image";
-import { MessageCircle, CheckCircle2, ArrowUp } from "lucide-react";
+import { MessageCircle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GitHubEmoji } from "@/components/shared/github-emoji";
 import { TimeAgo } from "@/components/ui/time-ago";
+import { DiscussionUpvoteButton } from "@/components/discussion/discussion-upvote-button";
 
 interface DiscussionHeaderProps {
 	title: string;
 	number: number;
-	category: { name: string; emoji: string; isAnswerable: boolean };
+	discussionId: string;
+	category: { name: string; emoji: string; emojiHTML?: string | null; isAnswerable: boolean };
 	isAnswered: boolean;
 	upvoteCount: number;
+	viewerHasUpvoted: boolean;
 	author: { login: string; avatar_url: string } | null;
 	createdAt: string;
 	commentsCount: number;
@@ -19,9 +23,11 @@ interface DiscussionHeaderProps {
 export function DiscussionHeader({
 	title,
 	number,
+	discussionId,
 	category,
 	isAnswered,
 	upvoteCount,
+	viewerHasUpvoted,
 	author,
 	createdAt,
 	commentsCount,
@@ -38,7 +44,8 @@ export function DiscussionHeader({
 			<div className="flex items-center gap-3 flex-wrap">
 				{/* Category pill */}
 				<span className="text-[11px] font-mono px-2 py-0.5 rounded-full border border-border/60 text-muted-foreground/70">
-					{category.emoji} {category.name}
+					<GitHubEmoji emojiHTML={category.emojiHTML} />{" "}
+					{category.name}
 				</span>
 
 				{/* Answered badge */}
@@ -65,12 +72,11 @@ export function DiscussionHeader({
 				)}
 
 				{/* Upvotes */}
-				{upvoteCount > 0 && (
-					<span className="inline-flex items-center gap-1 text-[11px] font-mono text-muted-foreground/50">
-						<ArrowUp className="w-3 h-3" />
-						{upvoteCount}
-					</span>
-				)}
+				<DiscussionUpvoteButton
+					discussionId={discussionId}
+					upvoteCount={upvoteCount}
+					viewerHasUpvoted={viewerHasUpvoted}
+				/>
 
 				{/* Author + date */}
 				{author && (

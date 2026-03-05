@@ -326,13 +326,14 @@ export default async function PRDetailPage({
 	}
 
 	for (const c of commits) {
+		const commitUser = c.author;
 		const entry: CommitEntry = {
 			type: "commit",
 			id: c.sha,
 			sha: c.sha,
 			message: c.commit?.message || "",
-			user: c.author
-				? { login: c.author.login, avatar_url: c.author.avatar_url }
+			user: commitUser
+				? { login: commitUser.login, avatar_url: commitUser.avatar_url }
 				: null,
 			committer_name: c.commit?.author?.name || c.commit?.committer?.name || null,
 			created_at: c.commit?.author?.date || c.commit?.committer?.date || "",
@@ -444,6 +445,8 @@ export default async function PRDetailPage({
 							pullNumber={pullNumber}
 							baseBranch={pr.base.ref}
 							headBranch={pr.head.ref}
+							headRepoOwner={pr.head_repo_owner}
+							headRepoName={pr.head_repo_name}
 						/>
 					) : undefined
 				}
@@ -459,6 +462,8 @@ export default async function PRDetailPage({
 							createdAt={pr.created_at}
 							baseBranch={pr.base.ref}
 							headBranch={pr.head.ref}
+							headRepoOwner={pr.head_repo_owner}
+							headRepoName={pr.head_repo_name}
 							additions={pr.additions}
 							deletions={pr.deletions}
 							changedFiles={pr.changed_files}

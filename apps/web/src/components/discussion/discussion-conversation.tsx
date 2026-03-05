@@ -4,9 +4,14 @@ import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";
 import { ReactiveCodeBlocks } from "@/components/shared/reactive-code-blocks";
+import { UserTooltip } from "@/components/shared/user-tooltip";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { CollapsibleBody } from "@/components/issue/collapsible-body";
 import { BotActivityGroup } from "@/components/pr/bot-activity-group";
+import {
+	DiscussionReactionDisplay,
+	type Reactions,
+} from "@/components/discussion/discussion-reaction-display";
 import type { DiscussionComment, DiscussionReply } from "@/lib/github";
 
 interface DescriptionEntry {
@@ -14,6 +19,10 @@ interface DescriptionEntry {
 	bodyHtml?: string;
 	author: { login: string; avatar_url: string } | null;
 	createdAt: string;
+	discussionId?: string;
+	reactions?: Reactions;
+	upvoteCount?: number;
+	viewerHasUpvoted?: boolean;
 }
 
 interface DiscussionConversationProps {
@@ -197,15 +206,17 @@ function DescriptionBlock({ entry }: { entry: DescriptionEntry }) {
 		<div className="flex gap-3 relative">
 			<div className="shrink-0 relative z-10">
 				{entry.author ? (
-					<Link href={`/users/${entry.author.login}`}>
-						<Image
-							src={entry.author.avatar_url}
-							alt={entry.author.login}
-							width={40}
-							height={40}
-							className="rounded-full bg-background ring-2 ring-border/60"
-						/>
-					</Link>
+					<UserTooltip username={entry.author.login} side="right">
+						<Link href={`/users/${entry.author.login}`}>
+							<Image
+								src={entry.author.avatar_url}
+								alt={entry.author.login}
+								width={40}
+								height={40}
+								className="rounded-full bg-background ring-2 ring-border/60"
+							/>
+						</Link>
+					</UserTooltip>
 				) : (
 					<div className="w-10 h-10 rounded-full bg-muted-foreground/20" />
 				)}
@@ -215,12 +226,14 @@ function DescriptionBlock({ entry }: { entry: DescriptionEntry }) {
 				<div className="border border-border/60 rounded-lg overflow-hidden">
 					<div className="flex items-center gap-2 px-3.5 py-2 border-b border-border/60 bg-card/80">
 						{entry.author && (
-							<Link
-								href={`/users/${entry.author.login}`}
-								className="text-xs font-semibold text-foreground/90 hover:text-foreground transition-colors"
-							>
-								{entry.author.login}
-							</Link>
+							<UserTooltip username={entry.author.login}>
+								<Link
+									href={`/users/${entry.author.login}`}
+									className="text-xs font-semibold text-foreground/90 hover:text-foreground transition-colors"
+								>
+									{entry.author.login}
+								</Link>
+							</UserTooltip>
 						)}
 						<span className="text-[11px] text-muted-foreground/50">
 							started this discussion{" "}
@@ -243,6 +256,20 @@ function DescriptionBlock({ entry }: { entry: DescriptionEntry }) {
 							<p className="text-sm text-muted-foreground/30 italic">
 								No description provided.
 							</p>
+						</div>
+					)}
+
+					{entry.discussionId && (
+						<div className="px-3.5 pb-2.5">
+							<DiscussionReactionDisplay
+								reactions={entry.reactions}
+								subjectId={entry.discussionId}
+								upvoteCount={entry.upvoteCount}
+								viewerHasUpvoted={
+									entry.viewerHasUpvoted
+								}
+								showUpvote={false}
+							/>
 						</div>
 					)}
 				</div>
@@ -318,11 +345,6 @@ function CommentBlock({ comment }: { comment: DiscussionComment }) {
 							commented{" "}
 							<TimeAgo date={comment.createdAt} />
 						</span>
-						{comment.upvoteCount > 0 && (
-							<span className="text-[10px] font-mono text-muted-foreground/40 ml-auto">
-								+{comment.upvoteCount}
-							</span>
-						)}
 					</div>
 
 					{hasBody && renderedBody ? (
@@ -342,6 +364,20 @@ function CommentBlock({ comment }: { comment: DiscussionComment }) {
 							</p>
 						</div>
 					)}
+
+					<div className="px-3.5 pb-2.5">
+						<DiscussionReactionDisplay
+							reactions={
+								comment.reactions as
+									| Reactions
+									| undefined
+							}
+							subjectId={comment.id}
+							upvoteCount={comment.upvoteCount}
+							viewerHasUpvoted={comment.viewerHasUpvoted}
+							showUpvote
+						/>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -398,13 +434,17 @@ function ReplyBlock({ reply }: { reply: DiscussionReply }) {
 				<span className="text-[10px] text-muted-foreground/40">
 					<TimeAgo date={reply.createdAt} />
 				</span>
-				{reply.upvoteCount > 0 && (
-					<span className="text-[10px] font-mono text-muted-foreground/40 ml-auto">
-						+{reply.upvoteCount}
-					</span>
-				)}
 			</div>
 			{renderedBody && <div className="px-3 py-2">{renderedBody}</div>}
+			<div className="px-3 pb-2">
+				<DiscussionReactionDisplay
+					reactions={reply.reactions as Reactions | undefined}
+					subjectId={reply.id}
+					upvoteCount={reply.upvoteCount}
+					viewerHasUpvoted={reply.viewerHasUpvoted}
+					showUpvote
+				/>
+			</div>
 		</div>
 	);
 }
