@@ -8,6 +8,7 @@ import {
 	getUserEvents,
 	getTrendingRepos,
 } from "@/lib/github";
+import type { IssueItem, SearchResult } from "@/lib/github-types";
 import { DashboardContent } from "@/components/dashboard/dashboard-content";
 import { all } from "better-all";
 
@@ -15,27 +16,43 @@ export const metadata: Metadata = {
 	title: "Dashboard",
 };
 
+const EMPTY_SEARCH_RESULTS: SearchResult<IssueItem> = {
+	items: [],
+	total_count: 0,
+};
+
 export default async function DashboardPage() {
 	const session = await getServerSession();
 	if (!session) return redirect("/");
 	const { githubUser } = session;
+	const hasGitHubLogin = Boolean(githubUser.login);
 	const { reviewRequests, myOpenPRs, myIssues, repos, notifications, activity, trending } =
 		await all({
 			reviewRequests: async () =>
-				await searchIssues(
-					`is:pr is:open review-requested:${githubUser.login}`,
-					10,
-				),
+				hasGitHubLogin
+					? await searchIssues(
+							`is:pr is:open review-requested:${githubUser.login}`,
+							10,
+						)
+					: EMPTY_SEARCH_RESULTS,
 			myOpenPRs: async () =>
-				await searchIssues(`is:pr is:open author:${githubUser.login}`, 10),
+				hasGitHubLogin
+					? await searchIssues(
+							`is:pr is:open author:${githubUser.login}`,
+							10,
+						)
+					: EMPTY_SEARCH_RESULTS,
 			myIssues: async () =>
-				await searchIssues(
-					`is:issue is:open assignee:${githubUser.login}`,
-					10,
-				),
+				hasGitHubLogin
+					? await searchIssues(
+							`is:issue is:open assignee:${githubUser.login}`,
+							10,
+						)
+					: EMPTY_SEARCH_RESULTS,
 			repos: async () => await getUserRepos("updated", 30),
 			notifications: async () => await getNotifications(20),
-			activity: async () => await getUserEvents(githubUser.login, 20),
+			activity: async () =>
+				hasGitHubLogin ? await getUserEvents(githubUser.login, 20) : [],
 			trending: async () => await getTrendingRepos(undefined, "weekly", 8),
 		});
 
