@@ -210,3 +210,15 @@ export interface GistDetail extends UserGist {
 		committed_at: string;
 	}>;
 }
+
+export interface GistComment {
+	id: number;
+	body: string;
+	created_at: string;
+	updated_at: string;
+	user: {
+		login: string;
+		avatar_url: string;
+	} | null;
+	author_association?: string;
+}

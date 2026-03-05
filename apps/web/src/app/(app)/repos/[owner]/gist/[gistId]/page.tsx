@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getGist } from "@/lib/github";
+import { getGist, getGistComments } from "@/lib/github";
 import { GistDetailContent } from "@/components/gist/gist-detail-content";
 import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 
@@ -39,11 +39,14 @@ export default async function OwnerGistPage({
 	params: Promise<{ owner: string; gistId: string }>;
 }) {
 	const { gistId } = await params;
-	const gist = await getGist(gistId).catch(() => null);
+	const [gist, comments] = await Promise.all([
+		getGist(gistId).catch(() => null),
+		getGistComments(gistId).catch(() => []),
+	]);
 
 	if (!gist) {
 		notFound();
 	}
 
-	return <GistDetailContent gist={gist} />;
+	return <GistDetailContent gist={gist} comments={comments} />;
 }

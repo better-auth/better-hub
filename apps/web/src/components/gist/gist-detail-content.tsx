@@ -4,8 +4,9 @@ import { ExternalLink, FileCode2, Globe, History, Lock, MessageSquare, Star } fr
 import { CodeViewer } from "@/components/repo/code-viewer";
 import { MarkdownBlobView } from "@/components/repo/markdown-blob-view";
 import { MarkdownRenderer } from "@/components/shared/markdown-renderer";
+import { CommentThread } from "@/components/shared/comment-thread";
 import { TimeAgo } from "@/components/ui/time-ago";
-import type { GistDetail } from "@/lib/github-types";
+import type { GistComment, GistDetail } from "@/lib/github-types";
 import { formatBytes, getLanguageColor, getLanguageFromFilename } from "@/lib/github-utils";
 import { formatNumber } from "@/lib/utils";
 
@@ -21,7 +22,13 @@ function getGistTitle(gist: GistDetail): string {
 	return gist.description?.trim() || firstFile?.filename || "Untitled Gist";
 }
 
-export function GistDetailContent({ gist }: { gist: GistDetail }) {
+export function GistDetailContent({
+	gist,
+	comments = [],
+}: {
+	gist: GistDetail;
+	comments?: GistComment[];
+}) {
 	const files = Object.entries(gist.files).map(([key, file]) => ({
 		key,
 		filename: file.filename || key,
@@ -276,6 +283,21 @@ export function GistDetailContent({ gist }: { gist: GistDetail }) {
 							</section>
 						);
 					})}
+
+					<section className="border border-border rounded-md overflow-hidden">
+						<div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-muted/30">
+							<MessageSquare className="w-3.5 h-3.5 text-muted-foreground/70 shrink-0" />
+							<span className="text-[12px] font-mono text-foreground">
+								Comments
+							</span>
+							<span className="ml-auto text-[11px] font-mono text-muted-foreground/70">
+								{formatNumber(gist.comments)}
+							</span>
+						</div>
+						<div className="p-3">
+							<CommentThread comments={comments} />
+						</div>
+					</section>
 				</main>
 
 				<aside className="xl:sticky xl:top-2 self-start">

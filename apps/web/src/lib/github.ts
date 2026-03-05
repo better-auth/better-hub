@@ -2,7 +2,7 @@ import { Octokit } from "@octokit/rest";
 import { headers } from "next/headers";
 import { cache } from "react";
 import { $Session, getServerSession } from "./auth";
-import type { UserGist, GistDetail } from "./github-types";
+import type { UserGist, GistDetail, GistComment } from "./github-types";
 import {
 	claimDueGithubSyncJobs,
 	deleteGithubCacheByPrefix,
@@ -648,7 +648,7 @@ async function fetchOrgFromGitHub(octokit: Octokit, org: string) {
 	try {
 		const { data } = await octokit.orgs.get({ org });
 		return data;
-	} catch (error) {
+	} catch {
 		// 404
 		return null;
 	}
@@ -1698,11 +1698,17 @@ async function fetchGistFromGitHub(
 	| (UserGist & {
 			owner: { login: string; avatar_url: string };
 			history: Array<{ version: string; committed_at: string }>;
+			viewerHasStarred: boolean;
 	  })
 	| null
 > {
 	try {
-		const { data } = await octokit.gists.get({ gist_id: gistId });
+		const [{ data }, starredResult] = await Promise.all([
+			octokit.gists.get({ gist_id: gistId }),
+			octokit.gists
+				.checkIsStarred({ gist_id: gistId })
+				.catch(() => ({ status: 404 })),
+		]);
 		return {
 			id: data.id || gistId,
 			description: data.description ?? null,
@@ -1736,6 +1742,7 @@ async function fetchGistFromGitHub(
 					version: h.version || "",
 					committed_at: h.committed_at || "",
 				})) || [],
+			viewerHasStarred: starredResult.status === 204,
 		};
 	} catch (error) {
 		console.error("[fetchGistFromGitHub] Error fetching gist:", error);
@@ -6158,26 +6165,6 @@ function mapDependabotAlert(alert: unknown): DependabotAlertSummary {
 	};
 }
 
-function mapCodeScanningAlert(alert: unknown): CodeScanningAlertSummary {
-	const row = asRecord(alert);
-	const rule = asRecord(row?.rule);
-	const tool = asRecord(row?.tool);
-	const instance = asRecord(row?.most_recent_instance);
-	const location = asRecord(instance?.location);
-
-	return {
-		number: asNumber(row?.number) ?? 0,
-		state: asString(row?.state) ?? "unknown",
-		severity: asString(rule?.severity) ?? asString(rule?.security_severity_level),
-		ruleId: asString(rule?.id),
-		ruleDescription: asString(rule?.description) ?? asString(rule?.name),
-		toolName: asString(tool?.name),
-		path: asString(location?.path),
-		createdAt: asString(row?.created_at) ?? "",
-		htmlUrl: asString(row?.html_url) ?? "",
-	};
-}
-
 function mapSecretScanningAlert(alert: unknown): SecretScanningAlertSummary {
 	const row = asRecord(alert);
 
@@ -6664,13 +6651,8 @@ export async function getUserStarredGists(perPage = 30) {
 }
 
 export async function getGist(gistId: string): Promise<GistDetail | null> {
-	console.log("[getGist] Called with gistId:", gistId);
 	const authCtx = await getGitHubAuthContext();
-	console.log("[getGist] authCtx exists:", !!authCtx);
-	if (!authCtx) {
-		console.log("[getGist] No auth context, returning null");
-		return null;
-	}
+
 	return readLocalFirstGitData({
 		authCtx,
 		cacheKey: buildGistCacheKey(gistId),
@@ -6685,6 +6667,34 @@ export async function getGist(gistId: string): Promise<GistDetail | null> {
 			return result;
 		},
 	});
+}
+
+export async function getGistComments(gistId: string): Promise<GistComment[]> {
+	const octokit = await getOctokit();
+	if (!octokit) return [];
+
+	try {
+		const { data } = await octokit.gists.listComments({
+			gist_id: gistId,
+			per_page: 100,
+		});
+
+		return data.map((comment) => ({
+			id: comment.id,
+			body: comment.body ?? "",
+			created_at: comment.created_at ?? "",
+			updated_at: comment.updated_at ?? "",
+			user: comment.user
+				? {
+						login: comment.user.login ?? "",
+						avatar_url: comment.user.avatar_url ?? "",
+					}
+				: null,
+			author_association: comment.author_association ?? undefined,
+		}));
+	} catch {
+		return [];
+	}
 }
 
 export async function getUserOrgTopRepos(orgLogins: string[]) {
