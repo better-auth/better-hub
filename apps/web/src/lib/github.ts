@@ -6659,9 +6659,7 @@ export async function getGist(gistId: string): Promise<GistDetail | null> {
 		jobType: "gist",
 		jobPayload: { gistId },
 		fetchRemote: async (octokit) => {
-			console.log("[getGist] Fetching from GitHub API...");
 			const result = await fetchGistFromGitHub(octokit, gistId);
-			console.log("[getGist] GitHub API result:", result ? "found" : "null");
 			return result;
 		},
 	});
