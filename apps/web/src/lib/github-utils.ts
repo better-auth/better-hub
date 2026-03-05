@@ -111,7 +111,11 @@ export function toInternalUrl(htmlUrl: string): string {
 	if (parsed.type === "user") return `/users/${parsed.owner}`;
 	if (parsed.type === "stars")
 		return parsed.username ? `/stars/${parsed.username}` : "/stars";
-	if (parsed.type === "gist") return `/gists/${parsed.gistId}`;
+	if (parsed.type === "gist") {
+		return parsed.owner
+			? `/${parsed.owner}/gist/${parsed.gistId}`
+			: `/gists/${parsed.gistId}`;
+	}
 
 	const base = `/${parsed.owner}/${parsed.repo}`;
 

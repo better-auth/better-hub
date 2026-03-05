@@ -1606,7 +1606,10 @@ export function UserProfileContent({
 
 						{/* Gists list */}
 						<div className="shrink-0 pb-4">
-							<UserProfileGists gists={filteredGists} />
+							<UserProfileGists
+								gists={filteredGists}
+								ownerLogin={user.login}
+							/>
 						</div>
 					</>
 				)}

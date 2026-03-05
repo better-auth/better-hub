@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { getGist } from "@/lib/github";
 import { GistDetailContent } from "@/components/gist/gist-detail-content";
 import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
@@ -7,7 +7,7 @@ import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 export async function generateMetadata({
 	params,
 }: {
-	params: Promise<{ gistId: string }>;
+	params: Promise<{ owner: string; gistId: string }>;
 }): Promise<Metadata> {
 	const { gistId } = await params;
 	const gist = await getGist(gistId).catch(() => null);
@@ -33,16 +33,16 @@ export async function generateMetadata({
 	};
 }
 
-export default async function GistPage({ params }: { params: Promise<{ gistId: string }> }) {
+export default async function OwnerGistPage({
+	params,
+}: {
+	params: Promise<{ owner: string; gistId: string }>;
+}) {
 	const { gistId } = await params;
 	const gist = await getGist(gistId).catch(() => null);
 
 	if (!gist) {
 		notFound();
-	}
-
-	if (gist.owner?.login) {
-		redirect(`/${gist.owner.login}/gist/${gist.id}`);
 	}
 
 	return <GistDetailContent gist={gist} />;

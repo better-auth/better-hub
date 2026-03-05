@@ -12,7 +12,7 @@ export interface UserGist {
 	public: boolean;
 	created_at: string;
 	updated_at: string;
-	stars: number;
+	stars?: number;
 	files: Record<
 		string,
 		{
@@ -27,9 +27,10 @@ export interface UserGist {
 
 interface UserProfileGistsProps {
 	gists: UserGist[];
+	ownerLogin?: string;
 }
 
-export function UserProfileGists({ gists }: UserProfileGistsProps) {
+export function UserProfileGists({ gists, ownerLogin }: UserProfileGistsProps) {
 	if (gists.length === 0) {
 		return (
 			<div className="border border-border rounded-md p-8 text-center">
@@ -58,7 +59,11 @@ export function UserProfileGists({ gists }: UserProfileGistsProps) {
 				return (
 					<Link
 						key={gist.id}
-						href={`/gists/${gist.id}`}
+						href={
+							ownerLogin
+								? `/${ownerLogin}/gist/${gist.id}`
+								: `/gists/${gist.id}`
+						}
 						className="group flex items-start gap-3 px-4 py-3 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors"
 					>
 						<FileCode className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />

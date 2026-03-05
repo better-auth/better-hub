@@ -21,7 +21,7 @@ function getGistTitle(gist: GistDetail): string {
 	return gist.description?.trim() || firstFile?.filename || "Untitled Gist";
 }
 
-export async function GistDetailContent({ gist }: { gist: GistDetail }) {
+export function GistDetailContent({ gist }: { gist: GistDetail }) {
 	const files = Object.entries(gist.files).map(([key, file]) => ({
 		key,
 		filename: file.filename || key,
