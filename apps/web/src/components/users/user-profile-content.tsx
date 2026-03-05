@@ -474,13 +474,13 @@ export function UserProfileContent({
 	}, [user, repos, orgs, contributions, totalStars, totalForks, orgTopRepos]);
 
 	return (
-		<div className="flex flex-col lg:flex-row gap-8 flex-1 min-h-0">
+		<div className="flex flex-col lg:flex-row gap-8 flex-1 min-h-0 pb-2">
 			{/* ── Left sidebar ── */}
 			<aside className="shrink-0 lg:w-[280px] lg:sticky lg:top-4 lg:self-start px-2 lg:pl-4">
 				{/* Avatar + identity */}
 				<div className="flex flex-col items-center lg:items-start">
 					<div className="relative group">
-						<div className="absolute -inset-1 rounded-full bg-gradient-to-br from-[var(--contrib-2)]/20 via-transparent to-[var(--contrib-4)]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm" />
+						<div className="absolute -inset-1 rounded-full bg-linear-to-br from-(--contrib-2)/20 via-transparent to-(--contrib-4)/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm" />
 						<Image
 							src={user.avatar_url}
 							alt={user.login}
@@ -619,7 +619,7 @@ export function UserProfileContent({
 								<Link
 									key={org.login}
 									href={`/${org.login}`}
-									className="group flex items-center gap-2.5 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/50 dark:hover:bg-white/[0.03] transition-colors"
+									className="group flex items-center gap-2.5 py-1 px-1.5 -mx-1.5 rounded-md hover:bg-muted/50 dark:hover:bg-white/3 transition-colors"
 								>
 									<Image
 										src={org.avatar_url}
@@ -715,7 +715,7 @@ export function UserProfileContent({
 							(activeYear === currentYear
 								? yearStats.currentStreak > 0 && (
 										<div className="flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground">
-											<span className="w-2 h-2 rounded-full bg-[var(--contrib-3)]" />
+											<span className="w-2 h-2 rounded-full bg-(--contrib-3)" />
 											{
 												yearStats.currentStreak
 											}{" "}
@@ -724,7 +724,7 @@ export function UserProfileContent({
 									)
 								: yearStats.bestStreak > 0 && (
 										<div className="flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground">
-											<span className="w-2 h-2 rounded-full bg-[var(--contrib-2)]" />
+											<span className="w-2 h-2 rounded-full bg-(--contrib-2)" />
 											{
 												yearStats.bestStreak
 											}{" "}
@@ -911,133 +911,83 @@ export function UserProfileContent({
 									/>
 								</div>
 
-								<div className="hidden lg:flex items-center border border-border divide-x divide-border rounded-sm shrink-0">
-									{(
-										[
+								<div className="flex items-center gap-2 w-full justify-between sm:justify-start sm:w-auto">
+									<div className="flex items-center border border-border divide-x divide-border rounded-md shrink-0">
+										{(
 											[
-												"all",
-												"All",
-											],
-											[
-												"sources",
-												"Sources",
-											],
-											[
-												"forks",
-												"Forks",
-											],
-											[
-												"archived",
-												"Archived",
-											],
-										] as const
-									).map(([value, label]) => (
-										<button
-											key={value}
-											onClick={() =>
-												setFilter(
-													value,
-												)
-											}
-											className={cn(
-												"px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
-												filter ===
-													value
-													? "bg-muted/50 dark:bg-white/4 text-foreground"
-													: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
-											)}
-										>
-											{label}
-										</button>
-									))}
+												[
+													"all",
+													"All",
+												],
+												[
+													"sources",
+													"Sources",
+												],
+												[
+													"forks",
+													"Forks",
+												],
+												[
+													"archived",
+													"Archived",
+												],
+											] as const
+										).map(
+											([
+												value,
+												label,
+											]) => (
+												<button
+													key={
+														value
+													}
+													onClick={() =>
+														setFilter(
+															value,
+														)
+													}
+													className={cn(
+														"px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
+														filter ===
+															value
+															? "bg-muted/50 dark:bg-white/4 text-foreground"
+															: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
+													)}
+												>
+													{
+														label
+													}
+												</button>
+											),
+										)}
+									</div>
+
+									<button
+										onClick={() =>
+											setSort(
+												(
+													current,
+												) =>
+													current ===
+													"updated"
+														? "stars"
+														: current ===
+															  "stars"
+															? "name"
+															: "updated",
+											)
+										}
+										className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground border border-border hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer rounded-md shrink-0"
+									>
+										<ArrowUpDown className="w-3 h-3" />
+										{sort === "updated"
+											? "Updated"
+											: sort ===
+												  "stars"
+												? "Stars"
+												: "Name"}
+									</button>
 								</div>
-
-								<button
-									onClick={() =>
-										setSort((current) =>
-											current ===
-											"updated"
-												? "stars"
-												: current ===
-													  "stars"
-													? "name"
-													: "updated",
-										)
-									}
-									className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground border border-border hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer rounded-sm shrink-0"
-								>
-									<ArrowUpDown className="w-3 h-3" />
-									{sort === "updated"
-										? "Updated"
-										: sort === "stars"
-											? "Stars"
-											: "Name"}
-								</button>
-							</div>
-
-							<div className="lg:hidden flex items-center justify-between border border-border border-t-0 rounded-sm rounded-t-none mb-3">
-								<div className="flex -ml-px">
-									{(
-										[
-											[
-												"all",
-												"All",
-											],
-											[
-												"sources",
-												"Sources",
-											],
-											[
-												"forks",
-												"Forks",
-											],
-											[
-												"archived",
-												"Archived",
-											],
-										] as const
-									).map(([value, label]) => (
-										<button
-											key={value}
-											onClick={() =>
-												setFilter(
-													value,
-												)
-											}
-											className={cn(
-												"px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer border-r border-border -ml-px first:ml-0 first:rounded-l-sm",
-												filter ===
-													value
-													? "bg-muted/50 dark:bg-white/4 text-foreground"
-													: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
-											)}
-										>
-											{label}
-										</button>
-									))}
-								</div>
-
-								<button
-									onClick={() =>
-										setSort((current) =>
-											current ===
-											"updated"
-												? "stars"
-												: current ===
-													  "stars"
-													? "name"
-													: "updated",
-										)
-									}
-									className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer"
-								>
-									<ArrowUpDown className="w-3 h-3" />
-									{sort === "updated"
-										? "Updated"
-										: sort === "stars"
-											? "Stars"
-											: "Name"}
-								</button>
 							</div>
 
 							<div className="flex items-start justify-between gap-4 mb-4">
@@ -1221,18 +1171,19 @@ export function UserProfileContent({
 						</div>
 
 						{/* Repo list */}
-						<div className="shrink-0 min-h-[280px] border border-border rounded-md divide-y divide-border">
+						<div className="flex-1 min-h-[50dvh] lg:min-h-0 overflow-y-auto border border-border rounded-md divide-y divide-border">
 							{filtered.map((repo) => (
 								<Link
 									key={repo.id}
 									href={`/${repo.full_name}`}
 									className="group flex items-start md:items-center gap-3 md:gap-4 px-4 py-3 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors"
 								>
-									<FolderGit2 className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5 md:mt-0" />
-									<div className="flex-1 min-w-0 flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4">
-										<div className="min-w-0">
-											<div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2">
-												<span className="text-sm text-foreground group-hover:text-foreground transition-colors font-mono leading-snug break-words">
+									{/* Desktop: Inline layout */}
+									<div className="hidden sm:contents">
+										<FolderGit2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+										<div className="flex-1 min-w-0">
+											<div className="flex items-center gap-2">
+												<span className="text-sm text-foreground group-hover:text-foreground transition-colors font-mono">
 													{
 														repo.name
 													}
@@ -1259,6 +1210,7 @@ export function UserProfileContent({
 													}
 												</p>
 											)}
+											<ChevronRight className="w-3 h-3 text-foreground/10 opacity-0 group-hover:opacity-100 transition-opacity" />
 										</div>
 
 										<div className="flex items-center flex-wrap md:flex-nowrap gap-x-3 gap-y-1 md:gap-4 shrink-0">
@@ -1325,7 +1277,7 @@ export function UserProfileContent({
 				)}
 
 				{tab === "activity" && (
-					<div className="shrink-0 pb-4">
+					<div className="flex-1 min-h-[50dvh] lg:min-h-0 overflow-y-auto pb-4">
 						<UserProfileActivityTimelineBoundary>
 							<UserProfileActivityTimeline
 								events={activityEvents}
