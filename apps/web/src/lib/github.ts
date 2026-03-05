@@ -123,7 +123,6 @@ const SHAREABLE_CACHE_TYPES: ReadonlySet<string> = new Set([
 	"user_public_repos",
 	"user_public_orgs",
 	"user_gists",
-	"user_starred_gists",
 	"gist",
 	"user_events",
 	"org",
