@@ -62,7 +62,7 @@ export function UserProfileGists({ gists, ownerLogin }: UserProfileGistsProps) {
 						href={
 							ownerLogin
 								? `/${ownerLogin}/gist/${gist.id}`
-								: `/gists/${gist.id}`
+								: gist.html_url
 						}
 						className="group flex items-start gap-3 px-4 py-3 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors"
 					>
