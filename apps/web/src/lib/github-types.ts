@@ -185,6 +185,7 @@ export interface UserGist {
 	public: boolean;
 	created_at: string;
 	updated_at: string;
+	stars: number;
 	files: Record<
 		string,
 		{
@@ -192,7 +193,20 @@ export interface UserGist {
 			type: string;
 			language: string | null;
 			size: number;
+			content?: string | null;
+			raw_url?: string;
 		}
 	>;
 	comments: number;
+}
+
+export interface GistDetail extends UserGist {
+	owner: {
+		login: string;
+		avatar_url: string;
+	};
+	history: Array<{
+		version: string;
+		committed_at: string;
+	}>;
 }

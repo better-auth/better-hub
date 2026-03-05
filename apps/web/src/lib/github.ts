@@ -2,7 +2,7 @@ import { Octokit } from "@octokit/rest";
 import { headers } from "next/headers";
 import { cache } from "react";
 import { $Session, getServerSession } from "./auth";
-import type { UserGist } from "./github-types";
+import type { UserGist, GistDetail } from "./github-types";
 import {
 	claimDueGithubSyncJobs,
 	deleteGithubCacheByPrefix,
@@ -89,6 +89,7 @@ type GitDataSyncJobType =
 	| "user_public_orgs"
 	| "user_gists"
 	| "user_starred_gists"
+	| "gist"
 	| "repo_workflows"
 	| "repo_workflow_runs"
 	| "repo_nav_counts"
@@ -123,6 +124,7 @@ const SHAREABLE_CACHE_TYPES: ReadonlySet<string> = new Set([
 	"user_public_orgs",
 	"user_gists",
 	"user_starred_gists",
+	"gist",
 	"user_events",
 	"org",
 	"org_repos",
@@ -154,6 +156,7 @@ interface GitDataSyncJobPayload {
 	language?: string;
 	since?: "daily" | "weekly" | "monthly";
 	openIssuesAndPrs?: number;
+	gistId?: string;
 }
 
 interface LocalFirstGitReadOptions<T> {
@@ -431,6 +434,10 @@ function buildUserGistsCacheKey(username: string, perPage: number): string {
 
 function buildUserStarredGistsCacheKey(perPage: number): string {
 	return `user_starred_gists:${perPage}`;
+}
+
+function buildGistCacheKey(gistId: string): string {
+	return `gist:${gistId}`;
 }
 
 function buildRepoWorkflowsCacheKey(owner: string, repo: string): string {
@@ -1553,22 +1560,87 @@ async function fetchUserPublicOrgsFromGitHub(octokit: Octokit, username: string)
 	return data;
 }
 
+async function enrichGistStarsFromGraphQL(
+	token: string | null | undefined,
+	gists: UserGist[],
+): Promise<UserGist[]> {
+	const normalized = gists.map((gist) => ({
+		...gist,
+		stars: gist.stars ?? 0,
+	}));
+	if (!token || normalized.length === 0) return normalized;
+
+	const starCountByGistId = new Map<string, number>();
+	const chunkSize = 50;
+
+	for (let offset = 0; offset < normalized.length; offset += chunkSize) {
+		const chunk = normalized
+			.slice(offset, offset + chunkSize)
+			.filter((gist) => gist.id.trim().length > 0);
+		if (chunk.length === 0) continue;
+
+		const aliases = chunk.map(
+			(_gist, i) => `g${i}: gist(name: $id${i}) { stargazerCount }`,
+		);
+		const variableDefinitions = chunk.map((_gist, i) => `$id${i}: String!`).join(", ");
+		const variables = Object.fromEntries(chunk.map((gist, i) => [`id${i}`, gist.id]));
+		const query = `query(${variableDefinitions}) { ${aliases.join("\n")} }`;
+
+		try {
+			const response = await fetch("https://api.github.com/graphql", {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${token}`,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ query, variables }),
+				signal: AbortSignal.timeout(8_000),
+			});
+			if (!response.ok) continue;
+
+			const json = (await response.json()) as {
+				data?: Record<string, { stargazerCount?: number | null } | null>;
+			};
+			if (!json.data) continue;
+
+			for (let i = 0; i < chunk.length; i++) {
+				const stars = json.data[`g${i}`]?.stargazerCount;
+				if (typeof stars === "number" && Number.isFinite(stars)) {
+					starCountByGistId.set(chunk[i].id, Math.max(0, stars));
+				}
+			}
+		} catch {
+			continue;
+		}
+	}
+
+	if (starCountByGistId.size === 0) return normalized;
+
+	return normalized.map((gist) => ({
+		...gist,
+		stars: starCountByGistId.get(gist.id) ?? gist.stars ?? 0,
+	}));
+}
+
+// !chore: clean this up - I don't like the way two calls are made
 async function fetchUserGistsFromGitHub(
 	octokit: Octokit,
 	username: string,
 	perPage: number,
+	token?: string | null,
 ): Promise<UserGist[]> {
 	const { data } = await octokit.gists.listForUser({
 		username,
 		per_page: perPage,
 	});
-	return data.map((gist) => ({
+	const mapped = data.map((gist) => ({
 		id: gist.id,
 		description: gist.description,
 		html_url: gist.html_url,
 		public: gist.public,
 		created_at: gist.created_at,
 		updated_at: gist.updated_at,
+		stars: 0,
 		files: Object.fromEntries(
 			Object.entries(gist.files || {}).map(([key, file]) => [
 				key,
@@ -1582,22 +1654,26 @@ async function fetchUserGistsFromGitHub(
 		),
 		comments: gist.comments,
 	}));
+
+	return enrichGistStarsFromGraphQL(token, mapped);
 }
 
 async function fetchUserStarredGistsFromGitHub(
 	octokit: Octokit,
 	perPage: number,
+	token?: string | null,
 ): Promise<UserGist[]> {
 	const { data } = await octokit.gists.listStarred({
 		per_page: perPage,
 	});
-	return data.map((gist) => ({
+	const mapped = data.map((gist) => ({
 		id: gist.id,
 		description: gist.description,
 		html_url: gist.html_url,
 		public: gist.public,
 		created_at: gist.created_at,
 		updated_at: gist.updated_at,
+		stars: 0,
 		files: Object.fromEntries(
 			Object.entries(gist.files || {}).map(([key, file]) => [
 				key,
@@ -1611,6 +1687,59 @@ async function fetchUserStarredGistsFromGitHub(
 		),
 		comments: gist.comments,
 	}));
+
+	return enrichGistStarsFromGraphQL(token, mapped);
+}
+
+async function fetchGistFromGitHub(
+	octokit: Octokit,
+	gistId: string,
+): Promise<
+	| (UserGist & {
+			owner: { login: string; avatar_url: string };
+			history: Array<{ version: string; committed_at: string }>;
+	  })
+	| null
+> {
+	try {
+		const { data } = await octokit.gists.get({ gist_id: gistId });
+		return {
+			id: data.id || gistId,
+			description: data.description ?? null,
+			html_url: data.html_url || "",
+			public: data.public ?? false,
+			created_at: data.created_at || "",
+			updated_at: data.updated_at || "",
+			stars: 0,
+			files: Object.fromEntries(
+				Object.entries(data.files || {})
+					.filter(([, file]) => file != null)
+					.map(([key, file]) => [
+						key,
+						{
+							filename: file?.filename || "",
+							type: file?.type || "",
+							language: file?.language ?? null,
+							size: file?.size || 0,
+							content: file?.content ?? null,
+							raw_url: file?.raw_url || "",
+						},
+					]),
+			),
+			comments: data.comments || 0,
+			owner: {
+				login: data.owner?.login || "",
+				avatar_url: data.owner?.avatar_url || "",
+			},
+			history:
+				data.history?.map((h) => ({
+					version: h.version || "",
+					committed_at: h.committed_at || "",
+				})) || [],
+		};
+	} catch {
+		return null;
+	}
 }
 
 async function fetchUserOrgTopReposFromGitHub(
@@ -1882,6 +2011,7 @@ async function processGitDataSyncJob(
 				authCtx.octokit,
 				payload.username,
 				perPage,
+				authCtx.token,
 			);
 			await upsertCacheWithShared(
 				authCtx.userId,
@@ -1896,6 +2026,7 @@ async function processGitDataSyncJob(
 			const data = await fetchUserStarredGistsFromGitHub(
 				authCtx.octokit,
 				perPage,
+				authCtx.token,
 			);
 			await upsertCacheWithShared(
 				authCtx.userId,
@@ -1903,6 +2034,19 @@ async function processGitDataSyncJob(
 				"user_starred_gists",
 				data,
 			);
+			return;
+		}
+		case "gist": {
+			if (!payload.gistId) return;
+			const data = await fetchGistFromGitHub(authCtx.octokit, payload.gistId);
+			if (data) {
+				await upsertCacheWithShared(
+					authCtx.userId,
+					buildGistCacheKey(payload.gistId),
+					"gist",
+					data,
+				);
+			}
 			return;
 		}
 		case "starred_repos": {
@@ -6494,7 +6638,13 @@ export async function getUserGists(username: string, perPage = 30) {
 		fallback: [],
 		jobType: "user_gists",
 		jobPayload: { username, perPage },
-		fetchRemote: (octokit) => fetchUserGistsFromGitHub(octokit, username, perPage),
+		fetchRemote: (octokit) =>
+			fetchUserGistsFromGitHub(
+				octokit,
+				username,
+				perPage,
+				authCtx?.token ?? null,
+			),
 	});
 }
 
@@ -6507,7 +6657,21 @@ export async function getUserStarredGists(perPage = 30) {
 		fallback: [],
 		jobType: "user_starred_gists",
 		jobPayload: { perPage },
-		fetchRemote: (octokit) => fetchUserStarredGistsFromGitHub(octokit, perPage),
+		fetchRemote: (octokit) =>
+			fetchUserStarredGistsFromGitHub(octokit, perPage, authCtx?.token ?? null),
+	});
+}
+
+export async function getGist(gistId: string): Promise<GistDetail | null> {
+	const authCtx = await getGitHubAuthContext();
+	return readLocalFirstGitData({
+		authCtx,
+		cacheKey: buildGistCacheKey(gistId),
+		cacheType: "gist",
+		fallback: null,
+		jobType: "gist",
+		jobPayload: { gistId },
+		fetchRemote: (octokit) => fetchGistFromGitHub(octokit, gistId),
 	});
 }
 

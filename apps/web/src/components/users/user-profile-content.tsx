@@ -97,7 +97,7 @@ const tabTypes = ["repositories", "activity", "gists"] as const;
 
 const gistFilterTypes = ["all", "public", "secret", "starred"] as const;
 
-const gistSortTypes = ["updated", "created"] as const;
+const gistSortTypes = ["updated", "stars", "created"] as const;
 
 function formatJoinedDate(value: string | null): string | null {
 	if (!value) return null;
@@ -452,6 +452,10 @@ export function UserProfileContent({
 				return true;
 			})
 			.sort((a, b) => {
+				if (gistSort === "stars") {
+					const starsDiff = (b.stars ?? 0) - (a.stars ?? 0);
+					if (starsDiff !== 0) return starsDiff;
+				}
 				if (gistSort === "created") {
 					return (
 						new Date(b.created_at).getTime() -
@@ -1491,8 +1495,11 @@ export function UserProfileContent({
 											(current) =>
 												current ===
 												"updated"
-													? "created"
-													: "updated",
+													? "stars"
+													: current ===
+														  "stars"
+														? "created"
+														: "updated",
 										)
 									}
 									className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground border border-border hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer rounded-sm shrink-0"
@@ -1500,7 +1507,10 @@ export function UserProfileContent({
 									<ArrowUpDown className="w-3 h-3" />
 									{gistSort === "updated"
 										? "Updated"
-										: "Created"}
+										: gistSort ===
+											  "stars"
+											? "Stars"
+											: "Created"}
 								</button>
 							</div>
 
@@ -1552,8 +1562,11 @@ export function UserProfileContent({
 											(current) =>
 												current ===
 												"updated"
-													? "created"
-													: "updated",
+													? "stars"
+													: current ===
+														  "stars"
+														? "created"
+														: "updated",
 										)
 									}
 									className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer"
@@ -1561,7 +1574,10 @@ export function UserProfileContent({
 									<ArrowUpDown className="w-3 h-3" />
 									{gistSort === "updated"
 										? "Updated"
-										: "Created"}
+										: gistSort ===
+											  "stars"
+											? "Stars"
+											: "Created"}
 								</button>
 							</div>
 

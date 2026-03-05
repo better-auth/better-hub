@@ -3,6 +3,7 @@
 import { TimeAgo } from "@/components/ui/time-ago";
 import { getLanguageColor } from "@/lib/github-utils";
 import { ChevronRight, FileCode, MessageSquare } from "lucide-react";
+import Link from "next/link";
 
 export interface UserGist {
 	id: string;
@@ -11,6 +12,7 @@ export interface UserGist {
 	public: boolean;
 	created_at: string;
 	updated_at: string;
+	stars: number;
 	files: Record<
 		string,
 		{
@@ -54,17 +56,15 @@ export function UserProfileGists({ gists }: UserProfileGistsProps) {
 				];
 
 				return (
-					<a
+					<Link
 						key={gist.id}
-						href={gist.html_url}
-						target="_blank"
-						rel="noreferrer"
+						href={`/gists/${gist.id}`}
 						className="group flex items-start gap-3 px-4 py-3 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors"
 					>
 						<FileCode className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
 						<div className="flex-1 min-w-0">
 							<div className="flex items-center gap-2 flex-wrap">
-								<span className="text-sm text-foreground group-hover:text-foreground transition-colors font-mono leading-snug break-words">
+								<span className="text-sm text-foreground group-hover:text-foreground transition-colors font-mono leading-snug wrap-break-word">
 									{gist.description ||
 										firstFile?.filename ||
 										"Untitled"}
@@ -139,7 +139,7 @@ export function UserProfileGists({ gists }: UserProfileGistsProps) {
 							</div>
 						</div>
 						<ChevronRight className="w-3 h-3 text-foreground/10 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-					</a>
+					</Link>
 				);
 			})}
 		</div>

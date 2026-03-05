@@ -111,6 +111,7 @@ export function toInternalUrl(htmlUrl: string): string {
 	if (parsed.type === "user") return `/users/${parsed.owner}`;
 	if (parsed.type === "stars")
 		return parsed.username ? `/stars/${parsed.username}` : "/stars";
+	if (parsed.type === "gist") return `/gists/${parsed.gistId}`;
 
 	const base = `/${parsed.owner}/${parsed.repo}`;
 
@@ -227,6 +228,11 @@ type ParsedGitHubUrl =
 	| {
 			type: "stars";
 			username?: string;
+	  }
+	| {
+			type: "gist";
+			gistId: string;
+			owner?: string;
 	  };
 
 function parsePositiveInt(value: string | undefined): number | null {
@@ -236,13 +242,36 @@ function parsePositiveInt(value: string | undefined): number | null {
 	return parsed > 0 && parsed <= Number.MAX_SAFE_INTEGER ? parsed : null;
 }
 
+function parseGistId(value: string | undefined): string | null {
+	if (!value) return null;
+	if (!/^[a-zA-Z0-9]{5,}$/.test(value)) return null;
+	return value;
+}
+
 export function parseGitHubUrl(htmlUrl: string): ParsedGitHubUrl | null {
 	try {
 		const url = new URL(htmlUrl);
-		if (url.hostname !== "github.com") return null;
+		const host = url.hostname.toLowerCase();
 
 		const parts = url.pathname.split("/").filter(Boolean);
 		if (parts.length === 0) return null;
+
+		if (host === "gist.github.com") {
+			if (parts.length === 1) {
+				const gistId = parseGistId(parts[0]);
+				return gistId ? { type: "gist", gistId } : null;
+			}
+
+			const gistId = parseGistId(parts[1]);
+			if (!gistId) return null;
+			return {
+				type: "gist",
+				gistId,
+				owner: parts[0],
+			};
+		}
+
+		if (host !== "github.com") return null;
 
 		if (parts[0].toLowerCase() === "stars") {
 			if (parts.length === 1) return { type: "stars" };

@@ -10,6 +10,7 @@ const KNOWN_ROUTES = [
 	"dashboard",
 	"debug",
 	"extension",
+	"gists",
 	"issues",
 	"notifications",
 	"orgs",

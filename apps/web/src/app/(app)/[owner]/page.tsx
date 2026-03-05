@@ -213,6 +213,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 				public: gist.public,
 				created_at: gist.created_at,
 				updated_at: gist.updated_at,
+				stars: gist.stars ?? 0,
 				files: gist.files,
 				comments: gist.comments,
 			}))}
@@ -223,6 +224,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 				public: gist.public,
 				created_at: gist.created_at,
 				updated_at: gist.updated_at,
+				stars: gist.stars ?? 0,
 				files: gist.files,
 				comments: gist.comments,
 			}))}
