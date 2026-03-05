@@ -18,6 +18,7 @@ const APP_ROUTES = new Set([
 	"api",
 	"debug",
 	"_next",
+	"gists",
 ]);
 
 export default async function middleware(request: NextRequest) {
@@ -49,7 +50,6 @@ export default async function middleware(request: NextRequest) {
 	const owner = segments[0];
 	const repo = segments[1];
 	const rest = segments.slice(2);
-
 	// /:owner/:repo/pull/:number → /repos/:owner/:repo/pulls/:number
 	if (rest[0] === "pull" && rest[1]) {
 		const url = request.nextUrl.clone();
@@ -87,6 +87,13 @@ export default async function middleware(request: NextRequest) {
 			if (body) url.searchParams.set("body", body);
 			return NextResponse.redirect(url);
 		}
+	}
+
+	// /:owner/gist/:gistId → /repos/:owner/gist/:gistId
+	if (repo === "gist" && rest[0]) {
+		const url = request.nextUrl.clone();
+		url.pathname = `/repos/${owner}/gist/${rest.join("/")}`;
+		return NextResponse.rewrite(url);
 	}
 
 	// Generic: /:owner/:repo/... → /repos/:owner/:repo/...

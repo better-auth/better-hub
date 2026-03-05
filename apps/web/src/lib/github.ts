@@ -1737,7 +1737,8 @@ async function fetchGistFromGitHub(
 					committed_at: h.committed_at || "",
 				})) || [],
 		};
-	} catch {
+	} catch (error) {
+		console.error("[fetchGistFromGitHub] Error fetching gist:", error);
 		return null;
 	}
 }
@@ -6663,7 +6664,13 @@ export async function getUserStarredGists(perPage = 30) {
 }
 
 export async function getGist(gistId: string): Promise<GistDetail | null> {
+	console.log("[getGist] Called with gistId:", gistId);
 	const authCtx = await getGitHubAuthContext();
+	console.log("[getGist] authCtx exists:", !!authCtx);
+	if (!authCtx) {
+		console.log("[getGist] No auth context, returning null");
+		return null;
+	}
 	return readLocalFirstGitData({
 		authCtx,
 		cacheKey: buildGistCacheKey(gistId),
@@ -6671,7 +6678,12 @@ export async function getGist(gistId: string): Promise<GistDetail | null> {
 		fallback: null,
 		jobType: "gist",
 		jobPayload: { gistId },
-		fetchRemote: (octokit) => fetchGistFromGitHub(octokit, gistId),
+		fetchRemote: async (octokit) => {
+			console.log("[getGist] Fetching from GitHub API...");
+			const result = await fetchGistFromGitHub(octokit, gistId);
+			console.log("[getGist] GitHub API result:", result ? "found" : "null");
+			return result;
+		},
 	});
 }
 
