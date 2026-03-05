@@ -1,6 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
-import { CheckCircle2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";
 import { ReactiveCodeBlocks } from "@/components/shared/reactive-code-blocks";
@@ -8,10 +12,13 @@ import { UserTooltip } from "@/components/shared/user-tooltip";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { CollapsibleBody } from "@/components/issue/collapsible-body";
 import { BotActivityGroup } from "@/components/pr/bot-activity-group";
+import { DiscussionActionsMenu } from "@/components/discussion/discussion-actions-menu";
+import { MarkdownEditor } from "@/components/shared/markdown-editor";
 import {
 	DiscussionReactionDisplay,
 	type Reactions,
 } from "@/components/discussion/discussion-reaction-display";
+import * as discussionActions from "@/app/(app)/repos/[owner]/[repo]/discussions/discussion-actions";
 import type { DiscussionComment, DiscussionReply } from "@/lib/github";
 
 interface DescriptionEntry {
@@ -26,6 +33,9 @@ interface DescriptionEntry {
 }
 
 interface DiscussionConversationProps {
+	owner: string;
+	repo: string;
+	discussionNumber: number;
 	description: DescriptionEntry;
 	comments: DiscussionComment[];
 }
@@ -65,7 +75,13 @@ function groupComments(comments: DiscussionComment[]): GroupedItem[] {
 	return groups;
 }
 
-export function DiscussionConversation({ description, comments }: DiscussionConversationProps) {
+export function DiscussionConversation({
+	owner,
+	repo,
+	discussionNumber,
+	description,
+	comments,
+}: DiscussionConversationProps) {
 	const grouped = groupComments(comments);
 
 	return (
@@ -117,6 +133,15 @@ export function DiscussionConversation({ description, comments }: DiscussionConv
 													}
 												>
 													<CommentBlock
+														owner={
+															owner
+														}
+														repo={
+															repo
+														}
+														discussionNumber={
+															discussionNumber
+														}
 														comment={
 															comment
 														}
@@ -131,6 +156,15 @@ export function DiscussionConversation({ description, comments }: DiscussionConv
 																	reply,
 																) => (
 																	<ReplyBlock
+																		owner={
+																			owner
+																		}
+																		repo={
+																			repo
+																		}
+																		discussionNumber={
+																			discussionNumber
+																		}
 																		key={
 																			reply.id
 																		}
@@ -154,12 +188,26 @@ export function DiscussionConversation({ description, comments }: DiscussionConv
 					const { comment } = item;
 					return (
 						<div key={comment.id}>
-							<CommentBlock comment={comment} />
+							<CommentBlock
+								owner={owner}
+								repo={repo}
+								discussionNumber={discussionNumber}
+								comment={comment}
+							/>
 							{comment.replies.length > 0 && (
 								<div className="ml-12 mt-2 space-y-2 border-l-2 border-border/30 pl-4">
 									{comment.replies.map(
 										(reply) => (
 											<ReplyBlock
+												owner={
+													owner
+												}
+												repo={
+													repo
+												}
+												discussionNumber={
+													discussionNumber
+												}
 												key={
 													reply.id
 												}
@@ -278,7 +326,23 @@ function DescriptionBlock({ entry }: { entry: DescriptionEntry }) {
 	);
 }
 
-function CommentBlock({ comment }: { comment: DiscussionComment }) {
+function CommentBlock({
+	owner,
+	repo,
+	discussionNumber,
+	comment,
+}: {
+	owner: string;
+	repo: string;
+	discussionNumber: number;
+	comment: DiscussionComment;
+}) {
+	const router = useRouter();
+	const [isEditing, setIsEditing] = useState(false);
+	const [editBody, setEditBody] = useState(comment.body);
+	const [editError, setEditError] = useState<string | null>(null);
+	const [isPending, startTransition] = useTransition();
+	const [deleted, setDeleted] = useState(false);
 	const hasBody = Boolean(comment.body && comment.body.trim().length > 0);
 	const isLong = hasBody && comment.body.length > 800;
 
@@ -292,6 +356,27 @@ function CommentBlock({ comment }: { comment: DiscussionComment }) {
 			</ReactiveCodeBlocks>
 		</MarkdownCopyHandler>
 	) : null;
+
+	if (deleted) return null;
+
+	const handleSave = () => {
+		setEditError(null);
+		startTransition(async () => {
+			const result = await discussionActions.updateDiscussionCommentAction(
+				owner,
+				repo,
+				discussionNumber,
+				comment.id,
+				editBody.trim(),
+			);
+			if (result.error) {
+				setEditError(result.error);
+				return;
+			}
+			setIsEditing(false);
+			router.refresh();
+		});
+	};
 
 	return (
 		<div className="flex gap-3 relative">
@@ -345,9 +430,100 @@ function CommentBlock({ comment }: { comment: DiscussionComment }) {
 							commented{" "}
 							<TimeAgo date={comment.createdAt} />
 						</span>
+						<div className="ml-auto">
+							<DiscussionActionsMenu
+								owner={owner}
+								repo={repo}
+								discussionNumber={discussionNumber}
+								commentId={comment.id}
+								body={comment.body}
+								url={comment.url}
+								canEdit={comment.viewerCanUpdate}
+								canDelete={comment.viewerCanDelete}
+								onEdit={() => {
+									setEditBody(comment.body);
+									setEditError(null);
+									setIsEditing(true);
+								}}
+								onDelete={() => {
+									setDeleted(true);
+								}}
+							/>
+						</div>
 					</div>
 
-					{hasBody && renderedBody ? (
+					{isEditing ? (
+						<div className="p-3 space-y-2">
+							<MarkdownEditor
+								value={editBody}
+								onChange={setEditBody}
+								placeholder="Leave a comment... (Markdown supported)"
+								rows={6}
+								compact
+								autoFocus
+								owner={owner}
+								onKeyDown={(e) => {
+									if (e.key === "Escape")
+										setIsEditing(false);
+									if (
+										e.key === "Enter" &&
+										(e.metaKey ||
+											e.ctrlKey)
+									) {
+										e.preventDefault();
+										handleSave();
+									}
+								}}
+							/>
+							{editError && (
+								<div className="flex items-center gap-2 text-[11px] text-destructive">
+									<AlertCircle className="w-3 h-3 shrink-0" />
+									{editError}
+								</div>
+							)}
+							<div className="flex items-center justify-between">
+								<span className="text-[10px] text-muted-foreground/25">
+									{typeof navigator !==
+										"undefined" &&
+									/Mac|iPhone|iPad/.test(
+										navigator.userAgent,
+									)
+										? "⌘"
+										: "Ctrl"}
+									+Enter to save
+								</span>
+								<div className="flex items-center gap-2">
+									<button
+										onClick={() => {
+											setEditBody(
+												comment.body,
+											);
+											setEditError(
+												null,
+											);
+											setIsEditing(
+												false,
+											);
+										}}
+										disabled={isPending}
+										className="px-3 py-1.5 text-[11px] text-muted-foreground/60 hover:text-foreground transition-colors cursor-pointer rounded-md"
+									>
+										Cancel
+									</button>
+									<button
+										onClick={handleSave}
+										disabled={isPending}
+										className="flex items-center gap-1.5 px-4 py-1.5 text-[11px] font-medium rounded-md bg-foreground text-background hover:bg-foreground/90 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+									>
+										{isPending && (
+											<Loader2 className="w-3 h-3 animate-spin" />
+										)}
+										Save changes
+									</button>
+								</div>
+							</div>
+						</div>
+					) : hasBody && renderedBody ? (
 						<div className="px-3.5 py-3">
 							{isLong ? (
 								<CollapsibleBody>
@@ -384,7 +560,23 @@ function CommentBlock({ comment }: { comment: DiscussionComment }) {
 	);
 }
 
-function ReplyBlock({ reply }: { reply: DiscussionReply }) {
+function ReplyBlock({
+	owner,
+	repo,
+	discussionNumber,
+	reply,
+}: {
+	owner: string;
+	repo: string;
+	discussionNumber: number;
+	reply: DiscussionReply;
+}) {
+	const router = useRouter();
+	const [isEditing, setIsEditing] = useState(false);
+	const [editBody, setEditBody] = useState(reply.body);
+	const [editError, setEditError] = useState<string | null>(null);
+	const [isPending, startTransition] = useTransition();
+	const [deleted, setDeleted] = useState(false);
 	const renderedBody = reply.bodyHtml ? (
 		<MarkdownCopyHandler>
 			<ReactiveCodeBlocks>
@@ -395,6 +587,27 @@ function ReplyBlock({ reply }: { reply: DiscussionReply }) {
 			</ReactiveCodeBlocks>
 		</MarkdownCopyHandler>
 	) : null;
+
+	if (deleted) return null;
+
+	const handleSave = () => {
+		setEditError(null);
+		startTransition(async () => {
+			const result = await discussionActions.updateDiscussionCommentAction(
+				owner,
+				repo,
+				discussionNumber,
+				reply.id,
+				editBody.trim(),
+			);
+			if (result.error) {
+				setEditError(result.error);
+				return;
+			}
+			setIsEditing(false);
+			router.refresh();
+		});
+	};
 
 	return (
 		<div
@@ -434,8 +647,81 @@ function ReplyBlock({ reply }: { reply: DiscussionReply }) {
 				<span className="text-[10px] text-muted-foreground/40">
 					<TimeAgo date={reply.createdAt} />
 				</span>
+				<div className="ml-auto">
+					<DiscussionActionsMenu
+						owner={owner}
+						repo={repo}
+						discussionNumber={discussionNumber}
+						commentId={reply.id}
+						body={reply.body}
+						url={reply.url}
+						canEdit={reply.viewerCanUpdate}
+						canDelete={reply.viewerCanDelete}
+						onEdit={() => {
+							setEditBody(reply.body);
+							setEditError(null);
+							setIsEditing(true);
+						}}
+						onDelete={() => {
+							setDeleted(true);
+						}}
+					/>
+				</div>
 			</div>
-			{renderedBody && <div className="px-3 py-2">{renderedBody}</div>}
+			{isEditing ? (
+				<div className="p-3 space-y-2">
+					<MarkdownEditor
+						value={editBody}
+						onChange={setEditBody}
+						placeholder="Leave a comment... (Markdown supported)"
+						rows={5}
+						compact
+						autoFocus
+						owner={owner}
+						onKeyDown={(e) => {
+							if (e.key === "Escape") setIsEditing(false);
+							if (
+								e.key === "Enter" &&
+								(e.metaKey || e.ctrlKey)
+							) {
+								e.preventDefault();
+								handleSave();
+							}
+						}}
+					/>
+					{editError && (
+						<div className="flex items-center gap-2 text-[11px] text-destructive">
+							<AlertCircle className="w-3 h-3 shrink-0" />
+							{editError}
+						</div>
+					)}
+					<div className="flex items-center justify-end gap-2">
+						<button
+							onClick={() => {
+								setEditBody(reply.body);
+								setEditError(null);
+								setIsEditing(false);
+							}}
+							disabled={isPending}
+							className="px-3 py-1.5 text-[11px] text-muted-foreground/60 hover:text-foreground transition-colors cursor-pointer rounded-md"
+						>
+							Cancel
+						</button>
+						<button
+							onClick={handleSave}
+							disabled={isPending}
+							className="flex items-center gap-1.5 px-4 py-1.5 text-[11px] font-medium rounded-md bg-foreground text-background hover:bg-foreground/90 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+						>
+							{isPending && (
+								<Loader2 className="w-3 h-3 animate-spin" />
+							)}
+							Save changes
+						</button>
+					</div>
+				</div>
+			) : (
+				renderedBody && <div className="px-3 py-2">{renderedBody}</div>
+			)}
 			<div className="px-3 pb-2">
 				<DiscussionReactionDisplay
 					reactions={reply.reactions as Reactions | undefined}

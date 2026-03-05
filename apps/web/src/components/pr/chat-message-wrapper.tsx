@@ -7,6 +7,8 @@ import { MessageActionsMenu } from "./message-actions-menu";
 import { useDeletedComments } from "./deleted-comments-context";
 import { MarkdownEditor } from "@/components/shared/markdown-editor";
 import { updateIssueComment } from "@/app/(app)/repos/[owner]/[repo]/issues/issue-actions";
+import { useMutationEvents } from "@/components/shared/mutation-event-provider";
+import { formatQuotedReplyMarkdown } from "@/lib/comment-quote";
 
 type ChatMessageWrapperProps = {
 	headerContent: ReactNode;
@@ -17,6 +19,7 @@ type ChatMessageWrapperProps = {
 	commentId: number;
 	body: string;
 	canEdit?: boolean;
+	canDelete?: boolean;
 } & (
 	| { contentType: "pr"; pullNumber: number; issueNumber?: never }
 	| { contentType: "issue"; issueNumber: number; pullNumber?: never }
@@ -34,8 +37,10 @@ export function ChatMessageWrapper({
 	commentId,
 	body,
 	canEdit = false,
+	canDelete = false,
 }: ChatMessageWrapperProps) {
 	const router = useRouter();
+	const { emit } = useMutationEvents();
 	const [deleted, setDeleted] = useState(false);
 	const [isEditing, setIsEditing] = useState(false);
 	const [editBody, setEditBody] = useState(body);
@@ -68,7 +73,7 @@ export function ChatMessageWrapper({
 			const result = await updateIssueComment(
 				owner,
 				repo,
-				issueNumber!,
+				contentType === "pr" ? pullNumber! : issueNumber!,
 				commentId,
 				editBody.trim(),
 			);
@@ -81,33 +86,39 @@ export function ChatMessageWrapper({
 		});
 	};
 
+	const handleQuoteReply = () => {
+		emit({
+			type: "comment:draft-quoted",
+			owner,
+			repo,
+			threadType: contentType,
+			number: contentType === "pr" ? pullNumber! : issueNumber!,
+			body: formatQuotedReplyMarkdown(body),
+		});
+	};
+
 	return (
 		<div className="group">
 			<div className="border border-border/60 rounded-lg overflow-hidden">
 				<div className="flex items-center gap-2 px-3 py-1.5 border-b border-border/60 bg-card/50">
 					{headerContent}
-					{contentType === "pr" ? (
-						<MessageActionsMenu
-							owner={owner}
-							repo={repo}
-							contentType="pr"
-							pullNumber={pullNumber}
-							commentId={commentId}
-							body={body}
-							onDelete={handleDelete}
-						/>
-					) : (
-						<MessageActionsMenu
-							owner={owner}
-							repo={repo}
-							contentType="issue"
-							issueNumber={issueNumber}
-							commentId={commentId}
-							body={body}
-							onDelete={handleDelete}
-							onEdit={canEdit ? handleEdit : undefined}
-						/>
-					)}
+					<MessageActionsMenu
+						owner={owner}
+						repo={repo}
+						commentId={commentId}
+						body={body}
+						canDelete={canDelete}
+						onDelete={handleDelete}
+						onEdit={canEdit ? handleEdit : undefined}
+						onQuoteReply={handleQuoteReply}
+						{...(contentType === "pr"
+							? { contentType: "pr" as const, pullNumber }
+							: {
+									contentType:
+										"issue" as const,
+									issueNumber,
+								})}
+					/>
 				</div>
 
 				{isEditing ? (

@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Loader2, CornerDownLeft } from "lucide-react";
+import { CornerDownLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { addDiscussionComment } from "@/app/(app)/repos/[owner]/[repo]/discussions/discussion-actions";
-import { MarkdownEditor } from "@/components/shared/markdown-editor";
+import { MarkdownEditor, type MarkdownEditorRef } from "@/components/shared/markdown-editor";
 import { ClientMarkdown } from "@/components/shared/client-markdown";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
+import { appendQuotedReplyMarkdown } from "@/lib/comment-quote";
 
 interface OptimisticComment {
 	id: number;
@@ -40,7 +41,25 @@ export function DiscussionCommentForm({
 	const [body, setBody] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [optimisticComments, setOptimisticComments] = useState<OptimisticComment[]>([]);
-	const { emit } = useMutationEvents();
+	const editorRef = useRef<MarkdownEditorRef>(null);
+	const { emit, subscribe } = useMutationEvents();
+
+	useEffect(() => {
+		return subscribe((event) => {
+			if (
+				event.type !== "comment:draft-quoted" ||
+				event.threadType !== "discussion" ||
+				event.owner !== owner ||
+				event.repo !== repo ||
+				event.number !== discussionNumber
+			) {
+				return;
+			}
+
+			setBody((prev) => appendQuotedReplyMarkdown(prev, event.body));
+			editorRef.current?.focus();
+		});
+	}, [discussionNumber, owner, repo, subscribe]);
 
 	const handleSubmit = () => {
 		if (!body.trim()) return;
@@ -127,6 +146,7 @@ export function DiscussionCommentForm({
 			{/* Comment form */}
 			<div className="border border-border/60 rounded-md overflow-hidden">
 				<MarkdownEditor
+					ref={editorRef}
 					value={body}
 					onChange={setBody}
 					placeholder="Leave a comment..."

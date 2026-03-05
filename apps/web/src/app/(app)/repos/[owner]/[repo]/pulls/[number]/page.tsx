@@ -669,6 +669,8 @@ export default async function PRDetailPage({
 							owner={owner}
 							repo={repo}
 							pullNumber={pullNumber}
+							currentUserLogin={currentUser?.login}
+							viewerHasWriteAccess={canWrite}
 							checkStatus={
 								checkStatus && checkStatus.total > 0
 									? checkStatus
