@@ -6,6 +6,9 @@ import {
 	upsertEmbedding,
 	type ContentType,
 } from "@/lib/embedding-store";
+import { prisma } from "@/lib/db";
+import { reportUsageToStripe } from "@/lib/billing/stripe";
+import { STRIPE_MAX_EVENT_AGE_DAYS } from "@/lib/billing/config";
 
 export const inngest = new Inngest({ id: "better-github" });
 
@@ -191,5 +194,90 @@ export const embedContent = inngest.createFunction(
 			contentKey,
 			commentCount: allCommentItems.length,
 		};
+	},
+);
+
+const RETRY_BATCH_SIZE = 500;
+const RETRY_PARALLEL_CHUNK = 25;
+
+export const retryUnreportedUsage = inngest.createFunction(
+	{ id: "retry-unreported-usage", retries: 2 },
+	{ cron: "*/10 * * * *" },
+	async ({ step }) => {
+		// 1. Expire entries older than 35 days (Stripe meter API limit)
+		const expired = await step.run("clean-expired", async () => {
+			const cutoff = new Date(
+				Date.now() - STRIPE_MAX_EVENT_AGE_DAYS * 24 * 60 * 60 * 1000,
+			);
+			const items = await prisma.usageLog.findMany({
+				where: {
+					stripeReported: false,
+					costUsd: { gt: 0 },
+					createdAt: { lt: cutoff },
+				},
+				select: { id: true, userId: true, costUsd: true, createdAt: true },
+				take: RETRY_BATCH_SIZE,
+			});
+			if (items.length > 0) {
+				console.error(
+					"[billing] PERMANENT LOSS:",
+					items.length,
+					"usage logs expired (>35 days)",
+					items.slice(0, 5).map((i) => ({
+						id: i.id,
+						userId: i.userId,
+						costUsd: Number(i.costUsd),
+					})),
+				);
+				await prisma.usageLog.updateMany({
+					where: { id: { in: items.map((i) => i.id) } },
+					data: { stripeReported: true },
+				});
+			}
+			return items.length;
+		});
+
+		// 2. Retry all unreported entries (at least 1 min old)
+		const unreported = await step.run("fetch-unreported", () =>
+			prisma.usageLog.findMany({
+				where: {
+					stripeReported: false,
+					costUsd: { gt: 0 },
+					createdAt: { lt: new Date(Date.now() - 60_000) },
+				},
+				orderBy: { id: "asc" },
+				take: RETRY_BATCH_SIZE,
+			}),
+		);
+
+		let succeeded = 0;
+		for (let i = 0; i < unreported.length; i += RETRY_PARALLEL_CHUNK) {
+			const chunk = unreported.slice(i, i + RETRY_PARALLEL_CHUNK);
+			const results = await Promise.all(
+				chunk.map((log) =>
+					step.run(`report-${log.id}`, async () => {
+						try {
+							await reportUsageToStripe(
+								log.id,
+								log.userId,
+								Number(log.costUsd),
+								new Date(log.createdAt),
+							);
+							return true;
+						} catch (e) {
+							console.error(
+								"[billing] meter retry failed:",
+								log.id,
+								e,
+							);
+							return false;
+						}
+					}),
+				),
+			);
+			succeeded += results.filter(Boolean).length;
+		}
+
+		return { expired, attempted: unreported.length, succeeded };
 	},
 );

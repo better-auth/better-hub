@@ -13,7 +13,7 @@ export async function GET() {
 		select: { scope: true },
 	});
 
-	const scopes = account?.scope ? account.scope.split(" ").filter(Boolean) : [];
+	const scopes = account?.scope ? account.scope.split(",").filter(Boolean) : [];
 
 	return Response.json({ scopes });
 }

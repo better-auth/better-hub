@@ -1,7 +1,7 @@
 import { serve } from "inngest/next";
-import { inngest, embedContent } from "@/lib/inngest";
+import { inngest, embedContent, retryUnreportedUsage } from "@/lib/inngest";
 
 export const { GET, POST, PUT } = serve({
 	client: inngest,
-	functions: [embedContent],
+	functions: [embedContent, retryUnreportedUsage],
 });

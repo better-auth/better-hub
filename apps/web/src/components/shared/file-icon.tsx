@@ -53,6 +53,7 @@ const langColors: Record<string, string> = {
 	md: "#083fa1",
 	mdx: "#083fa1",
 	json: "#a87c32",
+	ipynb: "#DA5B0B",
 	yaml: "#cb171e",
 	yml: "#cb171e",
 	toml: "#9c4221",
@@ -113,7 +114,7 @@ function getFileIcon(name: string): { Icon: LucideIcon; color?: string } {
 	}
 
 	// JSON/data
-	if (["json", "jsonc", "json5"].includes(ext)) {
+	if (["json", "jsonc", "json5", "ipynb"].includes(ext)) {
 		return { Icon: FileJson, color: langColors[ext] };
 	}
 

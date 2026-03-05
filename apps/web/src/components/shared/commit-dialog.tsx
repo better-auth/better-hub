@@ -45,8 +45,14 @@ export function CommitDialog({
 				body: JSON.stringify({ filename, originalContent, newContent }),
 			});
 			const data = await res.json();
-			if (data.error) {
-				setError(data.error);
+			if (!res.ok || data.error) {
+				if (data.error === "CREDIT_EXHAUSTED") {
+					setError("Your credits have been used up");
+				} else if (data.error === "SPENDING_LIMIT_REACHED") {
+					setError("Monthly spending limit reached");
+				} else {
+					setError(data.error || "Failed to generate");
+				}
 			} else {
 				setMessage(data.message);
 			}

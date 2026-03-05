@@ -6,6 +6,7 @@ import { X, Code2, ChevronRight, Ghost, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AIChat } from "@/components/shared/ai-chat";
 import { useGlobalChat, type InlineContext } from "@/components/shared/global-chat-provider";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import {
 	searchRepoFiles,
 	fetchFileContentForContext,
@@ -171,11 +172,13 @@ export function GlobalChatPanel() {
 		switchTab,
 		renameTab,
 		replaceCurrentTab,
+		registerGhostHistoryRefetch,
 	} = useGlobalChat();
 	const [contexts, setContexts] = useState<InlineContext[]>([]);
 	const prevContextKeyRef = useRef<string | null>(null);
 	const pathname = usePathname();
 	const searchParams = useSearchParams();
+	const isMobile = useIsMobile();
 
 	// Defer rendering until after hydration — this panel starts hidden (translate-x-full)
 	// and depends on client-only state (chat history, persisted context), so SSR is pointless
@@ -187,7 +190,7 @@ export function GlobalChatPanel() {
 	const [ghostHistory, setGhostHistory] = useState<
 		{ contextKey: string; title: string; updatedAt: string }[]
 	>([]);
-	useEffect(() => {
+	const fetchGhostHistory = useCallback(() => {
 		fetch("/api/ai/chat-history?list=ghost")
 			.then((res) => res.json())
 			.then((data) => {
@@ -209,6 +212,14 @@ export function GlobalChatPanel() {
 			})
 			.catch(() => {});
 	}, []);
+	useEffect(() => {
+		if (!state.isOpen) return;
+		fetchGhostHistory();
+	}, [state.isOpen, fetchGhostHistory]);
+	useEffect(() => {
+		registerGhostHistoryRefetch(fetchGhostHistory);
+		return () => registerGhostHistoryRefetch(null);
+	}, [registerGhostHistoryRefetch, fetchGhostHistory]);
 
 	const handleLoadHistory = useCallback(
 		(contextKey: string, title: string) => {
@@ -415,7 +426,7 @@ export function GlobalChatPanel() {
 		contexts.length > 0 ? (
 			<div className="flex items-center gap-1.5 px-2.5 pt-2">
 				{contexts.length === 1 ? (
-					<span className="inline-flex items-center gap-1 pl-1.5 pr-0.5 py-0.5 rounded bg-muted text-[10px] font-mono text-muted-foreground/70 max-w-[200px]">
+					<span className="inline-flex items-center gap-1 pl-1.5 pr-0.5 py-0.5 rounded bg-muted text-[10px] font-mono text-muted-foreground max-w-[200px]">
 						<Code2 className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
 						<span className="truncate">
 							{contexts[0].filename.split("/").pop()}
@@ -429,24 +440,24 @@ export function GlobalChatPanel() {
 						<button
 							type="button"
 							onClick={() => setContexts([])}
-							className="p-0.5 rounded text-muted-foreground/30 hover:text-muted-foreground transition-colors cursor-pointer shrink-0"
+							className="p-0.5 rounded text-muted-foreground hover:text-muted-foreground transition-colors cursor-pointer shrink-0"
 						>
 							<X className="w-2 h-2" />
 						</button>
 					</span>
 				) : (
-					<span className="inline-flex items-center gap-1.5 pl-1.5 pr-0.5 py-0.5 rounded bg-muted text-[10px] font-mono text-muted-foreground/70">
+					<span className="inline-flex items-center gap-1.5 pl-1.5 pr-0.5 py-0.5 rounded bg-muted text-[10px] font-mono text-muted-foreground">
 						<Code2 className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
-						<span className="size-4 rounded-full bg-foreground/10 flex items-center justify-center text-[9px] font-semibold text-muted-foreground/80 tabular-nums">
+						<span className="size-4 rounded-full bg-foreground/10 flex items-center justify-center text-[9px] font-semibold text-muted-foreground tabular-nums">
 							{contexts.length}
 						</span>
-						<span className="text-muted-foreground/50">
+						<span className="text-muted-foreground">
 							{contexts.length} files
 						</span>
 						<button
 							type="button"
 							onClick={() => setContexts([])}
-							className="p-0.5 rounded text-muted-foreground/30 hover:text-muted-foreground transition-colors cursor-pointer shrink-0"
+							className="p-0.5 rounded text-muted-foreground hover:text-muted-foreground transition-colors cursor-pointer shrink-0"
 						>
 							<X className="w-2 h-2" />
 						</button>
@@ -533,7 +544,7 @@ export function GlobalChatPanel() {
 										tab.id ===
 											activeTabId
 											? "border-foreground/60 text-foreground/70"
-											: "border-transparent text-muted-foreground hover:text-muted-foreground/60",
+											: "border-transparent text-muted-foreground hover:text-muted-foreground",
 									)}
 								>
 									<span className="truncate max-w-[120px]">
@@ -688,7 +699,10 @@ export function GlobalChatPanel() {
 									hashMentionPrFiles={
 										mentionableFiles
 									}
-									autoFocus={isActive}
+									autoFocus={
+										isActive &&
+										!isMobile
+									}
 									historyItems={ghostHistory}
 									onLoadHistory={
 										handleLoadHistory

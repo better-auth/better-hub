@@ -5,6 +5,7 @@ export interface UserSettings {
 	displayName: string | null;
 	theme: string;
 	colorTheme: string;
+	colorMode: string;
 	ghostModel: string;
 	useOwnApiKey: boolean;
 	openrouterApiKey: string | null;
@@ -22,6 +23,7 @@ function toSettings(row: {
 	displayName: string | null;
 	theme: string;
 	colorTheme: string;
+	colorMode?: string;
 	ghostModel: string;
 	useOwnApiKey: boolean;
 	openrouterApiKey: string | null;
@@ -38,6 +40,7 @@ function toSettings(row: {
 		displayName: row.displayName,
 		theme: row.theme,
 		colorTheme: row.colorTheme,
+		colorMode: row.colorMode ?? "dark",
 		ghostModel: row.ghostModel,
 		useOwnApiKey: row.useOwnApiKey,
 		openrouterApiKey: row.openrouterApiKey,
@@ -76,6 +79,7 @@ export async function updateUserSettings(
 			| "displayName"
 			| "theme"
 			| "colorTheme"
+			| "colorMode"
 			| "ghostModel"
 			| "useOwnApiKey"
 			| "openrouterApiKey"
@@ -101,6 +105,7 @@ export async function updateUserSettings(
 	if (updates.displayName !== undefined) data.displayName = updates.displayName;
 	if (updates.theme !== undefined) data.theme = updates.theme;
 	if (updates.colorTheme !== undefined) data.colorTheme = updates.colorTheme;
+	if (updates.colorMode !== undefined) data.colorMode = updates.colorMode;
 	if (updates.ghostModel !== undefined) data.ghostModel = updates.ghostModel;
 	if (updates.useOwnApiKey !== undefined) data.useOwnApiKey = updates.useOwnApiKey;
 	if (updates.openrouterApiKey !== undefined)

@@ -5,7 +5,9 @@ import {
 	getUserPublicOrgs,
 	getUserOrgTopRepos,
 	getContributionData,
+	getUserEvents,
 } from "@/lib/github";
+import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { UserProfileContent } from "@/components/users/user-profile-content";
 import { ExternalLink, User } from "lucide-react";
 
@@ -45,6 +47,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
 	const { username } = await params;
 	const userData = await getUser(username).catch(() => null);
+	const ogUrl = ogImageUrl({ type: "user", username });
+
 	if (!userData) {
 		return { title: username };
 	}
@@ -52,7 +56,8 @@ export async function generateMetadata({
 	return {
 		title: displayName,
 		description: userData.bio || `${displayName} on Better Hub`,
-		openGraph: { title: displayName },
+		openGraph: { title: displayName, ...ogImages(ogUrl) },
+		twitter: { card: "summary_large_image", ...ogImages(ogUrl) },
 	};
 }
 
@@ -68,6 +73,7 @@ export default async function UserProfilePage({
 	let orgsData: Awaited<ReturnType<typeof getUserPublicOrgs>> = [];
 	let contributionData: Awaited<ReturnType<typeof getContributionData>> = null;
 	let orgTopRepos: Awaited<ReturnType<typeof getUserOrgTopRepos>> = [];
+	let activityEvents: Awaited<ReturnType<typeof getUserEvents>> = [];
 
 	try {
 		userData = await getUser(username);
@@ -83,11 +89,22 @@ export default async function UserProfilePage({
 	if (!isBot) {
 		try {
 			const resolvedLogin = userData.login;
-			[reposData, orgsData, contributionData] = await Promise.all([
-				getUserPublicRepos(resolvedLogin, 100),
-				getUserPublicOrgs(resolvedLogin),
-				getContributionData(resolvedLogin),
-			]);
+			const [reposResult, orgsResult, contributionsResult, eventsResult] =
+				await Promise.allSettled([
+					getUserPublicRepos(resolvedLogin, 100),
+					getUserPublicOrgs(resolvedLogin),
+					getContributionData(resolvedLogin),
+					getUserEvents(resolvedLogin, 100),
+				]);
+
+			if (reposResult.status === "fulfilled") reposData = reposResult.value;
+			if (orgsResult.status === "fulfilled") orgsData = orgsResult.value;
+			if (contributionsResult.status === "fulfilled") {
+				contributionData = contributionsResult.value;
+			}
+			if (eventsResult.status === "fulfilled")
+				activityEvents = eventsResult.value;
+
 			// Fetch top repos from the user's orgs (for scoring)
 			if (orgsData.length > 0) {
 				orgTopRepos = await getUserOrgTopRepos(
@@ -130,6 +147,7 @@ export default async function UserProfilePage({
 				stargazers_count: repo.stargazers_count ?? 0,
 				forks_count: repo.forks_count ?? 0,
 				open_issues_count: repo.open_issues_count ?? 0,
+				created_at: repo.created_at ?? null,
 				updated_at: repo.updated_at ?? null,
 				pushed_at: repo.pushed_at ?? null,
 			}))}
@@ -138,6 +156,7 @@ export default async function UserProfilePage({
 				avatar_url: org.avatar_url,
 			}))}
 			contributions={contributionData}
+			activityEvents={activityEvents}
 			orgTopRepos={orgTopRepos.map((r) => ({
 				name: r.name,
 				full_name: r.full_name,

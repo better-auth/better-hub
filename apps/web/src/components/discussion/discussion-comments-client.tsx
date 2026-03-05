@@ -10,6 +10,10 @@ interface DescriptionEntry {
 	bodyHtml?: string;
 	author: { login: string; avatar_url: string } | null;
 	createdAt: string;
+	discussionId?: string;
+	reactions?: Record<string, unknown>;
+	upvoteCount?: number;
+	viewerHasUpvoted?: boolean;
 }
 
 export function DiscussionCommentsClient({

@@ -20,6 +20,7 @@ import { TimeAgo } from "@/components/ui/time-ago";
 import { LiveDuration } from "@/components/ui/live-duration";
 import { StatusIcon } from "./status-icon";
 import { RunComparisonInline } from "./run-comparison-inline";
+import { getRunLinkTargets, splitTitleOnPrToken } from "./run-link-targets";
 
 interface Workflow {
 	id: number;
@@ -37,6 +38,13 @@ interface WorkflowRun {
 	conclusion: string | null;
 	workflow_id: number;
 	head_branch: string | null;
+	head_sha?: string | null;
+	repository?: { name?: string | null; owner?: { login?: string | null } | null } | null;
+	head_repository?: {
+		name?: string | null;
+		owner?: { login?: string | null } | null;
+	} | null;
+	pull_requests?: { number?: number }[] | null;
 	event: string;
 	run_started_at?: string | null;
 	updated_at: string;
@@ -71,7 +79,6 @@ function FilterSection({
 	searchable?: boolean;
 }) {
 	const [search, setSearch] = useState("");
-	const inputRef = useRef<HTMLInputElement>(null);
 	const isDefault = options[0]?.value === value;
 
 	const filtered = useMemo(() => {
@@ -104,7 +111,6 @@ function FilterSection({
 				<div className="flex items-center gap-1.5 mx-3 mb-1 px-2 py-1 border border-border/40 bg-muted/10">
 					<Search className="w-2.5 h-2.5 text-muted-foreground/30 shrink-0" />
 					<input
-						ref={inputRef}
 						type="text"
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
@@ -451,7 +457,6 @@ export function ActionsList({
 		});
 	}
 
-	const selectedWorkflow = workflows.find((w) => w.id === workflowFilter);
 	const totalPages = Math.max(1, Math.ceil(totalCount / PER_PAGE));
 
 	// Fetch runs when workflow or page changes
@@ -600,12 +605,7 @@ export function ActionsList({
 									{
 										label: "Status",
 										value: statusFilter,
-										options: STATUS_OPTIONS.map(
-											(o) => ({
-												value: o.value,
-												label: o.label,
-											}),
-										),
+										options: STATUS_OPTIONS,
 										onChange: (v) =>
 											setStatusFilter(
 												v as StatusFilter,
@@ -737,6 +737,16 @@ export function ActionsList({
 										run.workflow_id,
 								)?.name ?? run.name;
 							const isSelected = selectedRuns.has(run.id);
+							const linkTargets = getRunLinkTargets(
+								owner,
+								repo,
+								run,
+							);
+							const titleParts = splitTitleOnPrToken(
+								run.display_title,
+								linkTargets.prNumber,
+							);
+							const runHref = `/${owner}/${repo}/actions/${run.id}`;
 
 							return (
 								<div
@@ -777,10 +787,7 @@ export function ActionsList({
 											</svg>
 										)}
 									</button>
-									<Link
-										href={`/${owner}/${repo}/actions/${run.id}`}
-										className="flex items-center gap-3 flex-1 min-w-0"
-									>
+									<div className="flex items-center gap-3 flex-1 min-w-0">
 										<StatusIcon
 											status={
 												run.status ??
@@ -793,9 +800,56 @@ export function ActionsList({
 										/>
 										<div className="flex-1 min-w-0">
 											<div className="text-[13px] truncate group-hover:text-foreground transition-colors">
-												{
-													run.display_title
-												}
+												{titleParts &&
+												linkTargets.prHref ? (
+													<>
+														{titleParts.before && (
+															<Link
+																href={
+																	runHref
+																}
+																className="hover:underline"
+															>
+																{
+																	titleParts.before
+																}
+															</Link>
+														)}
+														<Link
+															href={
+																linkTargets.prHref
+															}
+															className="text-link hover:underline"
+														>
+															{
+																titleParts.token
+															}
+														</Link>
+														{titleParts.after && (
+															<Link
+																href={
+																	runHref
+																}
+																className="hover:underline"
+															>
+																{
+																	titleParts.after
+																}
+															</Link>
+														)}
+													</>
+												) : (
+													<Link
+														href={
+															runHref
+														}
+														className="hover:underline"
+													>
+														{
+															run.display_title
+														}
+													</Link>
+												)}
 											</div>
 											<div className="flex items-center gap-1.5 mt-1 text-[11px] font-mono text-muted-foreground/50 flex-wrap">
 												<span>
@@ -806,12 +860,17 @@ export function ActionsList({
 												<span className="text-muted-foreground/20">
 													·
 												</span>
-												<span>
+												<Link
+													href={
+														runHref
+													}
+													className="hover:text-foreground transition-colors"
+												>
 													#
 													{
 														run.run_number
 													}
-												</span>
+												</Link>
 												<span className="text-muted-foreground/20">
 													·
 												</span>
@@ -825,12 +884,26 @@ export function ActionsList({
 														<span className="text-muted-foreground/20">
 															·
 														</span>
-														<span className="inline-flex items-center gap-0.5">
-															<GitBranch className="w-3 h-3" />
-															{
-																run.head_branch
-															}
-														</span>
+														{linkTargets.branchHref ? (
+															<Link
+																href={
+																	linkTargets.branchHref
+																}
+																className="inline-flex items-center gap-0.5 hover:text-foreground transition-colors"
+															>
+																<GitBranch className="w-3 h-3" />
+																{
+																	run.head_branch
+																}
+															</Link>
+														) : (
+															<span className="inline-flex items-center gap-0.5">
+																<GitBranch className="w-3 h-3" />
+																{
+																	run.head_branch
+																}
+															</span>
+														)}
 													</>
 												)}
 												{run.actor && (
@@ -838,13 +911,16 @@ export function ActionsList({
 														<span className="text-muted-foreground/20">
 															·
 														</span>
-														<span>
+														<Link
+															href={`/users/${run.actor.login}`}
+															className="hover:text-foreground transition-colors"
+														>
 															{
 																run
 																	.actor
 																	.login
 															}
-														</span>
+														</Link>
 													</>
 												)}
 											</div>
@@ -895,7 +971,7 @@ export function ActionsList({
 												className="rounded-full shrink-0 hidden sm:block"
 											/>
 										)}
-									</Link>
+									</div>
 								</div>
 							);
 						})}

@@ -68,8 +68,8 @@ export function OGFrame({ children }: { children: React.ReactNode }) {
 			style={{
 				display: "flex",
 				flexDirection: "column",
-				width: "100%",
-				height: "100%",
+				width: `${OG.width}px`,
+				height: `${OG.height}px`,
 				backgroundColor: OG.bg,
 				padding: "60px",
 				fontFamily: "Geist Sans",
@@ -150,4 +150,20 @@ export function Avatar({ src, size = 80 }: { src: string; size?: number }) {
 export function truncate(text: string, max: number): string {
 	if (text.length <= max) return text;
 	return text.slice(0, max - 1) + "\u2026";
+}
+
+// ── OG image URL builder (for generateMetadata) ──
+
+export function ogImageUrl(params: Record<string, string | number>): string {
+	const search = new URLSearchParams();
+	for (const [k, v] of Object.entries(params)) {
+		search.set(k, String(v));
+	}
+	return `/api/og?${search.toString()}`;
+}
+
+export function ogImages(url: string) {
+	return {
+		images: [{ url, width: OG.width, height: OG.height, alt: "Better Hub" }],
+	};
 }

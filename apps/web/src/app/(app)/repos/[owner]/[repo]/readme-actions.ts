@@ -88,12 +88,13 @@ export async function revalidateContributorAvatars(
 			.filter((c): c is typeof c & { login: string } => !!c.login)
 			.map((c) => ({ login: c.login!, avatar_url: c.avatar_url ?? "" }));
 
-		let totalCount = avatars.length;
+		const pageSize = response.data.length;
+		let totalCount = pageSize;
 		const linkHeader = response.headers.link;
 		if (linkHeader) {
 			const lastMatch = linkHeader.match(/[&?]page=(\d+)>;\s*rel="last"/);
 			if (lastMatch) {
-				totalCount = (parseInt(lastMatch[1], 10) - 1) * 30 + avatars.length;
+				totalCount = (parseInt(lastMatch[1], 10) - 1) * 30 + pageSize;
 			}
 		}
 

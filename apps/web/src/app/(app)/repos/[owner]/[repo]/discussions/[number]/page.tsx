@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getDiscussion, getDiscussionComments, getAuthenticatedUser } from "@/lib/github";
+import { getDiscussion, getDiscussionComments, getAuthenticatedUser, getRepo } from "@/lib/github";
 import { extractParticipants } from "@/lib/github-utils";
 import { renderMarkdownToHtml } from "@/components/shared/markdown-renderer";
 import { DiscussionHeader } from "@/components/discussion/discussion-header";
@@ -15,6 +15,14 @@ export async function generateMetadata({
 }): Promise<Metadata> {
 	const { owner, repo, number: numStr } = await params;
 	const discussionNumber = parseInt(numStr, 10);
+
+	const repoData = await getRepo(owner, repo);
+	const isPrivate = !repoData || repoData.private === true;
+
+	if (isPrivate) {
+		return { title: `Discussion #${discussionNumber} · ${owner}/${repo}` };
+	}
+
 	const discussion = await getDiscussion(owner, repo, discussionNumber);
 
 	if (!discussion) {
@@ -106,6 +114,10 @@ export default async function DiscussionDetailPage({
 		bodyHtml: descriptionHtml,
 		author: discussion.author,
 		createdAt: discussion.createdAt,
+		discussionId: discussion.id,
+		reactions: discussion.reactions,
+		upvoteCount: discussion.upvoteCount,
+		viewerHasUpvoted: discussion.viewerHasUpvoted,
 	};
 
 	// Extract participants
@@ -136,9 +148,11 @@ export default async function DiscussionDetailPage({
 				<DiscussionHeader
 					title={discussion.title}
 					number={discussion.number}
+					discussionId={discussion.id}
 					category={discussion.category}
 					isAnswered={discussion.isAnswered}
 					upvoteCount={discussion.upvoteCount}
+					viewerHasUpvoted={discussion.viewerHasUpvoted}
 					author={discussion.author}
 					createdAt={discussion.createdAt}
 					commentsCount={discussion.commentsCount}

@@ -63,7 +63,7 @@ export function IssueDetailLayout({
 					/>
 					<div
 						ref={scrollRef}
-						className="h-full overflow-y-auto pb-8 pr-4"
+						className="h-full overflow-y-auto pb-8 pl-1 pr-4"
 					>
 						<div>
 							{/* Mobile sidebar */}
@@ -76,7 +76,7 @@ export function IssueDetailLayout({
 							<div className="space-y-3">{timeline}</div>
 
 							{commentForm && (
-								<div className="mt-6 pt-4 border-t border-border/40">
+								<div className="mt-6 pt-4">
 									{commentForm}
 								</div>
 							)}

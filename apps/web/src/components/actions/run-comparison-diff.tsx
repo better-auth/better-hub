@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { Fragment, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
 	ChevronRight,
 	GitBranch,
 	GitCommit,
 	User,
-	Zap,
-	Clock,
 	TrendingDown,
 	TrendingUp,
 	Minus,
@@ -17,7 +15,6 @@ import {
 } from "lucide-react";
 import { cn, calculateDuration, formatDurationDelta } from "@/lib/utils";
 import { StatusIcon } from "./status-icon";
-import { TimeAgo } from "@/components/ui/time-ago";
 import type { ComparisonRun } from "./run-comparison";
 
 function formatDurationFromSeconds(totalSeconds: number): string {
@@ -36,6 +33,14 @@ function conclusionLabel(conclusion: string | null, status: string | null): stri
 	return conclusion ?? status ?? "unknown";
 }
 
+function normalizeStepName(name: string): string {
+	return name
+		.toLowerCase()
+		.trim()
+		.replace(/^run\s+/, "")
+		.replace(/\s+/g, " ");
+}
+
 interface LogLine {
 	timestamp: string | null;
 	content: string;
@@ -48,10 +53,47 @@ interface StepLog {
 	lines: LogLine[];
 }
 
+interface LogGroup {
+	title: string;
+	lines: LogLine[];
+}
+
+type StepLogBlock = { type: "line"; line: LogLine } | { type: "group"; group: LogGroup };
+
 interface JobLogsState {
 	steps: StepLog[];
 	loading: boolean;
 	error: string | null;
+}
+
+function buildStepLogBlocks(lines: LogLine[]): StepLogBlock[] {
+	const blocks: StepLogBlock[] = [];
+	let activeGroup: LogGroup | null = null;
+
+	for (const line of lines) {
+		const startGroup = line.content.match(/^##\[group\](.*)$/);
+		if (startGroup) {
+			const title = startGroup[1]?.trim() || "Details";
+			if (activeGroup) blocks.push({ type: "group", group: activeGroup });
+			activeGroup = { title, lines: [] };
+			continue;
+		}
+
+		if (line.content.includes("##[endgroup]")) {
+			if (activeGroup) blocks.push({ type: "group", group: activeGroup });
+			activeGroup = null;
+			continue;
+		}
+
+		if (activeGroup) {
+			activeGroup.lines.push(line);
+		} else {
+			blocks.push({ type: "line", line });
+		}
+	}
+
+	if (activeGroup) blocks.push({ type: "group", group: activeGroup });
+	return blocks;
 }
 
 /** Horizontal duration bar */
@@ -84,6 +126,8 @@ function DurationBar({
 }
 
 function StepLogViewer({ stepLog }: { stepLog: StepLog | undefined }) {
+	const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
 	if (!stepLog || stepLog.lines.length === 0) {
 		return (
 			<div className="px-4 py-3 text-[11px] font-mono text-muted-foreground/30">
@@ -92,45 +136,166 @@ function StepLogViewer({ stepLog }: { stepLog: StepLog | undefined }) {
 		);
 	}
 
+	const blocks = buildStepLogBlocks(stepLog.lines);
+	let logicalLineNumber = 0;
+
 	return (
 		<div className="max-h-[300px] overflow-auto bg-black/20">
 			<table className="w-full text-[11px] font-mono leading-[1.6]">
 				<tbody>
-					{stepLog.lines.map((line, i) => (
-						<tr
-							key={i}
-							className={cn(
-								"hover:bg-white/[0.02]",
-								line.annotation === "error" &&
-									"bg-red-500/10",
-								line.annotation === "warning" &&
-									"bg-yellow-500/10",
-							)}
-						>
-							<td className="px-3 py-0 text-right text-muted-foreground/15 select-none align-top w-[1%] whitespace-nowrap tabular-nums">
-								{i + 1}
-							</td>
-							<td
-								className={cn(
-									"px-3 py-0 whitespace-pre-wrap break-all",
-									line.annotation === "error"
-										? "text-red-400"
-										: line.annotation ===
-											  "warning"
-											? "text-yellow-400"
-											: line.annotation ===
-												  "debug"
-												? "text-muted-foreground/30"
+					{blocks.map((block, blockIdx) => {
+						if (block.type === "line") {
+							logicalLineNumber += 1;
+							const line = block.line;
+							return (
+								<tr
+									key={`line-${blockIdx}`}
+									className={cn(
+										"hover:bg-white/[0.02]",
+										line.annotation ===
+											"error" &&
+											"bg-red-500/10",
+										line.annotation ===
+											"warning" &&
+											"bg-yellow-500/10",
+									)}
+								>
+									<td className="px-3 py-0 text-right text-muted-foreground/15 select-none align-top w-[1%] whitespace-nowrap tabular-nums">
+										{logicalLineNumber}
+									</td>
+									<td
+										className={cn(
+											"px-3 py-0 whitespace-pre-wrap break-all",
+											line.annotation ===
+												"error"
+												? "text-red-400"
 												: line.annotation ===
-													  "notice"
-													? "text-blue-400"
-													: "text-muted-foreground/60",
-								)}
-							>
-								{line.content}
-							</td>
-						</tr>
-					))}
+													  "warning"
+													? "text-yellow-400"
+													: line.annotation ===
+														  "debug"
+														? "text-muted-foreground/30"
+														: line.annotation ===
+															  "notice"
+															? "text-blue-400"
+															: "text-muted-foreground/60",
+										)}
+									>
+										{line.content}
+									</td>
+								</tr>
+							);
+						}
+
+						const key = `${blockIdx}-${block.group.title}`;
+						const isExpanded =
+							expandedGroups[key] ??
+							block.group.title
+								.toLowerCase()
+								.startsWith("run ");
+						const groupHeaderLine = logicalLineNumber + 1;
+						const groupStartLine = groupHeaderLine + 1;
+						const groupEndLine =
+							groupHeaderLine + block.group.lines.length;
+						logicalLineNumber = groupEndLine;
+
+						return (
+							<Fragment key={`group-block-${key}`}>
+								<tr
+									key={`group-${key}`}
+									className="bg-white/[0.02] border-y border-border/20"
+								>
+									<td className="px-3 py-1 text-right text-muted-foreground/15 select-none align-middle w-[1%] whitespace-nowrap tabular-nums">
+										{groupHeaderLine}
+									</td>
+									<td className="px-3 py-1">
+										<button
+											type="button"
+											onClick={() =>
+												setExpandedGroups(
+													(
+														prev,
+													) => ({
+														...prev,
+														[key]: !isExpanded,
+													}),
+												)
+											}
+											className="inline-flex items-center gap-1.5 text-muted-foreground/80 hover:text-foreground transition-colors"
+										>
+											<ChevronRight
+												className={cn(
+													"w-3 h-3 transition-transform",
+													isExpanded &&
+														"rotate-90",
+												)}
+											/>
+											<span>
+												{
+													block
+														.group
+														.title
+												}
+											</span>
+										</button>
+									</td>
+								</tr>
+								{isExpanded &&
+									block.group.lines.map(
+										(
+											line,
+											groupLineIdx,
+										) => {
+											const lineNumber =
+												groupStartLine +
+												groupLineIdx;
+											return (
+												<tr
+													key={`group-line-${key}-${groupLineIdx}`}
+													className={cn(
+														"hover:bg-white/[0.02]",
+														line.annotation ===
+															"error" &&
+															"bg-red-500/10",
+														line.annotation ===
+															"warning" &&
+															"bg-yellow-500/10",
+													)}
+												>
+													<td className="px-3 py-0 text-right text-muted-foreground/15 select-none align-top w-[1%] whitespace-nowrap tabular-nums">
+														{
+															lineNumber
+														}
+													</td>
+													<td
+														className={cn(
+															"px-3 py-0 pl-7 whitespace-pre-wrap break-all border-l border-border/20",
+															line.annotation ===
+																"error"
+																? "text-red-400"
+																: line.annotation ===
+																	  "warning"
+																	? "text-yellow-400"
+																	: line.annotation ===
+																		  "debug"
+																		? "text-muted-foreground/30"
+																		: line.annotation ===
+																			  "notice"
+																			? "text-blue-400"
+																			: "text-muted-foreground/60",
+														)}
+													>
+														{
+															line.content
+														}
+													</td>
+												</tr>
+											);
+										},
+									)}
+							</Fragment>
+						);
+					})}
 				</tbody>
 			</table>
 		</div>
@@ -528,10 +693,21 @@ function JobRow({
 			stepNumber !== undefined
 				? state.steps.find((s) => s.stepNumber === stepNumber)
 				: undefined;
+		if (!log && stepNumber !== undefined) {
+			log = state.steps.find((s) => s.stepNumber === stepNumber - 1);
+		}
 		if (!log) {
-			log = state.steps.find(
-				(s) => s.stepName.toLowerCase() === stepName.toLowerCase(),
-			);
+			const normalizedUiName = normalizeStepName(stepName);
+			log =
+				state.steps.find(
+					(s) => normalizeStepName(s.stepName) === normalizedUiName,
+				) ??
+				state.steps.find((s) =>
+					normalizeStepName(s.stepName).includes(normalizedUiName),
+				) ??
+				state.steps.find((s) =>
+					normalizedUiName.includes(normalizeStepName(s.stepName)),
+				);
 		}
 		return { log, loading: false, error: null };
 	}

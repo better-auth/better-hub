@@ -71,23 +71,37 @@ export function parseRefAndPath(
 	pathSegments: string[],
 	branchNames: string[],
 ): { ref: string; path: string } {
+	// Decode URI-encoded segments (Next.js may keep [ ] encoded); fall back to raw segment when encoding is malformed.
+	const decodedPathSegments = pathSegments.map((s) => {
+		try {
+			return decodeURIComponent(s);
+		} catch {
+			return s;
+		}
+	});
 	// Sort branches by length (longest first) for greedy matching
 	const sorted = [...branchNames].sort((a, b) => b.length - a.length);
-	const joined = pathSegments.join("/");
 
 	for (const branch of sorted) {
 		const branchParts = branch.split("/");
-		if (pathSegments.length >= branchParts.length) {
-			const candidate = pathSegments.slice(0, branchParts.length).join("/");
+		if (decodedPathSegments.length >= branchParts.length) {
+			const candidate = decodedPathSegments
+				.slice(0, branchParts.length)
+				.join("/");
 			if (candidate === branch) {
-				const remaining = pathSegments.slice(branchParts.length).join("/");
+				const remaining = decodedPathSegments
+					.slice(branchParts.length)
+					.join("/");
 				return { ref: branch, path: remaining };
 			}
 		}
 	}
 
 	// Default: first segment is the ref
-	return { ref: pathSegments[0] || "main", path: pathSegments.slice(1).join("/") };
+	return {
+		ref: decodedPathSegments[0] || "main",
+		path: decodedPathSegments.slice(1).join("/"),
+	};
 }
 
 export function toInternalUrl(htmlUrl: string): string {
@@ -95,10 +109,20 @@ export function toInternalUrl(htmlUrl: string): string {
 	if (!parsed) return htmlUrl;
 
 	if (parsed.type === "user") return `/users/${parsed.owner}`;
+	if (parsed.type === "stars")
+		return parsed.username ? `/stars/${parsed.username}` : "/stars";
 
-	const { owner, repo, type, number, path } = parsed;
-	const base = `/${owner}/${repo}`;
+	const base = `/${parsed.owner}/${parsed.repo}`;
 
+	if (parsed.type === "download")
+		return `${base}/releases/download/${encodeURIComponent(parsed.tag)}/${parsed.filename}`;
+
+	if (parsed.type === "action_run") {
+		if (parsed.jobId) return `${base}/actions/${parsed.runId}/job/${parsed.jobId}`;
+		return `${base}/actions/${parsed.runId}`;
+	}
+
+	const { type, number, path } = parsed;
 	if (type === "pull") return `${base}/pulls/${number}`;
 	if (type === "issue") return `${base}/issues/${number}`;
 	if (type === "tree" && path) return `${base}/tree/${path}`;
@@ -108,6 +132,24 @@ export function toInternalUrl(htmlUrl: string): string {
 	if (type === "repo") return base;
 
 	return htmlUrl;
+}
+
+export function buildPrHeadBranchTreeHref({
+	baseOwner,
+	baseRepo,
+	headBranch,
+	headRepoOwner,
+	headRepoName,
+}: {
+	baseOwner: string;
+	baseRepo: string;
+	headBranch: string;
+	headRepoOwner?: string | null;
+	headRepoName?: string | null;
+}): string {
+	const targetOwner = headRepoOwner || baseOwner;
+	const targetRepo = headRepoName || baseRepo;
+	return `/${targetOwner}/${targetRepo}/tree/${headBranch}`;
 }
 
 /**
@@ -166,7 +208,25 @@ type ParsedGitHubUrl =
 	  }
 	| {
 			owner: string;
+			repo: string;
+			type: "download";
+			tag: string;
+			filename: string;
+	  }
+	| {
+			owner: string;
+			repo: string;
+			type: "action_run";
+			runId: number;
+			jobId?: number;
+	  }
+	| {
+			owner: string;
 			type: "user";
+	  }
+	| {
+			type: "stars";
+			username?: string;
 	  };
 
 function parsePositiveInt(value: string | undefined): number | null {
@@ -184,11 +244,17 @@ export function parseGitHubUrl(htmlUrl: string): ParsedGitHubUrl | null {
 		const parts = url.pathname.split("/").filter(Boolean);
 		if (parts.length === 0) return null;
 
+		if (parts[0].toLowerCase() === "stars") {
+			if (parts.length === 1) return { type: "stars" };
+			if (parts.length === 2) return { type: "stars", username: parts[1] };
+			return null;
+		}
+
+		if (GITHUB_NON_USER_PATHS.has(parts[0].toLowerCase())) return null;
+
 		// Single segment: github.com/username
 		if (parts.length === 1) {
-			const name = parts[0];
-			if (GITHUB_NON_USER_PATHS.has(name.toLowerCase())) return null;
-			return { owner: name, type: "user" };
+			return { owner: parts[0], type: "user" };
 		}
 
 		const [owner, repo, ...rest] = parts;
@@ -212,6 +278,52 @@ export function parseGitHubUrl(htmlUrl: string): ParsedGitHubUrl | null {
 			return { owner, repo, type: "commits" };
 		if (rest[0] === "commit" && rest[1])
 			return { owner, repo, type: "commit", path: rest[1] };
+		if (rest[0] === "releases" && rest[1] === "download" && rest[2] && rest[3])
+			return {
+				owner,
+				repo,
+				type: "download",
+				tag: rest[2],
+				filename: rest.slice(3).join("/"),
+			};
+		if (rest[0] === "actions") {
+			// /actions/runs/:runId or /actions/runs/:runId/jobs/:jobId
+			if (rest[1] === "runs" && rest[2]) {
+				const runId = parsePositiveInt(rest[2]);
+				if (runId !== null) {
+					if (rest[3] === "jobs" && rest[4]) {
+						const jobId = parsePositiveInt(rest[4]);
+						if (jobId !== null)
+							return {
+								owner,
+								repo,
+								type: "action_run",
+								runId,
+								jobId,
+							};
+					}
+					return { owner, repo, type: "action_run", runId };
+				}
+			}
+			// /actions/:runId/job/:jobId (better-hub style)
+			if (rest[1]) {
+				const runId = parsePositiveInt(rest[1]);
+				if (runId !== null) {
+					if (rest[2] === "job" && rest[3]) {
+						const jobId = parsePositiveInt(rest[3]);
+						if (jobId !== null)
+							return {
+								owner,
+								repo,
+								type: "action_run",
+								runId,
+								jobId,
+							};
+					}
+					return { owner, repo, type: "action_run", runId };
+				}
+			}
+		}
 
 		return { owner, repo, type: "repo" };
 	} catch {
@@ -247,6 +359,7 @@ const extensionMap: Record<string, string> = {
 	scss: "scss",
 	less: "less",
 	json: "json",
+	ipynb: "json",
 	yaml: "yaml",
 	yml: "yaml",
 	toml: "toml",

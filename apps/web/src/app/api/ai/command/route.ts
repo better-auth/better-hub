@@ -1,11 +1,14 @@
-import { anthropic } from "@ai-sdk/anthropic";
 import type { UIMessage } from "ai";
 import { convertToModelMessages, stepCountIs, streamText, tool } from "ai";
 import { z } from "zod";
 import { getOctokitFromSession } from "@/lib/ai-auth";
 import { auth } from "@/lib/auth";
+import { getInternalModel } from "@/lib/billing/ai-models.server";
 import { headers } from "next/headers";
-import { checkAiLimit, incrementAiUsage } from "@/lib/ai-usage";
+import { checkUsageLimit } from "@/lib/billing/usage-limit";
+import { getBillingErrorCode } from "@/lib/billing/config";
+import { logTokenUsage } from "@/lib/billing/token-usage";
+import { waitUntil } from "@vercel/functions";
 
 export const maxDuration = 60;
 
@@ -27,23 +30,26 @@ export async function POST(req: Request) {
 		} | null;
 	} = await req.json();
 
+	const session = await auth.api.getSession({ headers: await headers() });
+	if (!session?.user) {
+		return new Response("Unauthorized", { status: 401 });
+	}
+	const userId = session.user.id;
+
 	const octokit = await getOctokitFromSession();
 	if (!octokit) {
 		return new Response("Unauthorized", { status: 401 });
 	}
 
-	// Check AI message limit
-	const session = await auth.api.getSession({ headers: await headers() });
-	const userId = session?.user?.id;
-	if (userId) {
-		const { allowed, current, limit } = await checkAiLimit(userId);
-		if (!allowed) {
-			return new Response(
-				JSON.stringify({ error: "MESSAGE_LIMIT_REACHED", current, limit }),
-				{ status: 429, headers: { "Content-Type": "application/json" } },
-			);
-		}
-		await incrementAiUsage(userId);
+	const { model, modelId, isCustomApiKey } = await getInternalModel(userId);
+
+	const limitResult = await checkUsageLimit(userId, isCustomApiKey);
+	if (!limitResult.allowed) {
+		const errorCode = getBillingErrorCode(limitResult);
+		return new Response(JSON.stringify({ error: errorCode, ...limitResult }), {
+			status: 429,
+			headers: { "Content-Type": "application/json" },
+		});
 	}
 
 	// Get authenticated user info
@@ -92,7 +98,7 @@ export async function POST(req: Request) {
 	}
 
 	const result = streamText({
-		model: anthropic("claude-haiku-4-5-20251001"),
+		model,
 		system: `You are an AI assistant built into a GitHub client app's command palette (Cmd+K). You help users perform GitHub actions and navigate the app through natural language.
 
 ${currentUser ? `Authenticated GitHub user: ${currentUser.login}` : ""}
@@ -660,6 +666,21 @@ ${pageContextPrompt}`,
 		},
 		stopWhen: stepCountIs(3),
 	});
+
+	waitUntil(
+		Promise.resolve(result.usage)
+			.then((usage) =>
+				logTokenUsage({
+					userId,
+					provider: "openrouter",
+					modelId,
+					taskType: "command",
+					usage,
+					isCustomApiKey,
+				}),
+			)
+			.catch((e) => console.error("[billing] logTokenUsage failed:", e)),
+	);
 
 	return result.toUIMessageStreamResponse();
 }

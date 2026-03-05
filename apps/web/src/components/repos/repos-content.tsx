@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useMemo, useCallback } from "react";
+import { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import { useQueryState, parseAsString, parseAsStringLiteral } from "nuqs";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import Link from "next/link";
@@ -218,7 +218,15 @@ function RepoCard({ repo }: { repo: Repo }) {
 	);
 }
 
-export function ReposContent({ repos }: { repos: Repo[] }) {
+export function ReposContent({
+	repos,
+	title = "Repositories",
+	searchPlaceholder = "Find a repository...",
+}: {
+	repos: Repo[];
+	title?: string;
+	searchPlaceholder?: string;
+}) {
 	const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
 	const [filter, setFilter] = useQueryState(
 		"filter",
@@ -231,16 +239,19 @@ export function ReposContent({ repos }: { repos: Repo[] }) {
 	const [lang, setLang] = useQueryState("lang", parseAsString.withDefault(""));
 	const [showFilters, setShowFilters] = useState(false);
 	const [sortOpen, setSortOpen] = useState(false);
-	const [view, setView] = useState<ViewMode>(() => {
-		if (typeof window === "undefined") return "list";
-		const saved = localStorage.getItem("repo-view-mode");
-		return saved === "grid" || saved === "grouped" ? saved : "list";
-	});
+	const [view, setView] = useState<ViewMode>("list");
 	const setViewAndSave = (v: ViewMode) => {
 		setView(v);
 		localStorage.setItem("repo-view-mode", v);
 	};
 	const sortRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		const saved = localStorage.getItem("repo-view-mode");
+		if (saved === "grid" || saved === "grouped") {
+			setView(saved);
+		}
+	}, []);
 
 	useClickOutside(
 		sortRef,
@@ -292,10 +303,10 @@ export function ReposContent({ repos }: { repos: Repo[] }) {
 	}, [filtered]);
 
 	return (
-		<div className="flex flex-col flex-1 min-h-0">
+		<div className="flex flex-col flex-1 min-h-0 mb-4">
 			{/* Header + count */}
-			<div className="shrink-0 flex items-baseline gap-3 mb-4">
-				<h1 className="text-xl font-medium tracking-tight">Repositories</h1>
+			<div className="shrink-0 flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-4">
+				<h1 className="text-xl font-medium tracking-tight">{title}</h1>
 				<span className="text-xs text-muted-foreground/50 font-mono tabular-nums">
 					{filtered.length}
 					{filtered.length !== repos.length && ` / ${repos.length}`}
@@ -303,13 +314,13 @@ export function ReposContent({ repos }: { repos: Repo[] }) {
 			</div>
 
 			{/* Toolbar */}
-			<div className="shrink-0 flex items-center gap-2 mb-3">
+			<div className="shrink-0 flex flex-wrap items-center gap-2 mb-3">
 				{/* Search */}
-				<div className="relative flex-1 min-w-[180px] max-w-sm">
+				<div className="relative basis-full sm:basis-auto sm:flex-1 sm:min-w-[180px] sm:max-w-sm">
 					<Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50" />
 					<input
 						type="text"
-						placeholder="Find a repository..."
+						placeholder={searchPlaceholder}
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 						className="w-full bg-transparent border border-border pl-8 pr-3 py-1.5 text-xs font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/20 focus:ring-[3px] focus:ring-ring/50 transition-colors rounded-md"
@@ -320,7 +331,7 @@ export function ReposContent({ repos }: { repos: Repo[] }) {
 				<button
 					onClick={() => setShowFilters((v) => !v)}
 					className={cn(
-						"flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-mono border transition-colors cursor-pointer rounded-md",
+						"shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-mono border transition-colors cursor-pointer rounded-md",
 						showFilters || activeFilterCount > 0
 							? "border-foreground/20 bg-muted/50 dark:bg-white/4 text-foreground"
 							: "border-border text-muted-foreground/70 hover:bg-muted/50 dark:hover:bg-white/4",
@@ -336,7 +347,7 @@ export function ReposContent({ repos }: { repos: Repo[] }) {
 				</button>
 
 				{/* Sort dropdown */}
-				<div ref={sortRef} className="relative">
+				<div ref={sortRef} className="relative shrink-0">
 					<button
 						onClick={() => setSortOpen((o) => !o)}
 						className={cn(
@@ -360,7 +371,7 @@ export function ReposContent({ repos }: { repos: Repo[] }) {
 					</button>
 
 					{sortOpen && (
-						<div className="absolute top-full right-0 mt-1.5 w-48 bg-background border border-border rounded-md shadow-lg dark:shadow-2xl z-50 py-1">
+						<div className="absolute top-full left-0 sm:left-auto sm:right-0 mt-1.5 w-48 bg-background border border-border rounded-md shadow-lg dark:shadow-2xl z-50 py-1">
 							{(
 								[
 									["updated", "Last updated"],

@@ -291,7 +291,7 @@ export function CollapsibleReviewCard({
 				<button
 					onClick={() => hasContent && setExpanded((e) => !e)}
 					className={cn(
-						"w-full flex items-center gap-2 px-3 py-1.5 border-b border-border/60 bg-card/50 text-left",
+						"w-full flex items-center gap-2 px-3 py-1.5 bg-card/50 text-left",
 						hasContent &&
 							"cursor-pointer hover:bg-card/80 transition-colors",
 					)}
@@ -353,10 +353,10 @@ export function CollapsibleReviewCard({
 				{/* Collapsible body */}
 				<div
 					className={cn(
-						"transition-all duration-200 ease-out overflow-hidden",
+						"transition-all duration-200 ease-out overflow-hidden border-t border-border/60",
 						expanded
 							? "max-h-[2000px] opacity-100"
-							: "max-h-0 opacity-0",
+							: "max-h-0 opacity-0 border-t-transparent",
 					)}
 				>
 					{/* Server-rendered markdown body */}
