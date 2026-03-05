@@ -16,6 +16,7 @@ import {
 	vesper,
 	zinc,
 	catppuccin,
+	gruvbox,
 	rosePine,
 	LEGACY_THEME_MAP,
 } from "./themes";
@@ -37,6 +38,7 @@ const themes: ThemeDefinition[] = [
 	noir,
 	forest,
 	catppuccin,
+	gruvbox,
 	rosePine,
 ];
 
