@@ -2,7 +2,6 @@
 
 import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import {
 	Loader2,
 	CornerDownLeft,
@@ -22,6 +21,7 @@ import { MarkdownEditor, type MarkdownEditorRef } from "@/components/shared/mark
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import type { IssueComment } from "@/components/issue/issue-comments-client";
+import { appendQuotedReplyMarkdown } from "@/lib/comment-quote";
 
 type CloseReason = "completed" | "not_planned";
 
@@ -68,9 +68,26 @@ export function IssueCommentForm({
 	const [selectedReason, setSelectedReason] = useState<CloseReason>("completed");
 	const dropdownRef = useRef<HTMLDivElement>(null);
 	const editorRef = useRef<MarkdownEditorRef>(null);
-	const { emit } = useMutationEvents();
+	const { emit, subscribe } = useMutationEvents();
 
 	useClickOutside(dropdownRef, () => setCloseDropdownOpen(false));
+
+	useEffect(() => {
+		return subscribe((event) => {
+			if (
+				event.type !== "comment:draft-quoted" ||
+				event.threadType !== "issue" ||
+				event.owner !== owner ||
+				event.repo !== repo ||
+				event.number !== issueNumber
+			) {
+				return;
+			}
+
+			setBody((prev) => appendQuotedReplyMarkdown(prev, event.body));
+			editorRef.current?.focus();
+		});
+	}, [issueNumber, owner, repo, subscribe]);
 
 	// Persist draft when body changes (debounced)
 	useEffect(() => {

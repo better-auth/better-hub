@@ -584,6 +584,7 @@ function CommentBlock({
 			commentId={entry.id}
 			body={entry.body}
 			canEdit={isOptimistic ? false : canEditComment}
+			canDelete={isOptimistic ? false : canEditComment}
 		/>
 	);
 }

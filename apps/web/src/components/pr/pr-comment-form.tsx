@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CornerDownLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { addPRComment } from "@/app/(app)/repos/[owner]/[repo]/pulls/pr-actions";
-import { MarkdownEditor } from "@/components/shared/markdown-editor";
+import { MarkdownEditor, type MarkdownEditorRef } from "@/components/shared/markdown-editor";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { usePROptimisticComments } from "./pr-optimistic-comments-provider";
+import { appendQuotedReplyMarkdown } from "@/lib/comment-quote";
 
 interface PRCommentFormProps {
 	owner: string;
@@ -27,10 +28,28 @@ export function PRCommentForm({
 	participants,
 }: PRCommentFormProps) {
 	const router = useRouter();
-	const { emit } = useMutationEvents();
+	const { emit, subscribe } = useMutationEvents();
 	const { addComment, removeComment } = usePROptimisticComments();
 	const [body, setBody] = useState("");
 	const [error, setError] = useState<string | null>(null);
+	const editorRef = useRef<MarkdownEditorRef>(null);
+
+	useEffect(() => {
+		return subscribe((event) => {
+			if (
+				event.type !== "comment:draft-quoted" ||
+				event.threadType !== "pr" ||
+				event.owner !== owner ||
+				event.repo !== repo ||
+				event.number !== pullNumber
+			) {
+				return;
+			}
+
+			setBody((prev) => appendQuotedReplyMarkdown(prev, event.body));
+			editorRef.current?.focus();
+		});
+	}, [owner, pullNumber, repo, subscribe]);
 
 	const handleSubmit = () => {
 		if (!body.trim()) return;
@@ -61,6 +80,7 @@ export function PRCommentForm({
 		<div className="space-y-3">
 			<div className="border border-border/60 rounded-md overflow-hidden">
 				<MarkdownEditor
+					ref={editorRef}
 					value={body}
 					onChange={setBody}
 					placeholder="Leave a comment..."

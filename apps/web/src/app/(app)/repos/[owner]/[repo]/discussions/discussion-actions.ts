@@ -3,6 +3,8 @@
 import {
 	getDiscussionComments,
 	addDiscussionCommentViaGraphQL,
+	deleteDiscussionCommentViaGraphQL,
+	updateDiscussionCommentViaGraphQL,
 	invalidateRepoDiscussionsCache,
 	addDiscussionReaction,
 	removeDiscussionReaction,
@@ -13,7 +15,7 @@ import {
 	type DiscussionReactionContent,
 } from "@/lib/github";
 import { renderMarkdownToHtml } from "@/components/shared/markdown-renderer";
-import { getErrorMessage } from "@/lib/utils";
+import { getGitHubWriteErrorMessage } from "@/lib/github-write-errors";
 import { revalidatePath } from "next/cache";
 
 export async function fetchDiscussionComments(
@@ -63,7 +65,44 @@ export async function addDiscussionComment(
 		revalidatePath(`/repos/${owner}/${repo}/discussions/${discussionNumber}`);
 		return { success: true };
 	} catch (e: unknown) {
-		return { error: getErrorMessage(e) };
+		return { error: getGitHubWriteErrorMessage(e) };
+	}
+}
+
+export async function deleteDiscussionCommentAction(
+	owner: string,
+	repo: string,
+	discussionNumber: number,
+	commentId: string,
+): Promise<{ success?: boolean; error?: string }> {
+	try {
+		const result = await deleteDiscussionCommentViaGraphQL(commentId);
+		if (!result.success) return { error: result.error ?? "Failed to delete comment" };
+
+		await invalidateRepoDiscussionsCache(owner, repo);
+		revalidatePath(`/repos/${owner}/${repo}/discussions/${discussionNumber}`);
+		return { success: true };
+	} catch (e: unknown) {
+		return { error: getGitHubWriteErrorMessage(e) };
+	}
+}
+
+export async function updateDiscussionCommentAction(
+	owner: string,
+	repo: string,
+	discussionNumber: number,
+	commentId: string,
+	body: string,
+): Promise<{ success?: boolean; error?: string }> {
+	try {
+		const result = await updateDiscussionCommentViaGraphQL(commentId, body);
+		if (!result.success) return { error: result.error ?? "Failed to update comment" };
+
+		await invalidateRepoDiscussionsCache(owner, repo);
+		revalidatePath(`/repos/${owner}/${repo}/discussions/${discussionNumber}`);
+		return { success: true };
+	} catch (e: unknown) {
+		return { error: getGitHubWriteErrorMessage(e) };
 	}
 }
 

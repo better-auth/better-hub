@@ -4057,9 +4057,12 @@ export interface DiscussionReply {
 	body: string;
 	bodyHtml?: string;
 	createdAt: string;
+	url: string;
 	author: { login: string; avatar_url: string; type?: string } | null;
 	upvoteCount: number;
 	viewerHasUpvoted: boolean;
+	viewerCanUpdate: boolean;
+	viewerCanDelete: boolean;
 	isAnswer: boolean;
 	reactions?: ReactionSummary;
 }
@@ -4070,9 +4073,12 @@ export interface DiscussionComment {
 	body: string;
 	bodyHtml?: string;
 	createdAt: string;
+	url: string;
 	author: { login: string; avatar_url: string; type?: string } | null;
 	upvoteCount: number;
 	viewerHasUpvoted: boolean;
+	viewerCanUpdate: boolean;
+	viewerCanDelete: boolean;
 	isAnswer: boolean;
 	replies: DiscussionReply[];
 	reactions?: ReactionSummary;
@@ -4160,9 +4166,12 @@ const DISCUSSION_DETAIL_GRAPHQL = `
 						databaseId
 						body
 						createdAt
+						url
 						author { __typename login avatarUrl }
 						upvoteCount
 						viewerHasUpvoted
+						viewerCanUpdate
+						viewerCanDelete
 						isAnswer
 						reactionGroups {
 							content
@@ -4174,9 +4183,12 @@ const DISCUSSION_DETAIL_GRAPHQL = `
 								databaseId
 								body
 								createdAt
+								url
 								author { __typename login avatarUrl }
 								upvoteCount
 								viewerHasUpvoted
+								viewerCanUpdate
+								viewerCanDelete
 								isAnswer
 								reactionGroups {
 									content
@@ -4205,6 +4217,25 @@ const ADD_DISCUSSION_COMMENT_MUTATION = `
 				body
 				createdAt
 				author { login avatarUrl }
+			}
+		}
+	}
+`;
+
+const DELETE_DISCUSSION_COMMENT_MUTATION = `
+	mutation($id: ID!) {
+		deleteDiscussionComment(input: { id: $id }) {
+			clientMutationId
+		}
+	}
+`;
+
+const UPDATE_DISCUSSION_COMMENT_MUTATION = `
+	mutation($commentId: ID!, $body: String!) {
+		updateDiscussionComment(input: { commentId: $commentId, body: $body }) {
+			comment {
+				id
+				body
 			}
 		}
 	}
@@ -4304,9 +4335,12 @@ interface GQLDiscussionCommentNode {
 	databaseId: number;
 	body: string;
 	createdAt: string;
+	url: string;
 	author: { login: string; avatarUrl: string; __typename?: string } | null;
 	upvoteCount: number;
 	viewerHasUpvoted: boolean;
+	viewerCanUpdate: boolean;
+	viewerCanDelete: boolean;
 	isAnswer: boolean;
 	reactionGroups?: GraphQLReactionGroup[];
 	replies?: {
@@ -4315,9 +4349,12 @@ interface GQLDiscussionCommentNode {
 			databaseId: number;
 			body: string;
 			createdAt: string;
+			url: string;
 			author: { login: string; avatarUrl: string; __typename?: string } | null;
 			upvoteCount: number;
 			viewerHasUpvoted: boolean;
+			viewerCanUpdate: boolean;
+			viewerCanDelete: boolean;
 			isAnswer: boolean;
 			reactionGroups?: GraphQLReactionGroup[];
 		}[];
@@ -4362,9 +4399,12 @@ function mapGQLDiscussionComment(node: GQLDiscussionCommentNode): DiscussionComm
 		databaseId: node.databaseId,
 		body: node.body,
 		createdAt: node.createdAt,
+		url: node.url,
 		author: mapGQLAuthor(node.author),
 		upvoteCount: node.upvoteCount,
 		viewerHasUpvoted: node.viewerHasUpvoted ?? false,
+		viewerCanUpdate: node.viewerCanUpdate ?? false,
+		viewerCanDelete: node.viewerCanDelete ?? false,
 		isAnswer: node.isAnswer,
 		reactions: mapReactionGroups(node.reactionGroups),
 		replies: (node.replies?.nodes ?? []).map((r) => ({
@@ -4372,9 +4412,12 @@ function mapGQLDiscussionComment(node: GQLDiscussionCommentNode): DiscussionComm
 			databaseId: r.databaseId,
 			body: r.body,
 			createdAt: r.createdAt,
+			url: r.url,
 			author: mapGQLAuthor(r.author),
 			upvoteCount: r.upvoteCount,
 			viewerHasUpvoted: r.viewerHasUpvoted ?? false,
+			viewerCanUpdate: r.viewerCanUpdate ?? false,
+			viewerCanDelete: r.viewerCanDelete ?? false,
 			isAnswer: r.isAnswer,
 			reactions: mapReactionGroups(r.reactionGroups),
 		})),
@@ -4607,6 +4650,73 @@ export async function addDiscussionCommentViaGraphQL(
 	}
 	const comment = json.data?.addDiscussionComment?.comment;
 	return comment ? { id: comment.id, databaseId: comment.databaseId } : null;
+}
+
+export async function deleteDiscussionCommentViaGraphQL(
+	commentId: string,
+): Promise<{ success: boolean; error?: string }> {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx) return { success: false, error: "Not authenticated" };
+
+	const response = await fetch("https://api.github.com/graphql", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${authCtx.token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			query: DELETE_DISCUSSION_COMMENT_MUTATION,
+			variables: { id: commentId },
+		}),
+	});
+
+	if (!response.ok) {
+		return { success: false, error: `GraphQL mutation failed: ${response.status}` };
+	}
+
+	const json = await response.json();
+	if (json.errors?.length) {
+		return {
+			success: false,
+			error: json.errors.map((e: { message: string }) => e.message).join("; "),
+		};
+	}
+
+	return { success: true };
+}
+
+export async function updateDiscussionCommentViaGraphQL(
+	commentId: string,
+	body: string,
+): Promise<{ success: boolean; error?: string }> {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx) return { success: false, error: "Not authenticated" };
+
+	const response = await fetch("https://api.github.com/graphql", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${authCtx.token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			query: UPDATE_DISCUSSION_COMMENT_MUTATION,
+			variables: { commentId, body },
+		}),
+	});
+
+	if (!response.ok) {
+		return { success: false, error: `GraphQL mutation failed: ${response.status}` };
+	}
+
+	const json = await response.json();
+	if (json.errors?.length) {
+		return {
+			success: false,
+			error: json.errors.map((e: { message: string }) => e.message).join("; "),
+		};
+	}
+
+	return { success: true };
 }
 
 const CREATE_DISCUSSION_MUTATION = `

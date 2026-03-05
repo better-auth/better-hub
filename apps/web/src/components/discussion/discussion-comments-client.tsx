@@ -37,5 +37,13 @@ export function DiscussionCommentsClient({
 		gcTime: 10 * 60 * 1000,
 	});
 
-	return <DiscussionConversation description={descriptionEntry} comments={comments} />;
+	return (
+		<DiscussionConversation
+			owner={owner}
+			repo={repo}
+			discussionNumber={discussionNumber}
+			description={descriptionEntry}
+			comments={comments}
+		/>
+	);
 }
