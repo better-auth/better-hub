@@ -2,6 +2,7 @@ import { Octokit } from "@octokit/rest";
 import { headers } from "next/headers";
 import { cache } from "react";
 import { $Session, getServerSession } from "./auth";
+import type { UserGist } from "./github-types";
 import {
 	claimDueGithubSyncJobs,
 	deleteGithubCacheByPrefix,
@@ -86,6 +87,8 @@ type GitDataSyncJobType =
 	| "user_profile"
 	| "user_public_repos"
 	| "user_public_orgs"
+	| "user_gists"
+	| "user_starred_gists"
 	| "repo_workflows"
 	| "repo_workflow_runs"
 	| "repo_nav_counts"
@@ -118,6 +121,8 @@ const SHAREABLE_CACHE_TYPES: ReadonlySet<string> = new Set([
 	"user_profile",
 	"user_public_repos",
 	"user_public_orgs",
+	"user_gists",
+	"user_starred_gists",
 	"user_events",
 	"org",
 	"org_repos",
@@ -418,6 +423,14 @@ function buildUserPublicReposCacheKey(username: string, perPage: number): string
 
 function buildUserPublicOrgsCacheKey(username: string): string {
 	return `user_public_orgs:${username.toLowerCase()}`;
+}
+
+function buildUserGistsCacheKey(username: string, perPage: number): string {
+	return `user_gists:${username.toLowerCase()}:${perPage}`;
+}
+
+function buildUserStarredGistsCacheKey(perPage: number): string {
+	return `user_starred_gists:${perPage}`;
 }
 
 function buildRepoWorkflowsCacheKey(owner: string, repo: string): string {
@@ -1540,6 +1553,66 @@ async function fetchUserPublicOrgsFromGitHub(octokit: Octokit, username: string)
 	return data;
 }
 
+async function fetchUserGistsFromGitHub(
+	octokit: Octokit,
+	username: string,
+	perPage: number,
+): Promise<UserGist[]> {
+	const { data } = await octokit.gists.listForUser({
+		username,
+		per_page: perPage,
+	});
+	return data.map((gist) => ({
+		id: gist.id,
+		description: gist.description,
+		html_url: gist.html_url,
+		public: gist.public,
+		created_at: gist.created_at,
+		updated_at: gist.updated_at,
+		files: Object.fromEntries(
+			Object.entries(gist.files || {}).map(([key, file]) => [
+				key,
+				{
+					filename: file.filename || "",
+					type: file.type || "",
+					language: file.language || null,
+					size: file.size || 0,
+				},
+			]),
+		),
+		comments: gist.comments,
+	}));
+}
+
+async function fetchUserStarredGistsFromGitHub(
+	octokit: Octokit,
+	perPage: number,
+): Promise<UserGist[]> {
+	const { data } = await octokit.gists.listStarred({
+		per_page: perPage,
+	});
+	return data.map((gist) => ({
+		id: gist.id,
+		description: gist.description,
+		html_url: gist.html_url,
+		public: gist.public,
+		created_at: gist.created_at,
+		updated_at: gist.updated_at,
+		files: Object.fromEntries(
+			Object.entries(gist.files || {}).map(([key, file]) => [
+				key,
+				{
+					filename: file.filename || "",
+					type: file.type || "",
+					language: file.language || null,
+					size: file.size || 0,
+				},
+			]),
+		),
+		comments: gist.comments,
+	}));
+}
+
 async function fetchUserOrgTopReposFromGitHub(
 	octokit: Octokit,
 	orgLogins: string[],
@@ -1798,6 +1871,36 @@ async function processGitDataSyncJob(
 				authCtx.userId,
 				buildUserEventsCacheKey(payload.username, perPage),
 				"user_events",
+				data,
+			);
+			return;
+		}
+		case "user_gists": {
+			if (!payload.username) return;
+			const perPage = payload.perPage ?? 30;
+			const data = await fetchUserGistsFromGitHub(
+				authCtx.octokit,
+				payload.username,
+				perPage,
+			);
+			await upsertCacheWithShared(
+				authCtx.userId,
+				buildUserGistsCacheKey(payload.username, perPage),
+				"user_gists",
+				data,
+			);
+			return;
+		}
+		case "user_starred_gists": {
+			const perPage = payload.perPage ?? 30;
+			const data = await fetchUserStarredGistsFromGitHub(
+				authCtx.octokit,
+				perPage,
+			);
+			await upsertCacheWithShared(
+				authCtx.userId,
+				buildUserStarredGistsCacheKey(perPage),
+				"user_starred_gists",
 				data,
 			);
 			return;
@@ -6379,6 +6482,32 @@ export async function getUserPublicOrgs(username: string) {
 		jobType: "user_public_orgs",
 		jobPayload: { username },
 		fetchRemote: (octokit) => fetchUserPublicOrgsFromGitHub(octokit, username),
+	});
+}
+
+export async function getUserGists(username: string, perPage = 30) {
+	const authCtx = await getGitHubAuthContext();
+	return readLocalFirstGitData({
+		authCtx,
+		cacheKey: buildUserGistsCacheKey(username, perPage),
+		cacheType: "user_gists",
+		fallback: [],
+		jobType: "user_gists",
+		jobPayload: { username, perPage },
+		fetchRemote: (octokit) => fetchUserGistsFromGitHub(octokit, username, perPage),
+	});
+}
+
+export async function getUserStarredGists(perPage = 30) {
+	const authCtx = await getGitHubAuthContext();
+	return readLocalFirstGitData({
+		authCtx,
+		cacheKey: buildUserStarredGistsCacheKey(perPage),
+		cacheType: "user_starred_gists",
+		fallback: [],
+		jobType: "user_starred_gists",
+		jobPayload: { perPage },
+		fetchRemote: (octokit) => fetchUserStarredGistsFromGitHub(octokit, perPage),
 	});
 }
 

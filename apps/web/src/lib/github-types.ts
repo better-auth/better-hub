@@ -177,3 +177,22 @@ export interface SearchResult<T> {
 	items: Array<T>;
 	total_count: number;
 }
+
+export interface UserGist {
+	id: string;
+	description: string | null;
+	html_url: string;
+	public: boolean;
+	created_at: string;
+	updated_at: string;
+	files: Record<
+		string,
+		{
+			filename: string;
+			type: string;
+			language: string | null;
+			size: number;
+		}
+	>;
+	comments: number;
+}

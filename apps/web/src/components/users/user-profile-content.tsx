@@ -6,6 +6,7 @@ import { XIcon } from "@/components/shared/icons/x-icon";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { UserProfileActivityTimelineBoundary } from "@/components/users/user-profile-activity-timeline-boundary";
 import { UserProfileActivityTimeline } from "@/components/users/user-profile-activity-timeline";
+import { UserProfileGists } from "@/components/users/user-profile-gists";
 import { UserProfileScoreRing } from "@/components/users/user-profile-score-ring";
 import { getLanguageColor } from "@/lib/github-utils";
 import type { ActivityEvent } from "@/lib/github-types";
@@ -18,6 +19,7 @@ import {
 	CalendarDays,
 	ChevronRight,
 	ExternalLink,
+	FileCode,
 	FolderGit2,
 	GitFork,
 	Link2,
@@ -91,7 +93,11 @@ const filterTypes = ["all", "sources", "forks", "archived"] as const;
 
 const sortTypes = ["updated", "name", "stars"] as const;
 
-const tabTypes = ["repositories", "activity"] as const;
+const tabTypes = ["repositories", "activity", "gists"] as const;
+
+const gistFilterTypes = ["all", "public", "secret", "starred"] as const;
+
+const gistSortTypes = ["updated", "created"] as const;
 
 function formatJoinedDate(value: string | null): string | null {
 	if (!value) return null;
@@ -118,6 +124,8 @@ export function UserProfileContent({
 	contributions,
 	activityEvents = [],
 	orgTopRepos = [],
+	gists = [],
+	starredGists = [],
 }: {
 	user: UserProfile;
 	repos: UserRepo[];
@@ -125,6 +133,8 @@ export function UserProfileContent({
 	contributions: ContributionData | null;
 	activityEvents?: ActivityEvent[];
 	orgTopRepos?: OrgTopRepo[];
+	gists?: import("@/components/users/user-profile-gists").UserGist[];
+	starredGists?: import("@/components/users/user-profile-gists").UserGist[];
 }) {
 	const [tab, setTab] = useQueryState(
 		"tab",
@@ -142,6 +152,17 @@ export function UserProfileContent({
 	const [languageFilter, setLanguageFilter] = useState<string | null>(null);
 	const [showMoreLanguages, setShowMoreLanguages] = useState(false);
 	const [selectedYear, setSelectedYear] = useState<number | null>(null);
+
+	// Gists-specific states
+	const [gistSearch, setGistSearch] = useQueryState("gist_q", parseAsString.withDefault(""));
+	const [gistFilter, setGistFilter] = useQueryState(
+		"gist_filter",
+		parseAsStringLiteral(gistFilterTypes).withDefault("all"),
+	);
+	const [gistSort, setGistSort] = useQueryState(
+		"gist_sort",
+		parseAsStringLiteral(gistSortTypes).withDefault("updated"),
+	);
 
 	const currentYear = new Date().getFullYear();
 	const activeYear = selectedYear ?? currentYear;
@@ -403,6 +424,51 @@ export function UserProfileContent({
 		setLanguageFilter(null);
 		setShowMoreLanguages(false);
 	}, [setFilter, setSearch]);
+
+	// Gists filtering and sorting
+	const filteredGists = useMemo(() => {
+		// Use starred gists when filter is "starred", otherwise use user's gists
+		const sourceGists = gistFilter === "starred" ? starredGists : gists;
+
+		return sourceGists
+			.filter((gist) => {
+				if (
+					gistSearch &&
+					![
+						gist.description || "",
+						...Object.values(gist.files).map((f) => f.filename),
+					]
+						.join(" ")
+						.toLowerCase()
+						.includes(gistSearch.toLowerCase())
+				) {
+					return false;
+				}
+				// Only apply public/secret filters when not viewing starred gists
+				if (gistFilter !== "starred") {
+					if (gistFilter === "public" && !gist.public) return false;
+					if (gistFilter === "secret" && gist.public) return false;
+				}
+				return true;
+			})
+			.sort((a, b) => {
+				if (gistSort === "created") {
+					return (
+						new Date(b.created_at).getTime() -
+						new Date(a.created_at).getTime()
+					);
+				}
+				return (
+					new Date(b.updated_at).getTime() -
+					new Date(a.updated_at).getTime()
+				);
+			});
+	}, [gists, starredGists, gistSearch, gistFilter, gistSort]);
+
+	const clearGistFilters = useCallback(() => {
+		setGistSearch("");
+		setGistFilter("all");
+	}, [setGistSearch, setGistFilter]);
 
 	const toggleLanguageFilter = useCallback((language: string) => {
 		setLanguageFilter((current) => (current === language ? null : language));
@@ -868,7 +934,7 @@ export function UserProfileContent({
 						<button
 							onClick={() => setTab("activity")}
 							className={cn(
-								"flex-1 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer lg:rounded-r-md",
+								"flex-1 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
 								tab === "activity"
 									? "bg-muted/50 dark:bg-white/4 text-foreground"
 									: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
@@ -876,6 +942,21 @@ export function UserProfileContent({
 						>
 							<Activity className="w-3.5 h-3.5" />
 							Activity
+						</button>
+						<button
+							onClick={() => setTab("gists")}
+							className={cn(
+								"flex-1 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer lg:rounded-r-md",
+								tab === "gists"
+									? "bg-muted/50 dark:bg-white/4 text-foreground"
+									: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
+							)}
+						>
+							<FileCode className="w-3.5 h-3.5" />
+							Gists
+							<span className="text-muted-foreground/50 tabular-nums">
+								{gists.length}
+							</span>
 						</button>
 					</div>
 				</div>
@@ -1339,6 +1420,179 @@ export function UserProfileContent({
 							/>
 						</UserProfileActivityTimelineBoundary>
 					</div>
+				)}
+
+				{tab === "gists" && (
+					<>
+						{/* Search & filters */}
+						<div className="shrink-0 mb-4">
+							<div className="flex items-center gap-2 lg:mb-3">
+								<div className="relative flex-1">
+									<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50" />
+									<input
+										type="text"
+										placeholder="Find a gist..."
+										value={gistSearch}
+										onChange={(e) =>
+											setGistSearch(
+												e
+													.target
+													.value,
+											)
+										}
+										className="w-full bg-transparent border border-border pl-9 pr-4 py-2 text-base lg:text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground/20 focus:ring-[3px] focus:ring-ring/50 transition-colors rounded-none lg:rounded-md font-mono"
+									/>
+								</div>
+
+								<div className="hidden lg:flex items-center border border-border divide-x divide-border rounded-sm shrink-0">
+									{(
+										[
+											[
+												"all",
+												"All",
+											],
+											[
+												"public",
+												"Public",
+											],
+											[
+												"secret",
+												"Secret",
+											],
+											[
+												"starred",
+												"Starred",
+											],
+										] as const
+									).map(([value, label]) => (
+										<button
+											key={value}
+											onClick={() =>
+												setGistFilter(
+													value,
+												)
+											}
+											className={cn(
+												"px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
+												gistFilter ===
+													value
+													? "bg-muted/50 dark:bg-white/4 text-foreground"
+													: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
+											)}
+										>
+											{label}
+										</button>
+									))}
+								</div>
+
+								<button
+									onClick={() =>
+										setGistSort(
+											(current) =>
+												current ===
+												"updated"
+													? "created"
+													: "updated",
+										)
+									}
+									className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground border border-border hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer rounded-sm shrink-0"
+								>
+									<ArrowUpDown className="w-3 h-3" />
+									{gistSort === "updated"
+										? "Updated"
+										: "Created"}
+								</button>
+							</div>
+
+							<div className="lg:hidden flex items-center justify-between border border-border border-t-0 rounded-sm rounded-t-none mb-3">
+								<div className="flex -ml-px">
+									{(
+										[
+											[
+												"all",
+												"All",
+											],
+											[
+												"public",
+												"Public",
+											],
+											[
+												"secret",
+												"Secret",
+											],
+											[
+												"starred",
+												"Starred",
+											],
+										] as const
+									).map(([value, label]) => (
+										<button
+											key={value}
+											onClick={() =>
+												setGistFilter(
+													value,
+												)
+											}
+											className={cn(
+												"px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer border-r border-border -ml-px first:ml-0 first:rounded-l-sm",
+												gistFilter ===
+													value
+													? "bg-muted/50 dark:bg-white/4 text-foreground"
+													: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
+											)}
+										>
+											{label}
+										</button>
+									))}
+								</div>
+
+								<button
+									onClick={() =>
+										setGistSort(
+											(current) =>
+												current ===
+												"updated"
+													? "created"
+													: "updated",
+										)
+									}
+									className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer"
+								>
+									<ArrowUpDown className="w-3 h-3" />
+									{gistSort === "updated"
+										? "Updated"
+										: "Created"}
+								</button>
+							</div>
+
+							<div className="flex items-center justify-between">
+								{(gistSearch ||
+									gistFilter !== "all") && (
+									<button
+										onClick={
+											clearGistFilters
+										}
+										aria-label="Clear gist filters"
+										className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground font-mono transition-colors"
+									>
+										<X className="w-3 h-3" />
+										Clear
+									</button>
+								)}
+								<span className="text-[11px] text-muted-foreground/30 font-mono tabular-nums ml-auto">
+									{filteredGists.length}/
+									{gistFilter === "starred"
+										? starredGists.length
+										: gists.length}
+								</span>
+							</div>
+						</div>
+
+						{/* Gists list */}
+						<div className="shrink-0 pb-4">
+							<UserProfileGists gists={filteredGists} />
+						</div>
+					</>
 				)}
 			</main>
 		</div>
