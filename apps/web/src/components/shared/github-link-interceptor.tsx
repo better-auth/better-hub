@@ -27,7 +27,8 @@ export function GitHubLinkInterceptor({ children }: { children: React.ReactNode 
 			// Only intercept github.com links
 			try {
 				const url = new URL(href);
-				if (url.hostname !== "github.com") return;
+				const host = url.hostname.toLowerCase();
+				if (host !== "github.com" && host !== "gist.github.com") return;
 			} catch {
 				return;
 			}

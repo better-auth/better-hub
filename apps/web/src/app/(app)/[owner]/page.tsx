@@ -9,6 +9,8 @@ import {
 	getUserOrgTopRepos,
 	getContributionData,
 	getUserEvents,
+	getUserGists,
+	getUserStarredGists,
 } from "@/lib/github";
 import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { OrgDetailContent } from "@/components/orgs/org-detail-content";
@@ -116,16 +118,26 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 	let contributionData: Awaited<ReturnType<typeof getContributionData>> = null;
 	let orgTopRepos: Awaited<ReturnType<typeof getUserOrgTopRepos>> = [];
 	let activityEvents: Awaited<ReturnType<typeof getUserEvents>> = [];
+	let gistsData: Awaited<ReturnType<typeof getUserGists>> = [];
+	let starredGistsData: Awaited<ReturnType<typeof getUserStarredGists>> = [];
 
 	if (!isBot) {
 		try {
-			const [reposResult, orgsResult, contributionsResult, eventsResult] =
-				await Promise.allSettled([
-					getUserPublicRepos(userData.login, 100),
-					getUserPublicOrgs(userData.login),
-					getContributionData(userData.login),
-					getUserEvents(userData.login, 100),
-				]);
+			const [
+				reposResult,
+				orgsResult,
+				contributionsResult,
+				eventsResult,
+				gistsResult,
+				starredGistsResult,
+			] = await Promise.allSettled([
+				getUserPublicRepos(userData.login, 100),
+				getUserPublicOrgs(userData.login),
+				getContributionData(userData.login),
+				getUserEvents(userData.login, 100),
+				getUserGists(userData.login, 100),
+				getUserStarredGists(100),
+			]);
 			if (reposResult.status === "fulfilled") reposData = reposResult.value;
 			if (orgsResult.status === "fulfilled") orgsData = orgsResult.value;
 			if (contributionsResult.status === "fulfilled") {
@@ -133,6 +145,9 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 			}
 			if (eventsResult.status === "fulfilled")
 				activityEvents = eventsResult.value;
+			if (gistsResult.status === "fulfilled") gistsData = gistsResult.value;
+			if (starredGistsResult.status === "fulfilled")
+				starredGistsData = starredGistsResult.value;
 			if (orgsData.length > 0) {
 				orgTopRepos = await getUserOrgTopRepos(
 					orgsData.map((o) => o.login),
@@ -190,6 +205,28 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 				stargazers_count: r.stargazers_count,
 				forks_count: r.forks_count,
 				language: r.language,
+			}))}
+			gists={gistsData.map((gist) => ({
+				id: gist.id,
+				description: gist.description,
+				html_url: gist.html_url,
+				public: gist.public,
+				created_at: gist.created_at,
+				updated_at: gist.updated_at,
+				stars: gist.stars ?? 0,
+				files: gist.files,
+				comments: gist.comments,
+			}))}
+			starredGists={starredGistsData.map((gist) => ({
+				id: gist.id,
+				description: gist.description,
+				html_url: gist.html_url,
+				public: gist.public,
+				created_at: gist.created_at,
+				updated_at: gist.updated_at,
+				stars: gist.stars ?? 0,
+				files: gist.files,
+				comments: gist.comments,
 			}))}
 		/>
 	);
