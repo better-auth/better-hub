@@ -209,6 +209,7 @@ export interface GistDetail extends UserGist {
 		version: string;
 		committed_at: string;
 	}>;
+	viewerHasStarred: boolean;
 }
 
 export interface GistComment {

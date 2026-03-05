@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { getGist } from "@/lib/github";
-import { GistFiles } from "@/components/gist/gist-files";
+import { GistRevisions } from "@/components/gist/gist-revisions";
 
-export default async function GistFilesPage({
+export default async function GistRevisionsPage({
 	params,
 }: {
 	params: Promise<{ owner: string; gistId: string }>;
@@ -14,5 +14,5 @@ export default async function GistFilesPage({
 		notFound();
 	}
 
-	return <GistFiles gist={gist} />;
+	return <GistRevisions gist={gist} />;
 }
