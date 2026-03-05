@@ -89,7 +89,7 @@ export default async function middleware(request: NextRequest) {
 		}
 	}
 
-	// /:owner/gist/:gistId → /repos/:owner/gist/:gistId
+	// /:owner/gist/:gistId(/...) → /repos/:owner/gist/:gistId(/...)
 	if (repo === "gist" && rest[0]) {
 		const url = request.nextUrl.clone();
 		url.pathname = `/repos/${owner}/gist/${rest.join("/")}`;

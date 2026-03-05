@@ -9,7 +9,7 @@ import { UserProfileActivityTimeline } from "@/components/users/user-profile-act
 import { UserProfileGists } from "@/components/users/user-profile-gists";
 import { UserProfileScoreRing } from "@/components/users/user-profile-score-ring";
 import { getLanguageColor } from "@/lib/github-utils";
-import type { ActivityEvent } from "@/lib/github-types";
+import type { ActivityEvent, UserGist } from "@/lib/github-types";
 import { computeUserProfileScore } from "@/lib/user-profile-score";
 import { cn, formatNumber } from "@/lib/utils";
 import {
@@ -133,8 +133,8 @@ export function UserProfileContent({
 	contributions: ContributionData | null;
 	activityEvents?: ActivityEvent[];
 	orgTopRepos?: OrgTopRepo[];
-	gists?: import("@/components/users/user-profile-gists").UserGist[];
-	starredGists?: import("@/components/users/user-profile-gists").UserGist[];
+	gists?: UserGist[];
+	starredGists?: UserGist[];
 }) {
 	const [tab, setTab] = useQueryState(
 		"tab",
@@ -436,7 +436,9 @@ export function UserProfileContent({
 					gistSearch &&
 					![
 						gist.description || "",
-						...Object.values(gist.files).map((f) => f.filename),
+						...Object.values(gist.files).map(
+							(f: { filename: string }) => f.filename,
+						),
 					]
 						.join(" ")
 						.toLowerCase()

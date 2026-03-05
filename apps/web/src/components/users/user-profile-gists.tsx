@@ -2,28 +2,9 @@
 
 import { TimeAgo } from "@/components/ui/time-ago";
 import { getLanguageColor } from "@/lib/github-utils";
+import type { UserGist } from "@/lib/github-types";
 import { ChevronRight, FileCode, MessageSquare } from "lucide-react";
 import Link from "next/link";
-
-export interface UserGist {
-	id: string;
-	description: string | null;
-	html_url: string;
-	public: boolean;
-	created_at: string;
-	updated_at: string;
-	stars?: number;
-	files: Record<
-		string,
-		{
-			filename: string;
-			type: string;
-			language: string | null;
-			size: number;
-		}
-	>;
-	comments: number;
-}
 
 interface UserProfileGistsProps {
 	gists: UserGist[];
