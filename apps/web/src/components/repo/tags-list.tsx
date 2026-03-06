@@ -159,7 +159,7 @@ export function TagsList({
 								<div className="flex-1 min-w-0">
 									<div className="flex items-center gap-2 flex-wrap">
 										<Link
-											href={`/${owner}/${repo}/releases/${tag.name}`}
+											href={`/${owner}/${repo}/releases/${encodeURIComponent(tag.name)}`}
 											className="text-sm font-mono font-medium text-foreground truncate hover:underline hover:cursor-pointer"
 										>
 											{tag.name}
@@ -189,18 +189,13 @@ export function TagsList({
 
 								<div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
 									{release && (
-										<a
-											href={
-												release.html_url
-											}
-											data-no-github-intercept
-											target="_blank"
-											rel="noopener noreferrer"
+										<Link
+											href={`/${owner}/${repo}/releases/${encodeURIComponent(tag.name)}`}
 											className="flex items-center gap-1 text-[10px] px-2 py-1 border border-border/40 rounded text-muted-foreground hover:text-foreground hover:border-border/80 transition-colors"
 										>
 											<Rocket className="w-3 h-3" />
 											Release
-										</a>
+										</Link>
 									)}
 									<a
 										href={
