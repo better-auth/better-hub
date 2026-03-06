@@ -3,6 +3,7 @@
 import { useRef, useEffect, useImperativeHandle, forwardRef, useMemo } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import Image from "@tiptap/extension-image";
 import LinkExtension from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Markdown } from "tiptap-markdown";
@@ -86,6 +87,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
 					openOnClick: false,
 					HTMLAttributes: { class: "" },
 				}),
+				Image,
 				Placeholder.configure({ placeholder }),
 				Markdown,
 				CustomMention.configure({

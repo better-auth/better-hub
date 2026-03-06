@@ -2,7 +2,7 @@
 
 import { getOctokit, getIssueComments, invalidateIssueCache } from "@/lib/github";
 import { renderMarkdownToHtml } from "@/components/shared/markdown-renderer";
-import { getErrorMessage } from "@/lib/utils";
+import { getGitHubWriteErrorMessage } from "@/lib/github-write-errors";
 import { revalidatePath } from "next/cache";
 import { invalidateRepoCache } from "@/lib/repo-data-cache-vc";
 
@@ -43,7 +43,7 @@ export async function addIssueComment(
 		revalidatePath(`/repos/${owner}/${repo}/issues/${issueNumber}`);
 		return { success: true };
 	} catch (e: unknown) {
-		return { error: getErrorMessage(e) };
+		return { error: getGitHubWriteErrorMessage(e) };
 	}
 }
 
@@ -69,7 +69,7 @@ export async function updateIssueComment(
 		revalidatePath(`/repos/${owner}/${repo}/issues/${issueNumber}`);
 		return { success: true };
 	} catch (e: unknown) {
-		return { error: getErrorMessage(e) };
+		return { error: getGitHubWriteErrorMessage(e) };
 	}
 }
 
@@ -93,7 +93,9 @@ export async function deleteIssueComment(
 		revalidatePath(`/repos/${owner}/${repo}/issues/${issueNumber}`);
 		return { success: true };
 	} catch (e: unknown) {
-		return { error: getErrorMessage(e) || "Failed to delete comment" };
+		return {
+			error: getGitHubWriteErrorMessage(e) || "Failed to delete comment",
+		};
 	}
 }
 

@@ -108,6 +108,15 @@ export type DiscussionCommentedEvent = {
 	number: number;
 };
 
+export type CommentDraftQuotedEvent = {
+	type: "comment:draft-quoted";
+	owner: string;
+	repo: string;
+	threadType: "issue" | "pr" | "discussion";
+	number: number;
+	body: string;
+};
+
 // ── Prompt Events ─────────────────────────────────────────────
 
 export type PromptCreatedEvent = { type: "prompt:created"; owner: string; repo: string };
@@ -173,6 +182,7 @@ export type MutationEvent =
 	| IssueCommentedEvent
 	| DiscussionCreatedEvent
 	| DiscussionCommentedEvent
+	| CommentDraftQuotedEvent
 	| PromptCreatedEvent
 	| PromptAcceptedEvent
 	| PromptClosedEvent

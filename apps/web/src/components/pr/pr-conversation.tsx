@@ -175,12 +175,16 @@ export async function PRConversation({
 	repo,
 	pullNumber,
 	checkStatus,
+	currentUserLogin,
+	viewerHasWriteAccess,
 }: {
 	entries: TimelineEntry[];
 	owner: string;
 	repo: string;
 	pullNumber: number;
 	checkStatus?: CheckStatus;
+	currentUserLogin?: string;
+	viewerHasWriteAccess?: boolean;
 }) {
 	const grouped = groupEntries(entries);
 
@@ -287,6 +291,12 @@ export async function PRConversation({
 											pullNumber={
 												pullNumber
 											}
+											currentUserLogin={
+												currentUserLogin
+											}
+											viewerHasWriteAccess={
+												viewerHasWriteAccess
+											}
 										/>
 									);
 								})}
@@ -349,6 +359,10 @@ export async function PRConversation({
 								owner={owner}
 								repo={repo}
 								pullNumber={pullNumber}
+								currentUserLogin={currentUserLogin}
+								viewerHasWriteAccess={
+									viewerHasWriteAccess
+								}
 							/>
 							{checkStatus && (
 								<PRChecksPanel
@@ -367,6 +381,8 @@ export async function PRConversation({
 						owner={owner}
 						repo={repo}
 						pullNumber={pullNumber}
+						currentUserLogin={currentUserLogin}
+						viewerHasWriteAccess={viewerHasWriteAccess}
 					/>
 				);
 			})}
@@ -387,11 +403,15 @@ async function ChatMessage({
 	owner,
 	repo,
 	pullNumber,
+	currentUserLogin,
+	viewerHasWriteAccess,
 }: {
 	entry: DescriptionEntry | CommentEntry;
 	owner: string;
 	repo: string;
 	pullNumber: number;
+	currentUserLogin?: string;
+	viewerHasWriteAccess?: boolean;
 }) {
 	const hasBody = entry.body && entry.body.trim().length > 0;
 
@@ -497,6 +517,11 @@ async function ChatMessage({
 		/>
 	);
 
+	const canEditComment = !!(
+		currentUserLogin &&
+		(currentUserLogin === entry.user?.login || viewerHasWriteAccess)
+	);
+
 	return (
 		<ChatMessageWrapper
 			headerContent={headerContent}
@@ -508,6 +533,8 @@ async function ChatMessage({
 			pullNumber={pullNumber}
 			commentId={entry.id as number}
 			body={entry.body}
+			canEdit={canEditComment}
+			canDelete={canEditComment}
 		/>
 	);
 }
