@@ -10,15 +10,15 @@ import {
 	Trash2,
 	Loader2,
 	MessageSquare,
-	Send,
 	RefreshCw,
 	User,
-	Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ClientMarkdown } from "@/components/shared/client-markdown";
-import { MarkdownEditor } from "@/components/shared/markdown-editor";
 import { TimeAgo } from "@/components/ui/time-ago";
+import { KanbanCommentCard } from "./kanban-comment-card";
+import { KanbanCommentInput } from "./kanban-comment-input";
+import { KanbanIssueComments } from "./kanban-issue-comments";
 import type { KanbanItem, KanbanComment, KanbanStatus } from "@/lib/kanban-store";
 import {
 	moveKanbanItem,
@@ -303,244 +303,95 @@ export function KanbanItemDetail({
 						</div>
 					)}
 
-					<div className="space-y-3 pt-4">
-						<div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/50 font-mono">
-							<MessageSquare className="w-3 h-3" />
-							{optimisticComments.length} comment
-							{optimisticComments.length !== 1 ? "s" : ""}
+					{/* Issue Discussion */}
+					<div className="pt-4 border-t border-border/50">
+						<div className="border border-border rounded-lg overflow-hidden max-h-[500px]">
+							<KanbanIssueComments
+								owner={owner}
+								repo={repo}
+								issueNumber={item.issueNumber}
+								issueUrl={item.issueUrl}
+								currentUser={currentUser}
+								variant="default"
+							/>
 						</div>
+					</div>
+
+					{/* Maintainer Discussion */}
+					<div className="space-y-3 pt-4 border-t border-border/50">
+						<div className="flex items-center justify-between">
+							<div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/50 font-mono">
+								<MessageSquare className="w-3 h-3 text-amber-500" />
+								Maintainer Only (
+								{optimisticComments.length})
+							</div>
+						</div>
+
+						<p className="text-[10px] text-amber-500/60">
+							These comments are only visible to
+							repository maintainers
+						</p>
 
 						{optimisticComments.length > 0 && (
 							<div className="space-y-2">
 								{optimisticComments.map(
 									(comment) => (
-										<div
+										<KanbanCommentCard
 											key={
 												comment.id
 											}
-											className={cn(
-												"border border-border/60 rounded-md p-3 space-y-1.5",
-												comment.id.startsWith(
-													"optimistic-",
-												) &&
-													"opacity-60",
-											)}
-										>
-											<div className="flex items-center gap-2">
-												{comment.userAvatarUrl ? (
-													<Image
-														src={
-															comment.userAvatarUrl
-														}
-														alt={
-															comment.userName
-														}
-														width={
-															18
-														}
-														height={
-															18
-														}
-														className="rounded-full"
-													/>
-												) : (
-													<div className="w-[18px] h-[18px] rounded-full bg-muted" />
-												)}
-												{comment.userLogin ? (
-													<Link
-														href={`/users/${comment.userLogin}`}
-														className="text-[11px] font-medium text-foreground hover:underline"
-													>
-														{
-															comment.userName
-														}
-													</Link>
-												) : (
-													<span className="text-[11px] font-medium text-foreground">
-														{
-															comment.userName
-														}
-													</span>
-												)}
-												<span className="text-[10px] text-muted-foreground/40 font-mono">
-													<TimeAgo
-														date={
-															comment.createdAt
-														}
-													/>
-												</span>
-												{comment.updatedAt !==
-													comment.createdAt && (
-													<span className="text-[10px] text-muted-foreground/30">
-														(edited)
-													</span>
-												)}
-												<div className="flex-1" />
-												{currentUser?.id ===
-													comment.userId &&
-													!comment.id.startsWith(
-														"optimistic-",
-													) && (
-														<div className="flex items-center gap-0.5">
-															{editingCommentId !==
-																comment.id && (
-																<button
-																	onClick={() =>
-																		handleStartEdit(
-																			comment,
-																		)
-																	}
-																	className="text-muted-foreground/20 hover:text-foreground transition-colors cursor-pointer"
-																	title="Edit comment"
-																>
-																	<Pencil className="w-2.5 h-2.5" />
-																</button>
-															)}
-															<button
-																onClick={() =>
-																	handleDeleteComment(
-																		comment.id,
-																	)
-																}
-																className="text-muted-foreground/20 hover:text-red-400 transition-colors cursor-pointer"
-																title="Delete comment"
-															>
-																<Trash2 className="w-2.5 h-2.5" />
-															</button>
-														</div>
-													)}
-											</div>
-											{editingCommentId ===
-											comment.id ? (
-												<div className="pl-[26px] space-y-2">
-													<textarea
-														value={
-															editingCommentBody
-														}
-														onChange={(
-															e,
-														) =>
-															setEditingCommentBody(
-																e
-																	.target
-																	.value,
-															)
-														}
-														className="w-full min-h-[80px] p-2 text-sm bg-muted/30 border border-border rounded-md resize-y focus:outline-none focus:ring-1 focus:ring-primary/50"
-														autoFocus
-													/>
-													<div className="flex items-center justify-between">
-														<span
-															className={cn(
-																"text-xs",
-																editingCommentBody.trim()
-																	.length >
-																	10000
-																	? "text-red-400"
-																	: "text-muted-foreground/50",
-															)}
-														>
-															{
-																editingCommentBody.trim()
-																	.length
-															}
-															/10000
-														</span>
-														<div className="flex items-center gap-2">
-															<button
-																onClick={
-																	handleCancelEdit
-																}
-																className="text-xs px-2.5 py-1 text-muted-foreground hover:text-foreground transition-colors rounded"
-															>
-																Cancel
-															</button>
-															<button
-																onClick={
-																	handleSaveEdit
-																}
-																disabled={
-																	!editingCommentBody.trim() ||
-																	editingCommentBody.trim()
-																		.length >
-																		10000 ||
-																	isSubmittingComment
-																}
-																className={cn(
-																	"text-xs px-2.5 py-1 bg-primary text-primary-foreground rounded",
-																	"disabled:opacity-50 disabled:cursor-not-allowed",
-																	"hover:bg-primary/90 transition-colors",
-																)}
-															>
-																{isSubmittingComment
-																	? "Saving..."
-																	: "Save"}
-															</button>
-														</div>
-													</div>
-												</div>
-											) : (
-												<div className="pl-[26px]">
-													<ClientMarkdown
-														content={
-															comment.body
-														}
-													/>
-												</div>
-											)}
-										</div>
+											comment={
+												comment
+											}
+											currentUserId={
+												currentUser?.id
+											}
+											isEditing={
+												editingCommentId ===
+												comment.id
+											}
+											editingBody={
+												editingCommentBody
+											}
+											onEditingBodyChange={
+												setEditingCommentBody
+											}
+											onStartEdit={() =>
+												handleStartEdit(
+													comment,
+												)
+											}
+											onCancelEdit={
+												handleCancelEdit
+											}
+											onSaveEdit={
+												handleSaveEdit
+											}
+											onDelete={() =>
+												handleDeleteComment(
+													comment.id,
+												)
+											}
+											isSaving={
+												isSubmittingComment
+											}
+											variant="compact"
+										/>
 									),
 								)}
 							</div>
 						)}
 
 						{currentUser && (
-							<div className="space-y-1.5 rounded-md border">
-								<MarkdownEditor
-									value={commentBody}
-									onChange={setCommentBody}
-									placeholder="Leave a comment..."
-									rows={4}
-									className="border-none"
-									resizeYIndicator={false}
-									onKeyDown={(e) => {
-										if (
-											e.key ===
-												"Enter" &&
-											(e.metaKey ||
-												e.ctrlKey)
-										) {
-											e.preventDefault();
-											handleAddComment();
-										}
-									}}
-								/>
-								<div className="flex justify-end mb-3 pr-3">
-									<button
-										onClick={
-											handleAddComment
-										}
-										disabled={
-											!commentBody.trim() ||
-											isSubmittingComment
-										}
-										className={cn(
-											"flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md",
-											"border border-border",
-											"text-foreground/80 hover:text-foreground hover:bg-muted/50",
-											"transition-colors cursor-pointer",
-											"disabled:opacity-40 disabled:cursor-not-allowed",
-										)}
-									>
-										{isSubmittingComment ? (
-											<Loader2 className="w-3 h-3 animate-spin" />
-										) : (
-											<Send className="w-3 h-3" />
-										)}
-										Comment
-									</button>
-								</div>
-							</div>
+							<KanbanCommentInput
+								value={commentBody}
+								onChange={setCommentBody}
+								onSubmit={handleAddComment}
+								isSubmitting={isSubmittingComment}
+								placeholder="Leave a comment for other maintainers..."
+								rows={4}
+								variant="default"
+							/>
 						)}
 					</div>
 				</div>

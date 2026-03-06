@@ -9,7 +9,7 @@ import {
 	Trash2,
 	Loader2,
 	MessageSquare,
-	Send,
+	MessageCircle,
 	RefreshCw,
 	User,
 	Maximize2,
@@ -20,15 +20,20 @@ import {
 	Hash,
 	Sparkles,
 	ChevronDown,
+	ChevronUp,
 	Check,
 	Search,
 	UserX,
-	Pencil,
+	GripVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ClientMarkdown } from "@/components/shared/client-markdown";
-import { MarkdownEditor } from "@/components/shared/markdown-editor";
 import { TimeAgo } from "@/components/ui/time-ago";
+import { KanbanCommentCard } from "./kanban-comment-card";
+import { KanbanCommentInput } from "./kanban-comment-input";
+import { KanbanCommentSkeleton } from "./kanban-comment-skeleton";
+import { KanbanCommentsEmpty } from "./kanban-comments-empty";
+import { KanbanIssueComments } from "./kanban-issue-comments";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import type { KanbanItem, KanbanComment, KanbanStatus } from "@/lib/kanban-store";
 import {
@@ -125,6 +130,90 @@ export function KanbanItemSheet({
 	const [isLoadingCollaborators, setIsLoadingCollaborators] = useState(false);
 	const [assigneeSearch, setAssigneeSearch] = useState("");
 	const [isAssigning, setIsAssigning] = useState(false);
+	const [activeChatTab, setActiveChatTab] = useState<"maintainer" | "issue">("maintainer");
+	const [sidebarWidth, setSidebarWidth] = useState(430);
+	const [isResizing, setIsResizing] = useState(false);
+	const resizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
+	const maintainerScrollRef = useRef<HTMLDivElement>(null);
+	const [showMaintainerScrollTop, setShowMaintainerScrollTop] = useState(false);
+	const [showMaintainerScrollBottom, setShowMaintainerScrollBottom] = useState(false);
+
+	// Load saved width from localStorage on mount
+	useEffect(() => {
+		const saved = localStorage.getItem("kanban-sheet-sidebar-width");
+		if (saved) {
+			const width = Math.min(Math.max(Number(saved), 280), 700);
+			setSidebarWidth(width);
+		}
+	}, []);
+
+	const handleResizeStart = useCallback(
+		(e: React.MouseEvent) => {
+			e.preventDefault();
+			setIsResizing(true);
+			resizeRef.current = { startX: e.clientX, startWidth: sidebarWidth };
+		},
+		[sidebarWidth],
+	);
+
+	useEffect(() => {
+		if (!isResizing) return;
+		let currentWidth = sidebarWidth;
+
+		const handleMouseMove = (e: MouseEvent) => {
+			if (!resizeRef.current) return;
+			const delta = e.clientX - resizeRef.current.startX;
+			const newWidth = Math.min(
+				Math.max(resizeRef.current.startWidth + delta, 280),
+				700,
+			);
+			currentWidth = newWidth;
+			setSidebarWidth(newWidth);
+		};
+
+		const handleMouseUp = () => {
+			setIsResizing(false);
+			resizeRef.current = null;
+			localStorage.setItem("kanban-sheet-sidebar-width", String(currentWidth));
+		};
+
+		document.addEventListener("mousemove", handleMouseMove);
+		document.addEventListener("mouseup", handleMouseUp);
+
+		return () => {
+			document.removeEventListener("mousemove", handleMouseMove);
+			document.removeEventListener("mouseup", handleMouseUp);
+		};
+	}, [isResizing, sidebarWidth]);
+
+	const handleMaintainerScroll = useCallback(() => {
+		const container = maintainerScrollRef.current;
+		if (!container) return;
+
+		const { scrollTop, scrollHeight, clientHeight } = container;
+		setShowMaintainerScrollTop(scrollTop > 100);
+		setShowMaintainerScrollBottom(scrollTop < scrollHeight - clientHeight - 100);
+	}, []);
+
+	const scrollMaintainerToTop = useCallback(() => {
+		maintainerScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+	}, []);
+
+	const scrollMaintainerToBottom = useCallback(() => {
+		const container = maintainerScrollRef.current;
+		if (container) {
+			container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+		}
+	}, []);
+
+	useEffect(() => {
+		const container = maintainerScrollRef.current;
+		if (!container) return;
+
+		handleMaintainerScroll();
+		container.addEventListener("scroll", handleMaintainerScroll);
+		return () => container.removeEventListener("scroll", handleMaintainerScroll);
+	}, [handleMaintainerScroll, optimisticComments]);
 
 	useEffect(() => {
 		if (item) {
@@ -348,300 +437,220 @@ export function KanbanItemSheet({
 			<SheetContent
 				ref={containerRef}
 				side="right"
-				className="w-full sm:max-w-4xl lg:max-w-[1500px] flex flex-row p-0"
+				className={cn(
+					"w-full sm:max-w-4xl lg:max-w-[90vw] flex flex-row p-0",
+					isResizing && "select-none",
+				)}
 				showCloseButton={false}
 				autoFocus={false}
 			>
-				{/* Left Sidebar - Maintainer Discussion (full height) */}
-				<div className="hidden lg:flex lg:w-[430px] shrink-0 border-r border-border flex-col bg-muted/10">
-					<div className="px-4 py-4 border-b border-border/50 shrink-0">
-						<div className="flex items-center justify-between h-8">
-							<h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-								<MessageSquare className="w-4 h-4 text-muted-foreground" />
-								Maintainer Discussions
-							</h3>
-							{isLoadingComments ? (
-								<Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
-							) : (
-								<span className="text-[10px] text-muted-foreground/60 font-mono bg-muted/50 px-1.5 py-0.5 rounded">
-									{optimisticComments.length}
-								</span>
-							)}
+				{/* Left Sidebar - Chat Tabs (full height) */}
+				<div
+					className="hidden lg:flex shrink-0 border-r border-border flex-col bg-muted/10 relative"
+					style={{ width: sidebarWidth }}
+				>
+					{/* Resize handle */}
+					<div
+						onMouseDown={handleResizeStart}
+						className={cn(
+							"absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-10 group",
+							"hover:bg-primary/20 transition-colors",
+							isResizing && "bg-primary/30",
+						)}
+					>
+						<div className="absolute right-0 top-1/2 -translate-y-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+							<GripVertical className="w-3 h-3 text-muted-foreground" />
 						</div>
 					</div>
-
-					{/* Comments list - scrollable */}
-					<div className="flex-1 overflow-y-auto p-3 space-y-3">
-						{isLoadingComments && (
-							<>
-								{[1, 2, 3].map((i) => (
-									<div
-										key={i}
-										className="border border-border/50 rounded-lg p-3 space-y-2 bg-background animate-pulse"
-									>
-										<div className="flex items-center gap-2">
-											<div className="w-5 h-5 rounded-full bg-muted" />
-											<div className="h-3 w-20 bg-muted rounded" />
-											<div className="h-2.5 w-12 bg-muted/60 rounded" />
-										</div>
-										<div className="pl-7 space-y-1.5">
-											<div className="h-3 w-full bg-muted/50 rounded" />
-											<div className="h-3 w-3/4 bg-muted/50 rounded" />
-										</div>
-									</div>
-								))}
-							</>
-						)}
-						{!isLoadingComments &&
-							optimisticComments.length === 0 && (
-								<div className="flex flex-col items-center justify-center py-8 text-center">
-									<MessageSquare className="w-8 h-8 text-muted-foreground/20 mb-2" />
-									<p className="text-xs text-muted-foreground/50">
-										No comments yet
-									</p>
-									<p className="text-[10px] text-muted-foreground/40 mt-1">
-										Start a discussion
-										with maintainers
-									</p>
-								</div>
+					{/* Tab switcher */}
+					<div className="flex border-b border-border shrink-0">
+						<button
+							onClick={() =>
+								setActiveChatTab("maintainer")
+							}
+							className={cn(
+								"flex-1 px-4 py-3 text-xs font-medium transition-colors relative",
+								activeChatTab === "maintainer"
+									? "text-foreground"
+									: "text-muted-foreground hover:text-foreground/80",
 							)}
-						{!isLoadingComments &&
-							optimisticComments.map((comment) => (
-								<div
-									key={comment.id}
-									className={cn(
-										"border border-border/50 rounded-lg p-3 space-y-1.5 bg-background",
-										comment.id.startsWith(
-											"optimistic-",
-										) && "opacity-60",
+						>
+							<span className="flex items-center justify-center gap-2">
+								<MessageSquare className="w-3.5 h-3.5" />
+								Maintainer Only
+								{!isLoadingComments &&
+									optimisticComments.length >
+										0 && (
+										<span className="text-[9px] font-mono bg-muted/50 px-1 py-0.5 rounded">
+											{
+												optimisticComments.length
+											}
+										</span>
 									)}
-								>
-									<div className="flex items-center gap-2">
-										{comment.userAvatarUrl ? (
-											<Image
-												src={
-													comment.userAvatarUrl
-												}
-												alt={
-													comment.userName
-												}
-												width={
-													20
-												}
-												height={
-													20
-												}
-												className="rounded-full"
-											/>
-										) : (
-											<div className="w-5 h-5 rounded-full bg-muted" />
-										)}
-										<div className="flex items-center gap-1.5 flex-1 min-w-0">
-											{comment.userLogin ? (
-												<Link
-													href={`/users/${comment.userLogin}`}
-													className="text-xs font-medium text-foreground hover:underline truncate"
-												>
-													{
-														comment.userName
-													}
-												</Link>
-											) : (
-												<span className="text-xs font-medium text-foreground truncate">
-													{
-														comment.userName
-													}
-												</span>
-											)}
-											<span className="text-[10px] text-muted-foreground/50 font-mono shrink-0">
-												<TimeAgo
-													date={
-														comment.createdAt
-													}
-												/>
-											</span>
-											{comment.updatedAt !==
-												comment.createdAt && (
-												<span className="text-[9px] text-muted-foreground/40 shrink-0">
-													(edited)
-												</span>
-											)}
-										</div>
-										{currentUser?.id ===
-											comment.userId &&
-											!comment.id.startsWith(
-												"optimistic-",
-											) && (
-												<div className="flex items-center gap-0.5 shrink-0">
-													{editingCommentId !==
-														comment.id && (
-														<button
-															onClick={() =>
-																handleStartEdit(
-																	comment,
-																)
-															}
-															className="text-muted-foreground/30 hover:text-foreground transition-colors cursor-pointer p-0.5"
-															title="Edit comment"
-														>
-															<Pencil className="w-3 h-3" />
-														</button>
-													)}
-													<button
-														onClick={() =>
-															handleDeleteComment(
-																comment.id,
-															)
-														}
-														className="text-muted-foreground/30 hover:text-red-400 transition-colors cursor-pointer p-0.5"
-														title="Delete comment"
-													>
-														<Trash2 className="w-3 h-3" />
-													</button>
-												</div>
-											)}
-									</div>
-									{editingCommentId ===
-									comment.id ? (
-										<div className="space-y-2">
-											<textarea
-												value={
-													editingCommentBody
-												}
-												onChange={(
-													e,
-												) =>
-													setEditingCommentBody(
-														e
-															.target
-															.value,
-													)
-												}
-												className="w-full min-h-[60px] p-2 text-xs bg-muted/30 border border-border rounded-md resize-y focus:outline-none focus:ring-1 focus:ring-primary/50"
-												autoFocus
-											/>
-											<div className="flex items-center justify-between">
-												<span
-													className={cn(
-														"text-[10px]",
-														editingCommentBody.trim()
-															.length >
-															10000
-															? "text-red-400"
-															: "text-muted-foreground/50",
-													)}
-												>
-													{
-														editingCommentBody.trim()
-															.length
-													}
-													/10000
-												</span>
-												<div className="flex items-center gap-1.5">
-													<button
-														onClick={
-															handleCancelEdit
-														}
-														className="text-[10px] px-2 py-1 text-muted-foreground hover:text-foreground transition-colors rounded"
-													>
-														Cancel
-													</button>
-													<button
-														onClick={
-															handleSaveEdit
-														}
-														disabled={
-															!editingCommentBody.trim() ||
-															editingCommentBody.trim()
-																.length >
-																10000 ||
-															isSubmittingComment
-														}
-														className={cn(
-															"text-[10px] px-2 py-1 bg-primary text-primary-foreground rounded",
-															"disabled:opacity-50 disabled:cursor-not-allowed",
-															"hover:bg-primary/90 transition-colors",
-														)}
-													>
-														{isSubmittingComment
-															? "Saving..."
-															: "Save"}
-													</button>
-												</div>
-											</div>
-										</div>
-									) : (
-										<div className="text-xs pl-7">
-											<ClientMarkdown
-												content={
-													comment.body
-												}
-											/>
-										</div>
-									)}
-								</div>
-							))}
+							</span>
+							{activeChatTab === "maintainer" && (
+								<div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+							)}
+						</button>
+						<button
+							onClick={() => setActiveChatTab("issue")}
+							className={cn(
+								"flex-1 px-4 py-3 text-xs font-medium transition-colors relative",
+								activeChatTab === "issue"
+									? "text-foreground"
+									: "text-muted-foreground hover:text-foreground/80",
+							)}
+						>
+							<span className="flex items-center justify-center gap-2">
+								<MessageCircle className="w-3.5 h-3.5" />
+								Issue Discussion
+							</span>
+							{activeChatTab === "issue" && (
+								<div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+							)}
+						</button>
 					</div>
 
-					{/* Comment input - fixed at bottom */}
-					{currentUser && (
-						<div className="shrink-0 p-3 bg-background">
-							<div className="rounded-lg border border-border overflow-hidden">
-								<MarkdownEditor
+					{/* Tab content - both rendered but only one visible */}
+					{/* Issue Discussion Tab */}
+					<div
+						className={cn(
+							"flex-1 flex flex-col min-h-0",
+							activeChatTab !== "issue" && "hidden",
+						)}
+					>
+						<KanbanIssueComments
+							owner={owner}
+							repo={repo}
+							issueNumber={item.issueNumber}
+							issueUrl={item.issueUrl}
+							currentUser={currentUser}
+							variant="compact"
+						/>
+					</div>
+
+					{/* Maintainer Discussion Tab */}
+					<div
+						className={cn(
+							"flex-1 flex flex-col min-h-0",
+							activeChatTab !== "maintainer" && "hidden",
+						)}
+					>
+						{/* Maintainer comments list - scrollable */}
+						<div
+							ref={maintainerScrollRef}
+							className="flex-1 overflow-y-auto p-3 space-y-3 relative"
+						>
+							{/* Floating scroll buttons */}
+							{(showMaintainerScrollTop ||
+								showMaintainerScrollBottom) && (
+								<div className="sticky top-2 z-10 flex justify-end pointer-events-none">
+									<div className="flex flex-col gap-1 pointer-events-auto">
+										{showMaintainerScrollTop && (
+											<button
+												onClick={
+													scrollMaintainerToTop
+												}
+												className="w-6 h-6 rounded-full bg-background/90 border border-border shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background transition-colors"
+												title="Scroll to top"
+											>
+												<ChevronUp className="w-3.5 h-3.5" />
+											</button>
+										)}
+										{showMaintainerScrollBottom && (
+											<button
+												onClick={
+													scrollMaintainerToBottom
+												}
+												className="w-6 h-6 rounded-full bg-background/90 border border-border shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background transition-colors"
+												title="Scroll to bottom"
+											>
+												<ChevronDown className="w-3.5 h-3.5" />
+											</button>
+										)}
+									</div>
+								</div>
+							)}
+							{isLoadingComments && (
+								<KanbanCommentSkeleton
+									count={3}
+									variant="compact"
+								/>
+							)}
+							{!isLoadingComments &&
+								optimisticComments.length === 0 && (
+									<KanbanCommentsEmpty
+										title="No maintainer comments"
+										subtitle="Start a private discussion"
+									/>
+								)}
+							{!isLoadingComments &&
+								optimisticComments.map(
+									(comment) => (
+										<KanbanCommentCard
+											key={
+												comment.id
+											}
+											comment={
+												comment
+											}
+											currentUserId={
+												currentUser?.id
+											}
+											isEditing={
+												editingCommentId ===
+												comment.id
+											}
+											editingBody={
+												editingCommentBody
+											}
+											onEditingBodyChange={
+												setEditingCommentBody
+											}
+											onStartEdit={() =>
+												handleStartEdit(
+													comment,
+												)
+											}
+											onCancelEdit={
+												handleCancelEdit
+											}
+											onSaveEdit={
+												handleSaveEdit
+											}
+											onDelete={() =>
+												handleDeleteComment(
+													comment.id,
+												)
+											}
+											isSaving={
+												isSubmittingComment
+											}
+											variant="compact"
+										/>
+									),
+								)}
+						</div>
+
+						{/* Maintainer comment input - fixed at bottom */}
+						{currentUser && (
+							<div className="shrink-0 p-3 bg-background border-t border-border/50">
+								<KanbanCommentInput
 									value={commentBody}
 									onChange={setCommentBody}
-									placeholder="Leave a comment..."
+									onSubmit={handleAddComment}
+									isSubmitting={
+										isSubmittingComment
+									}
 									rows={4}
-									className="border-none text-xs"
-									resizeYIndicator={false}
-									onKeyDown={(e) => {
-										if (
-											e.key ===
-												"Enter" &&
-											(e.metaKey ||
-												e.ctrlKey)
-										) {
-											e.preventDefault();
-											handleAddComment();
-										}
-									}}
+									variant="compact"
 								/>
-								<div className="flex items-center justify-between px-2.5 py-1.5 bg-muted/30 border-t border-border/50">
-									<span className="text-[9px] text-muted-foreground/50">
-										<kbd className="px-1 py-0.5 text-[8px] bg-muted border border-border rounded">
-											⌘
-										</kbd>{" "}
-										+{" "}
-										<kbd className="px-1 py-0.5 text-[8px] bg-muted border border-border rounded">
-											↵
-										</kbd>
-									</span>
-									<button
-										onClick={
-											handleAddComment
-										}
-										disabled={
-											!commentBody.trim() ||
-											isSubmittingComment
-										}
-										className={cn(
-											"flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded",
-											"bg-primary text-primary-foreground",
-											"hover:bg-primary/90 transition-colors cursor-pointer",
-											"disabled:opacity-40 disabled:cursor-not-allowed",
-										)}
-									>
-										{isSubmittingComment ? (
-											<Loader2 className="w-3 h-3 animate-spin" />
-										) : (
-											<Send className="w-3 h-3" />
-										)}
-										Send
-									</button>
-								</div>
+								<p className="text-[9px] text-amber-500/60 mt-1.5 text-center">
+									Only visible to maintainers
+								</p>
 							</div>
-						</div>
-					)}
+						)}
+					</div>
 				</div>
 
 				{/* Right section: Header + Content */}
@@ -650,12 +659,15 @@ export function KanbanItemSheet({
 					<div className="px-6 py-4 border-b border-border shrink-0">
 						<div className="flex items-center justify-between gap-4">
 							<div className="flex items-center gap-3 min-w-0">
-								<div className="flex items-center gap-2">
+								<Link
+									href={`/${owner}/${repo}/issues/${item.issueNumber}`}
+									className="flex items-center gap-2 hover:text-foreground transition-colors"
+								>
 									<CircleDot className="w-4 h-4 text-green-500" />
-									<span className="text-sm font-mono text-muted-foreground">
+									<span className="text-sm font-mono text-muted-foreground hover:text-foreground">
 										#{item.issueNumber}
 									</span>
-								</div>
+								</Link>
 								<DropdownMenu>
 									<DropdownMenuTrigger
 										asChild
@@ -722,16 +734,6 @@ export function KanbanItemSheet({
 									<Maximize2 className="w-3.5 h-3.5" />
 									Full view
 								</button>
-								<a
-									href={item.issueUrl}
-									target="_blank"
-									rel="noopener noreferrer"
-									className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-md hover:bg-muted/50 transition-colors"
-									title="Open on GitHub"
-								>
-									<ExternalLink className="w-3.5 h-3.5" />
-									GitHub
-								</a>
 								<button
 									onClick={() =>
 										onOpenChange(false)
@@ -809,13 +811,32 @@ export function KanbanItemSheet({
 								</div>
 							)}
 
-							{/* Mobile-only: Comments Section */}
+							{/* Mobile-only: Issue Comments Section */}
+							<div className="lg:hidden pt-4 border-t border-border/50">
+								<div className="border border-border rounded-lg overflow-hidden">
+									<KanbanIssueComments
+										owner={owner}
+										repo={repo}
+										issueNumber={
+											item.issueNumber
+										}
+										issueUrl={
+											item.issueUrl
+										}
+										currentUser={
+											currentUser
+										}
+										variant="default"
+									/>
+								</div>
+							</div>
+
+							{/* Mobile-only: Maintainer Comments Section */}
 							<div className="lg:hidden space-y-4 pt-4 border-t border-border/50">
 								<div className="flex items-center justify-between">
 									<h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-										<MessageSquare className="w-4 h-4 text-muted-foreground" />
-										Maintainer
-										Discussion
+										<MessageSquare className="w-4 h-4 text-amber-500" />
+										Maintainer Only
 									</h3>
 									{isLoadingComments ? (
 										<Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
@@ -833,28 +854,18 @@ export function KanbanItemSheet({
 									)}
 								</div>
 
+								<p className="text-[10px] text-amber-500/60">
+									These comments are only
+									visible to repository
+									maintainers
+								</p>
+
 								{isLoadingComments && (
 									<div className="space-y-3">
-										{[1, 2, 3].map(
-											(i) => (
-												<div
-													key={
-														i
-													}
-													className="border border-border/60 rounded-lg p-4 space-y-2 animate-pulse"
-												>
-													<div className="flex items-center gap-3">
-														<div className="w-6 h-6 rounded-full bg-muted" />
-														<div className="h-3.5 w-24 bg-muted rounded" />
-														<div className="h-3 w-14 bg-muted/60 rounded" />
-													</div>
-													<div className="pl-9 space-y-1.5">
-														<div className="h-3.5 w-full bg-muted/50 rounded" />
-														<div className="h-3.5 w-4/5 bg-muted/50 rounded" />
-													</div>
-												</div>
-											),
-										)}
+										<KanbanCommentSkeleton
+											count={3}
+											variant="default"
+										/>
 									</div>
 								)}
 
@@ -866,252 +877,68 @@ export function KanbanItemSheet({
 												(
 													comment,
 												) => (
-													<div
+													<KanbanCommentCard
 														key={
 															comment.id
 														}
-														className={cn(
-															"border border-border/60 rounded-lg p-4 space-y-2",
-															comment.id.startsWith(
-																"optimistic-",
-															) &&
-																"opacity-60",
-														)}
-													>
-														<div className="flex items-center gap-3">
-															{comment.userAvatarUrl ? (
-																<Image
-																	src={
-																		comment.userAvatarUrl
-																	}
-																	alt={
-																		comment.userName
-																	}
-																	width={
-																		24
-																	}
-																	height={
-																		24
-																	}
-																	className="rounded-full"
-																/>
-															) : (
-																<div className="w-6 h-6 rounded-full bg-muted" />
-															)}
-															<div className="flex items-center gap-2 flex-1 min-w-0">
-																{comment.userLogin ? (
-																	<Link
-																		href={`/users/${comment.userLogin}`}
-																		className="text-sm font-medium text-foreground hover:underline"
-																	>
-																		{
-																			comment.userName
-																		}
-																	</Link>
-																) : (
-																	<span className="text-sm font-medium text-foreground">
-																		{
-																			comment.userName
-																		}
-																	</span>
-																)}
-																<span className="text-xs text-muted-foreground/50 font-mono">
-																	<TimeAgo
-																		date={
-																			comment.createdAt
-																		}
-																	/>
-																</span>
-																{comment.updatedAt !==
-																	comment.createdAt && (
-																	<span className="text-[10px] text-muted-foreground/40">
-																		(edited)
-																	</span>
-																)}
-															</div>
-															{currentUser?.id ===
-																comment.userId &&
-																!comment.id.startsWith(
-																	"optimistic-",
-																) && (
-																	<div className="flex items-center gap-0.5">
-																		{editingCommentId !==
-																			comment.id && (
-																			<button
-																				onClick={() =>
-																					handleStartEdit(
-																						comment,
-																					)
-																				}
-																				className="text-muted-foreground/30 hover:text-foreground transition-colors cursor-pointer p-1"
-																				title="Edit comment"
-																			>
-																				<Pencil className="w-3.5 h-3.5" />
-																			</button>
-																		)}
-																		<button
-																			onClick={() =>
-																				handleDeleteComment(
-																					comment.id,
-																				)
-																			}
-																			className="text-muted-foreground/30 hover:text-red-400 transition-colors cursor-pointer p-1"
-																		>
-																			<Trash2 className="w-3.5 h-3.5" />
-																		</button>
-																	</div>
-																)}
-														</div>
-														{editingCommentId ===
-														comment.id ? (
-															<div className="pl-9 space-y-2">
-																<textarea
-																	value={
-																		editingCommentBody
-																	}
-																	onChange={(
-																		e,
-																	) =>
-																		setEditingCommentBody(
-																			e
-																				.target
-																				.value,
-																		)
-																	}
-																	className="w-full min-h-[80px] p-2 text-sm bg-muted/30 border border-border rounded-md resize-y focus:outline-none focus:ring-1 focus:ring-primary/50"
-																	autoFocus
-																/>
-																<div className="flex items-center justify-between">
-																	<span
-																		className={cn(
-																			"text-xs",
-																			editingCommentBody.trim()
-																				.length >
-																				10000
-																				? "text-red-400"
-																				: "text-muted-foreground/50",
-																		)}
-																	>
-																		{
-																			editingCommentBody.trim()
-																				.length
-																		}
-																		/10000
-																	</span>
-																	<div className="flex items-center gap-2">
-																		<button
-																			onClick={
-																				handleCancelEdit
-																			}
-																			className="text-xs px-2.5 py-1 text-muted-foreground hover:text-foreground transition-colors rounded"
-																		>
-																			Cancel
-																		</button>
-																		<button
-																			onClick={
-																				handleSaveEdit
-																			}
-																			disabled={
-																				!editingCommentBody.trim() ||
-																				editingCommentBody.trim()
-																					.length >
-																					10000 ||
-																				isSubmittingComment
-																			}
-																			className={cn(
-																				"text-xs px-2.5 py-1 bg-primary text-primary-foreground rounded",
-																				"disabled:opacity-50 disabled:cursor-not-allowed",
-																				"hover:bg-primary/90 transition-colors",
-																			)}
-																		>
-																			{isSubmittingComment
-																				? "Saving..."
-																				: "Save"}
-																		</button>
-																	</div>
-																</div>
-															</div>
-														) : (
-															<div className="pl-9 text-sm">
-																<ClientMarkdown
-																	content={
-																		comment.body
-																	}
-																/>
-															</div>
-														)}
-													</div>
+														comment={
+															comment
+														}
+														currentUserId={
+															currentUser?.id
+														}
+														isEditing={
+															editingCommentId ===
+															comment.id
+														}
+														editingBody={
+															editingCommentBody
+														}
+														onEditingBodyChange={
+															setEditingCommentBody
+														}
+														onStartEdit={() =>
+															handleStartEdit(
+																comment,
+															)
+														}
+														onCancelEdit={
+															handleCancelEdit
+														}
+														onSaveEdit={
+															handleSaveEdit
+														}
+														onDelete={() =>
+															handleDeleteComment(
+																comment.id,
+															)
+														}
+														isSaving={
+															isSubmittingComment
+														}
+														variant="default"
+													/>
 												),
 											)}
 										</div>
 									)}
 
 								{currentUser && (
-									<div className="rounded-lg border border-border overflow-hidden">
-										<MarkdownEditor
-											value={
-												commentBody
-											}
-											onChange={
-												setCommentBody
-											}
-											placeholder="Leave a comment for other maintainers..."
-											rows={4}
-											className="border-none"
-											resizeYIndicator={
-												false
-											}
-											onKeyDown={(
-												e,
-											) => {
-												if (
-													e.key ===
-														"Enter" &&
-													(e.metaKey ||
-														e.ctrlKey)
-												) {
-													e.preventDefault();
-													handleAddComment();
-												}
-											}}
-										/>
-										<div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-t border-border/50">
-											<span className="text-xs text-muted-foreground/50">
-												Press{" "}
-												<kbd className="px-1 py-0.5 text-[10px] bg-muted border border-border rounded">
-													⌘
-												</kbd>{" "}
-												+{" "}
-												<kbd className="px-1 py-0.5 text-[10px] bg-muted border border-border rounded">
-													Enter
-												</kbd>{" "}
-												to
-												submit
-											</span>
-											<button
-												onClick={
-													handleAddComment
-												}
-												disabled={
-													!commentBody.trim() ||
-													isSubmittingComment
-												}
-												className={cn(
-													"flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md",
-													"bg-primary text-primary-foreground",
-													"hover:bg-primary/90 transition-colors cursor-pointer",
-													"disabled:opacity-40 disabled:cursor-not-allowed",
-												)}
-											>
-												{isSubmittingComment ? (
-													<Loader2 className="w-3.5 h-3.5 animate-spin" />
-												) : (
-													<Send className="w-3.5 h-3.5" />
-												)}
-												Comment
-											</button>
-										</div>
-									</div>
+									<KanbanCommentInput
+										value={commentBody}
+										onChange={
+											setCommentBody
+										}
+										onSubmit={
+											handleAddComment
+										}
+										isSubmitting={
+											isSubmittingComment
+										}
+										placeholder="Leave a comment for other maintainers..."
+										rows={4}
+										variant="default"
+									/>
 								)}
 							</div>
 						</div>
@@ -1124,7 +951,10 @@ export function KanbanItemSheet({
 									GitHub Issue
 								</h4>
 								<div className="space-y-1.5">
-									<div className="flex items-center gap-2">
+									<Link
+										href={`/${owner}/${repo}/issues/${item.issueNumber}`}
+										className="flex items-center gap-2 hover:bg-muted/50 -mx-1 px-1 py-0.5 rounded transition-colors"
+									>
 										<CircleDot className="w-3 h-3 text-green-500 shrink-0" />
 										<span className="text-[11px] text-muted-foreground/60">
 											Issue
@@ -1135,7 +965,7 @@ export function KanbanItemSheet({
 												item.issueNumber
 											}
 										</span>
-									</div>
+									</Link>
 									<div className="flex items-center gap-2">
 										<GitBranch className="w-3 h-3 text-muted-foreground/50 shrink-0" />
 										<span className="text-[11px] text-foreground/80 truncate">

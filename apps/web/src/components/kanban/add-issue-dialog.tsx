@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
-import Image from "next/image";
+import { useState, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Search, Loader2, Plus, CircleDot } from "lucide-react";
+import { X, Search, Loader2, Plus, CircleDot, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import type { KanbanItem } from "@/lib/kanban-store";
@@ -42,11 +41,13 @@ export function AddIssueDialog({
 	const [error, setError] = useState<string | null>(null);
 	const [addingIssue, setAddingIssue] = useState<number | null>(null);
 	const [generatingSummary, setGeneratingSummary] = useState<string | null>(null);
+	const [addedIssues, setAddedIssues] = useState<Set<number>>(new Set());
 
 	useEffect(() => {
 		if (open) {
 			setIsLoading(true);
 			setError(null);
+			setAddedIssues(new Set());
 			fetchRepoIssuesForKanban(owner, repo)
 				.then((data) => {
 					setIssues(data);
@@ -60,6 +61,7 @@ export function AddIssueDialog({
 			setSearch("");
 			setIssues([]);
 			setError(null);
+			setAddedIssues(new Set());
 		}
 	}, [open, owner, repo]);
 
@@ -70,6 +72,8 @@ export function AddIssueDialog({
 	);
 
 	const handleAddIssue = async (issue: Issue) => {
+		if (addedIssues.has(issue.number)) return;
+
 		setAddingIssue(issue.number);
 		try {
 			const newItem = await addIssueToKanban(owner, repo, issue.number);
@@ -102,8 +106,8 @@ export function AddIssueDialog({
 			}
 
 			setGeneratingSummary(null);
+			setAddedIssues((prev) => new Set(prev).add(issue.number));
 			onItemAdded(newItem);
-			setIssues((prev) => prev.filter((i) => i.number !== issue.number));
 		} catch (e) {
 			setError(e instanceof Error ? e.message : "Failed to add issue");
 		}
@@ -175,87 +179,111 @@ export function AddIssueDialog({
 							</div>
 						) : (
 							<div className="space-y-1">
-								{filteredIssues.map((issue) => (
-									<button
-										key={issue.number}
-										onClick={() =>
-											handleAddIssue(
-												issue,
-											)
-										}
-										disabled={
-											addingIssue !==
-											null
-										}
-										className={cn(
-											"w-full flex items-start gap-3 p-3 rounded-md",
-											"hover:bg-muted/50 transition-colors text-left",
-											"disabled:opacity-50 disabled:cursor-not-allowed",
-										)}
-									>
-										<CircleDot className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-										<div className="flex-1 min-w-0">
-											<div className="flex items-center gap-2 mb-1">
-												<span className="text-sm font-medium line-clamp-1">
-													{
-														issue.title
-													}
-												</span>
-											</div>
-											<div className="flex items-center gap-2 text-[10px] text-muted-foreground/60">
-												<span className="font-mono">
-													#
-													{
-														issue.number
-													}
-												</span>
-												{issue.user && (
-													<>
-														<span>
-															•
-														</span>
-														<span>
-															{
-																issue
-																	.user
-																	.login
-															}
-														</span>
-													</>
-												)}
-												<span>
-													•
-												</span>
-												<TimeAgo
-													date={
-														issue.updated_at
-													}
-												/>
-											</div>
-										</div>
-										<div className="shrink-0">
-											{addingIssue ===
-											issue.number ? (
-												<div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-													<Loader2 className="w-3.5 h-3.5 animate-spin" />
-													{generatingSummary
-														? "Generating..."
-														: "Adding..."}
-												</div>
-											) : (
-												<Plus className="w-4 h-4 text-muted-foreground/40" />
+								{filteredIssues.map((issue) => {
+									const isAdded =
+										addedIssues.has(
+											issue.number,
+										);
+									const isCurrentlyAdding =
+										addingIssue ===
+										issue.number;
+
+									return (
+										<button
+											key={
+												issue.number
+											}
+											onClick={() =>
+												handleAddIssue(
+													issue,
+												)
+											}
+											disabled={
+												addingIssue !==
+													null ||
+												isAdded
+											}
+											className={cn(
+												"w-full flex items-start gap-3 p-3 rounded-md",
+												"hover:bg-muted/50 transition-colors text-left",
+												"disabled:cursor-not-allowed",
+												isAdded &&
+													"opacity-60 bg-muted/30",
+												!isAdded &&
+													addingIssue !==
+														null &&
+													"opacity-50",
 											)}
-										</div>
-									</button>
-								))}
+										>
+											<CircleDot className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+											<div className="flex-1 min-w-0">
+												<div className="flex items-center gap-2 mb-1">
+													<span className="text-sm font-medium line-clamp-1">
+														{
+															issue.title
+														}
+													</span>
+												</div>
+												<div className="flex items-center gap-2 text-[10px] text-muted-foreground/60">
+													<span className="font-mono">
+														#
+														{
+															issue.number
+														}
+													</span>
+													{issue.user && (
+														<>
+															<span>
+																•
+															</span>
+															<span>
+																{
+																	issue
+																		.user
+																		.login
+																}
+															</span>
+														</>
+													)}
+													<span>
+														•
+													</span>
+													<TimeAgo
+														date={
+															issue.updated_at
+														}
+													/>
+												</div>
+											</div>
+											<div className="shrink-0">
+												{isCurrentlyAdding ? (
+													<div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+														<Loader2 className="w-3.5 h-3.5 animate-spin" />
+														{generatingSummary
+															? "Generating..."
+															: "Adding..."}
+													</div>
+												) : isAdded ? (
+													<div className="flex items-center gap-1.5 text-xs text-green-500">
+														<Check className="w-4 h-4" />
+														Added
+													</div>
+												) : (
+													<Plus className="w-4 h-4 text-muted-foreground/40" />
+												)}
+											</div>
+										</button>
+									);
+								})}
 							</div>
 						)}
 					</div>
 
 					<div className="p-4 border-t border-border">
 						<p className="text-xs text-muted-foreground/60 text-center">
-							Select an issue to add it to the kanban
-							board
+							{addedIssues.size > 0
+								? `${addedIssues.size} issue${addedIssues.size !== 1 ? "s" : ""} added to the board`
+								: "Select issues to add them to the kanban board"}
 						</p>
 					</div>
 				</Dialog.Content>

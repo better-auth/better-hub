@@ -52,7 +52,6 @@ export function KanbanCard({
 				"bg-background border rounded-md p-3 cursor-pointer outline-none!",
 				"hover:border-border hover:shadow-sm transition-all",
 				isDragging && "shadow-lg border-border rotate-2",
-				isFocused && "ring-2 ring-primary/50 border-primary/50",
 			)}
 			onClick={onOpen}
 			onKeyDown={(e) => {

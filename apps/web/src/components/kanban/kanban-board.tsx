@@ -141,7 +141,6 @@ export function KanbanBoard({ owner, repo, initialItems, currentUser }: KanbanBo
 
 	const handleItemAdded = useCallback((newItem: KanbanItem) => {
 		setItems((prev) => [...prev, newItem]);
-		setIsAddDialogOpen(false);
 	}, []);
 
 	const handleCardOpen = useCallback(
