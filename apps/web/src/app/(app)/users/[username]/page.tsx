@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import {
 	getUser,
 	getUserPublicRepos,
@@ -6,6 +7,8 @@ import {
 	getUserOrgTopRepos,
 	getContributionData,
 	getUserEvents,
+	getUserFollowers,
+	getUserFollowing,
 } from "@/lib/github";
 import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { UserProfileContent } from "@/components/users/user-profile-content";
@@ -63,10 +66,13 @@ export async function generateMetadata({
 
 export default async function UserProfilePage({
 	params,
+	searchParams,
 }: {
 	params: Promise<{ username: string }>;
+	searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
 	const { username } = await params;
+	const currentSearchParams = await searchParams;
 
 	let userData: Awaited<ReturnType<typeof getUser>> = null;
 	let reposData: Awaited<ReturnType<typeof getUserPublicRepos>> = [];
@@ -85,17 +91,36 @@ export default async function UserProfilePage({
 		return <UnknownUserPage username={username} />;
 	}
 
+	if ((userData as { type?: string }).type === "Organization") {
+		const params = new URLSearchParams();
+		for (const [key, value] of Object.entries(currentSearchParams ?? {})) {
+			if (typeof value === "string") params.set(key, value);
+		}
+		const query = params.toString();
+		redirect(`/${userData.login}${query ? `?${query}` : ""}`);
+	}
+
 	const isBot = (userData as { type?: string }).type === "Bot";
+	let followersData: Awaited<ReturnType<typeof getUserFollowers>> = [];
+	let followingData: Awaited<ReturnType<typeof getUserFollowing>> = [];
 	if (!isBot) {
 		try {
 			const resolvedLogin = userData.login;
-			const [reposResult, orgsResult, contributionsResult, eventsResult] =
-				await Promise.allSettled([
-					getUserPublicRepos(resolvedLogin, 100),
-					getUserPublicOrgs(resolvedLogin),
-					getContributionData(resolvedLogin),
-					getUserEvents(resolvedLogin, 100),
-				]);
+			const [
+				reposResult,
+				orgsResult,
+				contributionsResult,
+				eventsResult,
+				followersResult,
+				followingResult,
+			] = await Promise.allSettled([
+				getUserPublicRepos(resolvedLogin, 100),
+				getUserPublicOrgs(resolvedLogin),
+				getContributionData(resolvedLogin),
+				getUserEvents(resolvedLogin, 100),
+				getUserFollowers(resolvedLogin, 100),
+				getUserFollowing(resolvedLogin, 100),
+			]);
 
 			if (reposResult.status === "fulfilled") reposData = reposResult.value;
 			if (orgsResult.status === "fulfilled") orgsData = orgsResult.value;
@@ -104,6 +129,12 @@ export default async function UserProfilePage({
 			}
 			if (eventsResult.status === "fulfilled")
 				activityEvents = eventsResult.value;
+			if (followersResult.status === "fulfilled") {
+				followersData = followersResult.value;
+			}
+			if (followingResult.status === "fulfilled") {
+				followingData = followingResult.value;
+			}
 
 			// Fetch top repos from the user's orgs (for scoring)
 			if (orgsData.length > 0) {
@@ -157,6 +188,8 @@ export default async function UserProfilePage({
 			}))}
 			contributions={contributionData}
 			activityEvents={activityEvents}
+			followers={followersData}
+			following={followingData}
 			orgTopRepos={orgTopRepos.map((r) => ({
 				name: r.name,
 				full_name: r.full_name,

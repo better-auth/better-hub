@@ -9,11 +9,13 @@ import { UserProfileActivityTimeline } from "@/components/users/user-profile-act
 import { UserProfileScoreRing } from "@/components/users/user-profile-score-ring";
 import { getLanguageColor } from "@/lib/github-utils";
 import type { ActivityEvent } from "@/lib/github-types";
+import type { UserFollow } from "@/lib/github";
 import { computeUserProfileScore } from "@/lib/user-profile-score";
 import { cn, formatNumber } from "@/lib/utils";
 import {
 	Activity,
 	ArrowUpDown,
+	Bot,
 	Building2,
 	CalendarDays,
 	ChevronRight,
@@ -23,6 +25,7 @@ import {
 	Link2,
 	MapPin,
 	Search,
+	Shield,
 	Star,
 	Users,
 	X,
@@ -92,7 +95,7 @@ const filterTypes = ["all", "sources", "forks", "archived"] as const;
 
 const sortTypes = ["updated", "name", "stars"] as const;
 
-const tabTypes = ["repositories", "activity"] as const;
+const tabTypes = ["repositories", "followers", "following", "activity"] as const;
 
 function formatJoinedDate(value: string | null): string | null {
 	if (!value) return null;
@@ -118,6 +121,8 @@ export function UserProfileContent({
 	orgs,
 	contributions,
 	activityEvents = [],
+	followers = [],
+	following = [],
 	orgTopRepos = [],
 }: {
 	user: UserProfile;
@@ -125,6 +130,8 @@ export function UserProfileContent({
 	orgs: UserOrg[];
 	contributions: ContributionData | null;
 	activityEvents?: ActivityEvent[];
+	followers?: UserFollow[];
+	following?: UserFollow[];
 	orgTopRepos?: OrgTopRepo[];
 }) {
 	const [tab, setTab] = useQueryState(
@@ -398,12 +405,71 @@ export function UserProfileContent({
 	const topLanguages = useMemo(() => languages.slice(0, 10), [languages]);
 	const extraLanguages = useMemo(() => languages.slice(10), [languages]);
 
+	const filteredFollowers = useMemo(() => {
+		const query = search.trim().toLowerCase();
+		if (!query) return followers;
+		return followers.filter((person) =>
+			[
+				person.login,
+				person.name ?? "",
+				person.bio ?? "",
+				person.company ?? "",
+				person.location ?? "",
+			]
+				.join(" ")
+				.toLowerCase()
+				.includes(query),
+		);
+	}, [followers, search]);
+
+	const filteredFollowing = useMemo(() => {
+		const query = search.trim().toLowerCase();
+		if (!query) return following;
+		return following.filter((person) =>
+			[
+				person.login,
+				person.name ?? "",
+				person.bio ?? "",
+				person.company ?? "",
+				person.location ?? "",
+			]
+				.join(" ")
+				.toLowerCase()
+				.includes(query),
+		);
+	}, [following, search]);
+
+	const activePeople = useMemo(() => {
+		if (tab === "followers") return filteredFollowers;
+		if (tab === "following") return filteredFollowing;
+		return [];
+	}, [filteredFollowers, filteredFollowing, tab]);
+
+	const searchPlaceholder =
+		tab === "repositories"
+			? "Find a repository..."
+			: tab === "followers"
+				? "Find a follower..."
+				: "Find a user...";
+
 	const clearRepoFilters = useCallback(() => {
 		setSearch("");
 		setFilter("all");
 		setLanguageFilter(null);
 		setShowMoreLanguages(false);
 	}, [setFilter, setSearch]);
+
+	const handleTabChange = useCallback(
+		(nextTab: (typeof tabTypes)[number]) => {
+			setTab(nextTab);
+			setSearch("");
+			setShowMoreLanguages(false);
+			if (nextTab !== "repositories") {
+				setLanguageFilter(null);
+			}
+		},
+		[setSearch, setTab],
+	);
 
 	const toggleLanguageFilter = useCallback((language: string) => {
 		setLanguageFilter((current) => (current === language ? null : language));
@@ -544,20 +610,40 @@ export function UserProfileContent({
 
 				{/* Followers */}
 				<div className="flex items-center gap-3 mt-4 text-xs text-muted-foreground font-mono">
-					<span className="inline-flex items-center gap-1.5">
+					<button
+						type="button"
+						onClick={() => handleTabChange("followers")}
+						className={cn(
+							"inline-flex items-center gap-1.5 transition-colors cursor-pointer",
+							tab === "followers"
+								? "text-foreground"
+								: "hover:text-foreground",
+						)}
+						aria-label={`Show ${user.login} followers`}
+					>
 						<Users className="w-3 h-3" />
 						<span className="text-foreground font-medium">
 							{formatNumber(user.followers)}
 						</span>{" "}
 						followers
-					</span>
+					</button>
 					<span className="text-muted-foreground/30">&middot;</span>
-					<span>
+					<button
+						type="button"
+						onClick={() => handleTabChange("following")}
+						className={cn(
+							"transition-colors cursor-pointer",
+							tab === "following"
+								? "text-foreground"
+								: "hover:text-foreground",
+						)}
+						aria-label={`Show who ${user.login} follows`}
+					>
 						<span className="text-foreground font-medium">
 							{formatNumber(user.following)}
 						</span>{" "}
 						following
-					</span>
+					</button>
 				</div>
 
 				{/* Metadata */}
@@ -850,9 +936,11 @@ export function UserProfileContent({
 
 				{/* Tab switcher */}
 				<div className="shrink-0 mb-4">
-					<div className="flex items-center border border-border divide-x divide-border rounded-sm lg:w-fit">
+					<div className="grid grid-cols-2 lg:grid-cols-4 border border-border divide-x divide-border divide-y lg:divide-y-0 rounded-sm">
 						<button
-							onClick={() => setTab("repositories")}
+							onClick={() =>
+								handleTabChange("repositories")
+							}
 							className={cn(
 								"flex-1 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer lg:rounded-l-md",
 								tab === "repositories"
@@ -867,7 +955,37 @@ export function UserProfileContent({
 							</span>
 						</button>
 						<button
-							onClick={() => setTab("activity")}
+							onClick={() => handleTabChange("followers")}
+							className={cn(
+								"flex-1 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
+								tab === "followers"
+									? "bg-muted/50 dark:bg-white/4 text-foreground"
+									: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
+							)}
+						>
+							<Users className="w-3.5 h-3.5" />
+							Followers
+							<span className="text-muted-foreground/50 tabular-nums">
+								{followers.length}
+							</span>
+						</button>
+						<button
+							onClick={() => handleTabChange("following")}
+							className={cn(
+								"flex-1 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
+								tab === "following"
+									? "bg-muted/50 dark:bg-white/4 text-foreground"
+									: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
+							)}
+						>
+							<Users className="w-3.5 h-3.5" />
+							Following
+							<span className="text-muted-foreground/50 tabular-nums">
+								{following.length}
+							</span>
+						</button>
+						<button
+							onClick={() => handleTabChange("activity")}
 							className={cn(
 								"flex-1 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer lg:rounded-r-md",
 								tab === "activity"
@@ -881,7 +999,7 @@ export function UserProfileContent({
 					</div>
 				</div>
 
-				{tab === "repositories" && (
+				{tab !== "activity" && (
 					<>
 						{/* Search & filters */}
 						<div className="shrink-0">
@@ -890,7 +1008,9 @@ export function UserProfileContent({
 									<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50" />
 									<input
 										type="text"
-										placeholder="Find a repository..."
+										placeholder={
+											searchPlaceholder
+										}
 										value={search}
 										onChange={(e) => {
 											const next =
@@ -912,227 +1032,245 @@ export function UserProfileContent({
 								</div>
 
 								<div className="flex items-center gap-2 w-full justify-between sm:justify-start sm:w-auto">
-									<div className="flex items-center border border-border divide-x divide-border rounded-md shrink-0">
-										{(
-											[
+									{tab === "repositories" && (
+										<div className="flex items-center border border-border divide-x divide-border rounded-md shrink-0">
+											{(
 												[
-													"all",
-													"All",
-												],
-												[
-													"sources",
-													"Sources",
-												],
-												[
-													"forks",
-													"Forks",
-												],
-												[
-													"archived",
-													"Archived",
-												],
-											] as const
-										).map(
-											([
-												value,
-												label,
-											]) => (
-												<button
-													key={
-														value
-													}
-													onClick={() =>
-														setFilter(
-															value,
-														)
-													}
-													className={cn(
-														"px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
-														filter ===
+													[
+														"all",
+														"All",
+													],
+													[
+														"sources",
+														"Sources",
+													],
+													[
+														"forks",
+														"Forks",
+													],
+													[
+														"archived",
+														"Archived",
+													],
+												] as const
+											).map(
+												([
+													value,
+													label,
+												]) => (
+													<button
+														key={
 															value
-															? "bg-muted/50 dark:bg-white/4 text-foreground"
-															: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
-													)}
-												>
-													{
-														label
-													}
-												</button>
-											),
-										)}
-									</div>
+														}
+														onClick={() =>
+															setFilter(
+																value,
+															)
+														}
+														className={cn(
+															"px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
+															filter ===
+																value
+																? "bg-muted/50 dark:bg-white/4 text-foreground"
+																: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
+														)}
+													>
+														{
+															label
+														}
+													</button>
+												),
+											)}
+										</div>
+									)}
 
-									<button
-										onClick={() =>
-											setSort(
-												(
-													current,
-												) =>
-													current ===
-													"updated"
-														? "stars"
-														: current ===
-															  "stars"
-															? "name"
-															: "updated",
-											)
-										}
-										className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground border border-border hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer rounded-md shrink-0"
-									>
-										<ArrowUpDown className="w-3 h-3" />
-										{sort === "updated"
-											? "Updated"
-											: sort ===
-												  "stars"
-												? "Stars"
-												: "Name"}
-									</button>
+									{tab === "repositories" && (
+										<button
+											onClick={() =>
+												setSort(
+													(
+														current,
+													) =>
+														current ===
+														"updated"
+															? "stars"
+															: current ===
+																  "stars"
+																? "name"
+																: "updated",
+												)
+											}
+											className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground border border-border hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer rounded-md shrink-0"
+										>
+											<ArrowUpDown className="w-3 h-3" />
+											{sort ===
+											"updated"
+												? "Updated"
+												: sort ===
+													  "stars"
+													? "Stars"
+													: "Name"}
+										</button>
+									)}
 								</div>
 							</div>
 
 							<div className="flex items-start justify-between gap-4 mb-4">
-								{languages.length > 0 && (
-									<div className="flex items-center gap-1.5 flex-wrap mt-0.5 after:flex-1 after:content-['']">
-										{topLanguages.map(
-											(lang) => (
-												<button
-													key={
-														lang
-													}
-													onClick={() =>
-														toggleLanguageFilter(
-															lang,
-														)
-													}
-													aria-label={`Filter by ${lang}`}
-													className={cn(
-														"flex items-center gap-1.5 px-2 py-1 text-[11px] border border-border transition-colors cursor-pointer font-mono rounded-md",
-														languageFilter ===
+								{tab === "repositories" &&
+									languages.length > 0 && (
+										<div className="flex items-center gap-1.5 flex-wrap mt-0.5 after:flex-1 after:content-['']">
+											{topLanguages.map(
+												(
+													lang,
+												) => (
+													<button
+														key={
 															lang
-															? "bg-muted/80 dark:bg-white/6 text-foreground border-foreground/15"
-															: "text-muted-foreground hover:bg-muted/60 dark:hover:bg-white/3",
-													)}
-												>
-													<span
-														className="w-2 h-2 rounded-full"
-														style={{
-															backgroundColor:
-																getLanguageColor(
-																	lang,
-																),
-														}}
-													/>
-													{
-														lang
-													}
-												</button>
-											),
-										)}
-										{extraLanguages.length >
-											0 && (
-											<div
-												className="relative"
-												ref={
-													moreLanguagesRef
-												}
-											>
-												<button
-													data-more-lang-trigger="true"
-													onClick={() =>
-														setShowMoreLanguages(
-															(
-																current,
-															) =>
-																!current,
-														)
-													}
-													aria-label={`Show ${extraLanguages.length} more languages`}
-													aria-expanded={
-														showMoreLanguages
-													}
-													aria-haspopup="true"
-													className="px-2 py-1 text-[11px] border border-border rounded-md text-muted-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors font-mono"
-												>
-													+
-													{
-														extraLanguages.length
-													}{" "}
-													more
-												</button>
-												{showMoreLanguages && (
-													<div
-														ref={
-															moreLanguagesMenuRef
 														}
+														onClick={() =>
+															toggleLanguageFilter(
+																lang,
+															)
+														}
+														aria-label={`Filter by ${lang}`}
 														className={cn(
-															"absolute z-20 min-w-40 max-h-56 overflow-y-auto rounded-md border border-border bg-background/95 backdrop-blur-sm p-1.5 shadow-xl",
-															moreLanguagesPlacement.startsWith(
-																"up",
-															)
-																? "bottom-[calc(100%+6px)]"
-																: "top-[calc(100%+6px)]",
-															moreLanguagesPlacement.endsWith(
-																"right",
-															)
-																? "right-0"
-																: "left-0",
+															"flex items-center gap-1.5 px-2 py-1 text-[11px] border border-border transition-colors cursor-pointer font-mono rounded-md",
+															languageFilter ===
+																lang
+																? "bg-muted/80 dark:bg-white/6 text-foreground border-foreground/15"
+																: "text-muted-foreground hover:bg-muted/60 dark:hover:bg-white/3",
 														)}
 													>
-														<div className="flex flex-col gap-1">
-															{extraLanguages.map(
+														<span
+															className="w-2 h-2 rounded-full"
+															style={{
+																backgroundColor:
+																	getLanguageColor(
+																		lang,
+																	),
+															}}
+														/>
+														{
+															lang
+														}
+													</button>
+												),
+											)}
+											{extraLanguages.length >
+												0 && (
+												<div
+													className="relative"
+													ref={
+														moreLanguagesRef
+													}
+												>
+													<button
+														data-more-lang-trigger="true"
+														onClick={() =>
+															setShowMoreLanguages(
 																(
-																	lang,
-																) => (
-																	<button
-																		key={
-																			lang
-																		}
-																		data-more-lang-item="true"
-																		onClick={() =>
-																			toggleLanguageFilter(
-																				lang,
-																			)
-																		}
-																		aria-label={`Filter by ${lang}`}
-																		className={cn(
-																			"flex items-center gap-1.5 px-2 py-1 text-[11px] border border-border transition-colors cursor-pointer font-mono rounded-md text-left",
-																			languageFilter ===
-																				lang
-																				? "bg-muted/80 dark:bg-white/6 text-foreground border-foreground/15"
-																				: "text-muted-foreground hover:bg-muted/60 dark:hover:bg-white/3",
-																		)}
-																	>
-																		<span
-																			className="w-2 h-2 rounded-full"
-																			style={{
-																				backgroundColor:
-																					getLanguageColor(
-																						lang,
-																					),
-																			}}
-																		/>
-																		{
-																			lang
-																		}
-																	</button>
-																),
+																	current,
+																) =>
+																	!current,
+															)
+														}
+														aria-label={`Show ${extraLanguages.length} more languages`}
+														aria-expanded={
+															showMoreLanguages
+														}
+														aria-haspopup="true"
+														className="px-2 py-1 text-[11px] border border-border rounded-md text-muted-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors font-mono"
+													>
+														+
+														{
+															extraLanguages.length
+														}{" "}
+														more
+													</button>
+													{showMoreLanguages && (
+														<div
+															ref={
+																moreLanguagesMenuRef
+															}
+															className={cn(
+																"absolute z-20 min-w-40 max-h-56 overflow-y-auto rounded-md border border-border bg-background/95 backdrop-blur-sm p-1.5 shadow-xl",
+																moreLanguagesPlacement.startsWith(
+																	"up",
+																)
+																	? "bottom-[calc(100%+6px)]"
+																	: "top-[calc(100%+6px)]",
+																moreLanguagesPlacement.endsWith(
+																	"right",
+																)
+																	? "right-0"
+																	: "left-0",
 															)}
+														>
+															<div className="flex flex-col gap-1">
+																{extraLanguages.map(
+																	(
+																		lang,
+																	) => (
+																		<button
+																			key={
+																				lang
+																			}
+																			data-more-lang-item="true"
+																			onClick={() =>
+																				toggleLanguageFilter(
+																					lang,
+																				)
+																			}
+																			aria-label={`Filter by ${lang}`}
+																			className={cn(
+																				"flex items-center gap-1.5 px-2 py-1 text-[11px] border border-border transition-colors cursor-pointer font-mono rounded-md text-left",
+																				languageFilter ===
+																					lang
+																					? "bg-muted/80 dark:bg-white/6 text-foreground border-foreground/15"
+																					: "text-muted-foreground hover:bg-muted/60 dark:hover:bg-white/3",
+																			)}
+																		>
+																			<span
+																				className="w-2 h-2 rounded-full"
+																				style={{
+																					backgroundColor:
+																						getLanguageColor(
+																							lang,
+																						),
+																				}}
+																			/>
+																			{
+																				lang
+																			}
+																		</button>
+																	),
+																)}
+															</div>
 														</div>
-													</div>
-												)}
-											</div>
-										)}
-									</div>
-								)}
+													)}
+												</div>
+											)}
+										</div>
+									)}
 								<div className="hidden lg:flex items-center gap-3 shrink-0 ml-auto pt-1">
 									{(search ||
-										languageFilter ||
-										filter !==
-											"all") && (
+										(tab ===
+											"repositories" &&
+											(languageFilter ||
+												filter !==
+													"all"))) && (
 										<button
-											onClick={
-												clearRepoFilters
-											}
+											onClick={() => {
+												setSearch(
+													"",
+												);
+												if (
+													tab ===
+													"repositories"
+												) {
+													clearRepoFilters();
+												}
+											}}
 											aria-label="Clear repository filters"
 											className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground font-mono transition-colors"
 										>
@@ -1141,8 +1279,13 @@ export function UserProfileContent({
 										</button>
 									)}
 									<span className="text-[11px] text-muted-foreground/30 font-mono tabular-nums">
-										{filtered.length}/
-										{repos.length}
+										{tab ===
+										"repositories"
+											? `${filtered.length}/${repos.length}`
+											: tab ===
+												  "followers"
+												? `${filteredFollowers.length}/${followers.length}`
+												: `${filteredFollowing.length}/${following.length}`}
 									</span>
 								</div>
 							</div>
@@ -1150,12 +1293,22 @@ export function UserProfileContent({
 							{/* Mobile counter & clear row */}
 							<div className="lg:hidden flex items-center justify-between mb-4">
 								{(search ||
-									languageFilter ||
-									filter !== "all") && (
+									(tab === "repositories" &&
+										(languageFilter ||
+											filter !==
+												"all"))) && (
 									<button
-										onClick={
-											clearRepoFilters
-										}
+										onClick={() => {
+											setSearch(
+												"",
+											);
+											if (
+												tab ===
+												"repositories"
+											) {
+												clearRepoFilters();
+											}
+										}}
 										aria-label="Clear repository filters"
 										className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground font-mono transition-colors"
 									>
@@ -1164,114 +1317,210 @@ export function UserProfileContent({
 									</button>
 								)}
 								<span className="text-[11px] text-muted-foreground/30 font-mono tabular-nums ml-auto">
-									{filtered.length}/
-									{repos.length}
+									{tab === "repositories"
+										? `${filtered.length}/${repos.length}`
+										: tab ===
+											  "followers"
+											? `${filteredFollowers.length}/${followers.length}`
+											: `${filteredFollowing.length}/${following.length}`}
 								</span>
 							</div>
 						</div>
 
 						{/* Repo list */}
 						<div className="flex-1 min-h-[50dvh] lg:min-h-0 overflow-y-auto border border-border rounded-md divide-y divide-border">
-							{filtered.map((repo) => (
-								<Link
-									key={repo.id}
-									href={`/${repo.full_name}`}
-									className="group flex items-start md:items-center gap-3 md:gap-4 px-4 py-3 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors"
-								>
-									{/* Desktop: Inline layout */}
-									<div className="hidden sm:contents">
-										<FolderGit2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-										<div className="flex-1 min-w-0">
-											<div className="flex items-center gap-2">
-												<span className="text-sm text-foreground group-hover:text-foreground transition-colors font-mono">
-													{
-														repo.name
-													}
-												</span>
-												<div className="flex items-center gap-1.5 flex-wrap">
-													{repo.private ? (
-														<RepoBadge type="private" />
-													) : (
-														<RepoBadge type="public" />
-													)}
-													{repo.archived && (
-														<RepoBadge type="archived" />
-													)}
-													{repo.fork && (
-														<RepoBadge type="fork" />
-													)}
+							{tab === "repositories" &&
+								filtered.map((repo) => (
+									<Link
+										key={repo.id}
+										href={`/${repo.full_name}`}
+										className="group flex items-start md:items-center gap-3 md:gap-4 px-4 py-3 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors"
+									>
+										{/* Desktop: Inline layout */}
+										<div className="hidden sm:contents">
+											<FolderGit2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+											<div className="flex-1 min-w-0">
+												<div className="flex items-center gap-2">
+													<span className="text-sm text-foreground group-hover:text-foreground transition-colors font-mono">
+														{
+															repo.name
+														}
+													</span>
+													<div className="flex items-center gap-1.5 flex-wrap">
+														{repo.private ? (
+															<RepoBadge type="private" />
+														) : (
+															<RepoBadge type="public" />
+														)}
+														{repo.archived && (
+															<RepoBadge type="archived" />
+														)}
+														{repo.fork && (
+															<RepoBadge type="fork" />
+														)}
+													</div>
 												</div>
+
+												{repo.description && (
+													<p className="text-[11px] text-muted-foreground/60 mt-1 truncate max-w-lg">
+														{
+															repo.description
+														}
+													</p>
+												)}
+												<ChevronRight className="w-3 h-3 text-foreground/10 opacity-0 group-hover:opacity-100 transition-opacity" />
 											</div>
 
-											{repo.description && (
-												<p className="text-[11px] text-muted-foreground/60 mt-1 truncate max-w-lg">
-													{
-														repo.description
-													}
-												</p>
-											)}
-											<ChevronRight className="w-3 h-3 text-foreground/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-										</div>
-
-										<div className="flex items-center flex-wrap md:flex-nowrap gap-x-3 gap-y-1 md:gap-4 shrink-0">
-											{repo.language && (
-												<span className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60 font-mono">
-													<span
-														className="w-2 h-2 rounded-full"
-														style={{
-															backgroundColor:
-																getLanguageColor(
-																	repo.language,
-																),
-														}}
-													/>
-													{
-														repo.language
-													}
-												</span>
-											)}
-											{repo.stargazers_count >
-												0 && (
-												<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
-													<Star className="w-3 h-3" />
-													{formatNumber(
-														repo.stargazers_count,
-													)}
-												</span>
-											)}
-											{repo.forks_count >
-												0 && (
-												<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
-													<GitFork className="w-3 h-3" />
-													{formatNumber(
-														repo.forks_count,
-													)}
-												</span>
-											)}
-											{repo.updated_at && (
-												<span className="text-[11px] text-muted-foreground font-mono md:w-14 md:text-right md:ml-auto">
-													<TimeAgo
-														date={
-															repo.updated_at
+											<div className="flex items-center flex-wrap md:flex-nowrap gap-x-3 gap-y-1 md:gap-4 shrink-0">
+												{repo.language && (
+													<span className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60 font-mono">
+														<span
+															className="w-2 h-2 rounded-full"
+															style={{
+																backgroundColor:
+																	getLanguageColor(
+																		repo.language,
+																	),
+															}}
+														/>
+														{
+															repo.language
 														}
-													/>
-												</span>
-											)}
-											<ChevronRight className="hidden md:block w-3 h-3 text-foreground/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+													</span>
+												)}
+												{repo.stargazers_count >
+													0 && (
+													<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
+														<Star className="w-3 h-3" />
+														{formatNumber(
+															repo.stargazers_count,
+														)}
+													</span>
+												)}
+												{repo.forks_count >
+													0 && (
+													<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
+														<GitFork className="w-3 h-3" />
+														{formatNumber(
+															repo.forks_count,
+														)}
+													</span>
+												)}
+												{repo.updated_at && (
+													<span className="text-[11px] text-muted-foreground font-mono md:w-14 md:text-right md:ml-auto">
+														<TimeAgo
+															date={
+																repo.updated_at
+															}
+														/>
+													</span>
+												)}
+												<ChevronRight className="hidden md:block w-3 h-3 text-foreground/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+											</div>
 										</div>
-									</div>
-								</Link>
-							))}
+									</Link>
+								))}
 
-							{filtered.length === 0 && (
-								<div className="py-16 text-center">
-									<FolderGit2 className="w-6 h-6 text-muted-foreground/20 mx-auto mb-3" />
-									<p className="text-xs text-muted-foreground/50 font-mono">
-										No repositories
-										found
-									</p>
-								</div>
-							)}
+							{tab !== "repositories" &&
+								activePeople.map((person) => (
+									<Link
+										key={person.login}
+										href={`/${person.login}`}
+										className="group flex items-start gap-3 px-4 py-3 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors"
+									>
+										<Image
+											src={
+												person.avatar_url
+											}
+											alt={
+												person.login
+											}
+											width={28}
+											height={28}
+											className="rounded-full shrink-0 ring-1 ring-border/60"
+										/>
+										<div className="min-w-0 flex-1">
+											<div className="flex items-center gap-2 min-w-0">
+												<div className="text-sm font-medium truncate">
+													{person.name ??
+														person.login}
+												</div>
+												{person.name && (
+													<div className="text-[11px] font-mono text-muted-foreground/60 truncate">
+														{
+															person.login
+														}
+													</div>
+												)}
+											</div>
+											<div className="mt-0.5 min-h-4 text-[11px] text-muted-foreground/60 truncate">
+												{person.bio ??
+													""}
+											</div>
+											<div className="mt-1 min-h-4 flex items-center gap-3 text-[10px] font-mono text-muted-foreground/50">
+												{person.company && (
+													<span className="inline-flex items-center gap-1 truncate max-w-[200px]">
+														<Building2 className="w-3 h-3 shrink-0" />
+														<span className="truncate">
+															{
+																person.company
+															}
+														</span>
+													</span>
+												)}
+												{person.location && (
+													<span className="inline-flex items-center gap-1 truncate max-w-[180px]">
+														<MapPin className="w-3 h-3 shrink-0" />
+														<span className="truncate">
+															{
+																person.location
+															}
+														</span>
+													</span>
+												)}
+												{person.site_admin && (
+													<span className="inline-flex items-center gap-1">
+														<Shield className="w-3 h-3 shrink-0" />
+														GitHub
+														staff
+													</span>
+												)}
+												{person.type ===
+													"Bot" && (
+													<span className="inline-flex items-center gap-1">
+														<Bot className="w-3 h-3 shrink-0" />
+														Bot
+													</span>
+												)}
+											</div>
+										</div>
+										<ChevronRight className="w-3 h-3 text-foreground/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+									</Link>
+								))}
+
+							{tab === "repositories" &&
+								filtered.length === 0 && (
+									<div className="py-16 text-center">
+										<FolderGit2 className="w-6 h-6 text-muted-foreground/20 mx-auto mb-3" />
+										<p className="text-xs text-muted-foreground/50 font-mono">
+											No
+											repositories
+											found
+										</p>
+									</div>
+								)}
+							{tab !== "repositories" &&
+								activePeople.length === 0 && (
+									<div className="py-16 text-center">
+										<Users className="w-6 h-6 text-muted-foreground/20 mx-auto mb-3" />
+										<p className="text-xs text-muted-foreground/50 font-mono">
+											{tab ===
+											"followers"
+												? "No followers found"
+												: "No following users found"}
+										</p>
+									</div>
+								)}
 						</div>
 					</>
 				)}
