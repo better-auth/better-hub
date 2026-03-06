@@ -65,12 +65,22 @@ interface KanbanBoardProps {
 	owner: string;
 	repo: string;
 	initialItems: KanbanItem[];
+	initialMaintainerCommentCounts?: Record<string, number>;
 	currentUser: { id: string; login: string | null; name: string; image: string } | null;
 }
 
-export function KanbanBoard({ owner, repo, initialItems, currentUser }: KanbanBoardProps) {
+export function KanbanBoard({
+	owner,
+	repo,
+	initialItems,
+	initialMaintainerCommentCounts = {},
+	currentUser,
+}: KanbanBoardProps) {
 	const router = useRouter();
 	const [items, setItems] = useState<KanbanItem[]>(initialItems);
+	const [maintainerCommentCounts, setMaintainerCommentCounts] = useState<
+		Record<string, number>
+	>(initialMaintainerCommentCounts);
 	const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 	const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
 	const [selectedItemId, setSelectedItemId] = useQueryState("item", {
@@ -91,7 +101,8 @@ export function KanbanBoard({ owner, repo, initialItems, currentUser }: KanbanBo
 
 	useEffect(() => {
 		setItems(initialItems);
-	}, [initialItems]);
+		setMaintainerCommentCounts(initialMaintainerCommentCounts);
+	}, [initialItems, initialMaintainerCommentCounts]);
 
 	const getItemsByStatus = useCallback(
 		(status: KanbanStatus) => items.filter((item) => item.status === status),
@@ -432,6 +443,13 @@ export function KanbanBoard({ owner, repo, initialItems, currentUser }: KanbanBo
 																			handleCardDelete(
 																				item.id,
 																			)
+																		}
+																		maintainerCommentCount={
+																			maintainerCommentCounts[
+																				item
+																					.id
+																			] ??
+																			0
 																		}
 																	/>
 																</div>

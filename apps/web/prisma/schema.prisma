@@ -394,6 +394,10 @@ model KanbanItem {
   assigneeAvatar       String?
   kanbanAssigneeLogin  String?
   kanbanAssigneeAvatar String?
+  labels               String? // JSON array of {name, color} objects
+  issueCommentCount    Int     @default(0)
+  issueState           String  @default("open") // open or closed
+  linkedPRs            String? // JSON array of linked PR objects
   createdAt            String
   updatedAt            String
 

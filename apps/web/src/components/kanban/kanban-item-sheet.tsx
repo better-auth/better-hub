@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useOptimistic, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -25,6 +25,10 @@ import {
 	Search,
 	UserX,
 	GripVertical,
+	GitPullRequest,
+	GitMerge,
+	CircleX,
+	FileEdit,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ClientMarkdown } from "@/components/shared/client-markdown";
@@ -95,35 +99,31 @@ export function KanbanItemSheet({
 	const [commentBody, setCommentBody] = useState("");
 	const [comments, setComments] = useState<KanbanComment[]>([]);
 	const [isLoadingComments, setIsLoadingComments] = useState(false);
-	const [isSubmittingComment, startCommentTransition] = useTransition();
+	const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 	const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
 	const [editingCommentBody, setEditingCommentBody] = useState("");
-	const [optimisticComments, addOptimisticComment] = useOptimistic(
-		comments,
-		(
-			state: KanbanComment[],
-			action:
-				| { type: "add"; comment: KanbanComment }
-				| { type: "delete"; id: string }
-				| { type: "update"; id: string; body: string },
-		) => {
-			if (action.type === "add") return [...state, action.comment];
-			if (action.type === "delete")
-				return state.filter((c) => c.id !== action.id);
-			if (action.type === "update") {
-				return state.map((c) =>
-					c.id === action.id
-						? {
-								...c,
-								body: action.body,
-								updatedAt: new Date().toISOString(),
-							}
-						: c,
-				);
+	const [pendingAddComment, setPendingAddComment] = useState<KanbanComment | null>(null);
+	const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
+	const [pendingUpdates, setPendingUpdates] = useState<Map<string, string>>(new Map());
+
+	const optimisticComments = useMemo(() => {
+		let result = comments.filter((c) => !pendingDeleteIds.has(c.id));
+		result = result.map((c) => {
+			const pendingBody = pendingUpdates.get(c.id);
+			if (pendingBody !== undefined) {
+				return {
+					...c,
+					body: pendingBody,
+					updatedAt: new Date().toISOString(),
+				};
 			}
-			return state;
-		},
-	);
+			return c;
+		});
+		if (pendingAddComment) {
+			result = [...result, pendingAddComment];
+		}
+		return result;
+	}, [comments, pendingDeleteIds, pendingUpdates, pendingAddComment]);
 
 	const [assigneePopoverOpen, setAssigneePopoverOpen] = useState(false);
 	const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
@@ -131,6 +131,8 @@ export function KanbanItemSheet({
 	const [assigneeSearch, setAssigneeSearch] = useState("");
 	const [isAssigning, setIsAssigning] = useState(false);
 	const [activeChatTab, setActiveChatTab] = useState<"maintainer" | "issue">("maintainer");
+	const [issueCommentCount, setIssueCommentCount] = useState<number>(0);
+	const [isLoadingIssueComments, setIsLoadingIssueComments] = useState(true);
 	const [sidebarWidth, setSidebarWidth] = useState(430);
 	const [isResizing, setIsResizing] = useState(false);
 	const resizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
@@ -213,7 +215,12 @@ export function KanbanItemSheet({
 		handleMaintainerScroll();
 		container.addEventListener("scroll", handleMaintainerScroll);
 		return () => container.removeEventListener("scroll", handleMaintainerScroll);
-	}, [handleMaintainerScroll, optimisticComments]);
+	}, [handleMaintainerScroll]);
+
+	useEffect(() => {
+		const timeoutId = setTimeout(handleMaintainerScroll, 50);
+		return () => clearTimeout(timeoutId);
+	}, [optimisticComments.length, handleMaintainerScroll]);
 
 	useEffect(() => {
 		if (item) {
@@ -306,7 +313,7 @@ export function KanbanItemSheet({
 		[item, onItemUpdated, router],
 	);
 
-	const handleAddComment = useCallback(() => {
+	const handleAddComment = useCallback(async () => {
 		const body = commentBody.trim();
 		if (!body || !currentUser || !item) return;
 
@@ -324,36 +331,39 @@ export function KanbanItemSheet({
 		};
 
 		setCommentBody("");
-		startCommentTransition(async () => {
-			addOptimisticComment({ type: "add", comment: optimistic });
+		setPendingAddComment(optimistic);
+		setIsSubmittingComment(true);
+		try {
+			await addKanbanComment(item.id, body);
+			const res = await fetch(`/api/kanban/${item.id}/comments`);
+			const data = await res.json();
+			setComments(data.comments ?? []);
+		} finally {
+			setPendingAddComment(null);
+			setIsSubmittingComment(false);
+		}
+	}, [commentBody, currentUser, item]);
+
+	const handleDeleteComment = useCallback(
+		async (commentId: string) => {
+			if (!item) return;
+			setPendingDeleteIds((prev) => new Set(prev).add(commentId));
+			setIsSubmittingComment(true);
 			try {
-				await addKanbanComment(item.id, body);
-				addOptimisticComment({ type: "delete", id: optimisticId });
+				await deleteKanbanComment(commentId, item.id);
 				const res = await fetch(`/api/kanban/${item.id}/comments`);
 				const data = await res.json();
 				setComments(data.comments ?? []);
-			} catch {
-				addOptimisticComment({ type: "delete", id: optimisticId });
+			} finally {
+				setPendingDeleteIds((prev) => {
+					const next = new Set(prev);
+					next.delete(commentId);
+					return next;
+				});
+				setIsSubmittingComment(false);
 			}
-		});
-	}, [commentBody, currentUser, item, addOptimisticComment]);
-
-	const handleDeleteComment = useCallback(
-		(commentId: string) => {
-			if (!item) return;
-			startCommentTransition(async () => {
-				addOptimisticComment({ type: "delete", id: commentId });
-				try {
-					await deleteKanbanComment(commentId, item.id);
-					const res = await fetch(`/api/kanban/${item.id}/comments`);
-					const data = await res.json();
-					setComments(data.comments ?? []);
-				} catch {
-					// Revert will happen via server refresh
-				}
-			});
 		},
-		[item, addOptimisticComment],
+		[item],
 	);
 
 	const handleStartEdit = useCallback((comment: KanbanComment) => {
@@ -366,7 +376,7 @@ export function KanbanItemSheet({
 		setEditingCommentBody("");
 	}, []);
 
-	const handleSaveEdit = useCallback(() => {
+	const handleSaveEdit = useCallback(async () => {
 		if (!item || !editingCommentId) return;
 		const trimmedBody = editingCommentBody.trim();
 		if (!trimmedBody) return;
@@ -378,25 +388,26 @@ export function KanbanItemSheet({
 		const originalComment = comments.find((c) => c.id === editingCommentId);
 		if (!originalComment) return;
 
+		const commentIdToEdit = editingCommentId;
 		setEditingCommentId(null);
 		setEditingCommentBody("");
+		setPendingUpdates((prev) => new Map(prev).set(commentIdToEdit, trimmedBody));
+		setIsSubmittingComment(true);
 
-		startCommentTransition(async () => {
-			addOptimisticComment({
-				type: "update",
-				id: editingCommentId,
-				body: trimmedBody,
+		try {
+			await updateKanbanComment(commentIdToEdit, item.id, trimmedBody);
+			const res = await fetch(`/api/kanban/${item.id}/comments`);
+			const data = await res.json();
+			setComments(data.comments ?? []);
+		} finally {
+			setPendingUpdates((prev) => {
+				const next = new Map(prev);
+				next.delete(commentIdToEdit);
+				return next;
 			});
-			try {
-				await updateKanbanComment(editingCommentId, item.id, trimmedBody);
-				const res = await fetch(`/api/kanban/${item.id}/comments`);
-				const data = await res.json();
-				setComments(data.comments ?? []);
-			} catch {
-				// Revert will happen via server refresh
-			}
-		});
-	}, [item, editingCommentId, editingCommentBody, comments, addOptimisticComment]);
+			setIsSubmittingComment(false);
+		}
+	}, [item, editingCommentId, editingCommentBody, comments]);
 
 	const handleOpenFullView = useCallback(() => {
 		if (!item) return;
@@ -504,6 +515,14 @@ export function KanbanItemSheet({
 							<span className="flex items-center justify-center gap-2">
 								<MessageCircle className="w-3.5 h-3.5" />
 								Issue Discussion
+								{!isLoadingIssueComments &&
+									issueCommentCount > 0 && (
+										<span className="text-[9px] font-mono bg-muted/50 px-1 py-0.5 rounded">
+											{
+												issueCommentCount
+											}
+										</span>
+									)}
 							</span>
 							{activeChatTab === "issue" && (
 								<div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
@@ -526,6 +545,10 @@ export function KanbanItemSheet({
 							issueUrl={item.issueUrl}
 							currentUser={currentUser}
 							variant="compact"
+							onCommentCountChange={(count, loading) => {
+								setIssueCommentCount(count);
+								setIsLoadingIssueComments(loading);
+							}}
 						/>
 					</div>
 
@@ -984,6 +1007,143 @@ export function KanbanItemSheet({
 									</a>
 								</div>
 							</div>
+
+							{/* Linked PRs */}
+							{item.linkedPRs &&
+								item.linkedPRs.length > 0 && (
+									<>
+										<div className="h-px bg-border/50" />
+										<div className="space-y-2">
+											<h4 className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+												Linked
+												PRs
+											</h4>
+											<div className="space-y-2">
+												{item.linkedPRs.map(
+													(
+														pr,
+													) => {
+														const isMerged =
+															pr.merged;
+														const isClosed =
+															pr.state ===
+																"closed" &&
+															!pr.merged;
+														const isDraft =
+															pr.draft;
+														const isOpen =
+															pr.state ===
+															"open";
+
+														let statusIcon;
+														let statusColor;
+														let statusText;
+
+														if (
+															isMerged
+														) {
+															statusIcon =
+																(
+																	<GitMerge className="w-3 h-3" />
+																);
+															statusColor =
+																"text-purple-500";
+															statusText =
+																"Merged";
+														} else if (
+															isClosed
+														) {
+															statusIcon =
+																(
+																	<CircleX className="w-3 h-3" />
+																);
+															statusColor =
+																"text-red-500";
+															statusText =
+																"Closed";
+														} else if (
+															isDraft
+														) {
+															statusIcon =
+																(
+																	<FileEdit className="w-3 h-3" />
+																);
+															statusColor =
+																"text-muted-foreground";
+															statusText =
+																"Draft";
+														} else {
+															statusIcon =
+																(
+																	<GitPullRequest className="w-3 h-3" />
+																);
+															statusColor =
+																"text-green-500";
+															statusText =
+																"Open";
+														}
+
+														return (
+															<Link
+																key={`${pr.repoOwner}/${pr.repoName}#${pr.number}`}
+																href={`/${pr.repoOwner}/${pr.repoName}/pulls/${pr.number}`}
+																className="block p-2 -mx-1 rounded border border-border/50 hover:border-border hover:bg-muted/30 transition-colors"
+															>
+																<div className="flex items-start gap-2">
+																	<span
+																		className={cn(
+																			"shrink-0 mt-0.5",
+																			statusColor,
+																		)}
+																	>
+																		{
+																			statusIcon
+																		}
+																	</span>
+																	<div className="min-w-0 flex-1">
+																		<p className="text-[10px] font-medium text-foreground line-clamp-2 leading-tight">
+																			{
+																				pr.title
+																			}
+																		</p>
+																		<div className="flex items-center gap-1.5 mt-1">
+																			<span className="text-[9px] font-mono text-muted-foreground/60">
+																				#
+																				{
+																					pr.number
+																				}
+																			</span>
+																			<span
+																				className={cn(
+																					"text-[9px]",
+																					statusColor,
+																				)}
+																			>
+																				{
+																					statusText
+																				}
+																			</span>
+																			{pr.user && (
+																				<span className="text-[9px] text-muted-foreground/50">
+																					by{" "}
+																					{
+																						pr
+																							.user
+																							.login
+																					}
+																				</span>
+																			)}
+																		</div>
+																	</div>
+																</div>
+															</Link>
+														);
+													},
+												)}
+											</div>
+										</div>
+									</>
+								)}
 
 							<div className="h-px bg-border/50" />
 

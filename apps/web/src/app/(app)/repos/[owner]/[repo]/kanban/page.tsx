@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getOctokit, extractRepoPermissions } from "@/lib/github";
-import { listKanbanItems } from "@/lib/kanban-store";
+import { listKanbanItems, countMaintainerCommentsByItems } from "@/lib/kanban-store";
 import { KanbanBoard } from "@/components/kanban/kanban-board";
 import { syncAllKanbanStatuses } from "./actions";
 import { getServerSession } from "@/lib/auth";
@@ -64,6 +64,9 @@ export default async function KanbanPage({
 	}
 
 	const items = await listKanbanItems(owner, repo);
+	const maintainerCommentCounts = await countMaintainerCommentsByItems(
+		items.map((i) => i.id),
+	);
 	const session = await getServerSession();
 
 	const currentUser = session?.user
@@ -81,6 +84,7 @@ export default async function KanbanPage({
 				owner={owner}
 				repo={repo}
 				initialItems={items}
+				initialMaintainerCommentCounts={maintainerCommentCounts}
 				currentUser={currentUser}
 			/>
 		</div>

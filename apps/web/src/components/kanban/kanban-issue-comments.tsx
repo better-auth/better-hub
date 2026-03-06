@@ -34,6 +34,7 @@ interface KanbanIssueCommentsProps {
 	issueUrl: string;
 	currentUser: { id: string; login: string | null; name: string; image: string } | null;
 	variant?: "default" | "compact";
+	onCommentCountChange?: (count: number, isLoading: boolean) => void;
 }
 
 export function KanbanIssueComments({
@@ -43,6 +44,7 @@ export function KanbanIssueComments({
 	issueUrl,
 	currentUser,
 	variant = "default",
+	onCommentCountChange,
 }: KanbanIssueCommentsProps) {
 	const router = useRouter();
 	const [comments, setComments] = useState<IssueComment[]>([]);
@@ -102,6 +104,10 @@ export function KanbanIssueComments({
 			mounted = false;
 		};
 	}, [owner, repo, issueNumber]);
+
+	useEffect(() => {
+		onCommentCountChange?.(comments.length, isLoading);
+	}, [comments.length, isLoading, onCommentCountChange]);
 
 	const handleAddComment = useCallback(() => {
 		const body = commentBody.trim();

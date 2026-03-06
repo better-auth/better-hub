@@ -2,9 +2,18 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { ExternalLink, MoreHorizontal, Trash2 } from "lucide-react";
+import {
+	ExternalLink,
+	MoreHorizontal,
+	Trash2,
+	MessageCircle,
+	MessageSquare,
+	CheckCircle2,
+	Clock,
+	GitPullRequest,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { KanbanItem, KanbanStatus } from "@/lib/kanban-store";
+import type { KanbanItem, KanbanStatus, KanbanLabel } from "@/lib/kanban-store";
 import {
 	DropdownMenu,
 	DropdownMenuTrigger,
@@ -15,6 +24,7 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
+import { TimeAgo } from "@/components/ui/time-ago";
 
 const STATUS_LABELS: Record<KanbanStatus, string> = {
 	backlog: "Backlog",
@@ -31,6 +41,22 @@ interface KanbanCardProps {
 	onOpen: () => void;
 	onMove: (status: KanbanStatus) => void;
 	onDelete: () => void;
+	maintainerCommentCount?: number;
+}
+
+function LabelPill({ label }: { label: KanbanLabel }) {
+	const color = label.color || "888";
+	return (
+		<span
+			className="text-[9px] font-mono px-1.5 py-0.5 rounded-full whitespace-nowrap"
+			style={{
+				backgroundColor: `#${color}18`,
+				color: `#${color}`,
+			}}
+		>
+			{label.name}
+		</span>
+	);
 }
 
 export function KanbanCard({
@@ -40,11 +66,14 @@ export function KanbanCard({
 	onOpen,
 	onMove,
 	onDelete,
+	maintainerCommentCount = 0,
 }: KanbanCardProps) {
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
 
 	const assignee = item.kanbanAssigneeLogin ?? item.assigneeLogin;
 	const assigneeAvatar = item.kanbanAssigneeAvatar ?? item.assigneeAvatar;
+	const totalComments = item.issueCommentCount + maintainerCommentCount;
+	const isClosed = item.issueState === "closed";
 
 	return (
 		<div
@@ -52,6 +81,7 @@ export function KanbanCard({
 				"bg-background border rounded-md p-3 cursor-pointer outline-none!",
 				"hover:border-border hover:shadow-sm transition-all",
 				isDragging && "shadow-lg border-border rotate-2",
+				isClosed && "opacity-70",
 			)}
 			onClick={onOpen}
 			onKeyDown={(e) => {
@@ -62,9 +92,22 @@ export function KanbanCard({
 			}}
 		>
 			<div className="flex items-start justify-between gap-2 mb-2">
-				<h3 className="text-sm font-medium line-clamp-2 flex-1">
-					{item.issueTitle}
-				</h3>
+				<div className="flex-1 min-w-0">
+					<div className="flex items-center gap-1.5 mb-1">
+						{isClosed && (
+							<CheckCircle2 className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+						)}
+						<h3
+							className={cn(
+								"text-sm font-medium line-clamp-2",
+								isClosed &&
+									"line-through opacity-70",
+							)}
+						>
+							{item.issueTitle}
+						</h3>
+					</div>
+				</div>
 				<DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
 					<DropdownMenuTrigger asChild>
 						<button
@@ -154,18 +197,103 @@ export function KanbanCard({
 				</DropdownMenu>
 			</div>
 
+			{/* Labels */}
+			{item.labels && item.labels.length > 0 && (
+				<div className="flex flex-wrap gap-1 mb-2">
+					{item.labels.slice(0, 3).map((label) => (
+						<LabelPill key={label.name} label={label} />
+					))}
+					{item.labels.length > 3 && (
+						<span className="text-[9px] text-muted-foreground/50 self-center">
+							+{item.labels.length - 3}
+						</span>
+					)}
+				</div>
+			)}
+
 			{item.aiSummary && (
 				<p className="text-xs text-muted-foreground/70 line-clamp-2 mb-2">
 					{item.aiSummary}
 				</p>
 			)}
 
-			<div className="flex items-center justify-between">
-				<span className="text-[10px] font-mono text-muted-foreground/50">
-					#{item.issueNumber}
-				</span>
+			{/* Footer with metadata */}
+			<div className="flex items-center justify-between gap-2">
+				<div className="flex items-center gap-2 min-w-0">
+					<span className="text-[10px] font-mono text-muted-foreground/50">
+						#{item.issueNumber}
+					</span>
+
+					{/* Comments indicator */}
+					{totalComments > 0 && (
+						<div
+							className="flex items-center gap-0.5 text-muted-foreground/50"
+							title={`${item.issueCommentCount} issue comments${maintainerCommentCount > 0 ? `, ${maintainerCommentCount} maintainer comments` : ""}`}
+						>
+							<MessageCircle className="w-3 h-3" />
+							<span className="text-[10px]">
+								{totalComments}
+							</span>
+						</div>
+					)}
+
+					{/* Maintainer comments badge */}
+					{maintainerCommentCount > 0 && (
+						<div
+							className="flex items-center gap-0.5 text-amber-500/70"
+							title={`${maintainerCommentCount} maintainer comments`}
+						>
+							<MessageSquare className="w-3 h-3" />
+							<span className="text-[10px]">
+								{maintainerCommentCount}
+							</span>
+						</div>
+					)}
+
+					{/* Linked PRs indicator */}
+					{item.linkedPRs && item.linkedPRs.length > 0 && (
+						<div
+							className={cn(
+								"flex items-center gap-0.5",
+								item.linkedPRs.some(
+									(pr) =>
+										pr.state ===
+											"open" &&
+										!pr.draft,
+								)
+									? "text-green-500/70"
+									: item.linkedPRs.some(
+												(
+													pr,
+												) =>
+													pr.merged,
+										  )
+										? "text-purple-500/70"
+										: "text-muted-foreground/50",
+							)}
+							title={`${item.linkedPRs.length} linked PR${item.linkedPRs.length !== 1 ? "s" : ""}`}
+						>
+							<GitPullRequest className="w-3 h-3" />
+							<span className="text-[10px]">
+								{item.linkedPRs.length}
+							</span>
+						</div>
+					)}
+
+					{/* Updated time */}
+					<div
+						className="flex items-center gap-0.5 text-muted-foreground/40"
+						title={`Updated ${new Date(item.updatedAt).toLocaleString()}`}
+					>
+						<Clock className="w-2.5 h-2.5" />
+						<span className="text-[9px]">
+							<TimeAgo date={item.updatedAt} />
+						</span>
+					</div>
+				</div>
+
 				{assignee && (
-					<div className="flex items-center gap-1.5">
+					<div className="flex items-center gap-1.5 shrink-0">
 						{assigneeAvatar ? (
 							<Image
 								src={assigneeAvatar}
@@ -177,7 +305,7 @@ export function KanbanCard({
 						) : (
 							<div className="w-4 h-4 rounded-full bg-muted" />
 						)}
-						<span className="text-[10px] text-muted-foreground/60">
+						<span className="text-[10px] text-muted-foreground/60 max-w-[60px] truncate">
 							{assignee}
 						</span>
 					</div>

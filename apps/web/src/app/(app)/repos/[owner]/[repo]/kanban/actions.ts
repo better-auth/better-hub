@@ -16,6 +16,8 @@ import {
 	updateKanbanComment as updateKanbanCommentStore,
 	getKanbanComment,
 	type KanbanStatus,
+	type KanbanLabel,
+	type LinkedPR,
 } from "@/lib/kanban-store";
 import { auth, getServerSession } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -37,6 +39,70 @@ async function assertMaintainer(owner: string, repo: string) {
 	return session;
 }
 
+function extractLabels(
+	labels: Array<string | { name?: string | null; color?: string | null }>,
+): KanbanLabel[] {
+	return labels
+		.map((l) => {
+			if (typeof l === "string") return { name: l, color: "6b7280" };
+			return { name: l.name ?? "", color: l.color ?? "6b7280" };
+		})
+		.filter((l) => l.name);
+}
+
+async function fetchLinkedPRs(
+	octokit: Awaited<ReturnType<typeof getOctokit>>,
+	owner: string,
+	repo: string,
+	issueNumber: number,
+): Promise<LinkedPR[]> {
+	if (!octokit) return [];
+
+	const crossRefs = await getCrossReferences(owner, repo, issueNumber);
+	const prRefs = crossRefs.filter((ref) => ref.isPullRequest);
+
+	const linkedPRs: LinkedPR[] = [];
+	for (const ref of prRefs) {
+		try {
+			const { data: prData } = await octokit.pulls.get({
+				owner: ref.repoOwner,
+				repo: ref.repoName,
+				pull_number: ref.number,
+			});
+			linkedPRs.push({
+				number: ref.number,
+				title: ref.title,
+				state: ref.state,
+				merged: ref.merged,
+				draft: prData.draft ?? false,
+				user: ref.user
+					? { login: ref.user.login, avatarUrl: ref.user.avatar_url }
+					: null,
+				htmlUrl: ref.html_url,
+				repoOwner: ref.repoOwner,
+				repoName: ref.repoName,
+				createdAt: ref.created_at,
+			});
+		} catch {
+			linkedPRs.push({
+				number: ref.number,
+				title: ref.title,
+				state: ref.state,
+				merged: ref.merged,
+				draft: false,
+				user: ref.user
+					? { login: ref.user.login, avatarUrl: ref.user.avatar_url }
+					: null,
+				htmlUrl: ref.html_url,
+				repoOwner: ref.repoOwner,
+				repoName: ref.repoName,
+				createdAt: ref.created_at,
+			});
+		}
+	}
+	return linkedPRs;
+}
+
 export async function addIssueToKanban(owner: string, repo: string, issueNumber: number) {
 	await assertMaintainer(owner, repo);
 
@@ -55,6 +121,8 @@ export async function addIssueToKanban(owner: string, repo: string, issueNumber:
 	});
 
 	const assignee = issue.assignees?.[0] ?? issue.assignee;
+	const labels = extractLabels(issue.labels);
+	const linkedPRs = await fetchLinkedPRs(octokit, owner, repo, issueNumber);
 
 	const item = await createKanbanItem(
 		owner,
@@ -65,6 +133,10 @@ export async function addIssueToKanban(owner: string, repo: string, issueNumber:
 		issue.body ?? null,
 		assignee?.login ?? null,
 		assignee?.avatar_url ?? null,
+		labels,
+		issue.comments,
+		issue.state as "open" | "closed",
+		linkedPRs,
 	);
 
 	revalidatePath(`/repos/${owner}/${repo}/kanban`);
@@ -145,6 +217,8 @@ export async function syncKanbanItemFromGitHub(id: string) {
 	});
 
 	const assignee = issue.assignees?.[0] ?? issue.assignee;
+	const labels = extractLabels(issue.labels);
+	const linkedPRs = await fetchLinkedPRs(octokit, item.owner, item.repo, item.issueNumber);
 
 	const updated = await syncKanbanItemFromIssue(
 		id,
@@ -152,6 +226,10 @@ export async function syncKanbanItemFromGitHub(id: string) {
 		issue.body ?? null,
 		assignee?.login ?? null,
 		assignee?.avatar_url ?? null,
+		labels,
+		issue.comments,
+		issue.state as "open" | "closed",
+		linkedPRs,
 	);
 
 	revalidatePath(`/repos/${item.owner}/${item.repo}/kanban`);
@@ -180,12 +258,24 @@ export async function syncAllKanbanStatuses(owner: string, repo: string) {
 			});
 
 			const assignee = issue.assignees?.[0] ?? issue.assignee;
+			const labels = extractLabels(issue.labels);
+			const linkedPRs = await fetchLinkedPRs(
+				octokit,
+				owner,
+				repo,
+				item.issueNumber,
+			);
+
 			await syncKanbanItemFromIssue(
 				item.id,
 				issue.title,
 				issue.body ?? null,
 				assignee?.login ?? null,
 				assignee?.avatar_url ?? null,
+				labels,
+				issue.comments,
+				issue.state as "open" | "closed",
+				linkedPRs,
 			);
 
 			if (issue.state === "closed") {
@@ -193,31 +283,10 @@ export async function syncAllKanbanStatuses(owner: string, repo: string) {
 				continue;
 			}
 
-			const crossRefs = await getCrossReferences(owner, repo, item.issueNumber);
-			const linkedPRs = crossRefs.filter(
-				(ref) => ref.isPullRequest && ref.state === "open",
-			);
-
-			if (linkedPRs.length > 0) {
-				let hasDraftPR = false;
-				let hasReadyPR = false;
-
-				for (const pr of linkedPRs) {
-					try {
-						const { data: prData } = await octokit.pulls.get({
-							owner: pr.repoOwner,
-							repo: pr.repoName,
-							pull_number: pr.number,
-						});
-						if (prData.draft) {
-							hasDraftPR = true;
-						} else {
-							hasReadyPR = true;
-						}
-					} catch {
-						// PR might not be accessible
-					}
-				}
+			const openPRs = linkedPRs.filter((pr) => pr.state === "open");
+			if (openPRs.length > 0) {
+				const hasDraftPR = openPRs.some((pr) => pr.draft);
+				const hasReadyPR = openPRs.some((pr) => !pr.draft);
 
 				if (hasReadyPR) {
 					if (item.status !== "in-review") {

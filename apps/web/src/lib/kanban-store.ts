@@ -2,6 +2,24 @@ import { prisma } from "./db";
 
 export type KanbanStatus = "backlog" | "todo" | "in-progress" | "in-review" | "done";
 
+export interface KanbanLabel {
+	name: string;
+	color: string;
+}
+
+export interface LinkedPR {
+	number: number;
+	title: string;
+	state: "open" | "closed";
+	merged: boolean;
+	draft: boolean;
+	user: { login: string; avatarUrl: string } | null;
+	htmlUrl: string;
+	repoOwner: string;
+	repoName: string;
+	createdAt: string;
+}
+
 export interface KanbanItem {
 	id: string;
 	owner: string;
@@ -16,6 +34,10 @@ export interface KanbanItem {
 	assigneeAvatar: string | null;
 	kanbanAssigneeLogin: string | null;
 	kanbanAssigneeAvatar: string | null;
+	labels: KanbanLabel[];
+	issueCommentCount: number;
+	issueState: "open" | "closed";
+	linkedPRs: LinkedPR[];
 	createdAt: string;
 	updatedAt: string;
 }
@@ -34,9 +56,31 @@ function toKanbanItem(row: {
 	assigneeAvatar: string | null;
 	kanbanAssigneeLogin: string | null;
 	kanbanAssigneeAvatar: string | null;
+	labels: string | null;
+	issueCommentCount: number;
+	issueState: string;
+	linkedPRs: string | null;
 	createdAt: string;
 	updatedAt: string;
 }): KanbanItem {
+	let parsedLabels: KanbanLabel[] = [];
+	if (row.labels) {
+		try {
+			parsedLabels = JSON.parse(row.labels);
+		} catch {
+			parsedLabels = [];
+		}
+	}
+
+	let parsedLinkedPRs: LinkedPR[] = [];
+	if (row.linkedPRs) {
+		try {
+			parsedLinkedPRs = JSON.parse(row.linkedPRs);
+		} catch {
+			parsedLinkedPRs = [];
+		}
+	}
+
 	return {
 		id: row.id,
 		owner: row.owner,
@@ -51,6 +95,10 @@ function toKanbanItem(row: {
 		assigneeAvatar: row.assigneeAvatar,
 		kanbanAssigneeLogin: row.kanbanAssigneeLogin,
 		kanbanAssigneeAvatar: row.kanbanAssigneeAvatar,
+		labels: parsedLabels,
+		issueCommentCount: row.issueCommentCount,
+		issueState: row.issueState as "open" | "closed",
+		linkedPRs: parsedLinkedPRs,
 		createdAt: row.createdAt,
 		updatedAt: row.updatedAt,
 	};
@@ -65,6 +113,10 @@ export async function createKanbanItem(
 	issueBody: string | null,
 	assigneeLogin: string | null,
 	assigneeAvatar: string | null,
+	labels: KanbanLabel[] = [],
+	issueCommentCount: number = 0,
+	issueState: "open" | "closed" = "open",
+	linkedPRs: LinkedPR[] = [],
 ): Promise<KanbanItem> {
 	const id = crypto.randomUUID();
 	const now = new Date().toISOString();
@@ -81,6 +133,10 @@ export async function createKanbanItem(
 			status: "backlog",
 			assigneeLogin,
 			assigneeAvatar,
+			labels: JSON.stringify(labels),
+			issueCommentCount,
+			issueState,
+			linkedPRs: JSON.stringify(linkedPRs),
 			createdAt: now,
 			updatedAt: now,
 		},
@@ -176,6 +232,10 @@ export async function syncKanbanItemFromIssue(
 	issueBody: string | null,
 	assigneeLogin: string | null,
 	assigneeAvatar: string | null,
+	labels: KanbanLabel[] = [],
+	issueCommentCount: number = 0,
+	issueState: "open" | "closed" = "open",
+	linkedPRs: LinkedPR[] = [],
 ): Promise<KanbanItem | null> {
 	const now = new Date().toISOString();
 
@@ -186,6 +246,10 @@ export async function syncKanbanItemFromIssue(
 			issueBody,
 			assigneeLogin,
 			assigneeAvatar,
+			labels: JSON.stringify(labels),
+			issueCommentCount,
+			issueState,
+			linkedPRs: JSON.stringify(linkedPRs),
 			updatedAt: now,
 		},
 	});
@@ -270,6 +334,24 @@ export async function listKanbanComments(kanbanItemId: string): Promise<KanbanCo
 		orderBy: { createdAt: "asc" },
 	});
 	return rows.map(toKanbanComment);
+}
+
+export async function countMaintainerCommentsByItems(
+	kanbanItemIds: string[],
+): Promise<Record<string, number>> {
+	if (kanbanItemIds.length === 0) return {};
+
+	const counts = await prisma.kanbanComment.groupBy({
+		by: ["kanbanItemId"],
+		where: { kanbanItemId: { in: kanbanItemIds } },
+		_count: { id: true },
+	});
+
+	const result: Record<string, number> = {};
+	for (const item of counts) {
+		result[item.kanbanItemId] = item._count.id;
+	}
+	return result;
 }
 
 export async function getKanbanComment(id: string): Promise<KanbanComment | null> {

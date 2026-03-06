@@ -106,6 +106,16 @@ export function RepoNav({
 				pathname.startsWith(`${base}/commits`) ||
 				pathname.startsWith(`${base}/commit/`),
 		},
+		...(showKanbanTab
+			? [
+					{
+						label: "Kanban",
+						href: `${base}/kanban`,
+						active: pathname.startsWith(`${base}/kanban`),
+						count: kanbanItemsCount,
+					},
+				]
+			: []),
 		{
 			label: "PRs",
 			href: `${base}/pulls`,
@@ -142,16 +152,6 @@ export function RepoNav({
 						label: "People",
 						href: `${base}/people`,
 						active: pathname.startsWith(`${base}/people`),
-					},
-				]
-			: []),
-		...(showKanbanTab
-			? [
-					{
-						label: "Kanban",
-						href: `${base}/kanban`,
-						active: pathname.startsWith(`${base}/kanban`),
-						count: kanbanItemsCount,
 					},
 				]
 			: []),
