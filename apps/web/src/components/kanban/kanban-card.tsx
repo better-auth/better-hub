@@ -32,7 +32,7 @@ interface KanbanCardProps {
 	onMove: (status: KanbanStatus) => void;
 	onDelete: () => void;
 }
-
+d;
 export function KanbanCard({
 	item,
 	isDragging,
