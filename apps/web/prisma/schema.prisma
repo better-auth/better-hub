@@ -379,3 +379,40 @@ model PromptRequestReaction {
   @@index([userId])
   @@map("prompt_request_reactions")
 }
+
+model KanbanItem {
+  id                   String  @id
+  owner                String
+  repo                 String
+  issueNumber          Int
+  issueTitle           String
+  issueUrl             String
+  issueBody            String?
+  status               String  @default("backlog")
+  aiSummary            String?
+  assigneeLogin        String?
+  assigneeAvatar       String?
+  kanbanAssigneeLogin  String?
+  kanbanAssigneeAvatar String?
+  createdAt            String
+  updatedAt            String
+
+  @@unique([owner, repo, issueNumber])
+  @@index([owner, repo, status])
+  @@map("kanban_items")
+}
+
+model KanbanComment {
+  id            String @id
+  kanbanItemId  String
+  userId        String
+  userLogin     String?
+  userName      String
+  userAvatarUrl String
+  body          String
+  createdAt     String
+  updatedAt     String
+
+  @@index([kanbanItemId, createdAt])
+  @@map("kanban_comments")
+}

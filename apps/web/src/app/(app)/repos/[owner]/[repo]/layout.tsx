@@ -1,5 +1,6 @@
 import { getRepoPageData, getRepoTree, prefetchPRData, getForkSyncStatus } from "@/lib/github";
 import { countPromptRequests } from "@/lib/prompt-request-store";
+import { countKanbanItems } from "@/lib/kanban-store";
 import { buildFileTree, type FileTreeNode } from "@/lib/file-tree";
 import { RepoSidebar } from "@/components/repo/repo-sidebar";
 import { RepoNav } from "@/components/repo/repo-nav";
@@ -172,9 +173,16 @@ export default async function RepoLayout({
 
 	const showPeopleTab = repoData.owner.type === "Organization" && viewerIsOrgMember;
 
+	const { permissions } = repoData;
+	const isMaintainer = permissions.push || permissions.admin || permissions.maintain;
+	const kanbanCountPromise = isMaintainer
+		? countKanbanItems(owner, repoName)
+		: Promise.resolve(0);
+
 	const parent = repoData.parent;
 
 	const forkSyncStatus = await forkSyncPromise;
+	const kanbanItemsCount = await kanbanCountPromise;
 
 	return (
 		<div className="-mx-4 flex-1 min-h-0 flex flex-col">
@@ -254,7 +262,9 @@ export default async function RepoLayout({
 						hasDiscussions={!!repoData.has_discussions}
 						discussionsCount={navCounts.discussions}
 						promptRequestsCount={promptRequestsCount}
+						kanbanItemsCount={kanbanItemsCount}
 						showPeopleTab={showPeopleTab}
+						showKanbanTab={isMaintainer}
 					/>
 				</div>
 				<CodeContentWrapper
