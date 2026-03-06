@@ -21,7 +21,13 @@ import {
 } from "@/lib/kanban-store";
 import { auth, getServerSession } from "@/lib/auth";
 import { headers } from "next/headers";
-import { getOctokit, extractRepoPermissions, getCrossReferences, getIssue } from "@/lib/github";
+import {
+	getOctokit,
+	extractRepoPermissions,
+	getCrossReferences,
+	getIssue,
+	getRepoIssuesPage,
+} from "@/lib/github";
 
 async function assertMaintainer(owner: string, repo: string) {
 	const session = await auth.api.getSession({ headers: await headers() });
@@ -473,4 +479,125 @@ export async function fetchRepoCollaborators(owner: string, repo: string) {
 			avatar: c.avatar_url,
 			name: c.name ?? c.login,
 		}));
+}
+
+export interface ActiveIssue {
+	number: number;
+	title: string;
+	body: string | null;
+	state: "open" | "closed";
+	user: { login: string; avatar_url: string } | null;
+	assignees: { login: string; avatar_url: string }[];
+	labels: { name: string; color: string }[];
+	created_at: string;
+	updated_at: string;
+	comments: number;
+	html_url: string;
+	isOnKanban: boolean;
+}
+
+export async function fetchActiveIssuesPaginated(
+	owner: string,
+	repo: string,
+	page: number = 1,
+	perPage: number = 20,
+): Promise<{ issues: ActiveIssue[]; hasMore: boolean; totalCount: number }> {
+	await assertMaintainer(owner, repo);
+
+	const [cachedData, existingItems] = await Promise.all([
+		getRepoIssuesPage(owner, repo),
+		listKanbanItems(owner, repo),
+	]);
+
+	const existingIssueNumbers = new Set(existingItems.map((i) => i.issueNumber));
+
+	// Filter out PRs (they have pull_request field) and map to ActiveIssue
+	const allIssues: ActiveIssue[] = cachedData.openIssues
+		.filter((issue) => !issue.pull_request)
+		.map((issue) => ({
+			number: issue.number,
+			title: issue.title,
+			body: null,
+			state: issue.state as "open" | "closed",
+			user: issue.user,
+			assignees: issue.assignees,
+			labels: issue.labels
+				.filter((l) => l.name)
+				.map((l) => ({ name: l.name!, color: l.color ?? "6b7280" })),
+			created_at: issue.created_at,
+			updated_at: issue.updated_at,
+			comments: issue.comments,
+			html_url: `https://github.com/${owner}/${repo}/issues/${issue.number}`,
+			isOnKanban: existingIssueNumbers.has(issue.number),
+		}));
+
+	// Paginate the results
+	const startIndex = (page - 1) * perPage;
+	const endIndex = startIndex + perPage;
+	const paginatedIssues = allIssues.slice(startIndex, endIndex);
+	const hasMore = endIndex < allIssues.length;
+
+	return {
+		issues: paginatedIssues,
+		hasMore,
+		totalCount: allIssues.length,
+	};
+}
+
+export async function getIssueDetails(owner: string, repo: string, issueNumber: number) {
+	await assertMaintainer(owner, repo);
+
+	const octokit = await getOctokit();
+	if (!octokit) throw new Error("Failed to connect to GitHub");
+
+	const [issueResponse, commentsResponse] = await Promise.all([
+		octokit.issues.get({ owner, repo, issue_number: issueNumber }),
+		octokit.issues.listComments({
+			owner,
+			repo,
+			issue_number: issueNumber,
+			per_page: 100,
+		}),
+	]);
+
+	const issue = issueResponse.data;
+	const comments = commentsResponse.data;
+
+	return {
+		issue: {
+			number: issue.number,
+			title: issue.title,
+			body: issue.body ?? null,
+			state: issue.state as "open" | "closed",
+			user: issue.user
+				? { login: issue.user.login, avatar_url: issue.user.avatar_url }
+				: null,
+			assignees: (issue.assignees || []).map((a) => ({
+				login: a.login,
+				avatar_url: a.avatar_url,
+			})),
+			labels: extractLabels(issue.labels),
+			created_at: issue.created_at,
+			updated_at: issue.updated_at,
+			closed_at: (issue as { closed_at?: string | null }).closed_at ?? null,
+			comments: issue.comments,
+			html_url: issue.html_url,
+			milestone: issue.milestone
+				? {
+						title: issue.milestone.title,
+						description: issue.milestone.description ?? null,
+					}
+				: null,
+		},
+		comments: comments.map((c) => ({
+			id: c.id,
+			body: c.body ?? "",
+			user: c.user
+				? { login: c.user.login, avatar_url: c.user.avatar_url }
+				: null,
+			created_at: c.created_at,
+			updated_at: c.updated_at,
+			author_association: c.author_association,
+		})),
+	};
 }

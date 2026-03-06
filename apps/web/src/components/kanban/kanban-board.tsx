@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import {
-	Plus,
 	RefreshCw,
 	Loader2,
 	Circle,
@@ -13,6 +12,8 @@ import {
 	Timer,
 	Eye,
 	CheckCircle2,
+	Search,
+	MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { KanbanItem, KanbanStatus } from "@/lib/kanban-store";
@@ -20,12 +21,16 @@ import { KanbanCard } from "./kanban-card";
 import { KanbanItemSheet } from "./kanban-item-sheet";
 import { AddIssueDialog } from "./add-issue-dialog";
 import { KeyboardShortcutsModal } from "./keyboard-shortcuts-modal";
+import { ActiveIssuesColumn } from "./active-issues-column";
+import { IssueDetailSheet } from "./issue-detail-sheet";
 import { useKanbanHotkeys } from "./use-kanban-hotkeys";
 import {
 	moveKanbanItem,
 	removeKanbanItem,
 	syncAllKanbanStatuses,
 	assignKanbanItemToSelf,
+	addIssueToKanban,
+	type ActiveIssue,
 } from "@/app/(app)/repos/[owner]/[repo]/kanban/actions";
 
 const COLUMNS: { id: KanbanStatus; label: string; icon: React.ReactNode; iconColor: string }[] = [
@@ -61,6 +66,37 @@ const COLUMNS: { id: KanbanStatus; label: string; icon: React.ReactNode; iconCol
 	},
 ];
 
+function PendingIssueCard({ issue }: { issue: ActiveIssue }) {
+	return (
+		<div
+			className={cn(
+				"bg-background border rounded-md p-3",
+				"opacity-50 animate-pulse pointer-events-none",
+			)}
+		>
+			<div className="flex items-start justify-between gap-2 mb-2">
+				<div className="flex-1 min-w-0">
+					<div className="flex items-center gap-1.5 mb-1">
+						<Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground shrink-0" />
+						<h3 className="text-sm font-medium line-clamp-2">
+							{issue.title}
+						</h3>
+					</div>
+				</div>
+			</div>
+			<div className="flex items-center gap-3 text-muted-foreground/50">
+				<span className="text-xs font-mono">#{issue.number}</span>
+				{issue.comments > 0 && (
+					<div className="flex items-center gap-1">
+						<MessageCircle className="w-3 h-3" />
+						<span className="text-xs">{issue.comments}</span>
+					</div>
+				)}
+			</div>
+		</div>
+	);
+}
+
 interface KanbanBoardProps {
 	owner: string;
 	repo: string;
@@ -92,12 +128,37 @@ export function KanbanBoard({
 	const [focusedCardIndex, setFocusedCardIndex] = useState(0);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+	const [selectedActiveIssue, setSelectedActiveIssue] = useState<ActiveIssue | null>(null);
+	const [isIssueSheetOpen, setIsIssueSheetOpen] = useState(false);
+	const [pendingItems, setPendingItems] = useState<
+		Map<number, { issue: ActiveIssue; status: KanbanStatus }>
+	>(new Map());
+	const activeIssuesRef = useRef<Map<number, ActiveIssue>>(new Map());
 
 	const selectedItem = useMemo(
 		() => items.find((i) => i.id === selectedItemId) ?? null,
 		[items, selectedItemId],
 	);
 	const isSheetOpen = !!selectedItemId && !!selectedItem;
+
+	const kanbanIssueNumbers = useMemo(
+		() => new Set(items.map((item) => item.issueNumber)),
+		[items],
+	);
+
+	const handleActiveIssueClick = useCallback((issue: ActiveIssue) => {
+		setSelectedActiveIssue(issue);
+		setIsIssueSheetOpen(true);
+	}, []);
+
+	const handleRegisterActiveIssue = useCallback((issue: ActiveIssue) => {
+		activeIssuesRef.current.set(issue.number, issue);
+	}, []);
+
+	const handleIssueAddedToKanban = useCallback((newItem: KanbanItem) => {
+		setItems((prev) => [...prev, newItem]);
+		setSelectedActiveIssue((prev) => (prev ? { ...prev, isOnKanban: true } : null));
+	}, []);
 
 	useEffect(() => {
 		setItems(initialItems);
@@ -109,8 +170,21 @@ export function KanbanBoard({
 		[items],
 	);
 
+	const getPendingItemsByStatus = useCallback(
+		(status: KanbanStatus) => {
+			const pending: ActiveIssue[] = [];
+			pendingItems.forEach(({ issue, status: itemStatus }) => {
+				if (itemStatus === status) {
+					pending.push(issue);
+				}
+			});
+			return pending;
+		},
+		[pendingItems],
+	);
+
 	const handleDragEnd = useCallback(
-		(result: DropResult) => {
+		async (result: DropResult) => {
 			const { destination, source, draggableId } = result;
 
 			if (!destination) return;
@@ -124,6 +198,50 @@ export function KanbanBoard({
 
 			const newStatus = destination.droppableId as KanbanStatus;
 
+			if (draggableId.startsWith("active-issue-")) {
+				const issueNumber = parseInt(
+					draggableId.replace("active-issue-", ""),
+					10,
+				);
+				if (isNaN(issueNumber)) return;
+
+				const activeIssue = activeIssuesRef.current.get(issueNumber);
+				if (!activeIssue) return;
+
+				setPendingItems((prev) => {
+					const next = new Map(prev);
+					next.set(issueNumber, {
+						issue: activeIssue,
+						status: newStatus,
+					});
+					return next;
+				});
+
+				try {
+					const newItem = await addIssueToKanban(
+						owner,
+						repo,
+						issueNumber,
+					);
+					const itemWithStatus = { ...newItem, status: newStatus };
+					setPendingItems((prev) => {
+						const next = new Map(prev);
+						next.delete(issueNumber);
+						return next;
+					});
+					setItems((prev) => [...prev, itemWithStatus]);
+					await moveKanbanItem(newItem.id, newStatus);
+				} catch (e) {
+					console.error("Failed to add issue to kanban:", e);
+					setPendingItems((prev) => {
+						const next = new Map(prev);
+						next.delete(issueNumber);
+						return next;
+					});
+				}
+				return;
+			}
+
 			setItems((prev) =>
 				prev.map((item) =>
 					item.id === draggableId
@@ -136,7 +254,7 @@ export function KanbanBoard({
 				setItems(initialItems);
 			});
 		},
-		[initialItems],
+		[initialItems, owner, repo],
 	);
 
 	const handleSync = useCallback(() => {
@@ -316,16 +434,56 @@ export function KanbanBoard({
 							"hover:bg-primary/90 transition-colors",
 						)}
 					>
-						<Plus className="w-3.5 h-3.5" />
-						Add Issue
+						<Search className="w-3.5 h-3.5" />
+						Find Issue
 					</button>
 				</div>
 			</div>
 
 			<DragDropContext onDragEnd={handleDragEnd}>
 				<div className="flex gap-4 flex-1 min-h-0 overflow-x-auto pb-4 outline-none">
+					{/* Active Issues Column */}
+					<Droppable
+						droppableId="active-issues"
+						isDropDisabled={true}
+					>
+						{(provided) => (
+							<div
+								ref={provided.innerRef}
+								{...provided.droppableProps}
+								className="contents"
+							>
+								<ActiveIssuesColumn
+									owner={owner}
+									repo={repo}
+									onIssueClick={
+										handleActiveIssueClick
+									}
+									kanbanIssueNumbers={
+										kanbanIssueNumbers
+									}
+									onRegisterIssue={
+										handleRegisterActiveIssue
+									}
+									pendingIssueNumbers={
+										pendingItems
+									}
+								/>
+								<div className="hidden">
+									{provided.placeholder}
+								</div>
+							</div>
+						)}
+					</Droppable>
+
+					{/* Divider */}
+					<div className="w-px bg-border/30 shrink-0 my-6" />
+
 					{COLUMNS.map((column, columnIndex) => {
 						const columnItems = getItemsByStatus(column.id);
+						const columnPendingItems = getPendingItemsByStatus(
+							column.id,
+						);
 						return (
 							<div
 								key={column.id}
@@ -345,7 +503,8 @@ export function KanbanBoard({
 										{column.label}
 									</h2>
 									<span className="text-xs font-mono text-muted-foreground/60">
-										{columnItems.length}
+										{columnItems.length +
+											columnPendingItems.length}
 									</span>
 								</div>
 								<Droppable droppableId={column.id}>
@@ -457,6 +616,18 @@ export function KanbanBoard({
 														</Draggable>
 													),
 												)}
+												{columnPendingItems.map(
+													(
+														issue,
+													) => (
+														<PendingIssueCard
+															key={`pending-${issue.number}`}
+															issue={
+																issue
+															}
+														/>
+													),
+												)}
 												{
 													provided.placeholder
 												}
@@ -494,6 +665,15 @@ export function KanbanBoard({
 				currentUser={currentUser}
 				onItemUpdated={handleItemUpdated}
 				onItemDeleted={handleItemDeleted}
+			/>
+
+			<IssueDetailSheet
+				open={isIssueSheetOpen}
+				onOpenChange={setIsIssueSheetOpen}
+				owner={owner}
+				repo={repo}
+				issue={selectedActiveIssue}
+				onIssueAddedToKanban={handleIssueAddedToKanban}
 			/>
 		</div>
 	);

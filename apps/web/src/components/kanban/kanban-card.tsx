@@ -42,6 +42,7 @@ interface KanbanCardProps {
 	onMove: (status: KanbanStatus) => void;
 	onDelete: () => void;
 	maintainerCommentCount?: number;
+	isLoading?: boolean;
 }
 
 function LabelPill({ label }: { label: KanbanLabel }) {
@@ -67,6 +68,7 @@ export function KanbanCard({
 	onMove,
 	onDelete,
 	maintainerCommentCount = 0,
+	isLoading = false,
 }: KanbanCardProps) {
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -82,8 +84,9 @@ export function KanbanCard({
 				"hover:border-border hover:shadow-sm transition-all",
 				isDragging && "shadow-lg border-border rotate-2",
 				isClosed && "opacity-70",
+				isLoading && "opacity-50 pointer-events-none animate-pulse",
 			)}
-			onClick={onOpen}
+			onClick={isLoading ? undefined : onOpen}
 			onKeyDown={(e) => {
 				if (e.key === "Enter" || e.key === " ") {
 					e.preventDefault();
