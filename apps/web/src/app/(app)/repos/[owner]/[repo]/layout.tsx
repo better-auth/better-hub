@@ -176,7 +176,7 @@ export default async function RepoLayout({
 	const { permissions } = repoData;
 	const isMaintainer = permissions.push || permissions.admin || permissions.maintain;
 	const kanbanCountPromise = isMaintainer
-		? countKanbanItems(owner, repoName)
+		? countKanbanItems(owner, repoName, { excludeStatus: "done" })
 		: Promise.resolve(0);
 
 	const parent = repoData.parent;

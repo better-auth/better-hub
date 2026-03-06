@@ -176,10 +176,15 @@ export async function listKanbanItems(
 export async function countKanbanItems(
 	owner: string,
 	repo: string,
-	status?: KanbanStatus,
+	opts?: { status?: KanbanStatus; excludeStatus?: KanbanStatus },
 ): Promise<number> {
 	return prisma.kanbanItem.count({
-		where: { owner, repo, ...(status ? { status } : {}) },
+		where: {
+			owner,
+			repo,
+			...(opts?.status ? { status: opts.status } : {}),
+			...(opts?.excludeStatus ? { status: { not: opts.excludeStatus } } : {}),
+		},
 	});
 }
 
