@@ -86,6 +86,7 @@
 		"@types/react": "^19",
 		"@types/react-dom": "^19",
 		"babel-plugin-react-compiler": "^1.0.0",
+		"react-grab": "^0.1.25",
 		"tailwindcss": "^4"
 	}
 }
