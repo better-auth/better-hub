@@ -21,6 +21,7 @@ import {
 	FolderGit2,
 	GitFork,
 	Link2,
+	Loader2,
 	MapPin,
 	Search,
 	Star,
@@ -92,7 +93,17 @@ const filterTypes = ["all", "sources", "forks", "archived"] as const;
 
 const sortTypes = ["updated", "name", "stars"] as const;
 
-const tabTypes = ["repositories", "activity"] as const;
+const tabTypes = ["repositories", "activity", "followers", "following"] as const;
+
+type RelationshipSortMode = "alpha" | "newest" | "oldest";
+
+const relationshipSortCycle: RelationshipSortMode[] = ["alpha", "newest", "oldest"];
+
+const relationshipSortLabels: Record<RelationshipSortMode, string> = {
+	alpha: "Name",
+	newest: "Newest",
+	oldest: "Oldest",
+};
 
 function formatJoinedDate(value: string | null): string | null {
 	if (!value) return null;
@@ -112,6 +123,22 @@ export interface OrgTopRepo {
 	language: string | null;
 }
 
+export interface UserRelationshipNode {
+	login: string;
+	name: string | null;
+	avatar_url: string;
+	html_url: string;
+	bio: string | null;
+	company: string | null;
+	location: string | null;
+	created_at: string | null;
+}
+
+export interface UserRelationshipData {
+	totalCount: number;
+	nodes: UserRelationshipNode[];
+}
+
 export function UserProfileContent({
 	user,
 	repos,
@@ -119,6 +146,9 @@ export function UserProfileContent({
 	contributions,
 	activityEvents = [],
 	orgTopRepos = [],
+	initialTab = "repositories",
+	followersData = null,
+	followingData = null,
 }: {
 	user: UserProfile;
 	repos: UserRepo[];
@@ -126,10 +156,15 @@ export function UserProfileContent({
 	contributions: ContributionData | null;
 	activityEvents?: ActivityEvent[];
 	orgTopRepos?: OrgTopRepo[];
+	initialTab?: (typeof tabTypes)[number];
+	followersData?: UserRelationshipData | null;
+	followingData?: UserRelationshipData | null;
 }) {
 	const [tab, setTab] = useQueryState(
 		"tab",
-		parseAsStringLiteral(tabTypes).withDefault("repositories"),
+		parseAsStringLiteral(tabTypes)
+			.withDefault(initialTab)
+			.withOptions({ history: "push", shallow: false }),
 	);
 	const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
 	const [filter, setFilter] = useQueryState(
@@ -143,6 +178,8 @@ export function UserProfileContent({
 	const [languageFilter, setLanguageFilter] = useState<string | null>(null);
 	const [showMoreLanguages, setShowMoreLanguages] = useState(false);
 	const [selectedYear, setSelectedYear] = useState<number | null>(null);
+	const [relationshipSearch, setRelationshipSearch] = useState("");
+	const [relationshipSort, setRelationshipSort] = useState<RelationshipSortMode>("alpha");
 
 	const currentYear = new Date().getFullYear();
 	const activeYear = selectedYear ?? currentYear;
@@ -410,6 +447,54 @@ export function UserProfileContent({
 		setShowMoreLanguages(false);
 	}, []);
 
+	const activeRelationshipData = useMemo(() => {
+		if (tab === "followers") return followersData;
+		if (tab === "following") return followingData;
+		return null;
+	}, [tab, followersData, followingData]);
+
+	const isRelationshipLoading = useMemo(
+		() =>
+			(tab === "followers" || tab === "following") &&
+			activeRelationshipData === null,
+		[tab, activeRelationshipData],
+	);
+
+	const activeRelationshipNodes = useMemo(() => {
+		if (tab !== "followers" && tab !== "following") return [];
+		return activeRelationshipData?.nodes ?? [];
+	}, [tab, activeRelationshipData]);
+
+	const filteredRelationships = useMemo(() => {
+		const query = relationshipSearch.trim().toLowerCase();
+		const list = activeRelationshipNodes
+			.filter((person) => {
+				if (!query) return true;
+				return [
+					person.login,
+					person.name ?? "",
+					person.bio ?? "",
+					person.company ?? "",
+					person.location ?? "",
+				]
+					.join(" ")
+					.toLowerCase()
+					.includes(query);
+			})
+			.slice();
+
+		list.sort((a, b) => {
+			if (relationshipSort === "alpha") {
+				return a.login.toLowerCase().localeCompare(b.login.toLowerCase());
+			}
+			const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+			const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+			return relationshipSort === "newest" ? bTime - aTime : aTime - bTime;
+		});
+
+		return list;
+	}, [activeRelationshipNodes, relationshipSearch, relationshipSort]);
+
 	// Language distribution for the bar
 	const languageDistribution = useMemo(() => {
 		const counts: Record<string, number> = {};
@@ -472,6 +557,9 @@ export function UserProfileContent({
 			languageCount,
 		});
 	}, [user, repos, orgs, contributions, totalStars, totalForks, orgTopRepos]);
+
+	const activeRelationshipLabel = tab === "following" ? "following" : "followers";
+	const activeRelationshipTotal = activeRelationshipData?.totalCount ?? 0;
 
 	return (
 		<div className="flex flex-col lg:flex-row gap-8 flex-1 min-h-0 pb-2">
@@ -544,20 +632,36 @@ export function UserProfileContent({
 
 				{/* Followers */}
 				<div className="flex items-center gap-3 mt-4 text-xs text-muted-foreground font-mono">
-					<span className="inline-flex items-center gap-1.5">
+					<button
+						onClick={() => setTab("followers")}
+						className={cn(
+							"inline-flex items-center gap-1.5 transition-colors cursor-pointer",
+							tab === "followers"
+								? "text-foreground"
+								: "hover:text-foreground",
+						)}
+					>
 						<Users className="w-3 h-3" />
 						<span className="text-foreground font-medium">
 							{formatNumber(user.followers)}
 						</span>{" "}
 						followers
-					</span>
+					</button>
 					<span className="text-muted-foreground/30">&middot;</span>
-					<span>
+					<button
+						onClick={() => setTab("following")}
+						className={cn(
+							"transition-colors cursor-pointer",
+							tab === "following"
+								? "text-foreground"
+								: "hover:text-foreground",
+						)}
+					>
 						<span className="text-foreground font-medium">
 							{formatNumber(user.following)}
 						</span>{" "}
 						following
-					</span>
+					</button>
 				</div>
 
 				{/* Metadata */}
@@ -854,7 +958,7 @@ export function UserProfileContent({
 						<button
 							onClick={() => setTab("repositories")}
 							className={cn(
-								"flex-1 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer lg:rounded-l-md",
+								"flex-1 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
 								tab === "repositories"
 									? "bg-muted/50 dark:bg-white/4 text-foreground"
 									: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
@@ -869,7 +973,7 @@ export function UserProfileContent({
 						<button
 							onClick={() => setTab("activity")}
 							className={cn(
-								"flex-1 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer lg:rounded-r-md",
+								"flex-1 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
 								tab === "activity"
 									? "bg-muted/50 dark:bg-white/4 text-foreground"
 									: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
@@ -877,6 +981,36 @@ export function UserProfileContent({
 						>
 							<Activity className="w-3.5 h-3.5" />
 							Activity
+						</button>
+						<button
+							onClick={() => setTab("followers")}
+							className={cn(
+								"flex-1 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
+								tab === "followers"
+									? "bg-muted/50 dark:bg-white/4 text-foreground"
+									: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
+							)}
+						>
+							<Users className="w-3.5 h-3.5" />
+							Followers
+							<span className="text-muted-foreground/50 tabular-nums">
+								{formatNumber(user.followers)}
+							</span>
+						</button>
+						<button
+							onClick={() => setTab("following")}
+							className={cn(
+								"flex-1 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
+								tab === "following"
+									? "bg-muted/50 dark:bg-white/4 text-foreground"
+									: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
+							)}
+						>
+							<Users className="w-3.5 h-3.5" />
+							Following
+							<span className="text-muted-foreground/50 tabular-nums">
+								{formatNumber(user.following)}
+							</span>
 						</button>
 					</div>
 				</div>
@@ -1292,6 +1426,194 @@ export function UserProfileContent({
 							/>
 						</UserProfileActivityTimelineBoundary>
 					</div>
+				)}
+
+				{(tab === "followers" || tab === "following") && (
+					<>
+						<div className="shrink-0 flex items-center gap-2 mb-3 flex-wrap">
+							<div className="relative flex-1 min-w-[220px] max-w-sm">
+								<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50" />
+								<input
+									type="text"
+									placeholder={`Find ${activeRelationshipLabel}...`}
+									value={relationshipSearch}
+									onChange={(e) =>
+										setRelationshipSearch(
+											e.target
+												.value,
+										)
+									}
+									disabled={
+										isRelationshipLoading
+									}
+									className="w-full bg-transparent border border-border pl-9 pr-4 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground/20 focus:ring-[3px] focus:ring-ring/50 transition-colors rounded-md font-mono disabled:opacity-50"
+								/>
+							</div>
+
+							<button
+								onClick={() =>
+									setRelationshipSort(
+										(current) =>
+											relationshipSortCycle[
+												(relationshipSortCycle.indexOf(
+													current,
+												) +
+													1) %
+													relationshipSortCycle.length
+											],
+									)
+								}
+								disabled={isRelationshipLoading}
+								className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-mono uppercase tracking-wider text-muted-foreground border border-border hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer rounded-md shrink-0 disabled:opacity-50"
+							>
+								<ArrowUpDown className="w-3 h-3" />
+								{
+									relationshipSortLabels[
+										relationshipSort
+									]
+								}
+							</button>
+
+							<span className="text-[11px] text-muted-foreground/50 font-mono tabular-nums ml-auto">
+								{isRelationshipLoading
+									? "Loading..."
+									: `${filteredRelationships.length}${
+											filteredRelationships.length !==
+											activeRelationshipTotal
+												? ` / ${formatNumber(activeRelationshipTotal)}`
+												: ""
+										}`}
+							</span>
+						</div>
+
+						<div className="flex-1 min-h-[50dvh] lg:min-h-0 overflow-y-auto border border-border rounded-md divide-y divide-border">
+							{isRelationshipLoading && (
+								<div className="py-16 text-center">
+									<Loader2 className="w-6 h-6 text-muted-foreground/30 mx-auto mb-3 animate-spin" />
+									<p className="text-xs text-muted-foreground/50 font-mono">
+										Loading{" "}
+										{
+											activeRelationshipLabel
+										}
+										...
+									</p>
+								</div>
+							)}
+
+							{!isRelationshipLoading &&
+								filteredRelationships.map(
+									(person) => (
+										<Link
+											key={
+												person.login
+											}
+											href={`/${person.login}`}
+											className="group flex items-start gap-3 px-4 py-3 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors"
+										>
+											<Image
+												src={
+													person.avatar_url
+												}
+												alt={
+													person.login
+												}
+												width={
+													40
+												}
+												height={
+													40
+												}
+												className="rounded-full border border-border/50 shrink-0"
+											/>
+											<div className="flex-1 min-w-0">
+												<div className="flex items-center gap-2 flex-wrap">
+													<span className="text-sm font-medium text-foreground truncate">
+														{person.name ||
+															person.login}
+													</span>
+													{person.name && (
+														<span className="text-[11px] font-mono text-muted-foreground/60 truncate">
+															@
+															{
+																person.login
+															}
+														</span>
+													)}
+												</div>
+												{person.bio && (
+													<p className="text-xs text-muted-foreground/70 mt-1 line-clamp-1">
+														{
+															person.bio
+														}
+													</p>
+												)}
+												<div className="flex items-center gap-3 mt-1.5 flex-wrap text-[11px] text-muted-foreground/60 font-mono">
+													{person.company && (
+														<span className="inline-flex items-center gap-1">
+															<Building2 className="w-3 h-3" />
+															{
+																person.company
+															}
+														</span>
+													)}
+													{person.location && (
+														<span className="inline-flex items-center gap-1">
+															<MapPin className="w-3 h-3" />
+															{
+																person.location
+															}
+														</span>
+													)}
+													{person.created_at && (
+														<span className="inline-flex items-center gap-1 text-muted-foreground/50">
+															<CalendarDays className="w-3 h-3" />
+															Joined{" "}
+															{formatJoinedDate(
+																person.created_at,
+															)}
+														</span>
+													)}
+												</div>
+											</div>
+											<ChevronRight className="w-3 h-3 mt-1 text-foreground/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+										</Link>
+									),
+								)}
+
+							{!isRelationshipLoading &&
+								activeRelationshipNodes.length ===
+									0 && (
+									<div className="py-16 text-center">
+										<Users className="w-6 h-6 text-muted-foreground/20 mx-auto mb-3" />
+										<p className="text-xs text-muted-foreground/50 font-mono">
+											No{" "}
+											{
+												activeRelationshipLabel
+											}{" "}
+											found
+										</p>
+									</div>
+								)}
+
+							{!isRelationshipLoading &&
+								activeRelationshipNodes.length >
+									0 &&
+								filteredRelationships.length ===
+									0 && (
+									<div className="py-16 text-center">
+										<Search className="w-6 h-6 text-muted-foreground/20 mx-auto mb-3" />
+										<p className="text-xs text-muted-foreground/50 font-mono">
+											No matches
+											for "
+											{
+												relationshipSearch
+											}
+											"
+										</p>
+									</div>
+								)}
+						</div>
+					</>
 				)}
 			</main>
 		</div>
