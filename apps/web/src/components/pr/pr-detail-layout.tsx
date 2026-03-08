@@ -77,7 +77,7 @@ export function PRDetailLayout({
 		const stored = sessionStorage.getItem(SK);
 		if (stored !== null) {
 			const v = Number(stored);
-			if (Number.isFinite(v)) {
+			if (Number.isFinite(v) && v >= 25 && v <= 100) {
 				setSplitRatio(v);
 				userAdjustedRef.current = true;
 			}
@@ -208,10 +208,6 @@ export function PRDetailLayout({
 				skipAnimationRef.current = true;
 			}
 			setSplitRatio(0);
-			// Persist without triggering userAdjusted flag
-			try {
-				sessionStorage.setItem(SK, "0");
-			} catch {}
 		} else if (prevTab === "comments") {
 			// Restore previous split ratio when leaving comments tab
 			const restoreRatio =

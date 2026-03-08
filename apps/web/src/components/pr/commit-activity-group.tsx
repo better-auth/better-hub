@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import { GithubAvatar } from "@/components/shared/github-avatar";
 import { ChevronRight, GitCommitHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -37,12 +37,11 @@ export function CommitActivityGroup({ count, avatars, children }: CommitActivity
 				{avatars.length > 0 && (
 					<div className="flex items-center -space-x-1.5 ml-auto">
 						{avatars.slice(0, 3).map((url, i) => (
-							<Image
+							<GithubAvatar
 								key={i}
 								src={url}
 								alt=""
-								width={16}
-								height={16}
+								size={16}
 								className="rounded-full shrink-0 ring-1 ring-background"
 							/>
 						))}

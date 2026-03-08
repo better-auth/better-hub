@@ -12,7 +12,7 @@ import {
 import type { SyntaxToken } from "@/lib/shiki";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
-import Image from "next/image";
+import { GithubAvatar } from "@/components/shared/github-avatar";
 import {
 	File,
 	FileText,
@@ -3073,29 +3073,27 @@ export function InlineCommentForm({
 				</div>
 			)}
 
-			<div className="px-2 pt-2 pb-1">
-				<MarkdownEditor
-					ref={editorRef}
-					value={body}
-					onChange={setBody}
-					placeholder="Leave a comment..."
-					rows={5}
-					autoFocus
-					compact
-					participants={participants}
-					owner={owner}
-					className="border-0 rounded-none focus-within:border-0 focus-within:ring-0"
-					onKeyDown={(e) => {
-						if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-							e.preventDefault();
-							handleSubmit();
-						}
-						if (e.key === "Escape") {
-							onClose();
-						}
-					}}
-				/>
-			</div>
+			<MarkdownEditor
+				ref={editorRef}
+				value={body}
+				onChange={setBody}
+				placeholder="Leave a comment..."
+				rows={5}
+				autoFocus
+				compact
+				participants={participants}
+				owner={owner}
+				className="border-0 rounded-none focus-within:border-0 focus-within:ring-0"
+				onKeyDown={(e) => {
+					if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+						e.preventDefault();
+						handleSubmit();
+					}
+					if (e.key === "Escape") {
+						onClose();
+					}
+				}}
+			/>
 
 			{error && <p className="text-[10px] text-destructive px-3 pb-1">{error}</p>}
 
@@ -3292,11 +3290,10 @@ function InlineCommentDisplay({
 							className="flex items-center gap-1.5 text-xs font-medium text-foreground/70 hover:text-foreground transition-colors"
 							onClick={(e) => e.stopPropagation()}
 						>
-							<Image
+							<GithubAvatar
 								src={comment.user.avatar_url}
 								alt={comment.user.login}
-								width={16}
-								height={16}
+								size={16}
 								className="rounded-full"
 							/>
 							<span className="hover:underline">
@@ -4831,14 +4828,13 @@ function SidebarCommits({
 						>
 							<div className="flex items-start gap-1.5">
 								{c.author && (
-									<Image
+									<GithubAvatar
 										src={
 											c.author
 												.avatar_url
 										}
 										alt={c.author.login}
-										width={16}
-										height={16}
+										size={16}
 										className="rounded-full mt-0.5 shrink-0"
 									/>
 								)}
@@ -4989,11 +4985,10 @@ function SidebarReviews({
 							className="flex items-center gap-1.5"
 						>
 							{r.user && (
-								<Image
+								<GithubAvatar
 									src={r.user.avatar_url}
 									alt={r.user.login}
-									width={14}
-									height={14}
+									size={14}
 									className="rounded-full"
 								/>
 							)}

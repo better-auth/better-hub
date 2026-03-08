@@ -32,6 +32,8 @@ import { SettingsDialog } from "@/components/settings/settings-dialog";
 import type { TabId } from "@/components/settings/settings-content";
 import { NavbarGhostButton } from "@/components/shared/floating-ghost-button";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
+import { useNavVisibility } from "@/components/shared/nav-visibility-provider";
+import { cn } from "@/lib/utils";
 import { NotificationSheet } from "@/components/layout/notification-sheet";
 import { $Session } from "@/lib/auth";
 import type { NotificationItem } from "@/lib/github-types";
@@ -44,6 +46,7 @@ interface AppNavbarProps {
 export function AppNavbar({ session, notifications }: AppNavbarProps) {
 	const { mode, toggleMode } = useColorTheme();
 	const { subscribe } = useMutationEvents();
+	const { isNavHidden } = useNavVisibility();
 	const gh = session.githubUser;
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [settingsTab, setSettingsTab] = useState<TabId | undefined>();
@@ -67,7 +70,12 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 	const unreadCount = visibleNotifs.filter((n) => n.unread).length;
 
 	return (
-		<header className="fixed top-0 h-10 flex w-full flex-col bg-background backdrop-blur-lg z-10">
+		<header
+			className={cn(
+				"fixed top-0 h-10 flex w-full flex-col bg-background backdrop-blur-lg z-10 transition-transform duration-200 ease-out",
+				isNavHidden && "-translate-y-full",
+			)}
+		>
 			<nav className="top-0 flex h-full items-center justify-between border-border px-2 sm:px-4 border-b">
 				<div className="flex items-center gap-0" id="navbar-breadcrumb">
 					<Link

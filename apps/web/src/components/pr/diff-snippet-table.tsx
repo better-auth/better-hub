@@ -205,7 +205,7 @@ export function DiffSnippetTable({
 			: undefined;
 
 	return (
-		<div className="overflow-hidden rounded-b-md border px-3 pb-3 bg-[var(--code-bg)]">
+		<div className="overflow-hidden rounded-b-md border	 pb-3 bg-[var(--code-bg)]">
 			<table className="w-full border-collapse bg-[var(--code-bg)]">
 				<tbody>
 					{lines.map((line, i) => {
@@ -315,7 +315,7 @@ export function DiffSnippetTable({
 															e.shiftKey,
 														)
 													}
-													className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center opacity-0 group-hover/line:opacity-100 transition-opacity text-foreground/50 hover:text-foreground/70 cursor-pointer"
+													className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center opacity-0 group-hover/line:opacity-100 transition-opacity text-primary/50 hover:text-primary/70 cursor-pointer"
 													title="Add review comment (shift+click for range)"
 												>
 													<Plus className="w-3 h-3" />

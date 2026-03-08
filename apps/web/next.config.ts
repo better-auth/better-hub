@@ -30,6 +30,13 @@ const nextConfig: NextConfig = {
 			dynamic: 300,
 			static: 180,
 		},
+		serverComponentsHmrCache: true,
+		imgOptTimeoutInSeconds: 3,
+	},
+	logging: {
+		fetches: {
+			fullUrl: true,
+		},
 	},
 	reactCompiler: true,
 	images: {

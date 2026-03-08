@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { GithubAvatar } from "@/components/shared/github-avatar";
 import {
 	Check,
 	AlertTriangle,
@@ -142,14 +142,13 @@ export function PRReviewsPanel({ reviews, threads, owner, repo, pullNumber }: PR
 									href={`/users/${r.user!.login}`}
 									className="flex items-center gap-1.5 hover:text-foreground transition-colors"
 								>
-									<Image
+									<GithubAvatar
 										src={
 											r.user!
 												.avatar_url
 										}
 										alt={r.user!.login}
-										width={18}
-										height={18}
+										size={18}
 										className="rounded-full"
 									/>
 									<span className="text-xs font-medium text-foreground/80">
@@ -359,11 +358,10 @@ function ThreadCard({
 							onClick={(e) => e.stopPropagation()}
 							className="flex items-center gap-2 text-xs font-medium text-foreground/80 hover:text-foreground transition-colors"
 						>
-							<Image
+							<GithubAvatar
 								src={firstComment.author.avatarUrl}
 								alt={firstComment.author.login}
-								width={16}
-								height={16}
+								size={16}
 								className="rounded-full shrink-0"
 							/>
 							{firstComment.author.login}
@@ -449,7 +447,7 @@ function ThreadCard({
 										href={`/users/${comment.author.login}`}
 										className="flex items-center gap-1.5 text-xs font-medium text-foreground/80 hover:text-foreground transition-colors"
 									>
-										<Image
+										<GithubAvatar
 											src={
 												comment
 													.author
@@ -460,8 +458,7 @@ function ThreadCard({
 													.author
 													.login
 											}
-											width={14}
-											height={14}
+											size={14}
 											className="rounded-full shrink-0"
 										/>
 										{

@@ -529,7 +529,7 @@ export function PROverviewPanel({
 	}
 
 	return (
-		<div className="max-w-4xl mx-auto px-8 py-8">
+		<div className="max-w-4xl mx-auto px-8 py-12">
 			<div className="flex items-center justify-between mb-8">
 				<div>
 					<h2 className="text-xl font-semibold">
@@ -605,7 +605,7 @@ export function PROverviewPanel({
 
 			{!isLoading && !error && groups.length > 0 && (
 				<>
-					<div className="space-y-4">
+					<div className="space-y-6">
 						{groups
 							.sort(
 								(a, b) =>

@@ -8,7 +8,6 @@ import { CodeContentWrapper } from "@/components/repo/code-content-wrapper";
 import { RepoLayoutWrapper } from "@/components/repo/repo-layout-wrapper";
 import { ChatPageActivator } from "@/components/shared/chat-page-activator";
 import { RepoRevalidator } from "@/components/repo/repo-revalidator";
-import { NavVisibilityProvider } from "@/components/shared/nav-visibility-provider";
 import { cookies } from "next/headers";
 import {
 	REPO_SIDEBAR_COOKIE,
@@ -178,121 +177,114 @@ export default async function RepoLayout({
 	const forkSyncStatus = await forkSyncPromise;
 
 	return (
-		<NavVisibilityProvider>
-			<div className="-mx-4 flex-1 min-h-0 flex flex-col">
-				<RepoLayoutWrapper
-					owner={owner}
-					repo={repoName}
-					ownerType={repoData.owner.type}
-					ownerAvatarUrl={repoData.owner.avatar_url}
-					initialCollapsed={sidebarState?.collapsed}
-					initialWidth={sidebarState?.width}
-					sidebar={
-						<RepoSidebar
-							owner={owner}
-							repoName={repoName}
-							ownerType={repoData.owner.type}
-							avatarUrl={repoData.owner.avatar_url}
-							description={repoData.description ?? null}
-							stars={repoData.stargazers_count}
-							forks={repoData.forks_count}
-							watchers={repoData.subscribers_count}
-							openIssuesCount={navCounts.openIssues}
-							isPrivate={repoData.private}
-							defaultBranch={repoData.default_branch}
-							language={repoData.language}
-							license={repoData.license}
-							pushedAt={repoData.pushed_at}
-							size={repoData.size}
-							htmlUrl={repoData.html_url}
-							homepage={repoData.homepage}
-							topics={repoData.topics}
-							archived={repoData.archived}
-							fork={repoData.fork}
-							parent={
-								parent
-									? {
-											fullName: parent.full_name,
-											owner: parent
-												.owner
-												.login,
-											name: parent.name,
-										}
-									: null
-							}
-							initialContributors={cachedContributors}
-							initialLanguages={cachedLanguages}
-							isStarred={viewerHasStarred}
-							disableForkButton={isViewingOwnFork}
-							latestCommit={latestCommit}
-							isOwnFork={isViewingOwnFork}
-							forkSyncStatus={forkSyncStatus}
-							isEmptyRepo={isEmptyRepo}
-						/>
-					}
+		<div className="-mx-4 flex-1 min-h-0 flex flex-col">
+			<RepoLayoutWrapper
+				owner={owner}
+				repo={repoName}
+				ownerType={repoData.owner.type}
+				ownerAvatarUrl={repoData.owner.avatar_url}
+				initialCollapsed={sidebarState?.collapsed}
+				initialWidth={sidebarState?.width}
+				sidebar={
+					<RepoSidebar
+						owner={owner}
+						repoName={repoName}
+						ownerType={repoData.owner.type}
+						avatarUrl={repoData.owner.avatar_url}
+						description={repoData.description ?? null}
+						stars={repoData.stargazers_count}
+						forks={repoData.forks_count}
+						watchers={repoData.subscribers_count}
+						openIssuesCount={navCounts.openIssues}
+						isPrivate={repoData.private}
+						defaultBranch={repoData.default_branch}
+						language={repoData.language}
+						license={repoData.license}
+						pushedAt={repoData.pushed_at}
+						size={repoData.size}
+						htmlUrl={repoData.html_url}
+						homepage={repoData.homepage}
+						topics={repoData.topics}
+						archived={repoData.archived}
+						fork={repoData.fork}
+						parent={
+							parent
+								? {
+										fullName: parent.full_name,
+										owner: parent.owner
+											.login,
+										name: parent.name,
+									}
+								: null
+						}
+						initialContributors={cachedContributors}
+						initialLanguages={cachedLanguages}
+						isStarred={viewerHasStarred}
+						disableForkButton={isViewingOwnFork}
+						latestCommit={latestCommit}
+						isOwnFork={isViewingOwnFork}
+						forkSyncStatus={forkSyncStatus}
+						isEmptyRepo={isEmptyRepo}
+					/>
+				}
+			>
+				<div
+					className="shrink-0 pl-4"
+					style={{ paddingRight: "var(--repo-pr, 1rem)" }}
 				>
-					<div
-						className="shrink-0 pl-4"
-						style={{ paddingRight: "var(--repo-pr, 1rem)" }}
-					>
-						{isViewingOwnFork && forkSyncStatus && (
-							<div className="lg:hidden pb-2">
-								<ForkSyncButton
-									owner={owner}
-									repo={repoName}
-									defaultBranch={
-										repoData.default_branch
-									}
-									behind={
-										forkSyncStatus.behind
-									}
-									parentFullName={
-										parent?.full_name
-									}
-								/>
-							</div>
-						)}
-						<RepoNav
-							owner={owner}
-							repo={repoName}
-							openIssuesCount={navCounts.openIssues}
-							openPrsCount={navCounts.openPrs}
-							activeRunsCount={navCounts.activeRuns}
-							hasDiscussions={!!repoData.has_discussions}
-							discussionsCount={navCounts.discussions}
-							promptRequestsCount={promptRequestsCount}
-							showPeopleTab={showPeopleTab}
-						/>
-					</div>
-					<CodeContentWrapper
+					{isViewingOwnFork && forkSyncStatus && (
+						<div className="lg:hidden pb-2">
+							<ForkSyncButton
+								owner={owner}
+								repo={repoName}
+								defaultBranch={
+									repoData.default_branch
+								}
+								behind={forkSyncStatus.behind}
+								parentFullName={parent?.full_name}
+							/>
+						</div>
+					)}
+					<RepoNav
 						owner={owner}
 						repo={repoName}
-						defaultBranch={repoData.default_branch}
-						tree={tree}
-						initialBranches={cachedBranches}
-						initialTags={cachedTags}
-					>
-						{children}
-					</CodeContentWrapper>
-				</RepoLayoutWrapper>
-				<RepoRevalidator
+						openIssuesCount={navCounts.openIssues}
+						openPrsCount={navCounts.openPrs}
+						activeRunsCount={navCounts.activeRuns}
+						hasDiscussions={!!repoData.has_discussions}
+						discussionsCount={navCounts.discussions}
+						promptRequestsCount={promptRequestsCount}
+						showPeopleTab={showPeopleTab}
+					/>
+				</div>
+				<CodeContentWrapper
 					owner={owner}
 					repo={repoName}
 					defaultBranch={repoData.default_branch}
-				/>
-				<ChatPageActivator
-					config={{
-						chatType: "general",
-						contextKey: `${owner}/${repoName}`,
-						contextBody: {},
-						repoFileSearch: {
-							owner,
-							repo: repoName,
-							ref: repoData.default_branch,
-						},
-					}}
-				/>
-			</div>
-		</NavVisibilityProvider>
+					tree={tree}
+					initialBranches={cachedBranches}
+					initialTags={cachedTags}
+				>
+					{children}
+				</CodeContentWrapper>
+			</RepoLayoutWrapper>
+			<RepoRevalidator
+				owner={owner}
+				repo={repoName}
+				defaultBranch={repoData.default_branch}
+			/>
+			<ChatPageActivator
+				config={{
+					chatType: "general",
+					contextKey: `${owner}/${repoName}`,
+					contextBody: {},
+					repoFileSearch: {
+						owner,
+						repo: repoName,
+						ref: repoData.default_branch,
+					},
+				}}
+			/>
+		</div>
 	);
 }
