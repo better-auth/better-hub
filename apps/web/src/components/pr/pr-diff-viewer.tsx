@@ -96,6 +96,10 @@ interface PRCommit {
 	commit: {
 		message: string;
 		author: { name: string; date: string } | null;
+		verification?: {
+			verified: boolean;
+			reason: string;
+		};
 	};
 	author: { login: string; avatar_url: string } | null;
 }
@@ -4781,8 +4785,17 @@ function SidebarCommits({
 										</span>
 									)}
 									<div className="flex items-center gap-1.5 mt-0.5">
-										<span className="text-[9px] font-mono text-info/70">
+										<span className="text-[9px] font-mono text-info/70 flex items-center gap-1">
 											{shortSha}
+											{c.commit
+												.verification
+												?.verified && (
+												<span className="inline-flex items-center px-1 rounded-sm border border-success/30 bg-success/10 text-success">
+													<span className="text-[8px] font-bold">
+														Verified
+													</span>
+												</span>
+											)}
 										</span>
 										{c.author && (
 											<span className="text-[9px] text-muted-foreground/50 truncate">

@@ -3149,6 +3149,10 @@ export interface PRBundleData {
 			message: string;
 			author: { name: string; date: string } | null;
 			committer: { name: string; date: string } | null;
+			verification?: {
+				verified: boolean;
+				reason: string;
+			};
 		};
 		author: { login: string; avatar_url: string } | null;
 	}[];
@@ -3258,6 +3262,10 @@ const PR_BUNDLE_QUERY = `
               message
               author { name date user { login avatarUrl } }
               committer { name date user { login avatarUrl } }
+              signature {
+                isValid
+                state
+              }
             }
             resourcePath
           }
@@ -3390,6 +3398,10 @@ interface GQLCommitNode {
 			name: string;
 			date: string;
 			user?: { login: string; avatarUrl: string } | null;
+		} | null;
+		signature?: {
+			isValid: boolean;
+			state: string;
 		} | null;
 	};
 	resourcePath: string;
@@ -3561,6 +3573,12 @@ function transformGraphQLPRBundle(node: GQLPRNode): PRBundleData {
 				committer: c.committer
 					? { name: c.committer.name, date: c.committer.date }
 					: null,
+				verification: c.signature
+					? {
+							verified: c.signature.isValid,
+							reason: c.signature.state,
+						}
+					: undefined,
 			},
 			author: authorUser
 				? { login: authorUser.login, avatar_url: authorUser.avatarUrl }

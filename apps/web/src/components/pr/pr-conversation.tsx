@@ -79,6 +79,10 @@ export interface CommitEntry {
 	user: BaseUser | null;
 	committer_name: string | null;
 	created_at: string;
+	verification?: {
+		verified: boolean;
+		reason: string;
+	};
 }
 
 export interface StateChangeEntry {
@@ -620,9 +624,18 @@ function CommitGroup({ commits }: { commits: CommitEntry[] }) {
 						<span className="text-xs text-foreground/80 truncate flex-1 min-w-0">
 							{firstLine}
 						</span>
-						<code className="text-[10px] font-mono text-muted-foreground shrink-0">
-							{commit.sha.slice(0, 7)}
-						</code>
+						<div className="flex items-center gap-1.5 shrink-0">
+							<code className="text-[10px] font-mono text-muted-foreground">
+								{commit.sha.slice(0, 7)}
+							</code>
+							{commit.verification?.verified && (
+								<span className="inline-flex items-center px-1 rounded-sm border border-success/30 bg-success/10 text-success">
+									<span className="text-[8px] font-bold">
+										Verified
+									</span>
+								</span>
+							)}
+						</div>
 						<span className="text-[10px] text-muted-foreground shrink-0">
 							<TimeAgo date={commit.created_at} />
 						</span>

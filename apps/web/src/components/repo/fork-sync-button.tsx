@@ -41,8 +41,8 @@ export function ForkSyncButton({
 	if (behind === 0) {
 		return (
 			<span className="flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground/60 py-1.5">
-				<Check className="w-3 h-3 shrink-0" />
-				<span className="truncate">
+				<Check className="w-3 h-3 shrink-0 mt-0.5" />
+				<span className="break-words">
 					This branch is up to date with{" "}
 					{parentFullName ?? "upstream"}:{defaultBranch}
 				</span>
