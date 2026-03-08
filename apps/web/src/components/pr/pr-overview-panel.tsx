@@ -12,9 +12,11 @@ import {
 	ArrowUpRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getLanguageFromFilename, parseHunkHeader } from "@/lib/github-utils";
+import { parseDiffPatch } from "@/lib/github-utils";
+import type { SyntaxToken } from "@/lib/shiki";
+import { highlightDiffLinesClient } from "@/lib/shiki-client";
 import { useColorTheme } from "@/components/theme/theme-provider";
-import { highlightCodeClient } from "@/lib/shiki-client";
+import { DiffSnippetTable } from "./diff-snippet-table";
 
 interface DiffFile {
 	filename: string;
@@ -50,161 +52,64 @@ interface PROverviewPanelProps {
 	prBody: string;
 }
 
-interface ParsedDiffLine {
-	type: "add" | "remove" | "context" | "header";
-	content: string;
-	raw: string;
-	lineNumber?: number;
-}
-
-function parseDiffSnippet(snippet: string, startLine?: number): ParsedDiffLine[] {
-	const rawLines = snippet.split("\n");
-	const result: ParsedDiffLine[] = [];
-	let newLine: number | undefined = startLine;
-
-	for (const raw of rawLines) {
-		if (raw.startsWith("@@")) {
-			if (newLine === undefined) {
-				const hunk = parseHunkHeader(raw);
-				newLine = hunk?.newStart;
-			}
-			result.push({ type: "header", content: raw, raw });
-		} else if (raw.startsWith("+")) {
-			result.push({
-				type: "add",
-				content: raw.slice(1),
-				raw,
-				lineNumber: newLine,
-			});
-			if (newLine !== undefined) newLine++;
-		} else if (raw.startsWith("-")) {
-			result.push({ type: "remove", content: raw.slice(1), raw });
-		} else {
-			result.push({
-				type: "context",
-				content: raw.startsWith(" ") ? raw.slice(1) : raw,
-				raw,
-				lineNumber: newLine,
-			});
-			if (newLine !== undefined) newLine++;
-		}
-	}
-
-	return result;
-}
-
-function extractLineHtml(html: string): string {
-	if (typeof window === "undefined") return "";
-	const parser = new DOMParser();
-	const doc = parser.parseFromString(html, "text/html");
-	const shiki = doc.querySelector(".shiki");
-	if (!shiki) return html;
-
-	const lineSpan = shiki.querySelector(".line");
-	if (lineSpan) {
-		return lineSpan.innerHTML;
-	}
-	return shiki.innerHTML;
+function buildSnippetPatch(snippet: string, startLine?: number): string {
+	if (snippet.includes("@@")) return snippet;
+	const hunkHeader = `@@ -${startLine ?? 1},0 +${startLine ?? 1},0 @@`;
+	return `${hunkHeader}\n${snippet}`;
 }
 
 const DiffSnippet = memo(function DiffSnippet({
 	snippet,
 	filename,
 	startLine,
+	canComment,
+	owner,
+	repo,
+	pullNumber,
+	headSha,
+	headBranch,
 }: {
 	snippet: string;
 	filename: string;
 	startLine?: number;
+	canComment?: boolean;
+	owner?: string;
+	repo?: string;
+	pullNumber?: number;
+	headSha?: string;
+	headBranch?: string;
 }) {
 	const { themeId } = useColorTheme();
-	const parsed = useMemo(() => parseDiffSnippet(snippet, startLine), [snippet, startLine]);
-	const [highlightedLines, setHighlightedLines] = useState<(string | null)[]>(() =>
-		parsed.map(() => null),
-	);
+	const patch = useMemo(() => buildSnippetPatch(snippet, startLine), [snippet, startLine]);
+	const lines = useMemo(() => parseDiffPatch(patch), [patch]);
+	const [highlightData, setHighlightData] = useState<
+		Record<string, SyntaxToken[]> | undefined
+	>();
 
 	useEffect(() => {
 		let cancelled = false;
-		const lang = getLanguageFromFilename(filename);
-
-		(async () => {
-			const results = await Promise.all(
-				parsed.map(async (line) => {
-					if (line.type === "header") return null;
-					if (!line.content.trim()) return "";
-					try {
-						const html = await highlightCodeClient(
-							line.content,
-							lang,
-							themeId,
-						);
-						return extractLineHtml(html);
-					} catch {
-						return null;
-					}
-				}),
-			);
-
-			if (!cancelled) {
-				setHighlightedLines(results);
-			}
-		})();
-
+		highlightDiffLinesClient(patch, filename, themeId)
+			.then((tokens) => {
+				if (!cancelled) setHighlightData(tokens);
+			})
+			.catch(() => {});
 		return () => {
 			cancelled = true;
 		};
-	}, [parsed, filename, themeId]);
+	}, [patch, filename, themeId]);
 
 	return (
-		<div className="rounded-b-md border overflow-hidden text-xs font-mono bg-[var(--code-bg)]">
-			{parsed.map((line, i) => {
-				const highlightedHtml = highlightedLines[i];
-				return (
-					<div
-						key={i}
-						className={cn(
-							"pr-4 flex items-start relative",
-							line.type === "add" && "bg-success/10",
-							line.type === "remove" &&
-								"bg-destructive/10",
-							line.type === "header" &&
-								"bg-muted/50 text-muted-foreground text-[11px]",
-						)}
-					>
-						<span className="w-8 shrink-0 select-none text-right bg-diff-add-gutter text-diff-add-gutter pr-3 border-r border-border/40 tabular-nums py-1">
-							{line.lineNumber ?? ""}
-						</span>
-						<span
-							className={cn(
-								"w-4 shrink-0 select-none",
-								line.type === "add" &&
-									"text-success",
-								line.type === "remove" &&
-									"text-destructive",
-								line.type === "header" &&
-									"text-muted-foreground",
-							)}
-						>
-							{line.type === "add"
-								? "+"
-								: line.type === "remove"
-									? "-"
-									: ""}
-						</span>
-						<span className="flex-1 whitespace-pre-wrap break-all">
-							{highlightedHtml !== null ? (
-								<span
-									dangerouslySetInnerHTML={{
-										__html: highlightedHtml,
-									}}
-								/>
-							) : (
-								<span>{line.content}</span>
-							)}
-						</span>
-					</div>
-				);
-			})}
-		</div>
+		<DiffSnippetTable
+			lines={lines}
+			filename={filename}
+			fileHighlightData={highlightData}
+			canComment={canComment}
+			owner={owner}
+			repo={repo}
+			pullNumber={pullNumber}
+			headSha={headSha}
+			headBranch={headBranch}
+		/>
 	);
 });
 
@@ -214,12 +119,22 @@ function ChangeGroupCard({
 	isExpanded,
 	onToggleViewed,
 	onToggleExpanded,
+	owner,
+	repo,
+	pullNumber,
+	headSha,
+	headBranch,
 }: {
 	group: ChangeGroup;
 	isViewed: boolean;
 	isExpanded: boolean;
 	onToggleViewed: () => void;
 	onToggleExpanded: () => void;
+	owner?: string;
+	repo?: string;
+	pullNumber?: number;
+	headSha?: string;
+	headBranch?: string;
 }) {
 	return (
 		<div
@@ -363,6 +278,23 @@ function ChangeGroupCard({
 										}
 										startLine={
 											file.startLine
+										}
+										canComment={
+											!!(
+												owner &&
+												repo &&
+												pullNumber &&
+												headSha
+											)
+										}
+										owner={owner}
+										repo={repo}
+										pullNumber={
+											pullNumber
+										}
+										headSha={headSha}
+										headBranch={
+											headBranch
 										}
 									/>
 								)}
@@ -714,6 +646,12 @@ export function PROverviewPanel({
 												group.id,
 											)
 										}
+										owner={owner}
+										repo={repo}
+										pullNumber={
+											pullNumber
+										}
+										headSha={headSha}
 									/>
 								</div>
 							))}

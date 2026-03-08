@@ -118,7 +118,7 @@ interface PRDiffViewerProps {
 	checkStatus?: CheckStatus;
 }
 
-type AddContextCallback = (context: {
+export type AddContextCallback = (context: {
 	filename: string;
 	startLine: number;
 	endLine: number;
@@ -2987,7 +2987,7 @@ function DiffLineRow({
 	);
 }
 
-function InlineCommentForm({
+export function InlineCommentForm({
 	owner,
 	repo,
 	pullNumber,
@@ -4261,7 +4261,7 @@ function SplitDiffTable({
 	);
 }
 
-function SegmentedContent({
+export function SegmentedContent({
 	segments,
 	type,
 }: {
@@ -4293,7 +4293,7 @@ function SegmentedContent({
 
 /** Merges syntax highlighting tokens with word-diff segments.
  *  Segments provide the background highlight (changed words), tokens provide text color. */
-function SyntaxSegmentedContent({
+export function SyntaxSegmentedContent({
 	segments,
 	tokens,
 	type,
