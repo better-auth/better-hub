@@ -37,7 +37,6 @@ export function PRDetailLayout({
 	overviewPanel,
 	commentCount,
 	fileCount,
-	hasReviews,
 }: PRDetailLayoutProps) {
 	const [mobileTab, setMobileTab] = useState<MobileTab>("diff");
 	const [activeTab, setActiveTab] = useState<PRTab>("code");
@@ -116,15 +115,16 @@ export function PRDetailLayout({
 	const handleRestoreChat = () => persistSplit(65);
 	const handleRestoreCode = () => persistSplit(65);
 
-	// When navigating to a file from conversation, ensure the code panel is visible
+	// When navigating to a file from conversation or overview, ensure the code panel is visible
 	useEffect(() => {
 		const handler = () => {
+			if (activeTab === "overview") setActiveTab("code");
 			if (codeCollapsed) persistSplit(65);
 			if (window.innerWidth < 1024) setMobileTab("diff");
 		};
 		window.addEventListener("ghost:navigate-to-file", handler);
 		return () => window.removeEventListener("ghost:navigate-to-file", handler);
-	}, [codeCollapsed, persistSplit]);
+	}, [activeTab, codeCollapsed, persistSplit]);
 
 	// Keyboard shortcuts: 1/[ = files, 2/] = chat
 	useEffect(() => {
@@ -372,14 +372,12 @@ export function PRDetailLayout({
 					))}
 				</div>
 
-				{/* Desktop split panels */}
+				{/* Desktop split panels - always mounted, hidden when on overview */}
 				<div
 					ref={containerRef}
 					className={cn(
-						"flex-1 min-h-0 border-t",
-						activeTab === "overview"
-							? "hidden"
-							: "hidden lg:flex animate-in fade-in duration-200",
+						"flex-1 min-h-0 border-t hidden lg:flex",
+						activeTab === "overview" && "lg:hidden",
 					)}
 				>
 					{/* Left panel (files + reviews) */}
@@ -507,13 +505,11 @@ export function PRDetailLayout({
 					</div>
 				</div>
 
-				{/* Desktop Overview panel */}
+				{/* Desktop Overview panel - always mounted, hidden when not on overview */}
 				<div
 					className={cn(
-						"flex-1 min-h-0 border-t overflow-y-auto",
-						activeTab === "overview"
-							? "hidden lg:block animate-in fade-in duration-200"
-							: "hidden",
+						"flex-1 min-h-0 border-t overflow-y-auto hidden lg:block",
+						activeTab !== "overview" && "lg:hidden",
 					)}
 					onScroll={handleScrollForNav}
 				>

@@ -4,6 +4,7 @@ interface FileAnalysis {
 	filename: string;
 	snippet: string;
 	explanation: string;
+	startLine?: number;
 }
 
 interface ChangeGroup {

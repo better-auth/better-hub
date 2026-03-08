@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, memo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
 import {
 	Check,
 	Loader2,
@@ -9,9 +9,10 @@ import {
 	ChevronDown,
 	RefreshCw,
 	AlertCircle,
+	ArrowUpRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getLanguageFromFilename } from "@/lib/github-utils";
+import { getLanguageFromFilename, parseHunkHeader } from "@/lib/github-utils";
 import { useColorTheme } from "@/components/theme/theme-provider";
 import { highlightCodeClient } from "@/lib/shiki-client";
 
@@ -28,6 +29,7 @@ interface FileAnalysis {
 	filename: string;
 	snippet: string;
 	explanation: string;
+	startLine?: number;
 }
 
 interface ChangeGroup {
@@ -52,16 +54,43 @@ interface ParsedDiffLine {
 	type: "add" | "remove" | "context" | "header";
 	content: string;
 	raw: string;
+	lineNumber?: number;
 }
 
-function parseDiffSnippet(snippet: string): ParsedDiffLine[] {
-	const lines = snippet.split("\n");
-	return lines.map((raw) => {
-		if (raw.startsWith("@@")) return { type: "header", content: raw, raw };
-		if (raw.startsWith("+")) return { type: "add", content: raw.slice(1), raw };
-		if (raw.startsWith("-")) return { type: "remove", content: raw.slice(1), raw };
-		return { type: "context", content: raw.startsWith(" ") ? raw.slice(1) : raw, raw };
-	});
+function parseDiffSnippet(snippet: string, startLine?: number): ParsedDiffLine[] {
+	const rawLines = snippet.split("\n");
+	const result: ParsedDiffLine[] = [];
+	let newLine: number | undefined = startLine;
+
+	for (const raw of rawLines) {
+		if (raw.startsWith("@@")) {
+			if (newLine === undefined) {
+				const hunk = parseHunkHeader(raw);
+				newLine = hunk?.newStart;
+			}
+			result.push({ type: "header", content: raw, raw });
+		} else if (raw.startsWith("+")) {
+			result.push({
+				type: "add",
+				content: raw.slice(1),
+				raw,
+				lineNumber: newLine,
+			});
+			if (newLine !== undefined) newLine++;
+		} else if (raw.startsWith("-")) {
+			result.push({ type: "remove", content: raw.slice(1), raw });
+		} else {
+			result.push({
+				type: "context",
+				content: raw.startsWith(" ") ? raw.slice(1) : raw,
+				raw,
+				lineNumber: newLine,
+			});
+			if (newLine !== undefined) newLine++;
+		}
+	}
+
+	return result;
 }
 
 function extractLineHtml(html: string): string {
@@ -81,12 +110,14 @@ function extractLineHtml(html: string): string {
 const DiffSnippet = memo(function DiffSnippet({
 	snippet,
 	filename,
+	startLine,
 }: {
 	snippet: string;
 	filename: string;
+	startLine?: number;
 }) {
 	const { themeId } = useColorTheme();
-	const parsed = useMemo(() => parseDiffSnippet(snippet), [snippet]);
+	const parsed = useMemo(() => parseDiffSnippet(snippet, startLine), [snippet, startLine]);
 	const [highlightedLines, setHighlightedLines] = useState<(string | null)[]>(() =>
 		parsed.map(() => null),
 	);
@@ -131,7 +162,7 @@ const DiffSnippet = memo(function DiffSnippet({
 					<div
 						key={i}
 						className={cn(
-							"px-4 py-1 flex items-start",
+							"pr-4 flex items-start relative",
 							line.type === "add" && "bg-success/10",
 							line.type === "remove" &&
 								"bg-destructive/10",
@@ -139,6 +170,9 @@ const DiffSnippet = memo(function DiffSnippet({
 								"bg-muted/50 text-muted-foreground text-[11px]",
 						)}
 					>
+						<span className="w-8 shrink-0 select-none text-right bg-diff-add-gutter text-diff-add-gutter pr-3 border-r border-border/40 tabular-nums py-1">
+							{line.lineNumber ?? ""}
+						</span>
 						<span
 							className={cn(
 								"w-4 shrink-0 select-none",
@@ -195,7 +229,7 @@ function ChangeGroupCard({
 			)}
 		>
 			<div
-				className="flex items-start gap-4 px-5 py-4 cursor-pointer hover:bg-muted/30 transition-colors"
+				className="flex items-start gap-4 px-5 py-4 cursor-pointer hover:bg-muted/30 transition-colors select-none"
 				onClick={onToggleExpanded}
 			>
 				<button
@@ -271,7 +305,7 @@ function ChangeGroupCard({
 							<div key={i} className="">
 								<div className="flex items-center gap-2.5 border-t border-x px-3 pt-2 bg-[var(--code-bg)] pb-4 -mb-2 rounded-t-md">
 									<FileCode2 className="w-4 h-4 text-muted-foreground" />
-									<span className="font-mono flex items-center">
+									<span className="font-mono flex items-center flex-1 min-w-0">
 										{file.filename.includes(
 											"/",
 										) && (
@@ -298,6 +332,26 @@ function ChangeGroupCard({
 												: file.filename}
 										</span>
 									</span>
+									<button
+										onClick={(e) => {
+											e.stopPropagation();
+											window.dispatchEvent(
+												new CustomEvent(
+													"ghost:navigate-to-file",
+													{
+														detail: {
+															filename: file.filename,
+															line: file.startLine,
+														},
+													},
+												),
+											);
+										}}
+										className="shrink-0 p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+										title="View in code tab"
+									>
+										<ArrowUpRight className="w-4 h-4" />
+									</button>
 								</div>
 								{file.snippet && (
 									<DiffSnippet
@@ -307,6 +361,9 @@ function ChangeGroupCard({
 										filename={
 											file.filename
 										}
+										startLine={
+											file.startLine
+										}
 									/>
 								)}
 								<p className="text-sm text-muted-foreground leading-relaxed mt-3">
@@ -314,6 +371,25 @@ function ChangeGroupCard({
 								</p>
 							</div>
 						))}
+						<div className="flex justify-end pt-2">
+							<button
+								onClick={(e) => {
+									e.stopPropagation();
+									onToggleViewed();
+								}}
+								className={cn(
+									"flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer",
+									isViewed
+										? "bg-muted text-muted-foreground hover:bg-muted/80"
+										: "bg-primary text-primary-foreground hover:bg-primary/90",
+								)}
+							>
+								<Check className="w-4 h-4" />
+								{isViewed
+									? "Unmark reviewed"
+									: "Mark reviewed"}
+							</button>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -341,6 +417,7 @@ export function PROverviewPanel({
 	const [groups, setGroups] = useState<ChangeGroup[]>([]);
 	const [viewedGroups, setViewedGroups] = useState<Set<string>>(new Set());
 	const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+	const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [loadingPhrase, setLoadingPhrase] = useState(LOADING_PHRASES[0]);
@@ -455,6 +532,38 @@ export function PROverviewPanel({
 						}
 						return nextExpanded;
 					});
+
+					const scrollToId = groupId;
+					setTimeout(() => {
+						const el = cardRefs.current.get(scrollToId);
+						if (!el) return;
+						let container = el.parentElement;
+						while (
+							container &&
+							container !== document.documentElement
+						) {
+							const { overflowY } =
+								getComputedStyle(container);
+							if (
+								overflowY === "auto" ||
+								overflowY === "scroll"
+							)
+								break;
+							container = container.parentElement;
+						}
+						const target =
+							container ?? document.documentElement;
+						const elTop = el.getBoundingClientRect().top;
+						const containerTop =
+							target === document.documentElement
+								? 0
+								: target.getBoundingClientRect()
+										.top;
+						target.scrollBy({
+							top: elTop - containerTop - 64,
+							behavior: "smooth",
+						});
+					}, 100);
 				}
 
 				return next;
@@ -572,26 +681,41 @@ export function PROverviewPanel({
 									b.reviewOrder,
 							)
 							.map((group) => (
-								<ChangeGroupCard
+								<div
 									key={group.id}
-									group={group}
-									isViewed={viewedGroups.has(
-										group.id,
-									)}
-									isExpanded={expandedGroups.has(
-										group.id,
-									)}
-									onToggleViewed={() =>
-										toggleViewed(
+									ref={(el) => {
+										if (el) {
+											cardRefs.current.set(
+												group.id,
+												el,
+											);
+										} else {
+											cardRefs.current.delete(
+												group.id,
+											);
+										}
+									}}
+								>
+									<ChangeGroupCard
+										group={group}
+										isViewed={viewedGroups.has(
 											group.id,
-										)
-									}
-									onToggleExpanded={() =>
-										toggleExpanded(
+										)}
+										isExpanded={expandedGroups.has(
 											group.id,
-										)
-									}
-								/>
+										)}
+										onToggleViewed={() =>
+											toggleViewed(
+												group.id,
+											)
+										}
+										onToggleExpanded={() =>
+											toggleExpanded(
+												group.id,
+											)
+										}
+									/>
+								</div>
 							))}
 					</div>
 

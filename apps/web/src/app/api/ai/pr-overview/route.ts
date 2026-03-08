@@ -1,4 +1,4 @@
-import { generateText } from "ai";
+import { generateText, Output } from "ai";
 import { auth } from "@/lib/auth";
 import { getErrorMessage } from "@/lib/utils";
 import { getInternalModel } from "@/lib/billing/ai-models.server";
@@ -35,6 +35,7 @@ interface FileAnalysis {
 	filename: string;
 	snippet: string;
 	explanation: string;
+	startLine?: number;
 }
 
 interface ChangeGroup {
@@ -45,38 +46,60 @@ interface ChangeGroup {
 	files: FileAnalysis[];
 }
 
+const OverviewOutputSchema = z.object({
+	groups: z.array(
+		z.object({
+			id: z.string().describe("A unique kebab-case id for this group"),
+			title: z
+				.string()
+				.describe("Short descriptive title, e.g. 'API Authentication'"),
+			summary: z
+				.string()
+				.describe(
+					"2-3 sentence explanation of what these changes accomplish and why",
+				),
+			reviewOrder: z
+				.number()
+				.describe(
+					"Review priority, starting at 1 for the most foundational changes",
+				),
+			files: z.array(
+				z.object({
+					filename: z.string().describe("Path to the changed file"),
+					snippet: z
+						.string()
+						.describe(
+							"The most relevant diff lines (max 15 lines) with +/- prefixes",
+						),
+					explanation: z
+						.string()
+						.describe(
+							"Brief explanation focusing on why this file changed",
+						),
+					startLine: z
+						.number()
+						.describe(
+							"1-based line number in the new file where the snippet begins, from the @@ hunk header's new-file range",
+						),
+				}),
+			),
+		}),
+	),
+});
+
 const SYSTEM_PROMPT = `You are a code review assistant that analyzes pull request changes and organizes them for optimal review.
 
 Your task is to:
-1. Group related file changes by feature area or logical grouping
+1. Group related file changes by feature area or logical grouping (2-6 groups depending on PR size)
 2. Order groups by suggested review priority (dependencies first, then core changes, then peripheral)
 3. For each file, extract the most relevant diff snippet (max 15 lines) and explain why it changed
 
-Output valid JSON matching this structure:
-{
-  "groups": [
-    {
-      "id": "unique-id",
-      "title": "Short descriptive title",
-      "summary": "2-3 sentence explanation of what these changes accomplish and why",
-      "reviewOrder": 1,
-      "files": [
-        {
-          "filename": "path/to/file.ts",
-          "snippet": "relevant diff lines with +/- prefixes",
-          "explanation": "Brief explanation of this specific change"
-        }
-      ]
-    }
-  ]
-}
-
 Guidelines:
-- Create 2-6 logical groups depending on PR size
 - Group titles should be concise (e.g., "API Authentication", "UI Components", "Test Coverage")
 - Snippets should show the most important changes, not the entire diff
 - Explanations should focus on "why" not just "what"
-- reviewOrder should start at 1 for the most foundational changes`;
+- reviewOrder should start at 1 for the most foundational changes
+- startLine is the 1-based line number in the new version of the file where the snippet begins (from the @@ hunk header's new-file range)`;
 
 function truncatePatch(patch: string, maxLines: number = 100): string {
 	const lines = patch.split("\n");
@@ -163,15 +186,14 @@ ${prBody || "(no description)"}
 
 **Changed Files (${files.length} total):**
 
-${filesContext}
-
-Respond with only valid JSON, no markdown fences.`;
+${filesContext}`;
 
 	try {
-		const { text, usage } = await generateText({
+		const { output, usage } = await generateText({
 			model,
 			system: SYSTEM_PROMPT,
 			prompt,
+			output: Output.object({ schema: OverviewOutputSchema }),
 			temperature: 0.3,
 		});
 
@@ -186,25 +208,7 @@ Respond with only valid JSON, no markdown fences.`;
 			}).catch((e) => console.error("[billing] logTokenUsage failed:", e)),
 		);
 
-		let cleanedText = text.trim();
-		if (cleanedText.startsWith("```json")) {
-			cleanedText = cleanedText.slice(7);
-		} else if (cleanedText.startsWith("```")) {
-			cleanedText = cleanedText.slice(3);
-		}
-		if (cleanedText.endsWith("```")) {
-			cleanedText = cleanedText.slice(0, -3);
-		}
-		cleanedText = cleanedText.trim();
-
-		let parsed: { groups?: ChangeGroup[] };
-		try {
-			parsed = JSON.parse(cleanedText);
-		} catch {
-			console.error(
-				"[pr-overview] Failed to parse AI response:",
-				cleanedText.slice(0, 500),
-			);
+		if (!output) {
 			return new Response(
 				JSON.stringify({
 					error: "Failed to parse AI response",
@@ -214,19 +218,19 @@ Respond with only valid JSON, no markdown fences.`;
 			);
 		}
 
-		const groups: ChangeGroup[] = (parsed.groups || []).map((g, i) => ({
+		const groups: ChangeGroup[] = output.groups.map((g, i) => ({
 			id: g.id || `group-${i}`,
 			title: g.title || `Group ${i + 1}`,
 			summary: g.summary || "",
-			reviewOrder: typeof g.reviewOrder === "number" ? g.reviewOrder : i + 1,
-			files: (g.files || []).map((f) => ({
-				filename: f.filename || "",
-				snippet: f.snippet || "",
-				explanation: f.explanation || "",
+			reviewOrder: g.reviewOrder ?? i + 1,
+			files: g.files.map((f) => ({
+				filename: f.filename,
+				snippet: f.snippet,
+				explanation: f.explanation,
+				startLine: f.startLine,
 			})),
 		}));
 
-		// Save to database if we have headSha
 		if (headSha) {
 			waitUntil(
 				savePrOverviewAnalysis(
