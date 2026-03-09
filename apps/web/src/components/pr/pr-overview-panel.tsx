@@ -9,9 +9,10 @@ import {
 	ChevronDown,
 	RefreshCw,
 	AlertCircle,
-	ArrowUpRight,
+	Code2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useOverviewActive } from "./pr-detail-layout";
 import { parseDiffPatch } from "@/lib/github-utils";
 import type { SyntaxToken } from "@/lib/shiki";
 import { highlightDiffLinesClient } from "@/lib/shiki-client";
@@ -100,6 +101,7 @@ const DiffSnippet = memo(function DiffSnippet({
 
 	return (
 		<DiffSnippetTable
+			key={highlightData ? 1 : 0}
 			lines={lines}
 			filename={filename}
 			fileHighlightData={highlightData}
@@ -189,7 +191,7 @@ function ChangeGroupCard({
 							{group.title}
 						</h3>
 						<span className="text-xs text-muted-foreground">
-							{group.files.length} file
+							{group.files.length} section
 							{group.files.length !== 1 ? "s" : ""}
 						</span>
 					</div>
@@ -213,11 +215,24 @@ function ChangeGroupCard({
 			>
 				<div className="overflow-hidden">
 					<div className="border-t border-border/40 px-5 py-5 space-y-6 bg-muted/5">
-						<p className="text-sm text-muted-foreground leading-relaxed">
-							{group.summary}
-						</p>
+						<div className="space-y-3">
+							<h3 className="text-md font-medium px-2">
+								Summary
+							</h3>
+							<p className="text-sm text-muted-foreground leading-relaxed px-2">
+								{group.summary}
+							</p>
+						</div>
 						{group.files.map((file, i) => (
-							<div key={i} className="">
+							<div key={i} className="mt-3">
+								<div className="flex gap-3 my-3 pl-2">
+									<h3 className="text-md font-medium">
+										{i + 1}.
+									</h3>
+									<p className="text-sm text-muted-foreground leading-relaxed">
+										{file.explanation}
+									</p>
+								</div>
 								<div className="flex items-center gap-2.5 border-t border-x px-3 pt-2 bg-[var(--code-bg)] pb-4 -mb-2 rounded-t-md">
 									<FileCode2 className="w-4 h-4 text-muted-foreground" />
 									<span className="font-mono flex items-center flex-1 min-w-0">
@@ -265,9 +280,10 @@ function ChangeGroupCard({
 										className="shrink-0 p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
 										title="View in code tab"
 									>
-										<ArrowUpRight className="w-4 h-4" />
+										<Code2 className="w-4 h-4" />
 									</button>
 								</div>
+
 								{file.snippet && (
 									<DiffSnippet
 										snippet={
@@ -298,9 +314,6 @@ function ChangeGroupCard({
 										}
 									/>
 								)}
-								<p className="text-sm text-muted-foreground leading-relaxed mt-3">
-									{file.explanation}
-								</p>
 							</div>
 						))}
 						<div className="flex justify-end pt-2">
@@ -346,6 +359,7 @@ export function PROverviewPanel({
 	prTitle,
 	prBody,
 }: PROverviewPanelProps) {
+	const isActive = useOverviewActive();
 	const [groups, setGroups] = useState<ChangeGroup[]>([]);
 	const [viewedGroups, setViewedGroups] = useState<Set<string>>(new Set());
 	const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
@@ -418,10 +432,10 @@ export function PROverviewPanel({
 	);
 
 	useEffect(() => {
-		if (!hasLoaded && files.length > 0) {
+		if (isActive && !hasLoaded && files.length > 0) {
 			fetchAnalysis();
 		}
-	}, [hasLoaded, files.length, fetchAnalysis]);
+	}, [isActive, hasLoaded, files.length, fetchAnalysis]);
 
 	const toggleViewed = useCallback(
 		(groupId: string) => {

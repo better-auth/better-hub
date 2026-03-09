@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, createContext, useContext } from "react";
 import { Code2, MessageCircle, ChevronRight, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ResizeHandle } from "@/components/ui/resize-handle";
@@ -9,6 +9,9 @@ import {
 	PROptimisticCommentsDisplay,
 } from "./pr-optimistic-comments-provider";
 import { useNavVisibility } from "@/components/shared/nav-visibility-provider";
+
+const OverviewActiveContext = createContext(false);
+export const useOverviewActive = () => useContext(OverviewActiveContext);
 
 type MobileTab = "diff" | "chat";
 type PRTab = "code" | "comments" | "overview";
@@ -125,43 +128,6 @@ export function PRDetailLayout({
 		window.addEventListener("ghost:navigate-to-file", handler);
 		return () => window.removeEventListener("ghost:navigate-to-file", handler);
 	}, [activeTab, codeCollapsed, persistSplit]);
-
-	// Keyboard shortcuts: 1/[ = files, 2/] = chat
-	useEffect(() => {
-		function handleKeyDown(e: KeyboardEvent) {
-			// Skip when user is typing in an input/textarea/contenteditable
-			const tag = (e.target as HTMLElement)?.tagName;
-			if (
-				tag === "INPUT" ||
-				tag === "TEXTAREA" ||
-				(e.target as HTMLElement)?.isContentEditable
-			)
-				return;
-
-			const isDesktop = window.innerWidth >= 1024;
-
-			if (e.key === "1" || e.key === "[") {
-				e.preventDefault();
-				if (isDesktop) {
-					if (codeCollapsed) persistSplit(65);
-					else persistSplit(100);
-				} else {
-					setMobileTab("diff");
-				}
-			} else if (e.key === "2" || e.key === "]") {
-				e.preventDefault();
-				if (isDesktop) {
-					if (chatCollapsed) persistSplit(65);
-					else persistSplit(0);
-				} else {
-					setMobileTab("chat");
-				}
-			}
-		}
-
-		window.addEventListener("keydown", handleKeyDown);
-		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [codeCollapsed, chatCollapsed, persistSplit]);
 
 	// Update tab indicator position
 	const updateTabIndicator = useCallback(() => {
@@ -509,7 +475,11 @@ export function PRDetailLayout({
 					)}
 					onScroll={handleScrollForNav}
 				>
-					{overviewPanel}
+					<OverviewActiveContext.Provider
+						value={activeTab === "overview"}
+					>
+						{overviewPanel}
+					</OverviewActiveContext.Provider>
 				</div>
 
 				{/* Mobile panels */}

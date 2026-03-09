@@ -10,6 +10,7 @@ const MAX_TOKENIZE_LENGTH = 200_000;
 
 let highlighterInstance: Highlighter | null = null;
 let highlighterPromise: Promise<Highlighter> | null = null;
+const langLoadPromises = new Map<string, Promise<void>>();
 
 function getClientHighlighter(): Promise<Highlighter> {
 	if (highlighterInstance) return Promise.resolve(highlighterInstance);
@@ -27,6 +28,32 @@ function getClientHighlighter(): Promise<Highlighter> {
 			});
 	}
 	return highlighterPromise;
+}
+
+async function ensureLanguageLoaded(highlighter: Highlighter, lang: string): Promise<string> {
+	const loaded = highlighter.getLoadedLanguages();
+	if (loaded.includes(lang)) return lang;
+
+	let pending = langLoadPromises.get(lang);
+	if (!pending) {
+		pending = highlighter
+			.loadLanguage(lang as BundledLanguage)
+			.then(() => {
+				langLoadPromises.delete(lang);
+			})
+			.catch(() => {
+				langLoadPromises.delete(lang);
+				throw new Error(`Failed to load language: ${lang}`);
+			});
+		langLoadPromises.set(lang, pending);
+	}
+	try {
+		await pending;
+		return lang;
+	} catch {
+		if (lang === "text") return "text";
+		return ensureLanguageLoaded(highlighter, "text");
+	}
 }
 
 function escapeHtml(str: string): string {
@@ -153,21 +180,7 @@ export async function highlightCodeClient(
 	const highlighter = await getClientHighlighter();
 	const themes = await getThemePairForClient(highlighter, themeId);
 
-	const loaded = highlighter.getLoadedLanguages();
-	let effectiveLang = lang || "text";
-
-	if (!loaded.includes(effectiveLang)) {
-		try {
-			await highlighter.loadLanguage(effectiveLang as BundledLanguage);
-		} catch {
-			effectiveLang = "text";
-			if (!loaded.includes("text")) {
-				try {
-					await highlighter.loadLanguage("text" as BundledLanguage);
-				} catch {}
-			}
-		}
-	}
+	const effectiveLang = await ensureLanguageLoaded(highlighter, lang || "text");
 
 	try {
 		return highlighter.codeToHtml(code, {
@@ -194,22 +207,7 @@ export async function highlightDiffLinesClient(
 	const lang = getLanguageFromFilename(filename);
 	const diffLines = parseDiffPatch(patch);
 	const highlighter = await getClientHighlighter();
-
-	let effectiveLang = lang || "text";
-	const loaded = highlighter.getLoadedLanguages();
-	if (!loaded.includes(effectiveLang)) {
-		try {
-			await highlighter.loadLanguage(effectiveLang as BundledLanguage);
-		} catch {
-			effectiveLang = "text";
-			if (!loaded.includes("text")) {
-				try {
-					await highlighter.loadLanguage("text" as BundledLanguage);
-				} catch {}
-			}
-		}
-	}
-
+	const effectiveLang = await ensureLanguageLoaded(highlighter, lang || "text");
 	const themes = await getThemePairForClient(highlighter, themeId);
 
 	const oldStream: { key: string; content: string }[] = [];
