@@ -16,8 +16,9 @@ interface RepoNavProps {
 	hasDiscussions?: boolean;
 	discussionsCount?: number;
 	promptRequestsCount?: number;
-
+	kanbanItemsCount?: number;
 	showPeopleTab?: boolean;
+	showKanbanTab?: boolean;
 }
 
 export function RepoNav({
@@ -29,8 +30,9 @@ export function RepoNav({
 	hasDiscussions,
 	discussionsCount,
 	promptRequestsCount,
-
+	kanbanItemsCount,
 	showPeopleTab,
+	showKanbanTab,
 }: RepoNavProps) {
 	const pathname = usePathname();
 	const base = `/${owner}/${repo}`;
@@ -104,6 +106,16 @@ export function RepoNav({
 				pathname.startsWith(`${base}/commits`) ||
 				pathname.startsWith(`${base}/commit/`),
 		},
+		...(showKanbanTab
+			? [
+					{
+						label: "Kanban",
+						href: `${base}/kanban`,
+						active: pathname.startsWith(`${base}/kanban`),
+						count: kanbanItemsCount,
+					},
+				]
+			: []),
 		{
 			label: "PRs",
 			href: `${base}/pulls`,

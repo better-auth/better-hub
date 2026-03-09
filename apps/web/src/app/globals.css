@@ -623,6 +623,22 @@ tr.diff-search-match-active > td {
 	color: var(--foreground);
 	background-color: color-mix(in srgb, var(--muted) 40%, transparent);
 }
+/* First tab selected by default */
+.ghmd .ghmd-pkg-tabs label:nth-of-type(1) {
+	color: var(--foreground);
+	background-color: var(--code-block-bg);
+	border-bottom: 2px solid var(--foreground);
+	font-weight: 500;
+}
+/* Reset first tab when another is selected */
+.ghmd .ghmd-pkg-tabs:has(input:nth-of-type(2):checked) label:nth-of-type(1),
+.ghmd .ghmd-pkg-tabs:has(input:nth-of-type(3):checked) label:nth-of-type(1),
+.ghmd .ghmd-pkg-tabs:has(input:nth-of-type(4):checked) label:nth-of-type(1) {
+	color: var(--muted-foreground);
+	background-color: transparent;
+	border-bottom: 2px solid var(--border);
+	font-weight: 400;
+}
 .ghmd .ghmd-pkg-tabs input:checked + label {
 	color: var(--foreground);
 	background-color: var(--code-block-bg);
@@ -687,15 +703,19 @@ tr.diff-search-match-active > td {
 	width: 14px;
 	height: 14px;
 }
-.ghmd .ghmd-pkg-tabs input:nth-of-type(1):checked ~ .ghmd-pkg-panel:nth-of-type(1) {
+/* Show first panel by default */
+.ghmd .ghmd-pkg-tabs .ghmd-pkg-panel:nth-of-type(1) {
 	display: flex;
 }
-.ghmd .ghmd-pkg-tabs input:nth-of-type(2):checked ~ .ghmd-pkg-panel:nth-of-type(2) {
-	display: flex;
+/* Hide first panel when another tab is selected */
+.ghmd .ghmd-pkg-tabs:has(input:nth-of-type(2):checked) .ghmd-pkg-panel:nth-of-type(1),
+.ghmd .ghmd-pkg-tabs:has(input:nth-of-type(3):checked) .ghmd-pkg-panel:nth-of-type(1),
+.ghmd .ghmd-pkg-tabs:has(input:nth-of-type(4):checked) .ghmd-pkg-panel:nth-of-type(1) {
+	display: none;
 }
-.ghmd .ghmd-pkg-tabs input:nth-of-type(3):checked ~ .ghmd-pkg-panel:nth-of-type(3) {
-	display: flex;
-}
+.ghmd .ghmd-pkg-tabs input:nth-of-type(1):checked ~ .ghmd-pkg-panel:nth-of-type(1),
+.ghmd .ghmd-pkg-tabs input:nth-of-type(2):checked ~ .ghmd-pkg-panel:nth-of-type(2),
+.ghmd .ghmd-pkg-tabs input:nth-of-type(3):checked ~ .ghmd-pkg-panel:nth-of-type(3),
 .ghmd .ghmd-pkg-tabs input:nth-of-type(4):checked ~ .ghmd-pkg-panel:nth-of-type(4) {
 	display: flex;
 }

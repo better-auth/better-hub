@@ -435,7 +435,7 @@ function buildInstallTabsHtml(variants: PkgVariant[], id: number): string {
 	// Tab row: inputs + labels + trailing border fill
 	for (let i = 0; i < variants.length; i++) {
 		const rid = `${name}-${i}`;
-		html += `<input type="radio" name="${name}" id="${rid}"${i === 0 ? " checked" : ""}>`;
+		html += `<input type="radio" name="${name}" id="${rid}"${i === 0 ? ' checked="checked"' : ""} />`;
 		html += `<label for="${rid}">${variants[i].label}</label>`;
 	}
 	html += '<span class="ghmd-pkg-fill"></span>';
