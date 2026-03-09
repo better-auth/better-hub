@@ -678,9 +678,7 @@ export function PROverviewPanel({
 				setGroups(data.groups || []);
 				setHasLoaded(true);
 
-				if (data.groups?.length > 0) {
-					setExpandedGroups(new Set([data.groups[0].id]));
-				}
+				setExpandedGroups(new Set());
 			} catch (err) {
 				setError(
 					err instanceof Error ? err.message : "Failed to analyze PR",
