@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, memo, type ReactNode } from "react";
 import {
 	Check,
 	Loader2,
@@ -18,6 +18,42 @@ import type { SyntaxToken } from "@/lib/shiki";
 import { highlightDiffLinesClient } from "@/lib/shiki-client";
 import { useColorTheme } from "@/components/theme/theme-provider";
 import { DiffSnippetTable } from "./diff-snippet-table";
+
+const INLINE_MD_RE = /(`[^`]+`|\*\*(?:[^*]|\*(?!\*))+\*\*|\*(?:[^*])+\*)/g;
+
+function renderInlineMarkdown(text: string): ReactNode {
+	const parts: ReactNode[] = [];
+	let lastIndex = 0;
+	let key = 0;
+	let match: RegExpExecArray | null;
+
+	INLINE_MD_RE.lastIndex = 0;
+	while ((match = INLINE_MD_RE.exec(text)) !== null) {
+		if (match.index > lastIndex) {
+			parts.push(text.slice(lastIndex, match.index));
+		}
+		const token = match[0];
+		if (token.startsWith("`")) {
+			parts.push(
+				<code
+					key={key++}
+					className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.9em]"
+				>
+					{token.slice(1, -1)}
+				</code>,
+			);
+		} else if (token.startsWith("**")) {
+			parts.push(<strong key={key++}>{token.slice(2, -2)}</strong>);
+		} else if (token.startsWith("*")) {
+			parts.push(<em key={key++}>{token.slice(1, -1)}</em>);
+		}
+		lastIndex = match.index + token.length;
+	}
+
+	if (lastIndex === 0) return text;
+	if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+	return parts;
+}
 
 interface DiffFile {
 	filename: string;
@@ -220,7 +256,9 @@ function ChangeGroupCard({
 								Summary
 							</h3>
 							<p className="text-sm text-muted-foreground leading-relaxed px-2">
-								{group.summary}
+								{renderInlineMarkdown(
+									group.summary,
+								)}
 							</p>
 						</div>
 						{group.files.map((file, i) => (
@@ -230,7 +268,9 @@ function ChangeGroupCard({
 										{i + 1}.
 									</h3>
 									<p className="text-sm text-muted-foreground leading-relaxed">
-										{file.explanation}
+										{renderInlineMarkdown(
+											file.explanation,
+										)}
 									</p>
 								</div>
 								<div className="flex items-center gap-2.5 border-t border-x px-3 pt-2 bg-[var(--code-bg)] pb-4 -mb-2 rounded-t-md">

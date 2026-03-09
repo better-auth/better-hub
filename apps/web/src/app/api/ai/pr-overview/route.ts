@@ -56,7 +56,7 @@ const OverviewOutputSchema = z.object({
 			summary: z
 				.string()
 				.describe(
-					"2-3 sentence explanation of what these changes accomplish and why",
+					"2-3 sentence explanation of what these changes accomplish and why. Supports inline markdown: **bold**, *italics*, `code`.",
 				),
 			reviewOrder: z
 				.number()
@@ -74,7 +74,7 @@ const OverviewOutputSchema = z.object({
 					explanation: z
 						.string()
 						.describe(
-							"Brief explanation focusing on why this file changed",
+							"Brief explanation focusing on why this file changed. Supports inline markdown: **bold**, *italics*, `code`.",
 						),
 					startLine: z
 						.number()
@@ -99,7 +99,8 @@ Guidelines:
 - Snippets should show the most important changes, not the entire diff
 - Explanations should focus on "why" not just "what"
 - reviewOrder should start at 1 for the most foundational changes
-- startLine is the 1-based line number in the new version of the file where the snippet begins (from the @@ hunk header's new-file range)`;
+- startLine is the 1-based line number in the new version of the file where the snippet begins (from the @@ hunk header's new-file range)
+- The "summary" and "explanation" fields support inline markdown: use **bold** for emphasis, *italics* for nuance, and \`backticks\` for inline code references (e.g. function names, variable names, file paths). Do NOT use headings, lists, or block-level markdown—only inline formatting.`;
 
 function truncatePatch(patch: string, maxLines: number = 100): string {
 	const lines = patch.split("\n");
