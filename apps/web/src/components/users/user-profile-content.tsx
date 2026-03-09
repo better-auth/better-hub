@@ -885,7 +885,7 @@ export function UserProfileContent({
 					<>
 						{/* Search & filters */}
 						<div className="shrink-0">
-							<div className="flex items-center gap-2 lg:mb-3">
+							<div className="flex flex-col gap-2 lg:mb-3 sm:flex-row sm:items-center">
 								<div className="relative flex-1">
 									<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50" />
 									<input
@@ -1178,6 +1178,84 @@ export function UserProfileContent({
 									href={`/${repo.full_name}`}
 									className="group flex items-start md:items-center gap-3 md:gap-4 px-4 py-3 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors"
 								>
+									{/* Mobile: Stacked layout */}
+									<div className="flex sm:hidden w-full items-start gap-3">
+										<FolderGit2 className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
+										<div className="flex-1 min-w-0">
+											<span className="text-sm text-foreground font-mono truncate block">
+												{
+													repo.name
+												}
+											</span>
+											<div className="flex items-center gap-1.5 flex-wrap mt-1">
+												{repo.private ? (
+													<RepoBadge type="private" />
+												) : (
+													<RepoBadge type="public" />
+												)}
+												{repo.archived && (
+													<RepoBadge type="archived" />
+												)}
+												{repo.fork && (
+													<RepoBadge type="fork" />
+												)}
+											</div>
+											{repo.description && (
+												<p className="text-[11px] text-muted-foreground/60 mt-1">
+													{
+														repo.description
+													}
+												</p>
+											)}
+											<div className="mt-2 flex items-center flex-wrap gap-x-3 gap-y-1">
+												{repo.language && (
+													<span className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60 font-mono">
+														<span
+															className="w-2 h-2 rounded-full"
+															style={{
+																backgroundColor:
+																	getLanguageColor(
+																		repo.language,
+																	),
+															}}
+														/>
+														{
+															repo.language
+														}
+													</span>
+												)}
+												{repo.stargazers_count >
+													0 && (
+													<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
+														<Star className="w-3 h-3" />
+														{formatNumber(
+															repo.stargazers_count,
+														)}
+													</span>
+												)}
+												{repo.forks_count >
+													0 && (
+													<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
+														<GitFork className="w-3 h-3" />
+														{formatNumber(
+															repo.forks_count,
+														)}
+													</span>
+												)}
+												{repo.updated_at && (
+													<span className="text-[11px] text-muted-foreground font-mono">
+														<TimeAgo
+															date={
+																repo.updated_at
+															}
+														/>
+													</span>
+												)}
+											</div>
+										</div>
+										<ChevronRight className="w-3 h-3 text-foreground/10 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5" />
+									</div>
+
 									{/* Desktop: Inline layout */}
 									<div className="hidden sm:contents">
 										<FolderGit2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
