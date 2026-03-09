@@ -713,6 +713,7 @@ export function PRMergePanel({
 								<div className="border-t border-border/40 my-1" />
 								<a
 									href={`https://github.com/${owner}/${repo}/pull/${pullNumber}`}
+									data-no-github-intercept="true"
 									target="_blank"
 									rel="noopener noreferrer"
 									onClick={() =>
