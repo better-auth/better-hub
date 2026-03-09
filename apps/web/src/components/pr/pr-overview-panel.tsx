@@ -1,6 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef, memo, type ReactNode } from "react";
+import {
+	useState,
+	useEffect,
+	useCallback,
+	useMemo,
+	useRef,
+	memo,
+	useTransition,
+	type ReactNode,
+} from "react";
+import { useRouter } from "next/navigation";
 import {
 	Check,
 	Loader2,
@@ -10,6 +20,8 @@ import {
 	RefreshCw,
 	AlertCircle,
 	Code2,
+	MessageSquare,
+	AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useOverviewActive } from "./pr-detail-layout";
@@ -18,6 +30,12 @@ import type { SyntaxToken } from "@/lib/shiki";
 import { highlightDiffLinesClient } from "@/lib/shiki-client";
 import { useColorTheme } from "@/components/theme/theme-provider";
 import { DiffSnippetTable } from "./diff-snippet-table";
+import {
+	submitPRReview,
+	type ReviewEvent,
+} from "@/app/(app)/repos/[owner]/[repo]/pulls/pr-actions";
+import { MarkdownEditor } from "@/components/shared/markdown-editor";
+import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 
 const INLINE_MD_RE = /(`[^`]+`|\*\*(?:[^*]|\*(?!\*))+\*\*|\*(?:[^*])+\*)/g;
 
@@ -87,6 +105,7 @@ interface PROverviewPanelProps {
 	files: DiffFile[];
 	prTitle: string;
 	prBody: string;
+	participants?: Array<{ login: string; avatar_url: string }>;
 }
 
 function buildSnippetPatch(snippet: string, startLine?: number): string {
@@ -157,6 +176,8 @@ function ChangeGroupCard({
 	isExpanded,
 	onToggleViewed,
 	onToggleExpanded,
+	additions,
+	deletions,
 	owner,
 	repo,
 	pullNumber,
@@ -168,6 +189,8 @@ function ChangeGroupCard({
 	isExpanded: boolean;
 	onToggleViewed: () => void;
 	onToggleExpanded: () => void;
+	additions: number;
+	deletions: number;
 	owner?: string;
 	repo?: string;
 	pullNumber?: number;
@@ -182,7 +205,7 @@ function ChangeGroupCard({
 			)}
 		>
 			<div
-				className="flex items-start gap-4 px-5 py-4 cursor-pointer hover:bg-muted/30 transition-colors select-none"
+				className="flex items-start justify-center gap-4 px-5 py-4 cursor-pointer hover:bg-muted/30 transition-colors select-none"
 				onClick={onToggleExpanded}
 			>
 				<button
@@ -233,6 +256,26 @@ function ChangeGroupCard({
 					</div>
 				</div>
 
+				{(additions > 0 || deletions > 0) && (
+					<span className="text-[11px] font-mono text-muted-foreground/60 shrink-0 mt-1 tabular-nums">
+						{additions > 0 && (
+							<span className="text-success/70">
+								+{additions}
+							</span>
+						)}
+						{additions > 0 && deletions > 0 && (
+							<span className="text-muted-foreground/30 mx-1">
+								/
+							</span>
+						)}
+						{deletions > 0 && (
+							<span className="text-red-400/70">
+								-{deletions}
+							</span>
+						)}
+					</span>
+				)}
+
 				<ChevronDown
 					className={cn(
 						"w-5 h-5 text-muted-foreground shrink-0 transition-transform duration-300 mt-1",
@@ -251,16 +294,11 @@ function ChangeGroupCard({
 			>
 				<div className="overflow-hidden">
 					<div className="border-t border-border/40 px-5 py-5 space-y-6 bg-muted/5">
-						<div className="space-y-3">
-							<h3 className="text-md font-medium px-2">
-								Summary
-							</h3>
-							<p className="text-sm text-muted-foreground leading-relaxed px-2">
-								{renderInlineMarkdown(
-									group.summary,
-								)}
-							</p>
-						</div>
+						<p className="text-sm text-muted-foreground brightness-120 leading-relaxed px-2">
+							{renderInlineMarkdown(group.summary)}
+						</p>
+						<div className="mt-3 mb-6 h-px w-full bg-border/40"></div>
+
 						{group.files.map((file, i) => (
 							<div key={i} className="mt-3">
 								<div className="flex gap-3 my-3 pl-2">
@@ -354,16 +392,19 @@ function ChangeGroupCard({
 										}
 									/>
 								)}
+								{i !== group.files.length - 1 && (
+									<div className="mb-8 mt-10 h-px w-full bg-border/40"></div>
+								)}
 							</div>
 						))}
-						<div className="flex justify-end pt-2">
+						<div className="flex justify-end">
 							<button
 								onClick={(e) => {
 									e.stopPropagation();
 									onToggleViewed();
 								}}
 								className={cn(
-									"flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer",
+									"flex items-center gap-2 px-4 py-2 rounded-sm text-sm font-medium transition-colors cursor-pointer",
 									isViewed
 										? "bg-muted text-muted-foreground hover:bg-muted/80"
 										: "bg-primary text-primary-foreground hover:bg-primary/90",
@@ -378,6 +419,185 @@ function ChangeGroupCard({
 					</div>
 				</div>
 			</div>
+		</div>
+	);
+}
+
+const REVIEW_OPTIONS: {
+	key: ReviewEvent;
+	label: string;
+	icon: typeof Check;
+	accent: string;
+	activeAccent: string;
+}[] = [
+	{
+		key: "APPROVE",
+		label: "Approve",
+		icon: Check,
+		accent: "text-muted-foreground",
+		activeAccent: "border-success/50 text-success bg-success/5",
+	},
+	{
+		key: "COMMENT",
+		label: "Comment",
+		icon: MessageSquare,
+		accent: "text-muted-foreground",
+		activeAccent:
+			"border-foreground/50 text-foreground bg-muted/60 dark:bg-white/[0.04]",
+	},
+	{
+		key: "REQUEST_CHANGES",
+		label: "Request changes",
+		icon: AlertTriangle,
+		accent: "text-muted-foreground",
+		activeAccent: "border-warning/50 text-warning bg-warning/5",
+	},
+];
+
+function OverviewReviewForm({
+	owner,
+	repo,
+	pullNumber,
+	participants,
+}: {
+	owner: string;
+	repo: string;
+	pullNumber: number;
+	participants?: Array<{ login: string; avatar_url: string }>;
+}) {
+	const router = useRouter();
+	const { emit } = useMutationEvents();
+	const [body, setBody] = useState("");
+	const [selected, setSelected] = useState<ReviewEvent>("APPROVE");
+	const [isPending, startTransition] = useTransition();
+	const [error, setError] = useState<string | null>(null);
+	const [submitted, setSubmitted] = useState(false);
+
+	const handleSubmit = () => {
+		if (selected === "REQUEST_CHANGES" && !body.trim()) return;
+		setError(null);
+		startTransition(async () => {
+			const res = await submitPRReview(
+				owner,
+				repo,
+				pullNumber,
+				selected,
+				body.trim() || undefined,
+			);
+			if (res.error) {
+				setError(res.error);
+			} else {
+				setSubmitted(true);
+				emit({ type: "pr:reviewed", owner, repo, number: pullNumber });
+				router.refresh();
+			}
+		});
+	};
+
+	if (submitted) {
+		return (
+			<div className="flex flex-col items-center gap-2 py-4">
+				<div className="flex items-center gap-2 text-success">
+					<Check className="w-4 h-4" />
+					<span className="text-sm font-medium">
+						Review submitted
+					</span>
+				</div>
+				<button
+					onClick={() => {
+						setSubmitted(false);
+						setBody("");
+						setSelected("APPROVE");
+					}}
+					className="text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors cursor-pointer"
+				>
+					Submit another
+				</button>
+			</div>
+		);
+	}
+
+	return (
+		<div className="space-y-4">
+			<div className="flex items-center gap-1.5">
+				{REVIEW_OPTIONS.map(
+					({ key, label, icon: Icon, accent, activeAccent }) => {
+						const isSelected = selected === key;
+						const isDisabled =
+							key === "REQUEST_CHANGES" &&
+							!body.trim() &&
+							!isSelected;
+
+						return (
+							<button
+								key={key}
+								onClick={() =>
+									!isDisabled &&
+									setSelected(key)
+								}
+								disabled={isDisabled}
+								className={cn(
+									"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider",
+									"border rounded-sm transition-all cursor-pointer",
+									isSelected
+										? activeAccent
+										: cn(
+												"border-transparent",
+												accent,
+												"hover:text-foreground/70",
+											),
+									"disabled:opacity-25 disabled:cursor-not-allowed",
+								)}
+							>
+								<Icon className="w-3 h-3" />
+								{label}
+							</button>
+						);
+					},
+				)}
+			</div>
+
+			<MarkdownEditor
+				value={body}
+				onChange={setBody}
+				placeholder={
+					selected === "REQUEST_CHANGES"
+						? "Describe the changes you'd like to see…"
+						: "Leave a comment (optional)"
+				}
+				rows={5}
+				participants={participants}
+				owner={owner}
+				onKeyDown={(e) => {
+					if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+						e.preventDefault();
+						handleSubmit();
+					}
+				}}
+			/>
+
+			{error && <p className="text-[11px] text-destructive">{error}</p>}
+
+			<div className="flex items-center justify-end">
+				<button
+					onClick={handleSubmit}
+					disabled={
+						isPending ||
+						(selected === "REQUEST_CHANGES" && !body.trim())
+					}
+					className={cn(
+						"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider rounded-sm",
+						"bg-foreground text-background hover:bg-foreground/90",
+						"transition-colors cursor-pointer",
+						"disabled:opacity-40 disabled:cursor-not-allowed",
+					)}
+				>
+					{isPending && <Loader2 className="w-3 h-3 animate-spin" />}
+					Submit review
+				</button>
+			</div>
+
+			<div className="h-64" />
 		</div>
 	);
 }
@@ -398,6 +618,7 @@ export function PROverviewPanel({
 	files,
 	prTitle,
 	prBody,
+	participants,
 }: PROverviewPanelProps) {
 	const isActive = useOverviewActive();
 	const [groups, setGroups] = useState<ChangeGroup[]>([]);
@@ -570,6 +791,14 @@ export function PROverviewPanel({
 		});
 	}, []);
 
+	const fileStatsMap = useMemo(() => {
+		const m = new Map<string, { additions: number; deletions: number }>();
+		for (const f of files) {
+			m.set(f.filename, { additions: f.additions, deletions: f.deletions });
+		}
+		return m;
+	}, [files]);
+
 	const viewedCount = viewedGroups.size;
 	const totalCount = groups.length;
 	const progressPercent = totalCount > 0 ? Math.round((viewedCount / totalCount) * 100) : 0;
@@ -583,7 +812,7 @@ export function PROverviewPanel({
 	}
 
 	return (
-		<div className="max-w-4xl mx-auto px-8 py-12">
+		<div className="max-w-6xl mx-auto px-8 py-12">
 			<div className="flex items-center justify-between mb-8">
 				<div>
 					<h2 className="text-xl font-semibold">
@@ -700,6 +929,26 @@ export function PROverviewPanel({
 												group.id,
 											)
 										}
+										additions={group.files.reduce(
+											(sum, f) =>
+												sum +
+												(fileStatsMap.get(
+													f.filename,
+												)
+													?.additions ??
+													0),
+											0,
+										)}
+										deletions={group.files.reduce(
+											(sum, f) =>
+												sum +
+												(fileStatsMap.get(
+													f.filename,
+												)
+													?.deletions ??
+													0),
+											0,
+										)}
 										owner={owner}
 										repo={repo}
 										pullNumber={
@@ -711,16 +960,22 @@ export function PROverviewPanel({
 							))}
 					</div>
 
-					<div className="flex items-center justify-center py-12 mt-8">
-						<div className="flex items-center gap-4 text-muted-foreground/50">
-							<div className="h-px w-16 bg-border/50" />
-							<div className="flex items-center gap-2 text-sm">
-								<Check className="w-4 h-4" />
-								<span>End of review</span>
-							</div>
-							<div className="h-px w-16 bg-border/50" />
+					<div className="flex items-center justify-center pt-10 pb-10">
+						<div className="flex items-center gap-4 text-muted-foreground/40">
+							<div className="h-px w-12 bg-border/40" />
+							<span className="text-[11px] font-mono uppercase tracking-wider">
+								Submit review
+							</span>
+							<div className="h-px w-12 bg-border/40" />
 						</div>
 					</div>
+
+					<OverviewReviewForm
+						owner={owner}
+						repo={repo}
+						pullNumber={pullNumber}
+						participants={participants}
+					/>
 				</>
 			)}
 

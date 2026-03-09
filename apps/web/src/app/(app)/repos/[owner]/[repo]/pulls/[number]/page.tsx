@@ -463,6 +463,7 @@ export default async function PRDetailPage({
 						files={prFiles}
 						prTitle={pr.title}
 						prBody={pr.body || ""}
+						participants={participants}
 					/>
 				}
 				infoBar={

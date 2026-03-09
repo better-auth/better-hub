@@ -30,7 +30,7 @@ const nextConfig: NextConfig = {
 			dynamic: 300,
 			static: 180,
 		},
-		serverComponentsHmrCache: true,
+		// serverComponentsHmrCache: true,
 		imgOptTimeoutInSeconds: 3,
 	},
 	logging: {
@@ -38,7 +38,7 @@ const nextConfig: NextConfig = {
 			fullUrl: true,
 		},
 	},
-	reactCompiler: true,
+	// reactCompiler: true,
 	images: {
 		...(process.env.NODE_ENV === "development" && {
 			dangerouslyAllowLocalIP: true,

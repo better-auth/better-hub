@@ -283,14 +283,14 @@ export function DiffSnippetTable({
 									{/* Line number */}
 									<td
 										className={cn(
-											"w-10 py-0 pr-2 text-right text-[11px] font-mono select-none border-r border-border/40 relative",
+											"w-10 py-0 pr-2 text-right text-[11px] font-mono select-none border-r border-border/40 relative text-[var(--code-foreground)]",
 											isSelected
 												? "bg-muted-foreground/[0.06] text-muted-foreground"
 												: isAdd
-													? "bg-diff-add-gutter text-diff-add-gutter"
+													? "bg-diff-add-gutter"
 													: isDel
-														? "bg-diff-del-gutter text-diff-del-gutter"
-														: "text-muted-foreground/30",
+														? "bg-diff-del-gutter"
+														: "",
 										)}
 									>
 										{canComment &&
@@ -321,7 +321,10 @@ export function DiffSnippetTable({
 													<Plus className="w-3 h-3" />
 												</button>
 											)}
-										{lineNum ?? ""}
+										<span className="opacity-40">
+											{lineNum ??
+												""}
+										</span>
 									</td>
 
 									{/* Content */}
