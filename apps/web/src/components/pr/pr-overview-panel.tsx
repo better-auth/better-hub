@@ -205,7 +205,7 @@ function ChangeGroupCard({
 			)}
 		>
 			<div
-				className="flex items-start justify-center gap-4 px-5 py-4 cursor-pointer hover:bg-muted/30 transition-colors select-none"
+				className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-muted/30 transition-colors select-none"
 				onClick={onToggleExpanded}
 			>
 				<button
@@ -213,7 +213,7 @@ function ChangeGroupCard({
 						e.stopPropagation();
 						onToggleViewed();
 					}}
-					className="mt-1 shrink-0"
+					className="shrink-0"
 					title={isViewed ? "Mark as unviewed" : "Mark as viewed"}
 				>
 					<span
@@ -257,7 +257,7 @@ function ChangeGroupCard({
 				</div>
 
 				{(additions > 0 || deletions > 0) && (
-					<span className="text-[11px] font-mono text-muted-foreground/60 shrink-0 mt-1 tabular-nums">
+					<span className="text-[11px] font-mono text-muted-foreground/60 shrink-0 tabular-nums">
 						{additions > 0 && (
 							<span className="text-success/70">
 								+{additions}
@@ -278,7 +278,7 @@ function ChangeGroupCard({
 
 				<ChevronDown
 					className={cn(
-						"w-5 h-5 text-muted-foreground shrink-0 transition-transform duration-300 mt-1",
+						"w-5 h-5 text-muted-foreground shrink-0 transition-transform duration-300",
 						isExpanded && "rotate-180",
 					)}
 				/>
@@ -397,7 +397,7 @@ function ChangeGroupCard({
 								)}
 							</div>
 						))}
-						<div className="flex justify-end">
+						<div className="flex justify-center">
 							<button
 								onClick={(e) => {
 									e.stopPropagation();
