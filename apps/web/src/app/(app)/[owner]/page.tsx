@@ -9,6 +9,8 @@ import {
 	getUserOrgTopRepos,
 	getContributionData,
 	getUserEvents,
+	getUserFollowers,
+	getUserFollowing,
 } from "@/lib/github";
 import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { OrgDetailContent } from "@/components/orgs/org-detail-content";
@@ -64,11 +66,15 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 		if (!orgData) {
 			notFound();
 		}
-		const reposData = await getOrgRepos(owner, {
-			perPage: 100,
-			sort: "updated",
-			type: "all",
-		}).catch(() => []);
+		const [reposData, followersData, followingData] = await Promise.all([
+			getOrgRepos(owner, {
+				perPage: 100,
+				sort: "updated",
+				type: "all",
+			}).catch(() => []),
+			getUserFollowers(owner, 100).catch(() => []),
+			getUserFollowing(owner, 100).catch(() => []),
+		]);
 
 		return (
 			<OrgDetailContent
@@ -102,6 +108,8 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 					updated_at: repo.updated_at ?? null,
 					pushed_at: repo.pushed_at ?? null,
 				}))}
+				followers={followersData}
+				following={followingData}
 			/>
 		);
 	}
@@ -116,16 +124,26 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 	let contributionData: Awaited<ReturnType<typeof getContributionData>> = null;
 	let orgTopRepos: Awaited<ReturnType<typeof getUserOrgTopRepos>> = [];
 	let activityEvents: Awaited<ReturnType<typeof getUserEvents>> = [];
+	let followersData: Awaited<ReturnType<typeof getUserFollowers>> = [];
+	let followingData: Awaited<ReturnType<typeof getUserFollowing>> = [];
 
 	if (!isBot) {
 		try {
-			const [reposResult, orgsResult, contributionsResult, eventsResult] =
-				await Promise.allSettled([
-					getUserPublicRepos(userData.login, 100),
-					getUserPublicOrgs(userData.login),
-					getContributionData(userData.login),
-					getUserEvents(userData.login, 100),
-				]);
+			const [
+				reposResult,
+				orgsResult,
+				contributionsResult,
+				eventsResult,
+				followersResult,
+				followingResult,
+			] = await Promise.allSettled([
+				getUserPublicRepos(userData.login, 100),
+				getUserPublicOrgs(userData.login),
+				getContributionData(userData.login),
+				getUserEvents(userData.login, 100),
+				getUserFollowers(userData.login, 100),
+				getUserFollowing(userData.login, 100),
+			]);
 			if (reposResult.status === "fulfilled") reposData = reposResult.value;
 			if (orgsResult.status === "fulfilled") orgsData = orgsResult.value;
 			if (contributionsResult.status === "fulfilled") {
@@ -133,6 +151,12 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 			}
 			if (eventsResult.status === "fulfilled")
 				activityEvents = eventsResult.value;
+			if (followersResult.status === "fulfilled") {
+				followersData = followersResult.value;
+			}
+			if (followingResult.status === "fulfilled") {
+				followingData = followingResult.value;
+			}
 			if (orgsData.length > 0) {
 				orgTopRepos = await getUserOrgTopRepos(
 					orgsData.map((o) => o.login),
@@ -184,6 +208,8 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 			}))}
 			contributions={contributionData}
 			activityEvents={activityEvents}
+			followers={followersData}
+			following={followingData}
 			orgTopRepos={orgTopRepos.map((r) => ({
 				name: r.name,
 				full_name: r.full_name,
