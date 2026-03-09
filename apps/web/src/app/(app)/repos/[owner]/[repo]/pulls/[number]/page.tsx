@@ -338,6 +338,9 @@ export default async function PRDetailPage({
 				: null,
 			committer_name: c.commit?.author?.name || c.commit?.committer?.name || null,
 			created_at: c.commit?.author?.date || c.commit?.committer?.date || "",
+			verification: c.commit?.verification as
+				| { verified: boolean; reason: string }
+				| undefined,
 		};
 		timeline.push(entry);
 	}

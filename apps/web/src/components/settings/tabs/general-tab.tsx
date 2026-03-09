@@ -25,7 +25,7 @@ function ThemeGrid({
 	onSelect: (id: string) => void;
 }) {
 	return (
-		<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+		<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 w-full">
 			{themes.map((theme) => {
 				const isActive = activeId === theme.id;
 				const variant = theme[mode];
@@ -34,9 +34,9 @@ function ThemeGrid({
 						key={theme.id}
 						onClick={() => onSelect(theme.id)}
 						className={cn(
-							"group relative flex items-center gap-3 border px-3 py-2.5 text-left transition-colors cursor-pointer",
+							"group relative w-full flex items-center gap-3 border px-3 py-2.5 text-left transition-colors cursor-pointer",
 							isActive
-								? "border-foreground/30 bg-muted/50 dark:bg-white/[0.04]"
+								? "border-foreground/30 bg-muted/50 dark:bg-white/4"
 								: "border-border hover:border-foreground/10 hover:bg-muted/30",
 						)}
 					>
@@ -58,8 +58,8 @@ function ThemeGrid({
 						</div>
 
 						<div className="flex-1 min-w-0">
-							<div className="flex items-center gap-1.5">
-								<span className="text-xs font-mono font-medium text-foreground">
+							<div className="flex items-center gap-1.5 min-w-0">
+								<span className="text-xs font-mono font-medium text-foreground truncate">
 									{theme.name}
 								</span>
 							</div>
@@ -69,7 +69,7 @@ function ThemeGrid({
 						</div>
 
 						{isActive && (
-							<Check className="size-3.5 text-success shrink-0" />
+							<Check className="size-3.5 text-success shrink-0 ml-auto" />
 						)}
 					</button>
 				);
