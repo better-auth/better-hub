@@ -9,6 +9,7 @@ import { TimeAgo } from "@/components/ui/time-ago";
 import { CopyLinkButton } from "@/components/shared/copy-link-button";
 import { PinButton } from "@/components/shared/pin-button";
 import { RefreshButton } from "@/components/shared/refresh-button";
+import { PRViewSettingsButton } from "@/components/pr/pr-view-settings-button";
 import { EditablePRTitle } from "@/components/pr/editable-pr-title";
 import { EditableBaseBranch } from "@/components/pr/editable-base-branch";
 import { PRStatusIndicator } from "@/components/pr/pr-status-indicator";
@@ -195,6 +196,7 @@ export function PRHeader({
 					isPinned={isPinned}
 				/>
 				<RefreshButton />
+				<PRViewSettingsButton />
 
 				{/* Labels */}
 				{labels

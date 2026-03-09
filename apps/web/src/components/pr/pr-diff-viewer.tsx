@@ -127,6 +127,11 @@ type AddContextCallback = (context: {
 }) => void;
 
 type SidebarMode = "files" | "reviews" | "commits";
+type DiffMode = "single" | "combined";
+const EMPTY_COMMENTS: ReviewComment[] = [];
+const PR_VIEW_MODE_EVENT = "pr:view-mode-changed";
+const PR_DIFF_LAYOUT_EVENT = "pr:diff-layout-changed";
+const PR_WORD_WRAP_EVENT = "pr:word-wrap-changed";
 
 export function PRDiffViewer({
 	files,
@@ -158,6 +163,9 @@ export function PRDiffViewer({
 		}
 		return 0;
 	});
+	const [diffMode, setDiffMode] = useState<DiffMode>(
+		searchParams.get("view") === "combined" ? "combined" : "single",
+	);
 	const [wordWrap, setWordWrapState] = useState(() => getDiffPreferences().wordWrap);
 	const [splitView, setSplitViewState] = useState(() => getDiffPreferences().splitView);
 	const [sidebarWidth, setSidebarWidth] = useState(300);
@@ -171,14 +179,30 @@ export function PRDiffViewer({
 	});
 	const [scrollToLine, setScrollToLine] = useState<number | null>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
+	const fileSectionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+	const prevDiffModeRef = useRef<DiffMode>(diffMode);
 	const totalAdditions = files.reduce((s, f) => s + f.additions, 0);
 	const totalDeletions = files.reduce((s, f) => s + f.deletions, 0);
 
 	const currentFile = files[activeIndex];
+	const selectFile = useCallback(
+		(index: number, line: number | null = null) => {
+			setActiveIndex(index);
+			setScrollToLine(line);
+			if (diffMode === "combined") {
+				const file = files[index];
+				if (!file) return;
+				const section = fileSectionRefs.current.get(file.filename);
+				section?.scrollIntoView({ behavior: "smooth", block: "start" });
+			}
+		},
+		[diffMode, files],
+	);
 
 	// Sync active file to URL ?file= param (only when activeIndex changes)
 	const prevIndexRef = useRef(activeIndex);
 	useEffect(() => {
+		if (diffMode === "combined") return;
 		if (!currentFile) return;
 		if (
 			prevIndexRef.current === activeIndex &&
@@ -189,7 +213,77 @@ export function PRDiffViewer({
 		const url = new URL(window.location.href);
 		url.searchParams.set("file", currentFile.filename);
 		window.history.replaceState(null, "", url.toString());
-	}, [activeIndex, currentFile]); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [activeIndex, currentFile, diffMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+	// Sync diff mode from URL/event updates without router navigation
+	useEffect(() => {
+		const syncFromUrl = () => {
+			const url = new URL(window.location.href);
+			setDiffMode(
+				url.searchParams.get("view") === "combined" ? "combined" : "single",
+			);
+		};
+
+		const onModeChanged = (e: Event) => {
+			const mode = (e as CustomEvent<{ mode?: DiffMode }>).detail?.mode;
+			if (mode === "single" || mode === "combined") {
+				setDiffMode(mode);
+				return;
+			}
+			syncFromUrl();
+		};
+
+		window.addEventListener(PR_VIEW_MODE_EVENT, onModeChanged as EventListener);
+		window.addEventListener("popstate", syncFromUrl);
+		return () => {
+			window.removeEventListener(
+				PR_VIEW_MODE_EVENT,
+				onModeChanged as EventListener,
+			);
+			window.removeEventListener("popstate", syncFromUrl);
+		};
+	}, []);
+
+	// Sync split/unified + wrap toggles from global settings menu events.
+	useEffect(() => {
+		const onLayoutChanged = (e: Event) => {
+			const split = (e as CustomEvent<{ splitView?: boolean }>).detail?.splitView;
+			if (typeof split !== "boolean") return;
+			setSplitViewState(split);
+		};
+		const onWrapChanged = (e: Event) => {
+			const wrap = (e as CustomEvent<{ wordWrap?: boolean }>).detail?.wordWrap;
+			if (typeof wrap !== "boolean") return;
+			setWordWrapState(wrap);
+		};
+		window.addEventListener(PR_DIFF_LAYOUT_EVENT, onLayoutChanged as EventListener);
+		window.addEventListener(PR_WORD_WRAP_EVENT, onWrapChanged as EventListener);
+		return () => {
+			window.removeEventListener(
+				PR_DIFF_LAYOUT_EVENT,
+				onLayoutChanged as EventListener,
+			);
+			window.removeEventListener(
+				PR_WORD_WRAP_EVENT,
+				onWrapChanged as EventListener,
+			);
+		};
+	}, []);
+
+	// On single -> combined switch, jump to the currently selected file section instantly.
+	useEffect(() => {
+		const switchedToCombined =
+			prevDiffModeRef.current === "single" && diffMode === "combined";
+		prevDiffModeRef.current = diffMode;
+		if (!switchedToCombined) return;
+		const file = files[activeIndex];
+		if (!file) return;
+
+		requestAnimationFrame(() => {
+			const section = fileSectionRefs.current.get(file.filename);
+			section?.scrollIntoView({ block: "start", inline: "nearest" });
+		});
+	}, [diffMode, activeIndex, files]);
 
 	// Sync sidebar mode to URL ?tab= param
 	useEffect(() => {
@@ -210,15 +304,12 @@ export function PRDiffViewer({
 			).detail;
 			const idx = files.findIndex((f) => f.filename === filename);
 			if (idx >= 0) {
-				setActiveIndex(idx);
-				if (line) {
-					setScrollToLine(line);
-				}
+				selectFile(idx, line ?? null);
 			}
 		};
 		window.addEventListener("ghost:navigate-to-file", handler);
 		return () => window.removeEventListener("ghost:navigate-to-file", handler);
-	}, [files]);
+	}, [files, selectFile]);
 
 	const handleScrollComplete = useCallback(() => setScrollToLine(null), []);
 
@@ -228,16 +319,16 @@ export function PRDiffViewer({
 		[files.length],
 	);
 
-	const toggleViewed = (filename: string) => {
+	const toggleViewed = useCallback((filename: string) => {
 		setViewedFiles((prev) => {
 			const next = new Set(prev);
 			if (next.has(filename)) next.delete(filename);
 			else next.add(filename);
 			return next;
 		});
-	};
+	}, []);
 
-	const setFilesViewed = (filenames: string[], viewed: boolean) => {
+	const setFilesViewed = useCallback((filenames: string[], viewed: boolean) => {
 		setViewedFiles((prev) => {
 			const next = new Set(prev);
 			for (const f of filenames) {
@@ -246,27 +337,69 @@ export function PRDiffViewer({
 			}
 			return next;
 		});
-	};
+	}, []);
+
+	const toggleSidebar = useCallback(() => {
+		setSidebarCollapsed((c) => !c);
+	}, []);
+
+	const toggleWrap = useCallback(() => {
+		setWordWrapState((w) => {
+			setWordWrap(!w);
+			window.dispatchEvent(
+				new CustomEvent(PR_WORD_WRAP_EVENT, { detail: { wordWrap: !w } }),
+			);
+			return !w;
+		});
+	}, []);
+
+	const toggleSplit = useCallback(() => {
+		setSplitViewState((s) => {
+			setSplitView(!s);
+			window.dispatchEvent(
+				new CustomEvent(PR_DIFF_LAYOUT_EVENT, {
+					detail: { splitView: !s },
+				}),
+			);
+			return !s;
+		});
+	}, []);
 
 	const viewedCount = viewedFiles.size;
 
-	// Group review comments by file
-	const commentsByFile = new Map<string, ReviewComment[]>();
-	for (const rc of reviewComments) {
-		const existing = commentsByFile.get(rc.path) || [];
-		existing.push(rc);
-		commentsByFile.set(rc.path, existing);
-	}
+	// Group review comments by file (memoized for prop stability/perf)
+	const commentsByFile = useMemo(() => {
+		const map = new Map<string, ReviewComment[]>();
+		for (const rc of reviewComments) {
+			const existing = map.get(rc.path) || [];
+			existing.push(rc);
+			map.set(rc.path, existing);
+		}
+		return map;
+	}, [reviewComments]);
 
-	// Group review threads by file
-	const threadsByFile = new Map<string, ReviewThread[]>();
-	for (const t of reviewThreads) {
-		const existing = threadsByFile.get(t.path) || [];
-		existing.push(t);
-		threadsByFile.set(t.path, existing);
-	}
+	// Group review threads by file (memoized for prop stability/perf)
+	const threadsByFile = useMemo(() => {
+		const map = new Map<string, ReviewThread[]>();
+		for (const t of reviewThreads) {
+			const existing = map.get(t.path) || [];
+			existing.push(t);
+			map.set(t.path, existing);
+		}
+		return map;
+	}, [reviewThreads]);
 
-	const unresolvedThreadCount = reviewThreads.filter((t) => !t.isResolved).length;
+	const unresolvedThreadCount = useMemo(
+		() => reviewThreads.filter((t) => !t.isResolved).length,
+		[reviewThreads],
+	);
+	const fileCommentsByName = useMemo(() => {
+		const byName: Record<string, ReviewComment[]> = {};
+		for (const f of files) {
+			byName[f.filename] = commentsByFile.get(f.filename) ?? EMPTY_COMMENTS;
+		}
+		return byName;
+	}, [files, commentsByFile]);
 
 	const handleSidebarResize = useCallback((clientX: number) => {
 		if (!containerRef.current) return;
@@ -399,8 +532,8 @@ export function PRDiffViewer({
 								<DiffFileTree
 									files={files}
 									activeIndex={activeIndex}
-									onSelectFile={
-										setActiveIndex
+									onSelectFile={(i) =>
+										selectFile(i, null)
 									}
 									viewedFiles={viewedFiles}
 									threadsByFile={
@@ -433,8 +566,8 @@ export function PRDiffViewer({
 										i,
 										line,
 									) => {
-										setActiveIndex(i);
-										setScrollToLine(
+										selectFile(
+											i,
 											line ??
 												null,
 										);
@@ -459,63 +592,154 @@ export function PRDiffViewer({
 				</>
 			)}
 
-			{/* Single file diff view */}
+			{/* Diff view */}
 			<div className="flex-1 min-w-0 min-h-0 flex flex-col">
-				{currentFile && (
-					<SingleFileDiff
-						file={currentFile}
-						index={activeIndex}
-						total={files.length}
-						wordWrap={wordWrap}
-						splitView={splitView}
-						onToggleWrap={() => {
-							setWordWrapState((w) => {
-								setWordWrap(!w);
-								return !w;
-							});
-						}}
-						onToggleSplit={() => {
-							setSplitViewState((s) => {
-								setSplitView(!s);
-								return !s;
-							});
-						}}
-						sidebarCollapsed={sidebarCollapsed}
-						onToggleSidebar={() =>
-							setSidebarCollapsed((c) => !c)
-						}
-						onPrev={goToPrev}
-						onNext={goToNext}
-						fileComments={
-							commentsByFile.get(currentFile.filename) ||
-							[]
-						}
-						viewed={viewedFiles.has(currentFile.filename)}
-						onToggleViewed={() =>
-							toggleViewed(currentFile.filename)
-						}
-						owner={owner}
-						repo={repo}
-						pullNumber={pullNumber}
-						headSha={headSha}
-						headBranch={headBranch}
-						baseSha={baseSha}
-						scrollToLine={scrollToLine}
-						onScrollComplete={handleScrollComplete}
-						canWrite={canWrite}
-						fileHighlightData={
-							highlightData[currentFile.filename]
-						}
-						onAddContext={onAddContext}
-						participants={participants}
-					/>
+				{diffMode === "single" ? (
+					currentFile && (
+						<SingleFileDiff
+							file={currentFile}
+							index={activeIndex}
+							total={files.length}
+							wordWrap={wordWrap}
+							splitView={splitView}
+							onToggleWrap={toggleWrap}
+							onToggleSplit={toggleSplit}
+							sidebarCollapsed={sidebarCollapsed}
+							onToggleSidebar={toggleSidebar}
+							onPrev={goToPrev}
+							onNext={goToNext}
+							fileComments={
+								fileCommentsByName[
+									currentFile.filename
+								] ?? EMPTY_COMMENTS
+							}
+							viewed={viewedFiles.has(
+								currentFile.filename,
+							)}
+							onToggleViewed={toggleViewed}
+							owner={owner}
+							repo={repo}
+							pullNumber={pullNumber}
+							headSha={headSha}
+							headBranch={headBranch}
+							baseSha={baseSha}
+							scrollToLine={scrollToLine}
+							onScrollComplete={handleScrollComplete}
+							canWrite={canWrite}
+							fileHighlightData={
+								highlightData[currentFile.filename]
+							}
+							onAddContext={onAddContext}
+							participants={participants}
+						/>
+					)
+				) : (
+					<div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+						<div className="divide-y divide-border/70">
+							{files.map((file, index) => (
+								<div
+									key={file.filename}
+									ref={(el) => {
+										if (el) {
+											fileSectionRefs.current.set(
+												file.filename,
+												el,
+											);
+										} else {
+											fileSectionRefs.current.delete(
+												file.filename,
+											);
+										}
+									}}
+								>
+									<SingleFileDiff
+										file={file}
+										index={index}
+										total={files.length}
+										wordWrap={wordWrap}
+										splitView={
+											splitView
+										}
+										onToggleWrap={
+											toggleWrap
+										}
+										onToggleSplit={
+											toggleSplit
+										}
+										sidebarCollapsed={
+											sidebarCollapsed
+										}
+										onToggleSidebar={
+											toggleSidebar
+										}
+										onPrev={goToPrev}
+										onNext={goToNext}
+										fileComments={
+											fileCommentsByName[
+												file
+													.filename
+											] ??
+											EMPTY_COMMENTS
+										}
+										viewed={viewedFiles.has(
+											file.filename,
+										)}
+										onToggleViewed={
+											toggleViewed
+										}
+										owner={owner}
+										repo={repo}
+										pullNumber={
+											pullNumber
+										}
+										headSha={headSha}
+										headBranch={
+											headBranch
+										}
+										baseSha={baseSha}
+										scrollToLine={
+											activeIndex ===
+											index
+												? scrollToLine
+												: null
+										}
+										onScrollComplete={
+											handleScrollComplete
+										}
+										canWrite={canWrite}
+										fileHighlightData={
+											highlightData[
+												file
+													.filename
+											]
+										}
+										onAddContext={
+											onAddContext
+										}
+										participants={
+											participants
+										}
+										showFileNav={false}
+										stickyHeader
+										embedded
+										showSidebarToggle={
+											index === 0
+										}
+										onSelectFile={
+											setActiveIndex
+										}
+									/>
+								</div>
+							))}
+						</div>
+					</div>
 				)}
 			</div>
 		</div>
 	);
 }
 
-function SingleFileDiff({
+const SingleFileDiff = React.memo(function SingleFileDiff({
 	file,
 	index,
 	total,
@@ -542,6 +766,11 @@ function SingleFileDiff({
 	fileHighlightData,
 	onAddContext,
 	participants,
+	showFileNav = true,
+	stickyHeader = true,
+	embedded = false,
+	showSidebarToggle = true,
+	onSelectFile,
 }: {
 	file: DiffFile;
 	index: number;
@@ -556,7 +785,7 @@ function SingleFileDiff({
 	onNext: () => void;
 	fileComments: ReviewComment[];
 	viewed: boolean;
-	onToggleViewed: () => void;
+	onToggleViewed: (filename: string) => void;
 	owner?: string;
 	repo?: string;
 	pullNumber?: number;
@@ -569,9 +798,14 @@ function SingleFileDiff({
 	fileHighlightData?: Record<string, SyntaxToken[]>;
 	onAddContext?: AddContextCallback;
 	participants?: Array<{ login: string; avatar_url: string }>;
+	showFileNav?: boolean;
+	stickyHeader?: boolean;
+	embedded?: boolean;
+	showSidebarToggle?: boolean;
+	onSelectFile?: (index: number) => void;
 }) {
 	const { emit } = useMutationEvents();
-	const lines = file.patch ? parseDiffPatch(file.patch) : [];
+	const lines = useMemo(() => (file.patch ? parseDiffPatch(file.patch) : []), [file.patch]);
 	const diffContainerRef = useRef<HTMLDivElement>(null);
 	const onScrollCompleteRef = useRef(onScrollComplete);
 	onScrollCompleteRef.current = onScrollComplete;
@@ -612,6 +846,9 @@ function SingleFileDiff({
 	const [isLoadingExpand, setIsLoadingExpand] = useState<number | null>(null);
 	const [showFullFile, setShowFullFile] = useState(false);
 	const [isLoadingFullFile, setIsLoadingFullFile] = useState(false);
+	const [collapsed, setCollapsed] = useState(false);
+	const sectionRef = useRef<HTMLDivElement>(null);
+	const headerRef = useRef<HTMLDivElement>(null);
 
 	// Inline edit state
 	const [isEditing, setIsEditing] = useState(false);
@@ -628,16 +865,14 @@ function SingleFileDiff({
 
 	// Compute which lines were changed by the PR (new-file line numbers from the patch)
 	const prChangedLines = useMemo(() => {
-		if (!file.patch) return new Set<number>();
-		const diffLines = parseDiffPatch(file.patch);
 		const changed = new Set<number>();
-		for (const line of diffLines) {
+		for (const line of lines) {
 			if (line.type === "add" && line.newLineNumber !== undefined) {
 				changed.add(line.newLineNumber);
 			}
 		}
 		return changed;
-	}, [file.patch]);
+	}, [lines]);
 
 	// Sorted array for prev/next navigation
 	const prChangedLinesSorted = useMemo(
@@ -658,6 +893,9 @@ function SingleFileDiff({
 	const prevFilenameRef = useRef(file.filename);
 	if (prevFilenameRef.current !== file.filename) {
 		prevFilenameRef.current = file.filename;
+		if (collapsed) {
+			setCollapsed(false);
+		}
 		if (searchOpen) {
 			setSearchOpen(false);
 			setSearchQuery("");
@@ -1212,7 +1450,7 @@ function SingleFileDiff({
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	const splitRows = useMemo(
 		() => (splitView ? buildSplitRows(lines) : []),
-		[splitView, file.patch],
+		[splitView, lines],
 	);
 
 	const handleLineClick = (lineNum: number, side: "LEFT" | "RIGHT", shiftKey: boolean) => {
@@ -1264,9 +1502,56 @@ function SingleFileDiff({
 		}
 	};
 
+	const findScrollParent = (el: HTMLElement | null): HTMLElement | null => {
+		let node = el?.parentElement ?? null;
+		while (node) {
+			const style = window.getComputedStyle(node);
+			const overflowY = style.overflowY;
+			if (
+				(overflowY === "auto" ||
+					overflowY === "scroll" ||
+					overflowY === "overlay") &&
+				node.scrollHeight > node.clientHeight
+			) {
+				return node;
+			}
+			node = node.parentElement;
+		}
+		return null;
+	};
+
+	const collapseWithScrollAdjustment = useCallback(() => {
+		if (collapsed) return;
+		const sectionEl = sectionRef.current;
+		const headerEl = headerRef.current;
+		const scroller = findScrollParent(sectionEl);
+
+		const shouldAdjust =
+			!!sectionEl &&
+			!!headerEl &&
+			!!scroller &&
+			(() => {
+				const headerRect = headerEl.getBoundingClientRect();
+				const scrollerRect = scroller.getBoundingClientRect();
+				return headerRect.top <= scrollerRect.top + 1;
+			})();
+
+		setCollapsed(true);
+
+		if (!shouldAdjust || !sectionEl || !scroller) return;
+
+		requestAnimationFrame(() => {
+			const scrollerRect = scroller.getBoundingClientRect();
+			const sectionRect = sectionEl.getBoundingClientRect();
+			const targetTop = scroller.scrollTop + (sectionRect.top - scrollerRect.top);
+			scroller.scrollTo(0, Math.max(0, targetTop));
+		});
+	}, [collapsed]);
+
 	return (
 		<div
-			className="flex flex-col flex-1 min-h-0"
+			ref={sectionRef}
+			className={cn("flex flex-col", !embedded && "flex-1 min-h-0")}
 			onMouseEnter={() => {
 				isHoveringDiffRef.current = true;
 			}}
@@ -1275,24 +1560,52 @@ function SingleFileDiff({
 			}}
 		>
 			{/* Sticky file header */}
-			<div className="shrink-0 sticky top-0 z-10 bg-card/95 backdrop-blur-sm border-b border-border">
+			<div
+				ref={headerRef}
+				className={cn(
+					"shrink-0 border-b border-border",
+					embedded ? "bg-card" : "bg-card/95 backdrop-blur-sm",
+					stickyHeader && "sticky top-0 z-10",
+				)}
+			>
 				<div className="flex items-center gap-2 px-3 py-1.5">
-					{/* Sidebar collapse/expand toggle */}
+					{/* Collapse / expand file content */}
 					<button
-						onClick={onToggleSidebar}
-						className="hidden lg:flex p-0.5 rounded transition-colors cursor-pointer shrink-0 text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent/60"
-						title={
-							sidebarCollapsed
-								? "Show sidebar"
-								: "Hide sidebar"
-						}
+						onClick={() => {
+							if (collapsed) {
+								setCollapsed(false);
+								return;
+							}
+							collapseWithScrollAdjustment();
+						}}
+						className="p-0.5 rounded transition-colors cursor-pointer shrink-0 text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent/60"
+						title={collapsed ? "Expand file" : "Collapse file"}
 					>
-						{sidebarCollapsed ? (
+						{collapsed ? (
 							<ChevronRight className="w-3.5 h-3.5" />
 						) : (
-							<ChevronLeft className="w-3.5 h-3.5" />
+							<ChevronDown className="w-3.5 h-3.5" />
 						)}
 					</button>
+
+					{/* Sidebar collapse/expand toggle */}
+					{showSidebarToggle && (
+						<button
+							onClick={onToggleSidebar}
+							className="hidden lg:flex p-0.5 rounded transition-colors cursor-pointer shrink-0 text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent/60"
+							title={
+								sidebarCollapsed
+									? "Show sidebar"
+									: "Hide sidebar"
+							}
+						>
+							{sidebarCollapsed ? (
+								<ChevronRight className="w-3.5 h-3.5" />
+							) : (
+								<ChevronLeft className="w-3.5 h-3.5" />
+							)}
+						</button>
+					)}
 
 					<FileIcon
 						className={cn(
@@ -1301,26 +1614,53 @@ function SingleFileDiff({
 						)}
 					/>
 
-					<span className="text-xs font-mono truncate flex-1 min-w-0">
-						{dir && (
-							<span className="text-muted-foreground/60">
-								{dir}
-							</span>
-						)}
-						<span className="text-foreground font-medium">
-							{name}
-						</span>
-						{file.previous_filename && (
-							<span className="text-muted-foreground/50 ml-2 inline-flex items-center gap-1">
-								<ArrowRight className="w-2.5 h-2.5 inline" />
-								<span className="line-through">
-									{file.previous_filename
-										.split("/")
-										.pop()}
+					{onSelectFile ? (
+						<button
+							onClick={() => onSelectFile(index)}
+							className="text-xs font-mono truncate flex-1 min-w-0 text-left hover:underline decoration-dotted decoration-muted-foreground/60 cursor-pointer"
+							title="Select file in file tree"
+						>
+							{dir && (
+								<span className="text-muted-foreground/60">
+									{dir}
 								</span>
+							)}
+							<span className="text-foreground font-medium">
+								{name}
 							</span>
-						)}
-					</span>
+							{file.previous_filename && (
+								<span className="text-muted-foreground/50 ml-2 inline-flex items-center gap-1">
+									<ArrowRight className="w-2.5 h-2.5 inline" />
+									<span className="line-through">
+										{file.previous_filename
+											.split("/")
+											.pop()}
+									</span>
+								</span>
+							)}
+						</button>
+					) : (
+						<span className="text-xs font-mono truncate flex-1 min-w-0">
+							{dir && (
+								<span className="text-muted-foreground/60">
+									{dir}
+								</span>
+							)}
+							<span className="text-foreground font-medium">
+								{name}
+							</span>
+							{file.previous_filename && (
+								<span className="text-muted-foreground/50 ml-2 inline-flex items-center gap-1">
+									<ArrowRight className="w-2.5 h-2.5 inline" />
+									<span className="line-through">
+										{file.previous_filename
+											.split("/")
+											.pop()}
+									</span>
+								</span>
+							)}
+						</span>
+					)}
 
 					<span className="text-[11px] font-mono text-success tabular-nums shrink-0">
 						+{file.additions}
@@ -1333,7 +1673,10 @@ function SingleFileDiff({
 					<button
 						onClick={(e) => {
 							e.stopPropagation();
-							onToggleViewed();
+							onToggleViewed(file.filename);
+							if (!viewed) {
+								collapseWithScrollAdjustment();
+							}
 						}}
 						className={cn(
 							"flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] transition-colors cursor-pointer shrink-0 ml-1",
@@ -1826,29 +2169,31 @@ function SingleFileDiff({
 					</button>
 
 					{/* Prev / Next nav */}
-					<div className="flex items-center gap-0.5 shrink-0">
-						<button
-							onClick={onPrev}
-							disabled={index === 0}
-							className="p-0.5 rounded hover:bg-accent disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer transition-colors"
-						>
-							<ChevronLeft className="w-3.5 h-3.5" />
-						</button>
-						<span className="text-[10px] font-mono text-muted-foreground/60 tabular-nums min-w-[3ch] text-center">
-							{index + 1}/{total}
-						</span>
-						<button
-							onClick={onNext}
-							disabled={index === total - 1}
-							className="p-0.5 rounded hover:bg-accent disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer transition-colors"
-						>
-							<ChevronRight className="w-3.5 h-3.5" />
-						</button>
-					</div>
+					{showFileNav && (
+						<div className="flex items-center gap-0.5 shrink-0">
+							<button
+								onClick={onPrev}
+								disabled={index === 0}
+								className="p-0.5 rounded hover:bg-accent disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer transition-colors"
+							>
+								<ChevronLeft className="w-3.5 h-3.5" />
+							</button>
+							<span className="text-[10px] font-mono text-muted-foreground/60 tabular-nums min-w-[3ch] text-center">
+								{index + 1}/{total}
+							</span>
+							<button
+								onClick={onNext}
+								disabled={index === total - 1}
+								className="p-0.5 rounded hover:bg-accent disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer transition-colors"
+							>
+								<ChevronRight className="w-3.5 h-3.5" />
+							</button>
+						</div>
+					)}
 				</div>
 
 				{/* Inline search bar */}
-				{searchOpen && (
+				{!collapsed && searchOpen && (
 					<div className="flex items-center gap-1.5 px-3 py-1.5 border-t border-border/50">
 						<Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
 						<input
@@ -1917,682 +2262,762 @@ function SingleFileDiff({
 				)}
 			</div>
 
-			{/* Scrollable diff content */}
-			<div
-				ref={diffContainerRef}
-				className={cn(
-					"flex-1 overflow-y-auto overscroll-contain",
-					wordWrap ? "overflow-x-hidden" : "overflow-x-auto",
-				)}
-			>
-				{isEditing ? (
-					<>
-						{/* Editor — always mounted to preserve undo history */}
-						<div
-							className={cn(
-								"flex flex-1 min-h-0 overflow-auto",
-								editView !== "edit" && "hidden",
-							)}
-						>
-							{/* Line numbers gutter with PR change markers */}
-							<div className="shrink-0 select-none text-right border-r border-border/50 pt-4 pb-4 sticky left-0 bg-code-bg z-[1]">
-								{editContent
-									.split("\n")
-									.map((_, i) => {
-										const lineNum =
-											i + 1;
-										const isPrChanged =
-											prChangedLines.has(
-												lineNum,
-											);
-										return (
-											<div
-												key={
-													i
-												}
-												data-edit-line={
-													lineNum
-												}
-												className={cn(
-													"text-[12.5px] leading-[20px] font-mono h-[20px] pr-2 pl-2 flex items-center justify-end gap-1",
-													isPrChanged
-														? "text-muted-foreground/60"
-														: "text-muted-foreground",
-													isPrChanged &&
-														"bg-diff-add-bg",
-												)}
-											>
-												{isPrChanged && (
-													<span className="w-[3px] h-3 rounded-full bg-success/60 shrink-0" />
-												)}
-												{
-													lineNum
-												}
-											</div>
-										);
-									})}
-							</div>
-							{/* Code area: relative container with pre + absolute textarea overlay */}
-							<div className="flex-1 relative min-h-[400px]">
-								<pre
-									ref={editPreRef}
+			{!collapsed && (
+				<>
+					{/* Scrollable diff content */}
+					<div
+						ref={diffContainerRef}
+						className={cn(
+							embedded
+								? "overflow-x-auto"
+								: "flex-1 overflow-y-auto overscroll-contain",
+							wordWrap
+								? "overflow-x-hidden"
+								: "overflow-x-auto",
+						)}
+					>
+						{isEditing ? (
+							<>
+								{/* Editor — always mounted to preserve undo history */}
+								<div
 									className={cn(
-										"pointer-events-none font-mono text-[12.5px] leading-[20px] p-4 overflow-hidden m-0 diff-syntax",
-										wordWrap
-											? "whitespace-pre-wrap break-words"
-											: "whitespace-pre",
+										"flex flex-1 min-h-0 overflow-auto",
+										editView !==
+											"edit" &&
+											"hidden",
 									)}
-									aria-hidden="true"
-									style={{ tabSize: 2 }}
 								>
-									{editTokens
-										? editContent
-												.split(
-													"\n",
-												)
-												.map(
-													(
-														lineText,
-														lineIdx,
-													) => {
-														const tokens =
-															editTokens[
-																lineIdx
-															];
-														return (
-															<React.Fragment
-																key={
-																	lineIdx
-																}
-															>
-																{tokens
-																	? tokens.map(
-																			(
-																				t,
-																				ti,
-																			) => (
-																				<span
-																					key={
-																						ti
-																					}
-																					style={{
-																						color: `light-dark(${t.lightColor}, ${t.darkColor})`,
-																					}}
-																				>
-																					{
-																						t.text
-																					}
-																				</span>
-																			),
-																		)
-																	: lineText}
-																{
-																	"\n"
-																}
-															</React.Fragment>
+									{/* Line numbers gutter with PR change markers */}
+									<div className="shrink-0 select-none text-right border-r border-border/50 pt-4 pb-4 sticky left-0 bg-code-bg z-[1]">
+										{editContent
+											.split("\n")
+											.map(
+												(
+													_,
+													i,
+												) => {
+													const lineNum =
+														i +
+														1;
+													const isPrChanged =
+														prChangedLines.has(
+															lineNum,
 														);
-													},
-												)
-										: editContent}
-								</pre>
-								<textarea
-									ref={editTextareaRef}
-									defaultValue={editContent}
-									onInput={handleEditInput}
-									onKeyDown={
-										handleEditKeyDown
-									}
-									onScroll={handleEditScroll}
-									className={cn(
-										"absolute inset-0 w-full h-full bg-transparent font-mono text-[12.5px] leading-[20px] p-4 outline-none resize-none border-none m-0",
-										wordWrap
-											? "whitespace-pre-wrap break-words"
-											: "whitespace-pre",
-									)}
-									style={{
-										tabSize: 2,
-										color: "transparent",
-										caretColor: "var(--foreground)",
-										WebkitTextFillColor:
-											"transparent",
-									}}
-									spellCheck={false}
-									autoFocus
-								/>
-							</div>
-						</div>
-						{/* Changes view — merged diff (base → edited content), same style as full file view */}
-						{editView === "changes" && (
-							<div className="flex-1 overflow-auto">
-								{(() => {
-									const diffBase =
-										baseEditContent ??
-										originalEditContent;
-									const noChanges =
-										editContent ===
-										diffBase;
-									if (noChanges) {
-										return (
-											<div className="px-4 py-16 text-center">
-												<p className="text-[11px] text-muted-foreground/50 font-mono">
-													No
-													changes
-												</p>
-											</div>
-										);
-									}
-									const diffEntries =
-										computeLineDiff(
-											diffBase,
-											editContent,
-										);
-									return (
-										<table
+													return (
+														<div
+															key={
+																i
+															}
+															data-edit-line={
+																lineNum
+															}
+															className={cn(
+																"text-[12.5px] leading-[20px] font-mono h-[20px] pr-2 pl-2 flex items-center justify-end gap-1",
+																isPrChanged
+																	? "text-muted-foreground/60"
+																	: "text-muted-foreground",
+																isPrChanged &&
+																	"bg-diff-add-bg",
+															)}
+														>
+															{isPrChanged && (
+																<span className="w-[3px] h-3 rounded-full bg-success/60 shrink-0" />
+															)}
+															{
+																lineNum
+															}
+														</div>
+													);
+												},
+											)}
+									</div>
+									{/* Code area: relative container with pre + absolute textarea overlay */}
+									<div className="flex-1 relative min-h-[400px]">
+										<pre
+											ref={
+												editPreRef
+											}
 											className={cn(
-												"w-full border-collapse",
-												wordWrap &&
-													"table-fixed",
+												"pointer-events-none font-mono text-[12.5px] leading-[20px] p-4 overflow-hidden m-0 diff-syntax",
+												wordWrap
+													? "whitespace-pre-wrap break-words"
+													: "whitespace-pre",
 											)}
+											aria-hidden="true"
+											style={{
+												tabSize: 2,
+											}}
 										>
-											{wordWrap && (
-												<colgroup>
-													<col className="w-[3px]" />
-													<col className="w-10" />
-													<col />
-												</colgroup>
-											)}
-											<tbody>
-												{diffEntries.map(
-													(
-														entry,
-														i,
-													) => {
-														const isGapSeparator =
-															entry.type ===
-																"context" &&
-															entry.content ===
-																"···";
-														if (
-															isGapSeparator
-														) {
-															return (
-																<tr
-																	key={
-																		i
-																	}
-																>
-																	<td
-																		colSpan={
-																			3
+											{editTokens
+												? editContent
+														.split(
+															"\n",
+														)
+														.map(
+															(
+																lineText,
+																lineIdx,
+															) => {
+																const tokens =
+																	editTokens[
+																		lineIdx
+																	];
+																return (
+																	<React.Fragment
+																		key={
+																			lineIdx
 																		}
-																		className="py-1.5 text-center text-[11px] font-mono text-muted-foreground/30 bg-secondary/20 border-y border-border/30"
 																	>
-																		<UnfoldVertical className="w-3 h-3 inline-block mr-1 opacity-50" />
-																	</td>
-																</tr>
-															);
-														}
-														const isAdd =
-															entry.type ===
-															"add";
-														const isDel =
-															entry.type ===
-															"remove";
-														return (
-															<tr
-																key={
-																	i
+																		{tokens
+																			? tokens.map(
+																					(
+																						t,
+																						ti,
+																					) => (
+																						<span
+																							key={
+																								ti
+																							}
+																							style={{
+																								color: `light-dark(${t.lightColor}, ${t.darkColor})`,
+																							}}
+																						>
+																							{
+																								t.text
+																							}
+																						</span>
+																					),
+																				)
+																			: lineText}
+																		{
+																			"\n"
+																		}
+																	</React.Fragment>
+																);
+															},
+														)
+												: editContent}
+										</pre>
+										<textarea
+											ref={
+												editTextareaRef
+											}
+											defaultValue={
+												editContent
+											}
+											onInput={
+												handleEditInput
+											}
+											onKeyDown={
+												handleEditKeyDown
+											}
+											onScroll={
+												handleEditScroll
+											}
+											className={cn(
+												"absolute inset-0 w-full h-full bg-transparent font-mono text-[12.5px] leading-[20px] p-4 outline-none resize-none border-none m-0",
+												wordWrap
+													? "whitespace-pre-wrap break-words"
+													: "whitespace-pre",
+											)}
+											style={{
+												tabSize: 2,
+												color: "transparent",
+												caretColor: "var(--foreground)",
+												WebkitTextFillColor:
+													"transparent",
+											}}
+											spellCheck={
+												false
+											}
+											autoFocus
+										/>
+									</div>
+								</div>
+								{/* Changes view — merged diff (base → edited content), same style as full file view */}
+								{editView === "changes" && (
+									<div className="flex-1 overflow-auto">
+										{(() => {
+											const diffBase =
+												baseEditContent ??
+												originalEditContent;
+											const noChanges =
+												editContent ===
+												diffBase;
+											if (
+												noChanges
+											) {
+												return (
+													<div className="px-4 py-16 text-center">
+														<p className="text-[11px] text-muted-foreground/50 font-mono">
+															No
+															changes
+														</p>
+													</div>
+												);
+											}
+											const diffEntries =
+												computeLineDiff(
+													diffBase,
+													editContent,
+												);
+											return (
+												<table
+													className={cn(
+														"w-full border-collapse",
+														wordWrap &&
+															"table-fixed",
+													)}
+												>
+													{wordWrap && (
+														<colgroup>
+															<col className="w-[3px]" />
+															<col className="w-10" />
+															<col />
+														</colgroup>
+													)}
+													<tbody>
+														{diffEntries.map(
+															(
+																entry,
+																i,
+															) => {
+																const isGapSeparator =
+																	entry.type ===
+																		"context" &&
+																	entry.content ===
+																		"···";
+																if (
+																	isGapSeparator
+																) {
+																	return (
+																		<tr
+																			key={
+																				i
+																			}
+																		>
+																			<td
+																				colSpan={
+																					3
+																				}
+																				className="py-1.5 text-center text-[11px] font-mono text-muted-foreground/30 bg-secondary/20 border-y border-border/30"
+																			>
+																				<UnfoldVertical className="w-3 h-3 inline-block mr-1 opacity-50" />
+																			</td>
+																		</tr>
+																	);
 																}
-																className={cn(
-																	isAdd &&
-																		"diff-add-row",
-																	isDel &&
-																		"diff-del-row",
-																)}
-															>
-																{/* Gutter bar */}
-																<td
-																	className={cn(
-																		"w-[3px] p-0 sticky left-0 z-[1]",
-																		isAdd
-																			? "bg-success"
-																			: isDel
-																				? "bg-destructive"
-																				: "",
-																	)}
-																/>
-																{/* Line number */}
-																<td
-																	className={cn(
-																		"w-10 py-0 pr-2 text-right text-[11px] font-mono select-none border-r border-border/40 sticky left-[3px] z-[1]",
-																		isAdd
-																			? "bg-diff-add-gutter text-diff-add-gutter"
-																			: isDel
-																				? "bg-diff-del-gutter text-diff-del-gutter"
-																				: "text-muted-foreground/30",
-																	)}
-																>
-																	{isAdd
-																		? entry.newLineNumber
-																		: isDel
-																			? entry.oldLineNumber
-																			: entry.newLineNumber}
-																</td>
-																{/* Content */}
-																<td
-																	className={cn(
-																		"py-0 font-mono text-[12.5px] leading-[20px]",
-																		wordWrap
-																			? "whitespace-pre-wrap break-words"
-																			: "whitespace-pre",
-																		isAdd &&
-																			"bg-diff-add-bg",
-																		isDel &&
-																			"bg-diff-del-bg",
-																	)}
-																>
-																	<div className="flex">
-																		<span
+																const isAdd =
+																	entry.type ===
+																	"add";
+																const isDel =
+																	entry.type ===
+																	"remove";
+																return (
+																	<tr
+																		key={
+																			i
+																		}
+																		className={cn(
+																			isAdd &&
+																				"diff-add-row",
+																			isDel &&
+																				"diff-del-row",
+																		)}
+																	>
+																		{/* Gutter bar */}
+																		<td
 																			className={cn(
-																				"inline-block w-5 text-center shrink-0 select-none",
+																				"w-[3px] p-0 sticky left-0 z-[1]",
 																				isAdd
-																					? "text-success/50"
+																					? "bg-success"
 																					: isDel
-																						? "text-destructive/50"
-																						: "text-transparent",
+																						? "bg-destructive"
+																						: "",
+																			)}
+																		/>
+																		{/* Line number */}
+																		<td
+																			className={cn(
+																				"w-10 py-0 pr-2 text-right text-[11px] font-mono select-none border-r border-border/40 sticky left-[3px] z-[1]",
+																				isAdd
+																					? "bg-diff-add-gutter text-diff-add-gutter"
+																					: isDel
+																						? "bg-diff-del-gutter text-diff-del-gutter"
+																						: "text-muted-foreground/30",
 																			)}
 																		>
 																			{isAdd
-																				? "+"
+																				? entry.newLineNumber
 																				: isDel
-																					? "-"
-																					: " "}
-																		</span>
-																		<span className="pl-1">
-																			<span
-																				className={cn(
-																					isAdd &&
-																						"text-diff-add-text",
-																					isDel &&
-																						"text-diff-del-text",
-																				)}
-																			>
-																				{
-																					entry.content
-																				}
-																			</span>
-																		</span>
-																	</div>
-																</td>
-															</tr>
+																					? entry.oldLineNumber
+																					: entry.newLineNumber}
+																		</td>
+																		{/* Content */}
+																		<td
+																			className={cn(
+																				"py-0 font-mono text-[12.5px] leading-[20px]",
+																				wordWrap
+																					? "whitespace-pre-wrap break-words"
+																					: "whitespace-pre",
+																				isAdd &&
+																					"bg-diff-add-bg",
+																				isDel &&
+																					"bg-diff-del-bg",
+																			)}
+																		>
+																			<div className="flex">
+																				<span
+																					className={cn(
+																						"inline-block w-5 text-center shrink-0 select-none",
+																						isAdd
+																							? "text-success/50"
+																							: isDel
+																								? "text-destructive/50"
+																								: "text-transparent",
+																					)}
+																				>
+																					{isAdd
+																						? "+"
+																						: isDel
+																							? "-"
+																							: " "}
+																				</span>
+																				<span className="pl-1">
+																					<span
+																						className={cn(
+																							isAdd &&
+																								"text-diff-add-text",
+																							isDel &&
+																								"text-diff-del-text",
+																						)}
+																					>
+																						{
+																							entry.content
+																						}
+																					</span>
+																				</span>
+																			</div>
+																		</td>
+																	</tr>
+																);
+															},
+														)}
+													</tbody>
+												</table>
+											);
+										})()}
+									</div>
+								)}
+							</>
+						) : showFullFile && fileContent ? (
+							<FullFileView
+								fileContent={fileContent}
+								lines={lines}
+								hunkInfos={hunkInfos}
+								wordWrap={wordWrap}
+								fileHighlightData={
+									fileHighlightData
+								}
+								fullFileTokens={fullFileTokens}
+							/>
+						) : lines.length > 0 ? (
+							splitView ? (
+								<SplitDiffTable
+									lines={lines}
+									splitRows={splitRows}
+									wordWrap={wordWrap}
+									canComment={canComment}
+									commentsByLine={
+										commentsByLine
+									}
+									commentRange={commentRange}
+									selectionRange={
+										selectionRange
+									}
+									fileHighlightData={
+										fileHighlightData
+									}
+									expandedLines={
+										expandedLines
+									}
+									hunkInfos={hunkInfos}
+									isLoadingExpand={
+										isLoadingExpand
+									}
+									onExpandHunk={
+										handleExpandHunk
+									}
+									onLineClick={
+										handleLineClick
+									}
+									onLineMouseDown={
+										handleLineMouseDown
+									}
+									onLineHover={
+										handleLineHover
+									}
+									onCloseComment={() => {
+										setCommentRange(
+											null,
+										);
+										setSelectingFrom(
+											null,
+										);
+										setHoverLine(null);
+									}}
+									commentStartLine={
+										commentRange?.startLine
+									}
+									selectedLinesContent={
+										selectedLinesContent
+									}
+									selectedCodeForAI={
+										selectedCodeForAI
+									}
+									owner={owner}
+									repo={repo}
+									pullNumber={pullNumber}
+									headSha={headSha}
+									headBranch={headBranch}
+									filename={file.filename}
+									canWrite={canWrite}
+									onAddContext={onAddContext}
+									participants={participants}
+									hideComments={
+										hideReviewComments
+									}
+								/>
+							) : (
+								<table
+									className={cn(
+										"w-full border-collapse",
+										wordWrap &&
+											"table-fixed",
+									)}
+								>
+									{wordWrap && (
+										<colgroup>
+											<col className="w-[3px]" />
+											<col className="w-10" />
+											<col />
+										</colgroup>
+									)}
+									<tbody>
+										{lines.map(
+											(
+												line,
+												i,
+											) => {
+												const lineNum =
+													line.type ===
+														"add" ||
+													line.type ===
+														"context"
+														? line.newLineNumber
+														: line.type ===
+															  "remove"
+															? line.oldLineNumber
+															: undefined;
+												const side:
+													| "LEFT"
+													| "RIGHT" =
+													line.type ===
+													"remove"
+														? "LEFT"
+														: "RIGHT";
+
+												// Find inline comments for this line
+												const inlineComments: ReviewComment[] =
+													[];
+												if (
+													lineNum !==
+														undefined &&
+													!hideReviewComments
+												) {
+													const rightComments =
+														commentsByLine.get(
+															`RIGHT-${lineNum}`,
+														) ||
+														[];
+													const leftComments =
+														commentsByLine.get(
+															`LEFT-${lineNum}`,
+														) ||
+														[];
+													if (
+														line.type ===
+														"remove"
+													) {
+														inlineComments.push(
+															...leftComments,
 														);
-													},
-												)}
-											</tbody>
-										</table>
-									);
-								})()}
-							</div>
-						)}
-					</>
-				) : showFullFile && fileContent ? (
-					<FullFileView
-						fileContent={fileContent}
-						lines={lines}
-						hunkInfos={hunkInfos}
-						wordWrap={wordWrap}
-						fileHighlightData={fileHighlightData}
-						fullFileTokens={fullFileTokens}
-					/>
-				) : lines.length > 0 ? (
-					splitView ? (
-						<SplitDiffTable
-							lines={lines}
-							splitRows={splitRows}
-							wordWrap={wordWrap}
-							canComment={canComment}
-							commentsByLine={commentsByLine}
-							commentRange={commentRange}
-							selectionRange={selectionRange}
-							fileHighlightData={fileHighlightData}
-							expandedLines={expandedLines}
-							hunkInfos={hunkInfos}
-							isLoadingExpand={isLoadingExpand}
-							onExpandHunk={handleExpandHunk}
-							onLineClick={handleLineClick}
-							onLineMouseDown={handleLineMouseDown}
-							onLineHover={handleLineHover}
-							onCloseComment={() => {
-								setCommentRange(null);
-								setSelectingFrom(null);
-								setHoverLine(null);
-							}}
-							commentStartLine={commentRange?.startLine}
-							selectedLinesContent={selectedLinesContent}
-							selectedCodeForAI={selectedCodeForAI}
-							owner={owner}
-							repo={repo}
-							pullNumber={pullNumber}
-							headSha={headSha}
-							headBranch={headBranch}
-							filename={file.filename}
-							canWrite={canWrite}
-							onAddContext={onAddContext}
-							participants={participants}
-							hideComments={hideReviewComments}
-						/>
-					) : (
-						<table
-							className={cn(
-								"w-full border-collapse",
-								wordWrap && "table-fixed",
-							)}
-						>
-							{wordWrap && (
-								<colgroup>
-									<col className="w-[3px]" />
-									<col className="w-10" />
-									<col />
-								</colgroup>
-							)}
-							<tbody>
-								{lines.map((line, i) => {
-									const lineNum =
-										line.type ===
-											"add" ||
-										line.type ===
-											"context"
-											? line.newLineNumber
-											: line.type ===
-												  "remove"
-												? line.oldLineNumber
-												: undefined;
-									const side:
-										| "LEFT"
-										| "RIGHT" =
-										line.type ===
-										"remove"
-											? "LEFT"
-											: "RIGHT";
+													} else {
+														inlineComments.push(
+															...rightComments,
+														);
+													}
+												}
 
-									// Find inline comments for this line
-									const inlineComments: ReviewComment[] =
-										[];
-									if (
-										lineNum !==
-											undefined &&
-										!hideReviewComments
-									) {
-										const rightComments =
-											commentsByLine.get(
-												`RIGHT-${lineNum}`,
-											) || [];
-										const leftComments =
-											commentsByLine.get(
-												`LEFT-${lineNum}`,
-											) || [];
-										if (
-											line.type ===
-											"remove"
-										) {
-											inlineComments.push(
-												...leftComments,
-											);
-										} else {
-											inlineComments.push(
-												...rightComments,
-											);
-										}
-									}
+												// Show comment form at end of selected range
+												const isCommentFormOpen =
+													commentRange !==
+														null &&
+													lineNum !==
+														undefined &&
+													lineNum ===
+														commentRange.endLine &&
+													side ===
+														commentRange.side;
 
-									// Show comment form at end of selected range
-									const isCommentFormOpen =
-										commentRange !==
-											null &&
-										lineNum !==
-											undefined &&
-										lineNum ===
-											commentRange.endLine &&
-										side ===
-											commentRange.side;
+												// Is this line in the selection highlight? (side-aware)
+												const isSelected =
+													selectionRange !==
+														null &&
+													lineNum !==
+														undefined &&
+													lineNum >=
+														selectionRange.start &&
+													lineNum <=
+														selectionRange.end &&
+													side ===
+														selectionRange.side;
 
-									// Is this line in the selection highlight? (side-aware)
-									const isSelected =
-										selectionRange !==
-											null &&
-										lineNum !==
-											undefined &&
-										lineNum >=
-											selectionRange.start &&
-										lineNum <=
-											selectionRange.end &&
-										side ===
-											selectionRange.side;
+												// Compute syntax highlight key for this line
+												let syntaxTokens:
+													| SyntaxToken[]
+													| undefined;
+												if (
+													fileHighlightData &&
+													lineNum !==
+														undefined
+												) {
+													if (
+														line.type ===
+														"remove"
+													) {
+														syntaxTokens =
+															fileHighlightData[
+																`R-${line.oldLineNumber}`
+															];
+													} else if (
+														line.type ===
+														"add"
+													) {
+														syntaxTokens =
+															fileHighlightData[
+																`A-${line.newLineNumber}`
+															];
+													} else if (
+														line.type ===
+														"context"
+													) {
+														syntaxTokens =
+															fileHighlightData[
+																`C-${line.newLineNumber}`
+															];
+													}
+												}
 
-									// Compute syntax highlight key for this line
-									let syntaxTokens:
-										| SyntaxToken[]
-										| undefined;
-									if (
-										fileHighlightData &&
-										lineNum !==
-											undefined
-									) {
-										if (
-											line.type ===
-											"remove"
-										) {
-											syntaxTokens =
-												fileHighlightData[
-													`R-${line.oldLineNumber}`
-												];
-										} else if (
-											line.type ===
-											"add"
-										) {
-											syntaxTokens =
-												fileHighlightData[
-													`A-${line.newLineNumber}`
-												];
-										} else if (
-											line.type ===
-											"context"
-										) {
-											syntaxTokens =
-												fileHighlightData[
-													`C-${line.newLineNumber}`
-												];
-										}
-									}
-
-									// Render expanded context lines before hunk headers
-									const expandedContent =
-										line.type ===
-										"header"
-											? expandedLines.get(
-													i,
-												)
-											: undefined;
-
-									return (
-										<DiffLineRow
-											key={i}
-											diffIdx={i}
-											line={line}
-											wordWrap={
-												wordWrap
-											}
-											canComment={
-												canComment
-											}
-											inlineComments={
-												inlineComments
-											}
-											isCommentFormOpen={
-												isCommentFormOpen
-											}
-											isSelected={
-												isSelected
-											}
-											syntaxTokens={
-												syntaxTokens
-											}
-											expandedContent={
-												expandedContent
-											}
-											expandStartLine={
-												expandedContent
-													? hunkInfos.find(
-															(
-																h,
-															) =>
-																h.index ===
+												// Render expanded context lines before hunk headers
+												const expandedContent =
+													line.type ===
+													"header"
+														? expandedLines.get(
 																i,
-														)
-														? (() => {
-																const currentHunk =
-																	hunkInfos.find(
+															)
+														: undefined;
+
+												return (
+													<DiffLineRow
+														key={
+															i
+														}
+														diffIdx={
+															i
+														}
+														line={
+															line
+														}
+														wordWrap={
+															wordWrap
+														}
+														canComment={
+															canComment
+														}
+														inlineComments={
+															inlineComments
+														}
+														isCommentFormOpen={
+															isCommentFormOpen
+														}
+														isSelected={
+															isSelected
+														}
+														syntaxTokens={
+															syntaxTokens
+														}
+														expandedContent={
+															expandedContent
+														}
+														expandStartLine={
+															expandedContent
+																? hunkInfos.find(
 																		(
 																			h,
 																		) =>
 																			h.index ===
 																			i,
-																	)!;
-																const prevHunk =
-																	hunkInfos
-																		.filter(
-																			(
-																				h,
-																			) =>
-																				h.index <
-																				i,
-																		)
-																		.pop();
-																return prevHunk
-																	? prevHunk.endNewLine +
-																			1
-																	: 1;
-															})()
-														: 1
-													: undefined
-											}
-											isExpandLoading={
-												isLoadingExpand ===
-												i
-											}
-											onExpandHunk={() =>
-												handleExpandHunk(
-													i,
-												)
-											}
-											onOpenComment={(
-												shiftKey,
-											) => {
-												if (
-													lineNum !==
-														undefined &&
-													line.type !==
-														"header"
-												) {
-													handleLineClick(
-														lineNum,
-														side,
-														shiftKey,
-													);
-												}
-											}}
-											onStartSelect={() => {
-												if (
-													lineNum !==
-														undefined &&
-													line.type !==
-														"header"
-												) {
-													handleLineMouseDown(
-														lineNum,
-														side,
-													);
-												}
-											}}
-											onHoverLine={() => {
-												if (
-													lineNum !==
-													undefined
-												) {
-													handleLineHover(
-														lineNum,
-													);
-												}
-											}}
-											onCloseComment={() => {
-												setCommentRange(
-													null,
+																	)
+																	? (() => {
+																			const currentHunk =
+																				hunkInfos.find(
+																					(
+																						h,
+																					) =>
+																						h.index ===
+																						i,
+																				)!;
+																			const prevHunk =
+																				hunkInfos
+																					.filter(
+																						(
+																							h,
+																						) =>
+																							h.index <
+																							i,
+																					)
+																					.pop();
+																			return prevHunk
+																				? prevHunk.endNewLine +
+																						1
+																				: 1;
+																		})()
+																	: 1
+																: undefined
+														}
+														isExpandLoading={
+															isLoadingExpand ===
+															i
+														}
+														onExpandHunk={() =>
+															handleExpandHunk(
+																i,
+															)
+														}
+														onOpenComment={(
+															shiftKey,
+														) => {
+															if (
+																lineNum !==
+																	undefined &&
+																line.type !==
+																	"header"
+															) {
+																handleLineClick(
+																	lineNum,
+																	side,
+																	shiftKey,
+																);
+															}
+														}}
+														onStartSelect={() => {
+															if (
+																lineNum !==
+																	undefined &&
+																line.type !==
+																	"header"
+															) {
+																handleLineMouseDown(
+																	lineNum,
+																	side,
+																);
+															}
+														}}
+														onHoverLine={() => {
+															if (
+																lineNum !==
+																undefined
+															) {
+																handleLineHover(
+																	lineNum,
+																);
+															}
+														}}
+														onCloseComment={() => {
+															setCommentRange(
+																null,
+															);
+															setSelectingFrom(
+																null,
+															);
+															setHoverLine(
+																null,
+															);
+														}}
+														commentStartLine={
+															isCommentFormOpen
+																? commentRange!
+																		.startLine
+																: undefined
+														}
+														selectedLinesContent={
+															isCommentFormOpen
+																? selectedLinesContent
+																: undefined
+														}
+														selectedCodeForAI={
+															isCommentFormOpen
+																? selectedCodeForAI
+																: undefined
+														}
+														owner={
+															owner
+														}
+														repo={
+															repo
+														}
+														pullNumber={
+															pullNumber
+														}
+														headSha={
+															headSha
+														}
+														headBranch={
+															headBranch
+														}
+														filename={
+															file.filename
+														}
+														canWrite={
+															canWrite
+														}
+														onAddContext={
+															onAddContext
+														}
+														participants={
+															participants
+														}
+													/>
 												);
-												setSelectingFrom(
-													null,
-												);
-												setHoverLine(
-													null,
-												);
-											}}
-											commentStartLine={
-												isCommentFormOpen
-													? commentRange!
-															.startLine
-													: undefined
-											}
-											selectedLinesContent={
-												isCommentFormOpen
-													? selectedLinesContent
-													: undefined
-											}
-											selectedCodeForAI={
-												isCommentFormOpen
-													? selectedCodeForAI
-													: undefined
-											}
-											owner={
-												owner
-											}
-											repo={repo}
-											pullNumber={
-												pullNumber
-											}
-											headSha={
-												headSha
-											}
-											headBranch={
-												headBranch
-											}
-											filename={
-												file.filename
-											}
-											canWrite={
-												canWrite
-											}
-											onAddContext={
-												onAddContext
-											}
-											participants={
-												participants
-											}
-										/>
-									);
-								})}
-							</tbody>
-						</table>
-					)
-				) : (
-					<div className="px-4 py-16 text-center">
-						<File className="w-5 h-5 text-muted-foreground/30 mx-auto mb-2" />
-						<p className="text-[11px] text-muted-foreground/50 font-mono">
-							{file.status === "renamed"
-								? "File renamed without changes"
-								: "Binary file or no diff available"}
-						</p>
+											},
+										)}
+									</tbody>
+								</table>
+							)
+						) : (
+							<div className="px-4 py-16 text-center">
+								<File className="w-5 h-5 text-muted-foreground/30 mx-auto mb-2" />
+								<p className="text-[11px] text-muted-foreground/50 font-mono">
+									{file.status === "renamed"
+										? "File renamed without changes"
+										: "Binary file or no diff available"}
+								</p>
+							</div>
+						)}
 					</div>
-				)}
-			</div>
+				</>
+			)}
 
 			{/* Commit dialog for inline edits */}
 			{isEditing && headBranch && (
@@ -2608,7 +3033,7 @@ function SingleFileDiff({
 			)}
 		</div>
 	);
-}
+});
 
 function DiffLineRow({
 	line,
