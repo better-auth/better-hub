@@ -13,6 +13,8 @@ import { extractSnippetFromPatch } from "@/lib/extract-snippet";
 
 export const maxDuration = 120;
 
+const MAX_SNIPPET_LINES = 15;
+
 const FileSchema = z.object({
 	filename: z.string(),
 	status: z.string(),
@@ -76,12 +78,12 @@ const OverviewOutputSchema = z.object({
 					startLine: z
 						.number()
 						.describe(
-							"1-based line number in the NEW file where the most relevant section begins (from the @@ hunk header's +N range)",
+							"1-based line number in the NEW file where the most important changed region begins (from the @@ hunk header's +N range). Pick a narrow, focused range — do NOT start at line 1 unless that is truly where the key change is.",
 						),
 					endLine: z
 						.number()
 						.describe(
-							"1-based line number in the NEW file where the most relevant section ends (inclusive, max 15 lines from startLine)",
+							"1-based line number in the NEW file where the region ends (inclusive). MUST be at most startLine + 14 (i.e. max 15 lines). Aim for 5-12 lines covering only the single most critical change, not the whole diff.",
 						),
 				}),
 			),
@@ -94,11 +96,11 @@ const SYSTEM_PROMPT = `You are a code review assistant that analyzes pull reques
 Your task is to:
 1. Group related file changes by feature area or logical grouping (2-6 groups depending on PR size)
 2. Order groups by suggested review priority (dependencies first, then core changes, then peripheral)
-3. For each file, identify the most relevant line range (max 15 lines) and explain why it changed
+3. For each file, identify a SMALL, focused line range (5-15 lines) highlighting the single most important change and explain why it changed
 
 Guidelines:
 - Group titles should be concise (e.g., "API Authentication", "UI Components", "Test Coverage")
-- For each file, provide startLine and endLine pointing to the most important section of the diff. These are 1-based line numbers in the NEW version of the file (from the @@ hunk header's +N range). The code snippet will be extracted automatically — do NOT return code yourself.
+- CRITICAL — snippet targeting: For each file, startLine/endLine MUST pinpoint only the most important changed region. Pick the single most meaningful hunk — a new function signature, a key conditional, a config change — NOT the entire diff. The range MUST be at most 15 lines (aim for 5-12). These are 1-based line numbers in the NEW version of the file (from the @@ hunk header's +N range). The code snippet will be extracted automatically — do NOT return code yourself.
 - Explanations should focus on "why" not just "what"
 - reviewOrder should start at 1 for the most foundational changes
 - The "summary" and "explanation" fields support markdown: use **bold** for emphasis, *italics* for nuance, \`backticks\` for inline code references, and fenced code blocks (\`\`\`lang … \`\`\`) when a short snippet (≤6 lines) helps illustrate the change (e.g. a new function signature, config change, or key type definition). Do NOT use headings or lists.
@@ -151,7 +153,7 @@ function shouldIncludeFile(filename: string): boolean {
 	return true;
 }
 
-function truncatePatch(patch: string, maxLines: number = 100): string {
+function truncatePatch(patch: string, maxLines: number = 80): string {
 	const lines = patch.split("\n");
 	if (lines.length <= maxLines) return patch;
 	return lines.slice(0, maxLines).join("\n") + "\n... (truncated)";
@@ -283,17 +285,23 @@ ${filesContext}`;
 			title: g.title || `Group ${i + 1}`,
 			summary: g.summary || "",
 			reviewOrder: g.reviewOrder ?? i + 1,
-			files: g.files.map((f) => ({
-				filename: f.filename,
-				snippet: extractSnippetFromPatch(
-					patchMap.get(f.filename),
-					f.startLine,
+			files: g.files.map((f) => {
+				const clampedEnd = Math.min(
 					f.endLine,
-				),
-				explanation: f.explanation,
-				startLine: f.startLine,
-				endLine: f.endLine,
-			})),
+					f.startLine + MAX_SNIPPET_LINES - 1,
+				);
+				return {
+					filename: f.filename,
+					snippet: extractSnippetFromPatch(
+						patchMap.get(f.filename),
+						f.startLine,
+						clampedEnd,
+					),
+					explanation: f.explanation,
+					startLine: f.startLine,
+					endLine: clampedEnd,
+				};
+			}),
 		}));
 
 		if (headSha) {
