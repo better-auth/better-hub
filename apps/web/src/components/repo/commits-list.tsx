@@ -48,12 +48,12 @@ type Commit = {
 		} | null;
 	};
 	author:
-		| {
-				login: string;
-				avatar_url: string;
-		  }
-		| Record<string, never>
-		| null;
+	| {
+		login: string;
+		avatar_url: string;
+	}
+	| Record<string, never>
+	| null;
 	html_url: string;
 };
 
@@ -72,10 +72,10 @@ function groupByDate(commits: Commit[]) {
 		const date = commit.commit.author?.date;
 		const key = date
 			? new Date(date).toLocaleDateString("en-US", {
-					month: "long",
-					day: "numeric",
-					year: "numeric",
-				})
+				month: "long",
+				day: "numeric",
+				year: "numeric",
+			})
 			: "Unknown date";
 		if (!groups[key]) groups[key] = [];
 		groups[key].push(commit);
@@ -118,14 +118,14 @@ function BranchPicker({
 	}, [branches, defaultBranch, search]);
 
 	return (
-		<div className="relative">
+		<div className="relative w-full sm:w-auto">
 			<button
 				onClick={() => setOpen(!open)}
-				className="flex items-center gap-1.5 h-9 px-3 text-xs font-mono rounded-md border border-border hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer"
+				className="w-full sm:w-auto flex items-center gap-1.5 h-9 px-3 text-xs font-mono rounded-md border border-border hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer"
 			>
 				<GitBranch className="w-3.5 h-3.5 text-muted-foreground/70" />
-				<span className="max-w-[140px] truncate">{currentBranch}</span>
-				<ChevronDown className="w-3.5 h-3.5 text-muted-foreground/50" />
+				<span className="max-w-35 truncate">{currentBranch}</span>
+				<ChevronDown className="w-3.5 h-3.5 text-muted-foreground/50 ml-auto sm:ml-0" />
 			</button>
 			{open && (
 				<>
@@ -136,7 +136,7 @@ function BranchPicker({
 							setSearch("");
 						}}
 					/>
-					<div className="absolute top-full left-0 mt-1 z-50 w-72 border border-border bg-card shadow-lg rounded-md">
+					<div className="absolute top-full left-0 mt-1 z-50 w-full sm:w-72 border border-border bg-card shadow-lg rounded-md">
 						<div className="p-2 border-b border-border">
 							<div className="relative">
 								<Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground/50" />
@@ -178,7 +178,7 @@ function BranchPicker({
 										className={cn(
 											"w-full text-left px-3 py-1.5 text-xs font-mono hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer flex items-center gap-2",
 											isActive &&
-												"bg-muted/30",
+											"bg-muted/30",
 										)}
 									>
 										<span className="w-3.5 shrink-0 flex items-center justify-center">
@@ -253,14 +253,17 @@ function CommitsToolbar({
 	onClearDates: () => void;
 }) {
 	return (
-		<div className="flex items-center gap-2">
-			<BranchPicker
-				branches={branches}
-				currentBranch={currentBranch}
-				defaultBranch={defaultBranch}
-				onChange={onBranchChange}
-			/>
-			<div className="relative flex-1">
+		<div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+			<div className="w-full sm:w-auto sm:order-1">
+				<BranchPicker
+					branches={branches}
+					currentBranch={currentBranch}
+					defaultBranch={defaultBranch}
+					onChange={onBranchChange}
+				/>
+			</div>
+
+			<div className="relative sm:order-2 sm:flex-1">
 				<input
 					type="text"
 					placeholder="Search commits..."
@@ -283,29 +286,32 @@ function CommitsToolbar({
 					<line x1="21" y1="21" x2="16.65" y2="16.65" />
 				</svg>
 			</div>
-			<input
-				type="date"
-				value={since}
-				onChange={(e) => onSinceChange(e.target.value)}
-				title="Since date"
-				className="h-9 rounded-md border border-border bg-background px-3 font-mono text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-			/>
-			<input
-				type="date"
-				value={until}
-				onChange={(e) => onUntilChange(e.target.value)}
-				title="Until date"
-				className="h-9 rounded-md border border-border bg-background px-3 font-mono text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-			/>
-			{hasDateFilter && (
-				<button
-					onClick={onClearDates}
-					title="Clear date filters"
-					className="h-9 rounded-md border border-border bg-background px-3 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
-				>
-					✕
-				</button>
-			)}
+
+			<div className="flex items-center gap-2 sm:contents">
+				<input
+					type="date"
+					value={since}
+					onChange={(e) => onSinceChange(e.target.value)}
+					title="Since date"
+					className="sm:order-3 flex-1 sm:flex-none h-9 rounded-md border border-border bg-background px-3 font-mono text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+				/>
+				<input
+					type="date"
+					value={until}
+					onChange={(e) => onUntilChange(e.target.value)}
+					title="Until date"
+					className="sm:order-4 flex-1 sm:flex-none h-9 rounded-md border border-border bg-background px-3 font-mono text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+				/>
+				{hasDateFilter && (
+					<button
+						onClick={onClearDates}
+						title="Clear date filters"
+						className="sm:order-5 h-9 rounded-md border border-border bg-background px-3 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
+					>
+						✕
+					</button>
+				)}
+			</div>
 		</div>
 	);
 }
@@ -462,7 +468,7 @@ function CommitRow({
 
 			{/* Expanded body */}
 			{isExpanded && body && (
-				<div className="px-4 pb-3 pl-[52px]">
+				<div className="px-4 pb-3 pl-13">
 					<pre className="text-xs text-muted-foreground font-mono whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto border-l-2 border-border pl-3">
 						{body}
 					</pre>
@@ -566,7 +572,7 @@ function CommitDetailSheet({
 			>
 				<ResizeHandle
 					onResize={onResize}
-					onDragStart={() => {}}
+					onDragStart={() => { }}
 					onDragEnd={onResizeEnd}
 					onDoubleClick={onResetWidth}
 					className="absolute left-0 inset-y-0 z-20"
@@ -856,8 +862,8 @@ export function CommitsList({ owner, repo, commits, defaultBranch, branches }: C
 	const hasDateFilter = since !== "" || until !== "";
 	const filtered = search
 		? displayedCommits.filter((c) =>
-				c.commit.message.toLowerCase().includes(search.toLowerCase()),
-			)
+			c.commit.message.toLowerCase().includes(search.toLowerCase()),
+		)
 		: displayedCommits;
 	const grouped = groupByDate(filtered);
 
