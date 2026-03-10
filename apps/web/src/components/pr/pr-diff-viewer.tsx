@@ -10,9 +10,11 @@ import {
 	type DiffSegment,
 } from "@/lib/github-utils";
 import type { SyntaxToken } from "@/lib/shiki";
+import { highlightDiffLinesClient } from "@/lib/shiki-client";
+import { useColorTheme } from "@/components/theme/theme-provider";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
-import Image from "next/image";
+import { GithubAvatar } from "@/components/shared/github-avatar";
 import {
 	File,
 	FileText,
@@ -122,7 +124,7 @@ interface PRDiffViewerProps {
 	checkStatus?: CheckStatus;
 }
 
-type AddContextCallback = (context: {
+export type AddContextCallback = (context: {
 	filename: string;
 	startLine: number;
 	endLine: number;
@@ -131,6 +133,21 @@ type AddContextCallback = (context: {
 }) => void;
 
 type SidebarMode = "files" | "reviews" | "commits";
+
+function parseLineParam(
+	param: string,
+): { type: "single"; line: number } | { type: "range"; start: number; end: number } | null {
+	const rangeMatch = param.match(/^(\d+)-(\d+)$/);
+	if (rangeMatch) {
+		const start = parseInt(rangeMatch[1], 10);
+		const end = parseInt(rangeMatch[2], 10);
+		if (start > 0 && end >= start) return { type: "range", start, end };
+		return null;
+	}
+	const single = parseInt(param, 10);
+	if (Number.isFinite(single) && single > 0) return { type: "single", line: single };
+	return null;
+}
 
 export function PRDiffViewer({
 	files,
@@ -153,6 +170,40 @@ export function PRDiffViewer({
 	const onAddContext = globalChat?.addCodeContext;
 	const searchParams = useSearchParams();
 
+	const { themeId } = useColorTheme();
+	const initialThemeRef = useRef(themeId);
+	const [clientHighlightData, setClientHighlightData] =
+		useState<Record<string, Record<string, SyntaxToken[]>>>(highlightData);
+
+	useEffect(() => {
+		if (themeId === initialThemeRef.current) {
+			setClientHighlightData(highlightData);
+			return;
+		}
+		let cancelled = false;
+		(async () => {
+			const data: Record<string, Record<string, SyntaxToken[]>> = {};
+			await Promise.all(
+				files.map(async (file) => {
+					if (file.patch) {
+						try {
+							data[file.filename] =
+								await highlightDiffLinesClient(
+									file.patch,
+									file.filename,
+									themeId,
+								);
+						} catch {}
+					}
+				}),
+			);
+			if (!cancelled) setClientHighlightData(data);
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [themeId, files, highlightData]);
+
 	// Resolve initial index from ?file= query param
 	const [activeIndex, setActiveIndex] = useState(() => {
 		const fileParam = searchParams.get("file");
@@ -169,11 +220,29 @@ export function PRDiffViewer({
 	const [isDragging, setIsDragging] = useState(false);
 	const [viewedFiles, setViewedFiles] = useState<Set<string>>(new Set());
 	const [sidebarMode, setSidebarMode] = useState<SidebarMode>(() => {
-		const tab = searchParams.get("tab");
-		if (tab === "reviews" || tab === "commits") return tab;
+		const sidebar = searchParams.get("sidebar");
+		if (sidebar === "reviews" || sidebar === "commits") return sidebar;
 		return "files";
 	});
-	const [scrollToLine, setScrollToLine] = useState<number | null>(null);
+	const [scrollToLine, setScrollToLine] = useState<number | null>(() => {
+		const lineParam = searchParams.get("line");
+		if (!lineParam) return null;
+		const parsed = parseLineParam(lineParam);
+		if (!parsed) return null;
+		return parsed.type === "single" ? parsed.line : parsed.start;
+	});
+	const [highlightLines, setHighlightLines] = useState<Set<number> | null>(() => {
+		const lineParam = searchParams.get("line");
+		if (!lineParam) return null;
+		const parsed = parseLineParam(lineParam);
+		if (!parsed) return null;
+		if (parsed.type === "range") {
+			const s = new Set<number>();
+			for (let i = parsed.start; i <= parsed.end; i++) s.add(i);
+			return s;
+		}
+		return null;
+	});
 	const containerRef = useRef<HTMLDivElement>(null);
 	const totalAdditions = files.reduce((s, f) => s + f.additions, 0);
 	const totalDeletions = files.reduce((s, f) => s + f.deletions, 0);
@@ -189,24 +258,36 @@ export function PRDiffViewer({
 			searchParams.get("file") === currentFile.filename
 		)
 			return;
+		const fileChanged = prevIndexRef.current !== activeIndex;
 		prevIndexRef.current = activeIndex;
 		const url = new URL(window.location.href);
 		url.searchParams.set("file", currentFile.filename);
+		const navLine = pendingNavLineRef.current;
+		pendingNavLineRef.current = null;
+		if (fileChanged) {
+			if (navLine) {
+				url.searchParams.set("line", String(navLine));
+			} else {
+				url.searchParams.delete("line");
+				setHighlightLines(null);
+			}
+		}
 		window.history.replaceState(null, "", url.toString());
 	}, [activeIndex, currentFile]); // eslint-disable-line react-hooks/exhaustive-deps
 
-	// Sync sidebar mode to URL ?tab= param
+	// Sync sidebar mode to URL ?sidebar= param
 	useEffect(() => {
 		const url = new URL(window.location.href);
 		if (sidebarMode === "files") {
-			url.searchParams.delete("tab");
+			url.searchParams.delete("sidebar");
 		} else {
-			url.searchParams.set("tab", sidebarMode);
+			url.searchParams.set("sidebar", sidebarMode);
 		}
 		window.history.replaceState(null, "", url.toString());
 	}, [sidebarMode]);
 
 	// Listen for Ghost chat file navigation events
+	const pendingNavLineRef = useRef<number | null>(null);
 	useEffect(() => {
 		const handler = (e: Event) => {
 			const { filename, line } = (
@@ -214,10 +295,12 @@ export function PRDiffViewer({
 			).detail;
 			const idx = files.findIndex((f) => f.filename === filename);
 			if (idx >= 0) {
-				setActiveIndex(idx);
 				if (line) {
+					pendingNavLineRef.current = line;
 					setScrollToLine(line);
+					setHighlightLines(new Set([line]));
 				}
+				setActiveIndex(idx);
 			}
 		};
 		window.addEventListener("ghost:navigate-to-file", handler);
@@ -506,9 +589,10 @@ export function PRDiffViewer({
 						baseSha={baseSha}
 						scrollToLine={scrollToLine}
 						onScrollComplete={handleScrollComplete}
+						highlightLines={highlightLines}
 						canWrite={canWrite}
 						fileHighlightData={
-							highlightData[currentFile.filename]
+							clientHighlightData[currentFile.filename]
 						}
 						onAddContext={onAddContext}
 						participants={participants}
@@ -542,6 +626,7 @@ function SingleFileDiff({
 	baseSha,
 	scrollToLine,
 	onScrollComplete,
+	highlightLines,
 	canWrite = true,
 	fileHighlightData,
 	onAddContext,
@@ -569,6 +654,7 @@ function SingleFileDiff({
 	baseSha?: string;
 	scrollToLine?: number | null;
 	onScrollComplete?: () => void;
+	highlightLines?: Set<number> | null;
 	canWrite?: boolean;
 	fileHighlightData?: Record<string, SyntaxToken[]>;
 	onAddContext?: AddContextCallback;
@@ -584,16 +670,19 @@ function SingleFileDiff({
 		if (scrollToLine == null || !diffContainerRef.current) return;
 		const row = diffContainerRef.current.querySelector(`[data-line="${scrollToLine}"]`);
 		if (row) {
-			// Small delay to let the file render
 			requestAnimationFrame(() => {
 				row.scrollIntoView({ behavior: "smooth", block: "center" });
-				// Brief highlight
-				row.classList.add("!bg-warning/10");
-				setTimeout(() => row.classList.remove("!bg-warning/10"), 2000);
+				if (!highlightLines?.has(scrollToLine)) {
+					row.classList.add("!bg-warning/10");
+					setTimeout(
+						() => row.classList.remove("!bg-warning/10"),
+						2000,
+					);
+				}
 			});
 		}
 		onScrollCompleteRef.current?.();
-	}, [scrollToLine]);
+	}, [scrollToLine]); // eslint-disable-line react-hooks/exhaustive-deps
 	const [commentRange, setCommentRange] = useState<{
 		startLine: number;
 		endLine: number;
@@ -1270,7 +1359,7 @@ function SingleFileDiff({
 
 	return (
 		<div
-			className="flex flex-col flex-1 min-h-0"
+			className="flex flex-col flex-1 min-h-0 min-w-0"
 			onMouseEnter={() => {
 				isHoveringDiffRef.current = true;
 			}}
@@ -1279,8 +1368,8 @@ function SingleFileDiff({
 			}}
 		>
 			{/* Sticky file header */}
-			<div className="shrink-0 sticky top-0 z-10 bg-card/95 backdrop-blur-sm border-b border-border">
-				<div className="flex items-center gap-2 px-3 py-1.5">
+			<div className="shrink-0 sticky top-0 z-10 bg-card/95 backdrop-blur-sm border-b border-border overflow-hidden">
+				<div className="flex items-center gap-2 px-3 py-1.5 overflow-hidden">
 					{/* Sidebar collapse/expand toggle */}
 					<button
 						onClick={onToggleSidebar}
@@ -2259,6 +2348,7 @@ function SingleFileDiff({
 							commentRange={commentRange}
 							selectionRange={selectionRange}
 							fileHighlightData={fileHighlightData}
+							highlightLines={highlightLines}
 							expandedLines={expandedLines}
 							hunkInfos={hunkInfos}
 							isLoadingExpand={isLoadingExpand}
@@ -2437,6 +2527,13 @@ function SingleFileDiff({
 											}
 											isSelected={
 												isSelected
+											}
+											isHighlighted={
+												lineNum !==
+													undefined &&
+												!!highlightLines?.has(
+													lineNum,
+												)
 											}
 											syntaxTokens={
 												syntaxTokens
@@ -2622,6 +2719,7 @@ function DiffLineRow({
 	inlineComments,
 	isCommentFormOpen,
 	isSelected,
+	isHighlighted,
 	syntaxTokens,
 	expandedContent,
 	expandStartLine,
@@ -2651,6 +2749,7 @@ function DiffLineRow({
 	inlineComments: ReviewComment[];
 	isCommentFormOpen: boolean;
 	isSelected?: boolean;
+	isHighlighted?: boolean;
 	syntaxTokens?: SyntaxToken[];
 	expandedContent?: string[];
 	expandStartLine?: number;
@@ -2760,6 +2859,7 @@ function DiffLineRow({
 					isAdd && "diff-add-row",
 					isDel && "diff-del-row",
 					isSelected && "!bg-muted-foreground/[0.08]",
+					isHighlighted && "!bg-warning/10",
 				)}
 			>
 				{/* Gutter bar */}
@@ -2927,7 +3027,7 @@ function DiffLineRow({
 	);
 }
 
-function InlineCommentForm({
+export function InlineCommentForm({
 	owner,
 	repo,
 	pullNumber,
@@ -3013,29 +3113,27 @@ function InlineCommentForm({
 				</div>
 			)}
 
-			<div className="px-2 pt-2 pb-1">
-				<MarkdownEditor
-					ref={editorRef}
-					value={body}
-					onChange={setBody}
-					placeholder="Leave a comment..."
-					rows={5}
-					autoFocus
-					compact
-					participants={participants}
-					owner={owner}
-					className="border-0 rounded-none focus-within:border-0 focus-within:ring-0"
-					onKeyDown={(e) => {
-						if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-							e.preventDefault();
-							handleSubmit();
-						}
-						if (e.key === "Escape") {
-							onClose();
-						}
-					}}
-				/>
-			</div>
+			<MarkdownEditor
+				ref={editorRef}
+				value={body}
+				onChange={setBody}
+				placeholder="Leave a comment..."
+				rows={5}
+				autoFocus
+				compact
+				participants={participants}
+				owner={owner}
+				className="border-0 rounded-none focus-within:border-0 focus-within:ring-0"
+				onKeyDown={(e) => {
+					if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+						e.preventDefault();
+						handleSubmit();
+					}
+					if (e.key === "Escape") {
+						onClose();
+					}
+				}}
+			/>
 
 			{error && <p className="text-[10px] text-destructive px-3 pb-1">{error}</p>}
 
@@ -3232,11 +3330,10 @@ function InlineCommentDisplay({
 							className="flex items-center gap-1.5 text-xs font-medium text-foreground/70 hover:text-foreground transition-colors"
 							onClick={(e) => e.stopPropagation()}
 						>
-							<Image
+							<GithubAvatar
 								src={comment.user.avatar_url}
 								alt={comment.user.login}
-								width={16}
-								height={16}
+								size={16}
 								className="rounded-full"
 							/>
 							<span className="hover:underline">
@@ -3453,6 +3550,7 @@ function SplitDiffTable({
 	commentRange,
 	selectionRange,
 	fileHighlightData,
+	highlightLines,
 	expandedLines,
 	hunkInfos,
 	isLoadingExpand,
@@ -3483,6 +3581,7 @@ function SplitDiffTable({
 	commentRange: { startLine: number; endLine: number; side: "LEFT" | "RIGHT" } | null;
 	selectionRange: { start: number; end: number; side: "LEFT" | "RIGHT" } | null;
 	fileHighlightData?: Record<string, SyntaxToken[]>;
+	highlightLines?: Set<number> | null;
 	expandedLines: Map<number, string[]>;
 	hunkInfos: { index: number; newStart: number; newCount: number; endNewLine: number }[];
 	isLoadingExpand: number | null;
@@ -3911,6 +4010,15 @@ function SplitDiffTable({
 							? isCommentFormLine(row.right, rightSide)
 							: false;
 
+						const isRowHighlighted =
+							highlightLines != null &&
+							((rightLineNum !== undefined &&
+								highlightLines.has(rightLineNum)) ||
+								(leftLineNum !== undefined &&
+									highlightLines.has(
+										leftLineNum,
+									)));
+
 						return (
 							<React.Fragment key={`p-${i}`}>
 								<tr
@@ -3920,6 +4028,8 @@ function SplitDiffTable({
 									}
 									className={cn(
 										"group/splitline hover:brightness-95 dark:hover:brightness-110 transition-[filter] duration-75",
+										isRowHighlighted &&
+											"!bg-warning/10",
 									)}
 									onMouseEnter={() => {
 										if (
@@ -4188,7 +4298,7 @@ function SplitDiffTable({
 	);
 }
 
-function SegmentedContent({
+export function SegmentedContent({
 	segments,
 	type,
 }: {
@@ -4220,7 +4330,7 @@ function SegmentedContent({
 
 /** Merges syntax highlighting tokens with word-diff segments.
  *  Segments provide the background highlight (changed words), tokens provide text color. */
-function SyntaxSegmentedContent({
+export function SyntaxSegmentedContent({
 	segments,
 	tokens,
 	type,
@@ -4758,14 +4868,13 @@ function SidebarCommits({
 						>
 							<div className="flex items-start gap-1.5">
 								{c.author && (
-									<Image
+									<GithubAvatar
 										src={
 											c.author
 												.avatar_url
 										}
 										alt={c.author.login}
-										width={16}
-										height={16}
+										size={16}
 										className="rounded-full mt-0.5 shrink-0"
 									/>
 								)}
@@ -4925,11 +5034,10 @@ function SidebarReviews({
 							className="flex items-center gap-1.5"
 						>
 							{r.user && (
-								<Image
+								<GithubAvatar
 									src={r.user.avatar_url}
 									alt={r.user.login}
-									width={14}
-									height={14}
+									size={14}
 									className="rounded-full"
 								/>
 							)}

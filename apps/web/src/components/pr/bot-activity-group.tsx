@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import { GithubAvatar } from "@/components/shared/github-avatar";
 import { ChevronRight, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DeletedCommentsProvider, useDeletedComments } from "./deleted-comments-context";
@@ -55,12 +55,11 @@ function BotActivityGroupInner({ count, botNames, avatars, children }: BotActivi
 				/>
 				<div className="flex items-center -space-x-1.5">
 					{avatars.slice(0, 3).map((url, i) => (
-						<Image
+						<GithubAvatar
 							key={i}
 							src={url}
 							alt=""
-							width={16}
-							height={16}
+							size={16}
 							className="rounded-full shrink-0 ring-1 ring-background"
 						/>
 					))}

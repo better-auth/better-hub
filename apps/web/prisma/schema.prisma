@@ -379,3 +379,18 @@ model PromptRequestReaction {
   @@index([userId])
   @@map("prompt_request_reactions")
 }
+
+model PrOverviewAnalysis {
+  id           String @id
+  owner        String
+  repo         String
+  pullNumber   Int
+  headSha      String
+  analysisJson String
+  createdAt    String
+  updatedAt    String
+
+  @@unique([owner, repo, pullNumber])
+  @@index([owner, repo, pullNumber, headSha])
+  @@map("pr_overview_analyses")
+}

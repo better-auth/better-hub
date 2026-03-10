@@ -1,15 +1,21 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
-import { Code2, MessageCircle, ChevronRight } from "lucide-react";
+import { useState, useRef, useCallback, useEffect, createContext, useContext } from "react";
+import { useSearchParams } from "next/navigation";
+import { Code2, MessageCircle, ChevronRight, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ResizeHandle } from "@/components/ui/resize-handle";
 import {
 	PROptimisticCommentsProvider,
 	PROptimisticCommentsDisplay,
 } from "./pr-optimistic-comments-provider";
+import { useNavVisibility } from "@/components/shared/nav-visibility-provider";
+
+const OverviewActiveContext = createContext(false);
+export const useOverviewActive = () => useContext(OverviewActiveContext);
 
 type MobileTab = "diff" | "chat";
+type SidePanelTab = "conversation" | "overview";
 
 interface PRDetailLayoutProps {
 	infoBar: React.ReactNode;
@@ -19,6 +25,8 @@ interface PRDetailLayoutProps {
 	commentForm?: React.ReactNode;
 	/** Full-width conflict resolution panel — replaces split view when provided */
 	conflictPanel?: React.ReactNode;
+	/** Overview panel for AI analysis */
+	overviewPanel?: React.ReactNode;
 	commentCount: number;
 	fileCount: number;
 	hasReviews?: boolean;
@@ -30,27 +38,57 @@ export function PRDetailLayout({
 	conversationPanel,
 	commentForm,
 	conflictPanel,
+	overviewPanel,
 	commentCount,
 	fileCount,
-	hasReviews,
 }: PRDetailLayoutProps) {
+	const searchParams = useSearchParams();
+
 	const [mobileTab, setMobileTab] = useState<MobileTab>("diff");
+	const [sidePanelTab, setSidePanelTab] = useState<SidePanelTab>(() => {
+		const tabParam = searchParams.get("tab");
+		if (tabParam === "overview") return "overview";
+		return "conversation";
+	});
 	const [isDragging, setIsDragging] = useState(false);
 	const containerRef = useRef<HTMLDivElement>(null);
+	const sidePanelTabRef = useRef<HTMLDivElement>(null);
 	const userAdjustedRef = useRef(false);
+	const [tabIndicator, setTabIndicator] = useState({ left: 0, width: 0 });
+	const [hasTabAnimated, setHasTabAnimated] = useState(false);
+	const [isScrolled, setIsScrolled] = useState(false);
+	const conversationScrollRef = useRef<HTMLDivElement>(null);
+	const overviewWrapperRef = useRef<HTMLDivElement>(null);
+
+	const { setNavHidden } = useNavVisibility();
+	const lastScrollYRef = useRef(0);
+
+	const handleScrollForNav = useCallback(
+		(e: React.UIEvent<HTMLDivElement>) => {
+			const scrollY = e.currentTarget.scrollTop;
+			const delta = scrollY - lastScrollYRef.current;
+
+			if (delta > 10 && scrollY > 50) {
+				setNavHidden(true);
+			} else if (delta < -10) {
+				setNavHidden(false);
+			}
+
+			lastScrollYRef.current = scrollY;
+		},
+		[setNavHidden],
+	);
 
 	const SK = "pr-split-adjusted";
 	const [splitRatio, setSplitRatio] = useState(() => {
-		// SSR-safe: always start at 65 (conversation visible)
 		return 65;
 	});
 
-	// On mount, check if user already adjusted this session — if so, restore their preference
 	useEffect(() => {
 		const stored = sessionStorage.getItem(SK);
 		if (stored !== null) {
 			const v = Number(stored);
-			if (Number.isFinite(v)) {
+			if (Number.isFinite(v) && v >= 25 && v <= 100) {
 				setSplitRatio(v);
 				userAdjustedRef.current = true;
 			}
@@ -88,7 +126,7 @@ export function PRDetailLayout({
 	const handleRestoreChat = () => persistSplit(65);
 	const handleRestoreCode = () => persistSplit(65);
 
-	// When navigating to a file from conversation, ensure the code panel is visible
+	// When navigating to a file from overview, ensure the code panel is visible
 	useEffect(() => {
 		const handler = () => {
 			if (codeCollapsed) persistSplit(65);
@@ -98,42 +136,41 @@ export function PRDetailLayout({
 		return () => window.removeEventListener("ghost:navigate-to-file", handler);
 	}, [codeCollapsed, persistSplit]);
 
-	// Keyboard shortcuts: 1/[ = files, 2/] = chat
-	useEffect(() => {
-		function handleKeyDown(e: KeyboardEvent) {
-			// Skip when user is typing in an input/textarea/contenteditable
-			const tag = (e.target as HTMLElement)?.tagName;
-			if (
-				tag === "INPUT" ||
-				tag === "TEXTAREA" ||
-				(e.target as HTMLElement)?.isContentEditable
-			)
-				return;
-
-			const isDesktop = window.innerWidth >= 1024;
-
-			if (e.key === "1" || e.key === "[") {
-				e.preventDefault();
-				if (isDesktop) {
-					if (codeCollapsed) persistSplit(65);
-					else persistSplit(100);
-				} else {
-					setMobileTab("diff");
-				}
-			} else if (e.key === "2" || e.key === "]") {
-				e.preventDefault();
-				if (isDesktop) {
-					if (chatCollapsed) persistSplit(65);
-					else persistSplit(0);
-				} else {
-					setMobileTab("chat");
-				}
-			}
+	// Update side-panel tab indicator position
+	const updateTabIndicator = useCallback(() => {
+		if (!sidePanelTabRef.current) return;
+		const activeEl = sidePanelTabRef.current.querySelector<HTMLElement>(
+			"[data-tab-active='true']",
+		);
+		if (activeEl) {
+			setTabIndicator({
+				left: activeEl.offsetLeft,
+				width: activeEl.offsetWidth,
+			});
+			if (!hasTabAnimated) setHasTabAnimated(true);
 		}
+	}, [hasTabAnimated]);
 
-		window.addEventListener("keydown", handleKeyDown);
-		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [codeCollapsed, chatCollapsed, persistSplit]);
+	useEffect(() => {
+		updateTabIndicator();
+	}, [sidePanelTab, updateTabIndicator]);
+
+	const handleSidePanelTabChange = useCallback(
+		(tab: SidePanelTab) => {
+			if (tab === sidePanelTab) return;
+			setSidePanelTab(tab);
+			setIsScrolled(false);
+
+			const url = new URL(window.location.href);
+			if (tab === "conversation") {
+				url.searchParams.delete("tab");
+			} else {
+				url.searchParams.set("tab", tab);
+			}
+			window.history.replaceState(null, "", url.toString());
+		},
+		[sidePanelTab],
+	);
 
 	// Full-width conflict resolver mode
 	if (conflictPanel) {
@@ -152,7 +189,7 @@ export function PRDetailLayout({
 				<div className="shrink-0 px-4 pt-3">{infoBar}</div>
 
 				{/* Mobile tabs */}
-				<div className="lg:hidden shrink-0 flex">
+				<div className="lg:hidden shrink-0 flex border-t">
 					{(
 						[
 							{
@@ -190,11 +227,14 @@ export function PRDetailLayout({
 					))}
 				</div>
 
-				{/* Desktop split panels */}
-				<div ref={containerRef} className="flex-1 min-h-0 hidden lg:flex">
+				{/* Desktop split panels — always visible */}
+				<div
+					ref={containerRef}
+					className="flex-1 min-h-0 border-t hidden lg:flex"
+				>
 					{/* Left panel (files + reviews) */}
 					<div
-						className="min-h-0 flex border-r border-border/40"
+						className="min-h-0 min-w-0 flex overflow-hidden border-r border-border/40"
 						style={{
 							width: `${splitRatio}%`,
 							transition: isDragging
@@ -218,7 +258,6 @@ export function PRDetailLayout({
 							onDoubleClick={handleDoubleClick}
 						/>
 
-						{/* Show collapsed panel toggle */}
 						{chatCollapsed && (
 							<button
 								onClick={handleRestoreChat}
@@ -229,7 +268,7 @@ export function PRDetailLayout({
 									"text-muted-foreground/60 hover:text-muted-foreground hover:border-border",
 									"cursor-pointer transition-all duration-150",
 								)}
-								title="Show conversation"
+								title="Show side panel"
 							>
 								<MessageCircle className="w-3 h-3" />
 								{commentCount > 0 && (
@@ -258,9 +297,9 @@ export function PRDetailLayout({
 						)}
 					</div>
 
-					{/* Right panel (conversation) */}
+					{/* Right panel — side panel with conversation/overview tabs */}
 					<div
-						className="relative min-h-0 overflow-hidden pl-3"
+						className="relative min-h-0 flex flex-col"
 						style={{
 							width: `${100 - splitRatio}%`,
 							transition: isDragging
@@ -269,37 +308,179 @@ export function PRDetailLayout({
 						}}
 					>
 						{!chatCollapsed && (
-							<div className="w-full h-full flex flex-col relative max-w-[1000px] mx-auto">
-								<div className="shrink-0 absolute flex items-center px-2 pt-2 -left-3.5 top-1 z-10">
+							<>
+								{/* Side-panel header with tabs + collapse button */}
+								<div
+									className="shrink-0 flex items-center gap-1 pl-3 pr-2 pt-2 relative z-[1]"
+									style={{
+										boxShadow: isScrolled
+											? "0 1px 0 rgba(0,0,0,0.06), 0 3px 8px -2px rgba(0,0,0,0.1)"
+											: "0 0 0 transparent",
+										transition: "box-shadow 0.2s ease",
+									}}
+								>
+									<div
+										ref={
+											sidePanelTabRef
+										}
+										className="relative flex items-center gap-0.5"
+									>
+										{[
+											{
+												key: "conversation" as const,
+												label: "Conversation",
+												icon: MessageCircle,
+											},
+											{
+												key: "overview" as const,
+												label: "AI Overview",
+												icon: Sparkles,
+											},
+										].map(
+											({
+												key,
+												label,
+												icon: Icon,
+											}) => (
+												<button
+													key={
+														key
+													}
+													data-tab-active={
+														sidePanelTab ===
+														key
+													}
+													onClick={() =>
+														handleSidePanelTabChange(
+															key,
+														)
+													}
+													className={cn(
+														"relative flex items-center gap-1.5 px-2.5 py-1.5 text-xs whitespace-nowrap transition-colors cursor-pointer rounded-md",
+														sidePanelTab ===
+															key
+															? "text-foreground font-medium"
+															: "text-muted-foreground/60 hover:text-muted-foreground",
+													)}
+												>
+													<Icon className="w-3 h-3" />
+													{
+														label
+													}
+													{key ===
+														"conversation" &&
+														commentCount >
+															0 && (
+															<span
+																className={cn(
+																	"text-[10px] font-mono px-1 py-0.5 rounded-full",
+																	sidePanelTab ===
+																		key
+																		? "bg-muted text-foreground/70"
+																		: "bg-muted/50 text-muted-foreground/60",
+																)}
+															>
+																{
+																	commentCount
+																}
+															</span>
+														)}
+												</button>
+											),
+										)}
+										<div
+											className={cn(
+												"absolute bottom-0 h-0.5 bg-foreground/50 rounded-full",
+												hasTabAnimated
+													? "transition-all duration-200 ease-out"
+													: "",
+											)}
+											style={{
+												left: tabIndicator.left,
+												width: tabIndicator.width,
+											}}
+										/>
+									</div>
 									<button
 										onClick={() =>
 											persistSplit(
 												100,
 											)
 										}
-										className="flex items-center justify-center w-6 h-6 rounded-full border border-border bg-background text-muted-foreground hover:text-muted-foreground hover:border-border/80 transition-all cursor-pointer"
-										title="Hide conversation"
+										className="ml-auto flex items-center justify-center w-6 h-6 rounded-full border border-border bg-background text-muted-foreground hover:text-muted-foreground hover:border-border/80 transition-all cursor-pointer"
+										title="Hide panel"
 									>
 										<ChevronRight className="w-3 h-3" />
 									</button>
 								</div>
+
+								{/* Conversation content */}
 								<div
-									className="flex-1 overflow-y-auto overscroll-contain min-h-0 pr-4 pl-6 pb-12"
+									ref={conversationScrollRef}
+									className={cn(
+										"flex-1 overflow-y-auto overscroll-contain min-h-0 pb-12",
+										sidePanelTab !==
+											"conversation" &&
+											"hidden",
+									)}
+									onScroll={(e) =>
+										setIsScrolled(
+											e
+												.currentTarget
+												.scrollTop >
+												0,
+										)
+									}
 									style={{
 										maskImage: "linear-gradient(to bottom, black calc(100% - 24px), transparent 100%)",
 										WebkitMaskImage:
 											"linear-gradient(to bottom, black calc(100% - 24px), transparent 100%)",
 									}}
 								>
-									{conversationPanel}
-									<PROptimisticCommentsDisplay />
-								</div>
-								{commentForm && (
-									<div className="shrink-0 px-3 pb-6">
-										{commentForm}
+									<div className="max-w-[1000px] mx-auto pr-4 pl-6">
+										{conversationPanel}
+										<PROptimisticCommentsDisplay />
 									</div>
-								)}
-							</div>
+								</div>
+
+								{/* AI Overview content */}
+								<div
+									ref={overviewWrapperRef}
+									className={cn(
+										"flex-1 min-h-0 flex flex-col",
+										sidePanelTab !==
+											"overview" &&
+											"hidden",
+									)}
+									onScrollCapture={(e) =>
+										setIsScrolled(
+											(
+												e.target as HTMLElement
+											)
+												.scrollTop >
+												0,
+										)
+									}
+								>
+									<OverviewActiveContext.Provider
+										value={
+											sidePanelTab ===
+											"overview"
+										}
+									>
+										{overviewPanel}
+									</OverviewActiveContext.Provider>
+								</div>
+
+								{sidePanelTab === "conversation" &&
+									commentForm && (
+										<div className="shrink-0 max-w-[1000px] mx-auto w-full px-3 pb-6">
+											{
+												commentForm
+											}
+										</div>
+									)}
+							</>
 						)}
 					</div>
 				</div>
