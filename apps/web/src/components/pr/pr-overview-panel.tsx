@@ -957,17 +957,7 @@ export function PROverviewPanel({
 								</div>
 							))}
 					</div>
-
-					<div className="flex items-center justify-center pt-10 pb-10">
-						<div className="flex items-center gap-4 text-muted-foreground/40">
-							<div className="h-px w-12 bg-border/40" />
-							<span className="text-[11px] font-mono uppercase tracking-wider">
-								Submit review
-							</span>
-							<div className="h-px w-12 bg-border/40" />
-						</div>
-					</div>
-
+					<div className="h-10" />
 					<OverviewReviewForm
 						owner={owner}
 						repo={repo}
