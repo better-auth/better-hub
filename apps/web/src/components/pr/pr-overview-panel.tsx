@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef, memo, type ReactNode } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
 import {
 	Check,
 	Loader2,
@@ -9,8 +9,6 @@ import {
 	ChevronDown,
 	RefreshCw,
 	AlertCircle,
-	Code2,
-	Eye,
 	TextSearch,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -20,45 +18,10 @@ import type { SyntaxToken } from "@/lib/shiki";
 import { highlightDiffLinesClient } from "@/lib/shiki-client";
 import { useColorTheme } from "@/components/theme/theme-provider";
 import { DiffSnippetTable } from "./diff-snippet-table";
+import { ClientMarkdown } from "../shared/client-markdown";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-
-const INLINE_MD_RE = /(`[^`]+`|\*\*(?:[^*]|\*(?!\*))+\*\*|\*(?:[^*])+\*)/g;
-
-function renderInlineMarkdown(text: string): ReactNode {
-	const parts: ReactNode[] = [];
-	let lastIndex = 0;
-	let key = 0;
-	let match: RegExpExecArray | null;
-
-	INLINE_MD_RE.lastIndex = 0;
-	while ((match = INLINE_MD_RE.exec(text)) !== null) {
-		if (match.index > lastIndex) {
-			parts.push(text.slice(lastIndex, match.index));
-		}
-		const token = match[0];
-		if (token.startsWith("`")) {
-			parts.push(
-				<code
-					key={key++}
-					className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.9em]"
-				>
-					{token.slice(1, -1)}
-				</code>,
-			);
-		} else if (token.startsWith("**")) {
-			parts.push(<strong key={key++}>{token.slice(2, -2)}</strong>);
-		} else if (token.startsWith("*")) {
-			parts.push(<em key={key++}>{token.slice(1, -1)}</em>);
-		}
-		lastIndex = match.index + token.length;
-	}
-
-	if (lastIndex === 0) return text;
-	if (lastIndex < text.length) parts.push(text.slice(lastIndex));
-	return parts;
-}
 
 interface DiffFile {
 	filename: string;
@@ -218,7 +181,7 @@ function ChangeGroupCard({
 	return (
 		<div
 			className={cn(
-				"border border-border/50 rounded-xl bg-card overflow-hidden transition-opacity",
+				"rounded-xl bg-card overflow-hidden transition-opacity",
 				isViewed && "opacity-50",
 			)}
 		>
@@ -311,27 +274,33 @@ function ChangeGroupCard({
 				)}
 			>
 				<div className="overflow-hidden">
-					<div className="border-t border-border/40 px-3 py-4 space-y-6 bg-muted/5">
-						<p className="text-sm text-muted-foreground brightness-120 leading-relaxed px-2">
-							{renderInlineMarkdown(group.summary)}
-						</p>
+					<div className="border-t border-border/50! px-3 py-4 space-y-6 bg-muted/5">
+						<div className="text-sm text-muted-foreground brightness-120 leading-relaxed px-2">
+							<ClientMarkdown
+								content={group.summary}
+								className="ghmd-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+							/>
+						</div>
 						<div className="mt-3 mb-6 h-px w-full bg-border/40"></div>
 						{group.files.map((file, i) => (
 							<div key={i} className="mt-3">
 								<div className="flex gap-3 my-3 pl-2">
-									<h3 className="text-sm font-medium">
+									<h3 className="text-sm font-medium shrink-0">
 										{i + 1}.
 									</h3>
-									<p className="text-sm text-muted-foreground leading-relaxed">
-										{renderInlineMarkdown(
-											file.explanation,
-										)}
-									</p>
+									<div className="text-sm text-muted-foreground leading-relaxed min-w-0">
+										<ClientMarkdown
+											content={
+												file.explanation
+											}
+											className="ghmd-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+										/>
+									</div>
 								</div>
 
 								{file.snippet && (
 									<div className="px-2">
-										<div className="flex items-center gap-2.5 border-t border-x px-3 pt-2 bg-[var(--code-bg)] pb-4 -mb-2 rounded-t-md">
+										<div className="flex items-center gap-2.5 border-t border-x border-foreground/20! px-3 pt-2 bg-[var(--code-bg)] pb-4 -mb-2 rounded-t-md">
 											<FileCode2 className="w-4 h-4 text-muted-foreground shrink-0" />
 											<span className="font-mono flex items-center flex-1 min-w-0 overflow-hidden">
 												<span className="truncate">
@@ -680,7 +649,7 @@ export function PROverviewPanel({
 	return (
 		<div className="flex flex-col h-full min-h-0">
 			<div
-				className="flex-1 overflow-y-auto overscroll-contain min-h-0 pb-12"
+				className="flex-1 overflow-y-auto overscroll-contain min-h-0 pb-12 pr-3 -mr-3"
 				style={{
 					maskImage: "linear-gradient(to bottom, black calc(100% - 24px), transparent 100%)",
 					WebkitMaskImage:
@@ -690,27 +659,24 @@ export function PROverviewPanel({
 				<div className="max-w-[1000px] mx-auto pl-4 pr-1 py-6">
 					<div className="flex items-center justify-between mb-6">
 						<div>
-							<p className="text-sm text-muted-foreground">
-								AI Analysis of {files.length} files
-							</p>
+							<div className="flex items-center gap-3 text-sm text-muted-foreground">
+								<div className="w-28 h-2 bg-muted rounded-full overflow-hidden">
+									<div
+										className="h-full bg-primary transition-all duration-300"
+										style={{
+											width: `${progressPercent}%`,
+										}}
+									/>
+								</div>
+								<span className="font-mono tabular-nums">
+									{viewedCount}/{totalCount}{" "}
+									sections reviewed
+								</span>
+							</div>
 						</div>
 
 						{hasLoaded && !isLoading && (
 							<div className="flex items-center gap-5">
-								<div className="flex items-center gap-3 text-sm text-muted-foreground">
-									<div className="w-28 h-2 bg-muted rounded-full overflow-hidden">
-										<div
-											className="h-full bg-primary transition-all duration-300"
-											style={{
-												width: `${progressPercent}%`,
-											}}
-										/>
-									</div>
-									<span className="font-mono tabular-nums">
-										{viewedCount}/
-										{totalCount}
-									</span>
-								</div>
 								<button
 									onClick={() =>
 										fetchAnalysis(true)
@@ -719,7 +685,7 @@ export function PROverviewPanel({
 									title="Refresh analysis"
 								>
 									<RefreshCw className="w-4 h-4" />
-									Regenerate
+									Regenerate Overview
 								</button>
 							</div>
 						)}

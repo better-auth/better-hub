@@ -311,11 +311,13 @@ export function PRDetailLayout({
 							<>
 								{/* Side-panel header with tabs + collapse button */}
 								<div
-									className={cn(
-										"shrink-0 flex items-center gap-1 pl-3 pr-2 pt-2 relative z-[1] transition-[box-shadow] duration-200",
-										isScrolled &&
-											"shadow-[0_1px_3px_0_rgba(0,0,0,0.06),0_4px_12px_-4px_rgba(0,0,0,0.06)]",
-									)}
+									className="shrink-0 flex items-center gap-1 pl-3 pr-2 pt-2 relative z-[1]"
+									style={{
+										boxShadow: isScrolled
+											? "0 1px 0 rgba(0,0,0,0.06), 0 3px 8px -2px rgba(0,0,0,0.1)"
+											: "0 0 0 transparent",
+										transition: "box-shadow 0.2s ease",
+									}}
 								>
 									<div
 										ref={

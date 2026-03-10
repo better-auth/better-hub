@@ -58,7 +58,7 @@ const OverviewOutputSchema = z.object({
 			summary: z
 				.string()
 				.describe(
-					"2-3 sentence explanation of what these changes accomplish and why. Supports inline markdown: **bold**, *italics*, `code`.",
+					"2-3 sentence explanation of what these changes accomplish and why. Supports markdown: **bold**, *italics*, `code`, and fenced code blocks (```lang\\n...\\n```) when a short code example clarifies the change.",
 				),
 			reviewOrder: z
 				.number()
@@ -71,7 +71,7 @@ const OverviewOutputSchema = z.object({
 					explanation: z
 						.string()
 						.describe(
-							"Brief explanation focusing on why this file changed. Supports inline markdown: **bold**, *italics*, `code`.",
+							"Brief explanation focusing on why this file changed. Supports markdown: **bold**, *italics*, `code`, and fenced code blocks (```lang\\n...\\n```) when a short code example clarifies the change.",
 						),
 					startLine: z
 						.number()
@@ -101,7 +101,7 @@ Guidelines:
 - For each file, provide startLine and endLine pointing to the most important section of the diff. These are 1-based line numbers in the NEW version of the file (from the @@ hunk header's +N range). The code snippet will be extracted automatically — do NOT return code yourself.
 - Explanations should focus on "why" not just "what"
 - reviewOrder should start at 1 for the most foundational changes
-- The "summary" and "explanation" fields support inline markdown: use **bold** for emphasis, *italics* for nuance, and \`backticks\` for inline code references (e.g. function names, variable names, file paths). Do NOT use headings, lists, or block-level markdown—only inline formatting.`;
+- The "summary" and "explanation" fields support markdown: use **bold** for emphasis, *italics* for nuance, \`backticks\` for inline code references, and fenced code blocks (\`\`\`lang … \`\`\`) when a short snippet (≤6 lines) helps illustrate the change (e.g. a new function signature, config change, or key type definition). Do NOT use headings or lists.`;
 
 const IGNORED_FILENAMES = new Set([
 	"package-lock.json",

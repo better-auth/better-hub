@@ -100,10 +100,7 @@ export function ClientMarkdown({ content, className }: { content: string; classN
 						}
 						return (
 							<code
-								className={cn(
-									"font-mono",
-									codeClassName,
-								)}
+								className={cn(codeClassName)}
 								{...rest}
 							>
 								{children}

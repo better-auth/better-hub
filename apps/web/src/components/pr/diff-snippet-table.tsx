@@ -227,7 +227,7 @@ export function DiffSnippetTable({
 			: undefined;
 
 	return (
-		<div className="rounded-b-md border pb-3 bg-[var(--code-bg)]">
+		<div className="rounded-b-md border border-foreground/20! pb-3 bg-[var(--code-bg)]">
 			<div
 				className={cn(
 					wordWrap
