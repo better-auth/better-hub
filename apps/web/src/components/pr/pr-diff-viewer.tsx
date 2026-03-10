@@ -10,6 +10,8 @@ import {
 	type DiffSegment,
 } from "@/lib/github-utils";
 import type { SyntaxToken } from "@/lib/shiki";
+import { highlightDiffLinesClient } from "@/lib/shiki-client";
+import { useColorTheme } from "@/components/theme/theme-provider";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { GithubAvatar } from "@/components/shared/github-avatar";
@@ -167,6 +169,40 @@ export function PRDiffViewer({
 	const globalChat = useGlobalChatOptional();
 	const onAddContext = globalChat?.addCodeContext;
 	const searchParams = useSearchParams();
+
+	const { themeId } = useColorTheme();
+	const initialThemeRef = useRef(themeId);
+	const [clientHighlightData, setClientHighlightData] =
+		useState<Record<string, Record<string, SyntaxToken[]>>>(highlightData);
+
+	useEffect(() => {
+		if (themeId === initialThemeRef.current) {
+			setClientHighlightData(highlightData);
+			return;
+		}
+		let cancelled = false;
+		(async () => {
+			const data: Record<string, Record<string, SyntaxToken[]>> = {};
+			await Promise.all(
+				files.map(async (file) => {
+					if (file.patch) {
+						try {
+							data[file.filename] =
+								await highlightDiffLinesClient(
+									file.patch,
+									file.filename,
+									themeId,
+								);
+						} catch {}
+					}
+				}),
+			);
+			if (!cancelled) setClientHighlightData(data);
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [themeId, files, highlightData]);
 
 	// Resolve initial index from ?file= query param
 	const [activeIndex, setActiveIndex] = useState(() => {
@@ -556,7 +592,7 @@ export function PRDiffViewer({
 						highlightLines={highlightLines}
 						canWrite={canWrite}
 						fileHighlightData={
-							highlightData[currentFile.filename]
+							clientHighlightData[currentFile.filename]
 						}
 						onAddContext={onAddContext}
 						participants={participants}
