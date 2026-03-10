@@ -193,6 +193,7 @@ function ChangeGroupCard({
 			className={cn(
 				"rounded-md bg-card overflow-hidden transition-opacity",
 				isViewed && "opacity-50",
+				isExpanded ? "shadow-sm" : "shadow-xs",
 			)}
 		>
 			<div
@@ -672,7 +673,7 @@ export function PROverviewPanel({
 					<div className="flex items-center justify-between mb-6">
 						<div>
 							<div className="flex items-center gap-3 text-sm text-muted-foreground">
-								<div className="w-28 h-2 bg-muted rounded-full overflow-hidden">
+								<div className="w-28 h-2 bg-muted rounded-full overflow-hidden border border-border/50! shadow-xs">
 									<div
 										className="h-full bg-primary transition-all duration-300"
 										style={{
