@@ -59,10 +59,11 @@ function getClientHighlighter(): Promise<Highlighter> {
 	if (highlighterInstance) return Promise.resolve(highlighterInstance);
 	if (!highlighterPromise) {
 		highlighterPromise = import("shiki")
-			.then(({ createHighlighter }) =>
+			.then(({ createHighlighter, createJavaScriptRegexEngine }) =>
 				createHighlighter({
 					themes: ["vitesse-light", "vitesse-black"],
 					langs: [],
+					engine: createJavaScriptRegexEngine(),
 				}),
 			)
 			.then((h) => {

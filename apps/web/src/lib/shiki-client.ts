@@ -16,10 +16,11 @@ function getClientHighlighter(): Promise<Highlighter> {
 	if (highlighterInstance) return Promise.resolve(highlighterInstance);
 	if (!highlighterPromise) {
 		highlighterPromise = import("shiki")
-			.then(({ createHighlighter }) =>
+			.then(({ createHighlighter, createJavaScriptRegexEngine }) =>
 				createHighlighter({
 					themes: [DEFAULT_LIGHT_THEME, DEFAULT_DARK_THEME],
 					langs: [],
+					engine: createJavaScriptRegexEngine(),
 				}),
 			)
 			.then((h) => {
