@@ -23,6 +23,16 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
+/** Turn single newlines into paragraph breaks, preserving fenced code blocks. */
+function ensureParagraphBreaks(md: string): string {
+	return md
+		.split(/(```[\s\S]*?```)/g)
+		.map((segment, i) =>
+			i % 2 === 1 ? segment : segment.replace(/(?<!\n)\n(?!\n)/g, "\n\n"),
+		)
+		.join("");
+}
+
 interface DiffFile {
 	filename: string;
 	status: string;
@@ -181,7 +191,7 @@ function ChangeGroupCard({
 	return (
 		<div
 			className={cn(
-				"rounded-xl bg-card overflow-hidden transition-opacity",
+				"rounded-md bg-card overflow-hidden transition-opacity",
 				isViewed && "opacity-50",
 			)}
 		>
@@ -277,144 +287,153 @@ function ChangeGroupCard({
 					<div className="border-t border-border/50! px-3 py-4 space-y-6 bg-muted/5">
 						<div className="text-sm text-muted-foreground brightness-120 leading-relaxed px-2">
 							<ClientMarkdown
-								content={group.summary}
-								className="ghmd-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+								content={ensureParagraphBreaks(
+									group.summary,
+								)}
+								className="ghmd-md [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
 							/>
 						</div>
 						<div className="mt-3 mb-6 h-px w-full bg-border/40"></div>
-						{group.files.map((file, i) => (
-							<div key={i} className="mt-3">
-								<div className="flex gap-3 my-3 pl-2">
-									<h3 className="text-sm font-medium shrink-0">
-										{i + 1}.
-									</h3>
-									<div className="text-sm text-muted-foreground leading-relaxed min-w-0">
-										<ClientMarkdown
-											content={
-												file.explanation
-											}
-											className="ghmd-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
-										/>
+						{group.files.map((file, i) => {
+							console.log([file.explanation][0]);
+							return (
+								<div key={i} className="mt-3">
+									<div className="flex gap-3 my-3 pl-2">
+										<h3 className="text-sm font-medium shrink-0">
+											{i + 1}.
+										</h3>
+										<div className="text-sm text-muted-foreground leading-relaxed min-w-0">
+											<ClientMarkdown
+												content={ensureParagraphBreaks(
+													file.explanation,
+												)}
+												className="ghmd-md [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+											/>
+										</div>
 									</div>
-								</div>
 
-								{file.snippet && (
-									<div className="px-2">
-										<div className="flex items-center gap-2.5 border-t border-x border-foreground/20! px-3 pt-2 bg-[var(--code-bg)] pb-4 -mb-2 rounded-t-md">
-											<FileCode2 className="w-4 h-4 text-muted-foreground shrink-0" />
-											<span className="font-mono flex items-center flex-1 min-w-0 overflow-hidden">
-												<span className="truncate">
-													{file.filename.includes(
-														"/",
-													) && (
-														<span className="text-xs text-muted-foreground">
-															{file.filename.substring(
-																0,
-																file.filename.lastIndexOf(
-																	"/",
-																) +
-																	1,
-															)}
-														</span>
-													)}
-													<span className="text-sm text-foreground/90">
+									{file.snippet && (
+										<div className="px-2">
+											<div className="flex items-center gap-2.5 border-t border-x border-foreground/20! px-3 pt-2 bg-[var(--code-bg)] pb-4 -mb-2 rounded-t-md">
+												<FileCode2 className="w-4 h-4 text-muted-foreground shrink-0" />
+												<span className="font-mono flex items-center flex-1 min-w-0 overflow-hidden">
+													<span className="truncate">
 														{file.filename.includes(
 															"/",
-														)
-															? file.filename.substring(
+														) && (
+															<span className="text-xs text-muted-foreground">
+																{file.filename.substring(
+																	0,
 																	file.filename.lastIndexOf(
 																		"/",
 																	) +
 																		1,
-																)
-															: file.filename}
+																)}
+															</span>
+														)}
+														<span className="text-sm text-foreground/90">
+															{file.filename.includes(
+																"/",
+															)
+																? file.filename.substring(
+																		file.filename.lastIndexOf(
+																			"/",
+																		) +
+																			1,
+																	)
+																: file.filename}
+														</span>
 													</span>
+													{isSnippetNewFile(
+														file.snippet,
+														file.startLine,
+													) && (
+														<Badge
+															variant="outline"
+															className="text-[10px] px-1.5 py-0 ml-2 shrink-0 text-success border-success/30 bg-success/10"
+														>
+															New
+														</Badge>
+													)}
 												</span>
-												{isSnippetNewFile(
-													file.snippet,
-													file.startLine,
-												) && (
-													<Badge
-														variant="outline"
-														className="text-[10px] px-1.5 py-0 ml-2 shrink-0 text-success border-success/30 bg-success/10"
+												<Tooltip>
+													<TooltipTrigger
+														asChild
 													>
-														New
-													</Badge>
-												)}
-											</span>
-											<Tooltip>
-												<TooltipTrigger
-													asChild
-												>
-													<button
-														onClick={(
-															e,
-														) => {
-															e.stopPropagation();
-															window.dispatchEvent(
-																new CustomEvent(
-																	"ghost:navigate-to-file",
-																	{
-																		detail: {
-																			filename: file.filename,
-																			line: file.startLine,
+														<button
+															onClick={(
+																e,
+															) => {
+																e.stopPropagation();
+																window.dispatchEvent(
+																	new CustomEvent(
+																		"ghost:navigate-to-file",
+																		{
+																			detail: {
+																				filename: file.filename,
+																				line: file.startLine,
+																			},
 																		},
-																	},
-																),
-															);
-														}}
-														className="shrink-0 p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-													>
-														<TextSearch className="w-4 h-4" />
-													</button>
-												</TooltipTrigger>
-												<TooltipContent className="text-xs z-[10]">
-													Go
-													to
-													code
-												</TooltipContent>
-											</Tooltip>
-										</div>
-										<DiffSnippet
-											snippet={
-												file.snippet
-											}
-											filename={
-												file.filename
-											}
-											startLine={
-												file.startLine
-											}
-											canComment={
-												!!(
-													owner &&
-													repo &&
-													pullNumber &&
+																	),
+																);
+															}}
+															className="shrink-0 p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+														>
+															<TextSearch className="w-4 h-4" />
+														</button>
+													</TooltipTrigger>
+													<TooltipContent className="text-xs z-[10]">
+														Go
+														to
+														code
+													</TooltipContent>
+												</Tooltip>
+											</div>
+											<DiffSnippet
+												snippet={
+													file.snippet
+												}
+												filename={
+													file.filename
+												}
+												startLine={
+													file.startLine
+												}
+												canComment={
+													!!(
+														owner &&
+														repo &&
+														pullNumber &&
+														headSha
+													)
+												}
+												owner={
+													owner
+												}
+												repo={
+													repo
+												}
+												pullNumber={
+													pullNumber
+												}
+												headSha={
 													headSha
-												)
-											}
-											owner={
-												owner
-											}
-											repo={repo}
-											pullNumber={
-												pullNumber
-											}
-											headSha={
-												headSha
-											}
-											headBranch={
-												headBranch
-											}
-											hideNewBadge
-										/>
-									</div>
-								)}
-								{i !== group.files.length - 1 && (
-									<div className="mb-8 mt-10 h-px w-full bg-border/40"></div>
-								)}
-							</div>
-						))}
+												}
+												headBranch={
+													headBranch
+												}
+												hideNewBadge
+											/>
+										</div>
+									)}
+									{i !==
+										group.files.length -
+											1 && (
+										<div className="mb-8 mt-10 h-px w-full bg-border/40"></div>
+									)}
+								</div>
+							);
+						})}
 						<div className="flex justify-end">
 							<Button
 								variant="outline"

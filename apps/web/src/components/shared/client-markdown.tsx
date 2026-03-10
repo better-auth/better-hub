@@ -79,7 +79,7 @@ function childrenToText(children: ReactNode): string {
 
 export function ClientMarkdown({ content, className }: { content: string; className?: string }) {
 	return (
-		<div className={cn("ghmd ghmd-sm", className)}>
+		<div className={cn("ghmd", className)}>
 			<ReactMarkdown
 				remarkPlugins={[remarkGfm]}
 				rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
