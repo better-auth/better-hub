@@ -9,6 +9,7 @@ import { logTokenUsage } from "@/lib/billing/token-usage";
 import { waitUntil } from "@vercel/functions";
 import { z } from "zod";
 import { getPrOverviewAnalysis, savePrOverviewAnalysis } from "@/lib/pr-overview-store";
+import { extractSnippetFromPatch } from "@/lib/extract-snippet";
 
 export const maxDuration = 120;
 
@@ -153,65 +154,6 @@ function truncatePatch(patch: string, maxLines: number = 100): string {
 	const lines = patch.split("\n");
 	if (lines.length <= maxLines) return patch;
 	return lines.slice(0, maxLines).join("\n") + "\n... (truncated)";
-}
-
-function extractSnippetFromPatch(
-	patch: string | undefined,
-	startLine: number,
-	endLine: number,
-): string {
-	if (!patch) return "";
-
-	const lines = patch.split("\n");
-	const collected: string[] = [];
-	let newLine = 0;
-	let oldLine = 0;
-
-	for (const line of lines) {
-		if (line.startsWith("@@")) {
-			const match = line.match(/@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
-			if (match) {
-				oldLine = parseInt(match[1], 10);
-				newLine = parseInt(match[2], 10);
-			}
-			continue;
-		}
-
-		if (line.startsWith("-")) {
-			if (newLine >= startLine && newLine <= endLine + 1) {
-				collected.push(line);
-			}
-			oldLine++;
-		} else if (line.startsWith("+")) {
-			if (newLine >= startLine && newLine <= endLine) {
-				collected.push(line);
-			}
-			newLine++;
-		} else {
-			if (newLine >= startLine && newLine <= endLine) {
-				collected.push(line.startsWith(" ") ? line : ` ${line}`);
-			}
-			oldLine++;
-			newLine++;
-		}
-	}
-
-	if (collected.length === 0) return "";
-
-	let addCount = 0;
-	let delCount = 0;
-	for (const l of collected) {
-		if (l.startsWith("+")) addCount++;
-		else if (l.startsWith("-")) delCount++;
-		else {
-			addCount++;
-			delCount++;
-		}
-	}
-
-	const oldStart = delCount > 0 ? startLine : 0;
-	const header = `@@ -${oldStart},${delCount} +${startLine},${addCount} @@`;
-	return `${header}\n${collected.join("\n")}`;
 }
 
 export async function POST(req: Request) {

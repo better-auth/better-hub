@@ -1,14 +1,14 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const getRepoCommitsMock = mock();
+const getRepoCommitsMock = vi.fn();
 
-mock.module("@/lib/github", () => ({
+vi.mock("@/lib/github", () => ({
 	getRepoCommits: getRepoCommitsMock,
-	getCommit: mock(),
+	getCommit: vi.fn(),
 }));
 
-mock.module("@/lib/shiki", () => ({
-	highlightDiffLines: mock(async () => ({})),
+vi.mock("@/lib/shiki", () => ({
+	highlightDiffLines: vi.fn(async () => ({})),
 }));
 
 describe("fetchLatestCommit", () => {

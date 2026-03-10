@@ -56,6 +56,9 @@ export function PRDetailLayout({
 	const userAdjustedRef = useRef(false);
 	const [tabIndicator, setTabIndicator] = useState({ left: 0, width: 0 });
 	const [hasTabAnimated, setHasTabAnimated] = useState(false);
+	const [isScrolled, setIsScrolled] = useState(false);
+	const conversationScrollRef = useRef<HTMLDivElement>(null);
+	const overviewWrapperRef = useRef<HTMLDivElement>(null);
 
 	const { setNavHidden } = useNavVisibility();
 	const lastScrollYRef = useRef(0);
@@ -156,6 +159,7 @@ export function PRDetailLayout({
 		(tab: SidePanelTab) => {
 			if (tab === sidePanelTab) return;
 			setSidePanelTab(tab);
+			setIsScrolled(false);
 
 			const url = new URL(window.location.href);
 			if (tab === "conversation") {
@@ -306,7 +310,13 @@ export function PRDetailLayout({
 						{!chatCollapsed && (
 							<>
 								{/* Side-panel header with tabs + collapse button */}
-								<div className="shrink-0 flex items-center gap-1 pl-3 pr-2 pt-2">
+								<div
+									className={cn(
+										"shrink-0 flex items-center gap-1 pl-3 pr-2 pt-2 relative z-[1] transition-[box-shadow] duration-200",
+										isScrolled &&
+											"shadow-[0_1px_3px_0_rgba(0,0,0,0.06),0_4px_12px_-4px_rgba(0,0,0,0.06)]",
+									)}
+								>
 									<div
 										ref={
 											sidePanelTabRef
@@ -404,12 +414,21 @@ export function PRDetailLayout({
 
 								{/* Conversation content */}
 								<div
+									ref={conversationScrollRef}
 									className={cn(
 										"flex-1 overflow-y-auto overscroll-contain min-h-0 pb-12",
 										sidePanelTab !==
 											"conversation" &&
 											"hidden",
 									)}
+									onScroll={(e) =>
+										setIsScrolled(
+											e
+												.currentTarget
+												.scrollTop >
+												0,
+										)
+									}
 									style={{
 										maskImage: "linear-gradient(to bottom, black calc(100% - 24px), transparent 100%)",
 										WebkitMaskImage:
@@ -424,12 +443,22 @@ export function PRDetailLayout({
 
 								{/* AI Overview content */}
 								<div
+									ref={overviewWrapperRef}
 									className={cn(
 										"flex-1 min-h-0 flex flex-col",
 										sidePanelTab !==
 											"overview" &&
 											"hidden",
 									)}
+									onScrollCapture={(e) =>
+										setIsScrolled(
+											(
+												e.target as HTMLElement
+											)
+												.scrollTop >
+												0,
+										)
+									}
 								>
 									<OverviewActiveContext.Provider
 										value={
