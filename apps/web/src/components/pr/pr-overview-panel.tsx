@@ -20,6 +20,7 @@ import type { SyntaxToken } from "@/lib/shiki";
 import { highlightDiffLinesClient } from "@/lib/shiki-client";
 import { useColorTheme } from "@/components/theme/theme-provider";
 import { DiffSnippetTable } from "./diff-snippet-table";
+import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
@@ -95,6 +96,13 @@ interface PROverviewPanelProps {
 	participants?: Array<{ login: string; avatar_url: string }>;
 }
 
+function isSnippetNewFile(snippet: string, startLine?: number): boolean {
+	const patch = buildSnippetPatch(snippet, startLine);
+	const headerMatch = patch.match(/^@@\s+(-\d+(?:,\d+)?)\s/);
+	if (headerMatch) return headerMatch[1] === "-0,0";
+	return false;
+}
+
 function buildSnippetPatch(snippet: string, startLine?: number): string {
 	if (snippet.includes("@@")) return snippet;
 
@@ -130,6 +138,7 @@ const DiffSnippet = memo(function DiffSnippet({
 	pullNumber,
 	headSha,
 	headBranch,
+	hideNewBadge,
 }: {
 	snippet: string;
 	filename: string;
@@ -140,6 +149,7 @@ const DiffSnippet = memo(function DiffSnippet({
 	pullNumber?: number;
 	headSha?: string;
 	headBranch?: string;
+	hideNewBadge?: boolean;
 }) {
 	const { themeId } = useColorTheme();
 	const patch = useMemo(() => buildSnippetPatch(snippet, startLine), [snippet, startLine]);
@@ -173,6 +183,7 @@ const DiffSnippet = memo(function DiffSnippet({
 			pullNumber={pullNumber}
 			headSha={headSha}
 			headBranch={headBranch}
+			hideNewBadge={hideNewBadge}
 		/>
 	);
 });
@@ -348,6 +359,17 @@ function ChangeGroupCard({
 															)
 														: file.filename}
 												</span>
+												{isSnippetNewFile(
+													file.snippet,
+													file.startLine,
+												) && (
+													<Badge
+														variant="outline"
+														className="text-[10px] px-1.5 py-0 ml-2 text-success border-success/30 bg-success/10"
+													>
+														New
+													</Badge>
+												)}
 											</span>
 											<Tooltip>
 												<TooltipTrigger
@@ -413,6 +435,7 @@ function ChangeGroupCard({
 											headBranch={
 												headBranch
 											}
+											hideNewBadge
 										/>
 									</div>
 								)}

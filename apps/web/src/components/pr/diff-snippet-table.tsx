@@ -27,6 +27,7 @@ interface DiffSnippetTableProps {
 	headBranch?: string;
 	onAddContext?: AddContextCallback;
 	participants?: Array<{ login: string; avatar_url: string }>;
+	hideNewBadge?: boolean;
 }
 
 export function DiffSnippetTable({
@@ -43,6 +44,7 @@ export function DiffSnippetTable({
 	headBranch,
 	onAddContext,
 	participants,
+	hideNewBadge,
 }: DiffSnippetTableProps) {
 	const [expanded, setExpanded] = useState(false);
 
@@ -252,14 +254,15 @@ export function DiffSnippetTable({
 												{
 													line.content
 												}
-												{isNewFile && (
-													<Badge
-														variant="outline"
-														className="text-[10px] px-1.5 py-0 text-success border-success/30 bg-success/10"
-													>
-														New
-													</Badge>
-												)}
+												{isNewFile &&
+													!hideNewBadge && (
+														<Badge
+															variant="outline"
+															className="text-[10px] px-1.5 py-0 text-success border-success/30 bg-success/10"
+														>
+															New
+														</Badge>
+													)}
 											</span>
 										</td>
 									</tr>
