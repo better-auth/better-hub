@@ -332,32 +332,34 @@ function ChangeGroupCard({
 								{file.snippet && (
 									<div className="px-2">
 										<div className="flex items-center gap-2.5 border-t border-x px-3 pt-2 bg-[var(--code-bg)] pb-4 -mb-2 rounded-t-md">
-											<FileCode2 className="w-4 h-4 text-muted-foreground" />
-											<span className="font-mono flex items-center flex-1 min-w-0">
-												{file.filename.includes(
-													"/",
-												) && (
-													<span className="text-xs text-muted-foreground">
-														{file.filename.substring(
-															0,
-															file.filename.lastIndexOf(
-																"/",
-															) +
-																1,
-														)}
-													</span>
-												)}
-												<span className="text-sm text-foreground/90">
+											<FileCode2 className="w-4 h-4 text-muted-foreground shrink-0" />
+											<span className="font-mono flex items-center flex-1 min-w-0 overflow-hidden">
+												<span className="truncate">
 													{file.filename.includes(
 														"/",
-													)
-														? file.filename.substring(
+													) && (
+														<span className="text-xs text-muted-foreground">
+															{file.filename.substring(
+																0,
 																file.filename.lastIndexOf(
 																	"/",
 																) +
 																	1,
-															)
-														: file.filename}
+															)}
+														</span>
+													)}
+													<span className="text-sm text-foreground/90">
+														{file.filename.includes(
+															"/",
+														)
+															? file.filename.substring(
+																	file.filename.lastIndexOf(
+																		"/",
+																	) +
+																		1,
+																)
+															: file.filename}
+													</span>
 												</span>
 												{isSnippetNewFile(
 													file.snippet,
@@ -365,7 +367,7 @@ function ChangeGroupCard({
 												) && (
 													<Badge
 														variant="outline"
-														className="text-[10px] px-1.5 py-0 ml-2 text-success border-success/30 bg-success/10"
+														className="text-[10px] px-1.5 py-0 ml-2 shrink-0 text-success border-success/30 bg-success/10"
 													>
 														New
 													</Badge>
