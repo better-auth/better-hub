@@ -43,8 +43,4 @@ function makePrisma() {
 	return new PrismaClient({ adapter });
 }
 
-export const prisma: ExtendedPrismaClient = _proc.__prisma ?? makePrisma();
-
-if (process.env.NODE_ENV !== "production") {
-	_proc.__prisma = prisma;
-}
+export const prisma: ExtendedPrismaClient = _proc.__prisma ?? (_proc.__prisma = makePrisma());
