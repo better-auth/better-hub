@@ -36,6 +36,7 @@ interface FileAnalysis {
 	snippet: string;
 	explanation: string;
 	startLine?: number;
+	endLine?: number;
 }
 
 interface ChangeGroup {
@@ -66,11 +67,6 @@ const OverviewOutputSchema = z.object({
 			files: z.array(
 				z.object({
 					filename: z.string().describe("Path to the changed file"),
-					snippet: z
-						.string()
-						.describe(
-							"The most relevant diff lines (max 15 lines) with +/- prefixes",
-						),
 					explanation: z
 						.string()
 						.describe(
@@ -79,7 +75,12 @@ const OverviewOutputSchema = z.object({
 					startLine: z
 						.number()
 						.describe(
-							"1-based line number in the new file where the snippet begins, from the @@ hunk header's new-file range",
+							"1-based line number in the NEW file where the most relevant section begins (from the @@ hunk header's +N range)",
+						),
+					endLine: z
+						.number()
+						.describe(
+							"1-based line number in the NEW file where the most relevant section ends (inclusive, max 15 lines from startLine)",
 						),
 				}),
 			),
@@ -92,20 +93,125 @@ const SYSTEM_PROMPT = `You are a code review assistant that analyzes pull reques
 Your task is to:
 1. Group related file changes by feature area or logical grouping (2-6 groups depending on PR size)
 2. Order groups by suggested review priority (dependencies first, then core changes, then peripheral)
-3. For each file, extract the most relevant diff snippet (max 15 lines) and explain why it changed
+3. For each file, identify the most relevant line range (max 15 lines) and explain why it changed
 
 Guidelines:
 - Group titles should be concise (e.g., "API Authentication", "UI Components", "Test Coverage")
-- Snippets should show the most important changes, not the entire diff
+- For each file, provide startLine and endLine pointing to the most important section of the diff. These are 1-based line numbers in the NEW version of the file (from the @@ hunk header's +N range). The code snippet will be extracted automatically — do NOT return code yourself.
 - Explanations should focus on "why" not just "what"
 - reviewOrder should start at 1 for the most foundational changes
-- startLine is the 1-based line number in the new version of the file where the snippet begins (from the @@ hunk header's new-file range)
 - The "summary" and "explanation" fields support inline markdown: use **bold** for emphasis, *italics* for nuance, and \`backticks\` for inline code references (e.g. function names, variable names, file paths). Do NOT use headings, lists, or block-level markdown—only inline formatting.`;
+
+const IGNORED_FILENAMES = new Set([
+	"package-lock.json",
+	"yarn.lock",
+	"pnpm-lock.yaml",
+	"bun.lockb",
+	"bun.lock",
+	"composer.lock",
+	"Gemfile.lock",
+	"Cargo.lock",
+	"poetry.lock",
+	"Pipfile.lock",
+	"go.sum",
+	"flake.lock",
+	"packages-lock.json",
+	".DS_Store",
+	"Thumbs.db",
+]);
+
+const IGNORED_EXTENSIONS = new Set([
+	".min.js",
+	".min.css",
+	".map",
+	".snap",
+	".svg",
+	".png",
+	".jpg",
+	".jpeg",
+	".gif",
+	".ico",
+	".woff",
+	".woff2",
+	".ttf",
+	".eot",
+	".mp4",
+	".webm",
+	".pdf",
+]);
+
+function shouldIncludeFile(filename: string): boolean {
+	const basename = filename.split("/").pop() ?? filename;
+	if (IGNORED_FILENAMES.has(basename)) return false;
+	for (const ext of IGNORED_EXTENSIONS) {
+		if (filename.endsWith(ext)) return false;
+	}
+	return true;
+}
 
 function truncatePatch(patch: string, maxLines: number = 100): string {
 	const lines = patch.split("\n");
 	if (lines.length <= maxLines) return patch;
 	return lines.slice(0, maxLines).join("\n") + "\n... (truncated)";
+}
+
+function extractSnippetFromPatch(
+	patch: string | undefined,
+	startLine: number,
+	endLine: number,
+): string {
+	if (!patch) return "";
+
+	const lines = patch.split("\n");
+	const collected: string[] = [];
+	let newLine = 0;
+	let oldLine = 0;
+
+	for (const line of lines) {
+		if (line.startsWith("@@")) {
+			const match = line.match(/@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+			if (match) {
+				oldLine = parseInt(match[1], 10);
+				newLine = parseInt(match[2], 10);
+			}
+			continue;
+		}
+
+		if (line.startsWith("-")) {
+			if (newLine >= startLine && newLine <= endLine + 1) {
+				collected.push(line);
+			}
+			oldLine++;
+		} else if (line.startsWith("+")) {
+			if (newLine >= startLine && newLine <= endLine) {
+				collected.push(line);
+			}
+			newLine++;
+		} else {
+			if (newLine >= startLine && newLine <= endLine) {
+				collected.push(line.startsWith(" ") ? line : ` ${line}`);
+			}
+			oldLine++;
+			newLine++;
+		}
+	}
+
+	if (collected.length === 0) return "";
+
+	let addCount = 0;
+	let delCount = 0;
+	for (const l of collected) {
+		if (l.startsWith("+")) addCount++;
+		else if (l.startsWith("-")) delCount++;
+		else {
+			addCount++;
+			delCount++;
+		}
+	}
+
+	const oldStart = delCount > 0 ? startLine : 0;
+	const header = `@@ -${oldStart},${delCount} +${startLine},${addCount} @@`;
+	return `${header}\n${collected.join("\n")}`;
 }
 
 export async function POST(req: Request) {
@@ -162,7 +268,10 @@ export async function POST(req: Request) {
 	// Check for cached analysis (unless refresh is requested)
 	if (!refresh && headSha) {
 		const cached = await getPrOverviewAnalysis(owner, repo, pullNumber, headSha);
-		if (cached) {
+		const hasEmptySnippets = cached?.groups.some((g) =>
+			g.files.some((f) => !f.snippet),
+		);
+		if (cached && !hasEmptySnippets) {
 			return new Response(
 				JSON.stringify({ groups: cached.groups, cached: true }),
 				{ status: 200, headers: { "Content-Type": "application/json" } },
@@ -170,7 +279,9 @@ export async function POST(req: Request) {
 		}
 	}
 
-	const filesContext = files
+	const relevantFiles = files.filter((f) => shouldIncludeFile(f.filename));
+
+	const filesContext = relevantFiles
 		.slice(0, 50)
 		.map((f) => {
 			const patch = f.patch ? truncatePatch(f.patch) : "(no diff available)";
@@ -185,7 +296,7 @@ export async function POST(req: Request) {
 **PR Description:**
 ${prBody || "(no description)"}
 
-**Changed Files (${files.length} total):**
+**Changed Files (${relevantFiles.length} total${relevantFiles.length < files.length ? `, ${files.length - relevantFiles.length} auto-generated/lock files excluded` : ""}):**
 
 ${filesContext}`;
 
@@ -219,6 +330,11 @@ ${filesContext}`;
 			);
 		}
 
+		const patchMap = new Map<string, string>();
+		for (const f of files) {
+			if (f.patch) patchMap.set(f.filename, f.patch);
+		}
+
 		const groups: ChangeGroup[] = output.groups.map((g, i) => ({
 			id: g.id || `group-${i}`,
 			title: g.title || `Group ${i + 1}`,
@@ -226,9 +342,14 @@ ${filesContext}`;
 			reviewOrder: g.reviewOrder ?? i + 1,
 			files: g.files.map((f) => ({
 				filename: f.filename,
-				snippet: f.snippet,
+				snippet: extractSnippetFromPatch(
+					patchMap.get(f.filename),
+					f.startLine,
+					f.endLine,
+				),
 				explanation: f.explanation,
 				startLine: f.startLine,
+				endLine: f.endLine,
 			})),
 		}));
 

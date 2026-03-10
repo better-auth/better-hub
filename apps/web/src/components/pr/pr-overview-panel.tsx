@@ -10,6 +10,8 @@ import {
 	RefreshCw,
 	AlertCircle,
 	Code2,
+	Eye,
+	TextSearch,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useOverviewActive } from "./pr-detail-layout";
@@ -19,6 +21,7 @@ import { highlightDiffLinesClient } from "@/lib/shiki-client";
 import { useColorTheme } from "@/components/theme/theme-provider";
 import { DiffSnippetTable } from "./diff-snippet-table";
 import { Button } from "../ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 const INLINE_MD_RE = /(`[^`]+`|\*\*(?:[^*]|\*(?!\*))+\*\*|\*(?:[^*])+\*)/g;
 
@@ -70,6 +73,7 @@ interface FileAnalysis {
 	snippet: string;
 	explanation: string;
 	startLine?: number;
+	endLine?: number;
 }
 
 interface ChangeGroup {
@@ -93,18 +97,17 @@ interface PROverviewPanelProps {
 
 function buildSnippetPatch(snippet: string, startLine?: number): string {
 	if (snippet.includes("@@")) return snippet;
-	let lines = snippet.split("\n").filter((l) => l.length > 0);
 
-	// If no lines have +/- prefixes (e.g. AI omitted them for a new file),
-	// treat all lines as additions
+	// Fallback for legacy cached data without a hunk header
+	const lines = snippet.split("\n").filter((l) => l.length > 0);
+	if (lines.length === 0) return "";
+
 	const hasPrefixes = lines.some((l) => l.startsWith("+") || l.startsWith("-"));
-	if (!hasPrefixes) {
-		lines = lines.map((l) => `+${l}`);
-	}
+	const normalized = hasPrefixes ? lines : lines.map((l) => `+${l}`);
 
 	let oldCount = 0;
 	let newCount = 0;
-	for (const line of lines) {
+	for (const line of normalized) {
 		if (line.startsWith("+")) newCount++;
 		else if (line.startsWith("-")) oldCount++;
 		else {
@@ -114,8 +117,7 @@ function buildSnippetPatch(snippet: string, startLine?: number): string {
 	}
 	const start = startLine ?? 1;
 	const oldStart = oldCount > 0 ? start : 0;
-	const hunkHeader = `@@ -${oldStart},${oldCount} +${start},${newCount} @@`;
-	return `${hunkHeader}\n${lines.join("\n")}`;
+	return `@@ -${oldStart},${oldCount} +${start},${newCount} @@\n${normalized.join("\n")}`;
 }
 
 const DiffSnippet = memo(function DiffSnippet({
@@ -315,86 +317,104 @@ function ChangeGroupCard({
 										)}
 									</p>
 								</div>
-								<div className="flex items-center gap-2.5 border-t border-x px-3 pt-2 bg-[var(--code-bg)] pb-4 -mb-2 rounded-t-md">
-									<FileCode2 className="w-4 h-4 text-muted-foreground" />
-									<span className="font-mono flex items-center flex-1 min-w-0">
-										{file.filename.includes(
-											"/",
-										) && (
-											<span className="text-xs text-muted-foreground">
-												{file.filename.substring(
-													0,
-													file.filename.lastIndexOf(
-														"/",
-													) +
-														1,
-												)}
-											</span>
-										)}
-										<span className="text-sm text-foreground/90">
-											{file.filename.includes(
-												"/",
-											)
-												? file.filename.substring(
-														file.filename.lastIndexOf(
-															"/",
-														) +
-															1,
-													)
-												: file.filename}
-										</span>
-									</span>
-									<button
-										onClick={(e) => {
-											e.stopPropagation();
-											window.dispatchEvent(
-												new CustomEvent(
-													"ghost:navigate-to-file",
-													{
-														detail: {
-															filename: file.filename,
-															line: file.startLine,
-														},
-													},
-												),
-											);
-										}}
-										className="shrink-0 p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-										title="View in code tab"
-									>
-										<Code2 className="w-4 h-4" />
-									</button>
-								</div>
 
 								{file.snippet && (
-									<DiffSnippet
-										snippet={
-											file.snippet
-										}
-										filename={
-											file.filename
-										}
-										startLine={
-											file.startLine
-										}
-										canComment={
-											!!(
-												owner &&
-												repo &&
-												pullNumber &&
+									<div className="px-2">
+										<div className="flex items-center gap-2.5 border-t border-x px-3 pt-2 bg-[var(--code-bg)] pb-4 -mb-2 rounded-t-md">
+											<FileCode2 className="w-4 h-4 text-muted-foreground" />
+											<span className="font-mono flex items-center flex-1 min-w-0">
+												{file.filename.includes(
+													"/",
+												) && (
+													<span className="text-xs text-muted-foreground">
+														{file.filename.substring(
+															0,
+															file.filename.lastIndexOf(
+																"/",
+															) +
+																1,
+														)}
+													</span>
+												)}
+												<span className="text-sm text-foreground/90">
+													{file.filename.includes(
+														"/",
+													)
+														? file.filename.substring(
+																file.filename.lastIndexOf(
+																	"/",
+																) +
+																	1,
+															)
+														: file.filename}
+												</span>
+											</span>
+											<Tooltip>
+												<TooltipTrigger
+													asChild
+												>
+													<button
+														onClick={(
+															e,
+														) => {
+															e.stopPropagation();
+															window.dispatchEvent(
+																new CustomEvent(
+																	"ghost:navigate-to-file",
+																	{
+																		detail: {
+																			filename: file.filename,
+																			line: file.startLine,
+																		},
+																	},
+																),
+															);
+														}}
+														className="shrink-0 p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+													>
+														<TextSearch className="w-4 h-4" />
+													</button>
+												</TooltipTrigger>
+												<TooltipContent className="text-xs z-[10]">
+													Go
+													to
+													code
+												</TooltipContent>
+											</Tooltip>
+										</div>
+										<DiffSnippet
+											snippet={
+												file.snippet
+											}
+											filename={
+												file.filename
+											}
+											startLine={
+												file.startLine
+											}
+											canComment={
+												!!(
+													owner &&
+													repo &&
+													pullNumber &&
+													headSha
+												)
+											}
+											owner={
+												owner
+											}
+											repo={repo}
+											pullNumber={
+												pullNumber
+											}
+											headSha={
 												headSha
-											)
-										}
-										owner={owner}
-										repo={repo}
-										pullNumber={
-											pullNumber
-										}
-										headSha={headSha}
-										headBranch={
-											headBranch
-										}
-									/>
+											}
+											headBranch={
+												headBranch
+											}
+										/>
+									</div>
 								)}
 								{i !== group.files.length - 1 && (
 									<div className="mb-8 mt-10 h-px w-full bg-border/40"></div>

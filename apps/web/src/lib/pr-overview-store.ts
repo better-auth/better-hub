@@ -5,6 +5,7 @@ interface FileAnalysis {
 	snippet: string;
 	explanation: string;
 	startLine?: number;
+	endLine?: number;
 }
 
 interface ChangeGroup {
