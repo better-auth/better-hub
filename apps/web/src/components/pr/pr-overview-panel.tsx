@@ -18,6 +18,7 @@ import type { SyntaxToken } from "@/lib/shiki";
 import { highlightDiffLinesClient } from "@/lib/shiki-client";
 import { useColorTheme } from "@/components/theme/theme-provider";
 import { DiffSnippetTable } from "./diff-snippet-table";
+import { Button } from "../ui/button";
 
 const INLINE_MD_RE = /(`[^`]+`|\*\*(?:[^*]|\*(?!\*))+\*\*|\*(?:[^*])+\*)/g;
 
@@ -92,7 +93,15 @@ interface PROverviewPanelProps {
 
 function buildSnippetPatch(snippet: string, startLine?: number): string {
 	if (snippet.includes("@@")) return snippet;
-	const lines = snippet.split("\n").filter((l) => l.length > 0);
+	let lines = snippet.split("\n").filter((l) => l.length > 0);
+
+	// If no lines have +/- prefixes (e.g. AI omitted them for a new file),
+	// treat all lines as additions
+	const hasPrefixes = lines.some((l) => l.startsWith("+") || l.startsWith("-"));
+	if (!hasPrefixes) {
+		lines = lines.map((l) => `+${l}`);
+	}
+
 	let oldCount = 0;
 	let newCount = 0;
 	for (const line of lines) {
@@ -104,8 +113,9 @@ function buildSnippetPatch(snippet: string, startLine?: number): string {
 		}
 	}
 	const start = startLine ?? 1;
-	const hunkHeader = `@@ -${start},${oldCount} +${start},${newCount} @@`;
-	return `${hunkHeader}\n${snippet}`;
+	const oldStart = oldCount > 0 ? start : 0;
+	const hunkHeader = `@@ -${oldStart},${oldCount} +${start},${newCount} @@`;
+	return `${hunkHeader}\n${lines.join("\n")}`;
 }
 
 const DiffSnippet = memo(function DiffSnippet({
@@ -151,6 +161,7 @@ const DiffSnippet = memo(function DiffSnippet({
 	return (
 		<DiffSnippetTable
 			key={highlightData ? 1 : 0}
+			wordWrap={false}
 			lines={lines}
 			filename={filename}
 			fileHighlightData={highlightData}
@@ -225,10 +236,10 @@ function ChangeGroupCard({
 				</button>
 
 				<div className="flex-1 min-w-0">
-					<div className="flex items-center gap-2.5 flex-wrap">
+					<div className="flex items-center gap-2.5 min-w-0">
 						<span
 							className={cn(
-								"text-[11px] font-mono px-2 py-0.5 rounded-md bg-muted text-muted-foreground",
+								"text-xs font-mono px-2 py-0.5 rounded-md bg-muted text-muted-foreground shrink-0",
 								isViewed && "line-through",
 							)}
 						>
@@ -236,14 +247,14 @@ function ChangeGroupCard({
 						</span>
 						<h3
 							className={cn(
-								"font-semibold text-base",
+								"font-semibold text-sm truncate min-w-0",
 								isViewed &&
 									"line-through text-muted-foreground",
 							)}
 						>
 							{group.title}
 						</h3>
-						<span className="text-xs text-muted-foreground">
+						<span className="text-xs text-muted-foreground shrink-0">
 							{group.files.length} section
 							{group.files.length !== 1 ? "s" : ""}
 						</span>
@@ -272,7 +283,7 @@ function ChangeGroupCard({
 
 				<ChevronDown
 					className={cn(
-						"w-5 h-5 text-muted-foreground shrink-0 transition-transform duration-300",
+						"w-4 h-4 text-muted-foreground shrink-0 transition-transform duration-300",
 						isExpanded && "rotate-180",
 					)}
 				/>
@@ -287,16 +298,15 @@ function ChangeGroupCard({
 				)}
 			>
 				<div className="overflow-hidden">
-					<div className="border-t border-border/40 px-5 py-5 space-y-6 bg-muted/5">
+					<div className="border-t border-border/40 px-3 py-4 space-y-6 bg-muted/5">
 						<p className="text-sm text-muted-foreground brightness-120 leading-relaxed px-2">
 							{renderInlineMarkdown(group.summary)}
 						</p>
 						<div className="mt-3 mb-6 h-px w-full bg-border/40"></div>
-
 						{group.files.map((file, i) => (
 							<div key={i} className="mt-3">
 								<div className="flex gap-3 my-3 pl-2">
-									<h3 className="text-md font-medium">
+									<h3 className="text-sm font-medium">
 										{i + 1}.
 									</h3>
 									<p className="text-sm text-muted-foreground leading-relaxed">
@@ -392,23 +402,19 @@ function ChangeGroupCard({
 							</div>
 						))}
 						<div className="flex justify-end">
-							<button
+							<Button
+								variant="outline"
 								onClick={(e) => {
 									e.stopPropagation();
 									onToggleViewed();
 								}}
-								className={cn(
-									"flex items-center gap-2 px-4 py-2 rounded-sm text-sm font-medium transition-colors cursor-pointer",
-									isViewed
-										? "bg-muted text-muted-foreground hover:bg-muted/80"
-										: "bg-primary text-primary-foreground hover:bg-primary/90",
-								)}
+								size={"sm"}
 							>
 								<Check className="w-4 h-4" />
 								{isViewed
 									? "Unmark reviewed"
 									: "Mark reviewed"}
-							</button>
+							</Button>
 						</div>
 					</div>
 				</div>
@@ -636,12 +642,11 @@ export function PROverviewPanel({
 						"linear-gradient(to bottom, black calc(100% - 24px), transparent 100%)",
 				}}
 			>
-				<div className="max-w-[1000px] mx-auto px-6 py-6">
+				<div className="max-w-[1000px] mx-auto pl-4 pr-1 py-6">
 					<div className="flex items-center justify-between mb-6">
 						<div>
 							<p className="text-sm text-muted-foreground">
-								Changes grouped by feature area in
-								suggested review order
+								AI Analysis of {files.length} files
 							</p>
 						</div>
 

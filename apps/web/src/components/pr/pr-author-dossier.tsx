@@ -112,7 +112,7 @@ function ScoreRing({ score }: { score: ScoreResult }) {
 	return (
 		<div
 			ref={triggerRef}
-			className="relative shrink-0"
+			className="relative shrink-0 mt-3"
 			onMouseEnter={handleMouseEnter}
 			onMouseLeave={() => setTooltipPos(null)}
 		>
@@ -245,7 +245,7 @@ export function PRAuthorDossier({
 			{/* Author summary row */}
 			<div className="flex items-center gap-2.5 px-1 py-1.5">
 				{score && <ScoreRing score={score} />}
-				<div className="flex-1 min-w-0 gap-0.5 flex flex-col justify-center h-10">
+				<div className="flex-1 min-w-0 flex flex-col justify-center h-10 pt-2">
 					{/* Top: User info */}
 					<div className="flex items-center gap-1.5">
 						<UserTooltip

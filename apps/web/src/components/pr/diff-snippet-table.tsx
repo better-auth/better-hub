@@ -205,8 +205,18 @@ export function DiffSnippetTable({
 			: undefined;
 
 	return (
-		<div className="overflow-hidden rounded-b-md border pb-3 bg-[var(--code-bg)]">
-			<table className="w-full border-collapse bg-[var(--code-bg)]">
+		<div
+			className={cn(
+				"rounded-b-md border pb-3 bg-[var(--code-bg)]",
+				wordWrap ? "overflow-hidden" : "overflow-x-auto overflow-y-hidden",
+			)}
+		>
+			<table
+				className={cn(
+					"border-collapse bg-[var(--code-bg)]",
+					wordWrap ? "w-full" : "w-full min-w-fit",
+				)}
+			>
 				<tbody>
 					{lines.map((line, i) => {
 						if (line.type === "header") {
@@ -270,27 +280,60 @@ export function DiffSnippetTable({
 									<td
 										className={cn(
 											"w-[3px] p-0",
-											isSelected
-												? "bg-muted-foreground"
-												: isAdd
-													? "bg-success"
-													: isDel
-														? "bg-destructive"
-														: "",
+											!wordWrap
+												? cn(
+														"sticky left-0 z-[2] bg-[var(--code-bg)]",
+														isSelected
+															? "before:bg-muted-foreground"
+															: isAdd
+																? "before:bg-success"
+																: isDel
+																	? "before:bg-destructive"
+																	: "",
+														(isSelected ||
+															isAdd ||
+															isDel) &&
+															"before:absolute before:inset-0 before:pointer-events-none",
+													)
+												: isSelected
+													? "bg-muted-foreground"
+													: isAdd
+														? "bg-success"
+														: isDel
+															? "bg-destructive"
+															: "",
 										)}
 									/>
 
 									{/* Line number */}
 									<td
 										className={cn(
-											"w-10 py-0 pr-2 text-right text-[11px] font-mono select-none border-r border-border/40 relative text-[var(--code-foreground)]",
-											isSelected
-												? "bg-muted-foreground/[0.06] text-muted-foreground"
-												: isAdd
-													? "bg-diff-add-gutter"
-													: isDel
-														? "bg-diff-del-gutter"
-														: "",
+											"py-0 pr-2 text-right text-[11px] font-mono select-none border-r border-border/40 relative text-[var(--code-foreground)]",
+											canComment
+												? "w-14 pl-5"
+												: "w-10",
+											!wordWrap
+												? cn(
+														"sticky z-[1] bg-[var(--code-bg)]",
+														isSelected
+															? "before:bg-muted-foreground/[0.06] text-muted-foreground"
+															: isAdd
+																? "before:bg-diff-add-gutter"
+																: isDel
+																	? "before:bg-diff-del-gutter"
+																	: "",
+														(isSelected ||
+															isAdd ||
+															isDel) &&
+															"before:absolute before:inset-y-0 before:-left-[3px] before:right-0 before:pointer-events-none",
+													)
+												: isSelected
+													? "bg-muted-foreground/[0.06] text-muted-foreground"
+													: isAdd
+														? "bg-diff-add-gutter"
+														: isDel
+															? "bg-diff-del-gutter"
+															: "bg-[var(--code-bg)]",
 										)}
 									>
 										{canComment &&
@@ -321,7 +364,7 @@ export function DiffSnippetTable({
 													<Plus className="w-3 h-3" />
 												</button>
 											)}
-										<span className="opacity-40">
+										<span className="relative opacity-40">
 											{lineNum ??
 												""}
 										</span>
