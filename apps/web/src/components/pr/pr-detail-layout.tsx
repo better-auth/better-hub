@@ -366,7 +366,7 @@ export function PRDetailLayout({
 				>
 					{/* Left panel (files + reviews) */}
 					<div
-						className="min-h-0 flex border-r border-border/40"
+						className="min-h-0 min-w-0 flex overflow-hidden border-r border-border/40"
 						style={{
 							width: `${splitRatio}%`,
 							transition:

@@ -1323,7 +1323,7 @@ function SingleFileDiff({
 
 	return (
 		<div
-			className="flex flex-col flex-1 min-h-0"
+			className="flex flex-col flex-1 min-h-0 min-w-0"
 			onMouseEnter={() => {
 				isHoveringDiffRef.current = true;
 			}}
@@ -1332,8 +1332,8 @@ function SingleFileDiff({
 			}}
 		>
 			{/* Sticky file header */}
-			<div className="shrink-0 sticky top-0 z-10 bg-card/95 backdrop-blur-sm border-b border-border">
-				<div className="flex items-center gap-2 px-3 py-1.5">
+			<div className="shrink-0 sticky top-0 z-10 bg-card/95 backdrop-blur-sm border-b border-border overflow-hidden">
+				<div className="flex items-center gap-2 px-3 py-1.5 overflow-hidden">
 					{/* Sidebar collapse/expand toggle */}
 					<button
 						onClick={onToggleSidebar}
