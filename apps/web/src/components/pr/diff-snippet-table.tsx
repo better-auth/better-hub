@@ -205,7 +205,7 @@ export function DiffSnippetTable({
 			: undefined;
 
 	return (
-		<div className="overflow-hidden rounded-b-md border	 pb-3 bg-[var(--code-bg)]">
+		<div className="overflow-hidden rounded-b-md border pb-3 bg-[var(--code-bg)]">
 			<table className="w-full border-collapse bg-[var(--code-bg)]">
 				<tbody>
 					{lines.map((line, i) => {

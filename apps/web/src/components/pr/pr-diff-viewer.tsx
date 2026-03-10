@@ -184,8 +184,8 @@ export function PRDiffViewer({
 	const [isDragging, setIsDragging] = useState(false);
 	const [viewedFiles, setViewedFiles] = useState<Set<string>>(new Set());
 	const [sidebarMode, setSidebarMode] = useState<SidebarMode>(() => {
-		const tab = searchParams.get("tab");
-		if (tab === "reviews" || tab === "commits") return tab;
+		const sidebar = searchParams.get("sidebar");
+		if (sidebar === "reviews" || sidebar === "commits") return sidebar;
 		return "files";
 	});
 	const [scrollToLine, setScrollToLine] = useState<number | null>(() => {
@@ -239,13 +239,13 @@ export function PRDiffViewer({
 		window.history.replaceState(null, "", url.toString());
 	}, [activeIndex, currentFile]); // eslint-disable-line react-hooks/exhaustive-deps
 
-	// Sync sidebar mode to URL ?tab= param
+	// Sync sidebar mode to URL ?sidebar= param
 	useEffect(() => {
 		const url = new URL(window.location.href);
 		if (sidebarMode === "files") {
-			url.searchParams.delete("tab");
+			url.searchParams.delete("sidebar");
 		} else {
-			url.searchParams.set("tab", sidebarMode);
+			url.searchParams.set("sidebar", sidebarMode);
 		}
 		window.history.replaceState(null, "", url.toString());
 	}, [sidebarMode]);

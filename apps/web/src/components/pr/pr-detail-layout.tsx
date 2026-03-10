@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, createContext, useContext } from "react";
+import { useSearchParams } from "next/navigation";
 import { Code2, MessageCircle, ChevronRight, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ResizeHandle } from "@/components/ui/resize-handle";
@@ -41,8 +42,16 @@ export function PRDetailLayout({
 	commentCount,
 	fileCount,
 }: PRDetailLayoutProps) {
+	const searchParams = useSearchParams();
+
 	const [mobileTab, setMobileTab] = useState<MobileTab>("diff");
-	const [activeTab, setActiveTab] = useState<PRTab>("code");
+	const [activeTab, setActiveTab] = useState<PRTab>(() => {
+		const tabParam = searchParams.get("tab");
+		if (tabParam === "comments" || tabParam === "overview" || tabParam === "code") {
+			return tabParam;
+		}
+		return "code";
+	});
 	const [isDragging, setIsDragging] = useState(false);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const tabContainerRef = useRef<HTMLDivElement>(null);
@@ -121,7 +130,12 @@ export function PRDetailLayout({
 	// When navigating to a file from conversation or overview, ensure the code panel is visible
 	useEffect(() => {
 		const handler = () => {
-			if (activeTab === "overview") setActiveTab("code");
+			if (activeTab === "overview") {
+				setActiveTab("code");
+				const url = new URL(window.location.href);
+				url.searchParams.delete("tab");
+				window.history.replaceState(null, "", url.toString());
+			}
 			if (codeCollapsed) persistSplit(65);
 			if (window.innerWidth < 1024) setMobileTab("diff");
 		};
@@ -203,6 +217,14 @@ export function PRDetailLayout({
 		(tab: PRTab) => {
 			if (tab === activeTab) return;
 			setActiveTab(tab);
+
+			const url = new URL(window.location.href);
+			if (tab === "code") {
+				url.searchParams.delete("tab");
+			} else {
+				url.searchParams.set("tab", tab);
+			}
+			window.history.replaceState(null, "", url.toString());
 		},
 		[activeTab],
 	);
