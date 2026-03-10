@@ -15,7 +15,7 @@ const OverviewActiveContext = createContext(false);
 export const useOverviewActive = () => useContext(OverviewActiveContext);
 
 type MobileTab = "diff" | "chat";
-type PRTab = "code" | "comments" | "overview";
+type SidePanelTab = "conversation" | "overview";
 
 interface PRDetailLayoutProps {
 	infoBar: React.ReactNode;
@@ -45,16 +45,14 @@ export function PRDetailLayout({
 	const searchParams = useSearchParams();
 
 	const [mobileTab, setMobileTab] = useState<MobileTab>("diff");
-	const [activeTab, setActiveTab] = useState<PRTab>(() => {
+	const [sidePanelTab, setSidePanelTab] = useState<SidePanelTab>(() => {
 		const tabParam = searchParams.get("tab");
-		if (tabParam === "comments" || tabParam === "overview" || tabParam === "code") {
-			return tabParam;
-		}
-		return "code";
+		if (tabParam === "overview") return "overview";
+		return "conversation";
 	});
 	const [isDragging, setIsDragging] = useState(false);
 	const containerRef = useRef<HTMLDivElement>(null);
-	const tabContainerRef = useRef<HTMLDivElement>(null);
+	const sidePanelTabRef = useRef<HTMLDivElement>(null);
 	const userAdjustedRef = useRef(false);
 	const [tabIndicator, setTabIndicator] = useState({ left: 0, width: 0 });
 	const [hasTabAnimated, setHasTabAnimated] = useState(false);
@@ -80,11 +78,9 @@ export function PRDetailLayout({
 
 	const SK = "pr-split-adjusted";
 	const [splitRatio, setSplitRatio] = useState(() => {
-		// SSR-safe: always start at 65 (conversation visible)
 		return 65;
 	});
 
-	// On mount, check if user already adjusted this session — if so, restore their preference
 	useEffect(() => {
 		const stored = sessionStorage.getItem(SK);
 		if (stored !== null) {
@@ -127,26 +123,20 @@ export function PRDetailLayout({
 	const handleRestoreChat = () => persistSplit(65);
 	const handleRestoreCode = () => persistSplit(65);
 
-	// When navigating to a file from conversation or overview, ensure the code panel is visible
+	// When navigating to a file from overview, ensure the code panel is visible
 	useEffect(() => {
 		const handler = () => {
-			if (activeTab === "overview") {
-				setActiveTab("code");
-				const url = new URL(window.location.href);
-				url.searchParams.delete("tab");
-				window.history.replaceState(null, "", url.toString());
-			}
 			if (codeCollapsed) persistSplit(65);
 			if (window.innerWidth < 1024) setMobileTab("diff");
 		};
 		window.addEventListener("ghost:navigate-to-file", handler);
 		return () => window.removeEventListener("ghost:navigate-to-file", handler);
-	}, [activeTab, codeCollapsed, persistSplit]);
+	}, [codeCollapsed, persistSplit]);
 
-	// Update tab indicator position
+	// Update side-panel tab indicator position
 	const updateTabIndicator = useCallback(() => {
-		if (!tabContainerRef.current) return;
-		const activeEl = tabContainerRef.current.querySelector<HTMLElement>(
+		if (!sidePanelTabRef.current) return;
+		const activeEl = sidePanelTabRef.current.querySelector<HTMLElement>(
 			"[data-tab-active='true']",
 		);
 		if (activeEl) {
@@ -160,73 +150,22 @@ export function PRDetailLayout({
 
 	useEffect(() => {
 		updateTabIndicator();
-	}, [activeTab, updateTabIndicator]);
+	}, [sidePanelTab, updateTabIndicator]);
 
-	// Store the split ratio before switching to comments tab
-	const prevSplitRatioRef = useRef(65);
-	const prevTabRef = useRef<PRTab>(activeTab);
-
-	// Track if we're coming from overview (to skip animation when going to comments)
-	const skipAnimationRef = useRef(false);
-
-	// Handle side effects when activeTab changes (including initial hydration from URL)
-	useEffect(() => {
-		const prevTab = prevTabRef.current;
-		prevTabRef.current = activeTab;
-
-		// Skip if same tab (e.g., initial render when already on correct tab)
-		if (prevTab === activeTab) return;
-
-		if (activeTab === "comments") {
-			// Save current split ratio before going full-width comments
-			const currentRatio = splitRatio;
-			if (currentRatio > 10) {
-				prevSplitRatioRef.current = currentRatio;
-			}
-			// When coming from overview, skip animation by setting ratio directly
-			if (prevTab === "overview") {
-				skipAnimationRef.current = true;
-			}
-			setSplitRatio(0);
-		} else if (prevTab === "comments") {
-			// Restore previous split ratio when leaving comments tab
-			const restoreRatio =
-				prevSplitRatioRef.current > 10 ? prevSplitRatioRef.current : 65;
-			persistSplit(restoreRatio);
-		}
-
-		// Reset nav visibility when switching to code tab
-		if (activeTab === "code") {
-			setNavHidden(false);
-			lastScrollYRef.current = 0;
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [activeTab, persistSplit, setNavHidden]);
-
-	// Reset skip animation flag after render
-	useEffect(() => {
-		if (skipAnimationRef.current) {
-			// Reset after a frame to allow the non-animated state to render
-			requestAnimationFrame(() => {
-				skipAnimationRef.current = false;
-			});
-		}
-	});
-
-	const handleTabChange = useCallback(
-		(tab: PRTab) => {
-			if (tab === activeTab) return;
-			setActiveTab(tab);
+	const handleSidePanelTabChange = useCallback(
+		(tab: SidePanelTab) => {
+			if (tab === sidePanelTab) return;
+			setSidePanelTab(tab);
 
 			const url = new URL(window.location.href);
-			if (tab === "code") {
+			if (tab === "conversation") {
 				url.searchParams.delete("tab");
 			} else {
 				url.searchParams.set("tab", tab);
 			}
 			window.history.replaceState(null, "", url.toString());
 		},
-		[activeTab],
+		[sidePanelTab],
 	);
 
 	// Full-width conflict resolver mode
@@ -244,78 +183,6 @@ export function PRDetailLayout({
 			<div className="flex-1 min-h-0 flex flex-col">
 				{/* Compact PR info bar */}
 				<div className="shrink-0 px-4 pt-3">{infoBar}</div>
-
-				{/* Desktop PR tabs (Code / Comments / Overview) */}
-				<div className="hidden lg:block shrink-0 px-4 pt-2">
-					<div
-						ref={tabContainerRef}
-						className="relative flex items-center justify-end gap-1 -mt-9"
-					>
-						{(
-							[
-								{
-									key: "code",
-									label: "Code",
-									icon: Code2,
-									count: undefined,
-								},
-								{
-									key: "comments",
-									label: "Comments",
-									icon: MessageCircle,
-									count: commentCount,
-								},
-								{
-									key: "overview",
-									label: "AI Overview",
-									icon: Sparkles,
-									count: undefined,
-								},
-							] as const
-						).map(({ key, label, icon: Icon, count }) => (
-							<button
-								key={key}
-								data-tab-active={activeTab === key}
-								onClick={() => handleTabChange(key)}
-								className={cn(
-									"relative flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap transition-colors cursor-pointer",
-									activeTab === key
-										? "text-foreground font-medium"
-										: "text-muted-foreground/70 hover:text-muted-foreground",
-								)}
-							>
-								<Icon className="w-3.5 h-3.5" />
-								{label}
-								{count !== undefined &&
-									count > 0 && (
-										<span
-											className={cn(
-												"text-[10px] font-mono px-1.5 py-0.5 rounded-full",
-												activeTab ===
-													key
-													? "bg-muted text-foreground/70"
-													: "bg-muted/50 text-muted-foreground/60",
-											)}
-										>
-											{count}
-										</span>
-									)}
-							</button>
-						))}
-						<div
-							className={cn(
-								"absolute bottom-0 h-0.5 bg-foreground/50",
-								hasTabAnimated
-									? "transition-all duration-200 ease-out"
-									: "",
-							)}
-							style={{
-								left: tabIndicator.left,
-								width: tabIndicator.width,
-							}}
-						/>
-					</div>
-				</div>
 
 				{/* Mobile tabs */}
 				<div className="lg:hidden shrink-0 flex border-t">
@@ -356,24 +223,19 @@ export function PRDetailLayout({
 					))}
 				</div>
 
-				{/* Desktop split panels - always mounted, hidden when on overview */}
+				{/* Desktop split panels — always visible */}
 				<div
 					ref={containerRef}
-					className={cn(
-						"flex-1 min-h-0 border-t hidden lg:flex",
-						activeTab === "overview" && "lg:hidden",
-					)}
+					className="flex-1 min-h-0 border-t hidden lg:flex"
 				>
 					{/* Left panel (files + reviews) */}
 					<div
 						className="min-h-0 min-w-0 flex overflow-hidden border-r border-border/40"
 						style={{
 							width: `${splitRatio}%`,
-							transition:
-								isDragging ||
-								skipAnimationRef.current
-									? "none"
-									: "width 0.2s cubic-bezier(0.4,0,0.2,1)",
+							transition: isDragging
+								? "none"
+								: "width 0.2s cubic-bezier(0.4,0,0.2,1)",
 						}}
 					>
 						{!codeCollapsed && (
@@ -392,7 +254,6 @@ export function PRDetailLayout({
 							onDoubleClick={handleDoubleClick}
 						/>
 
-						{/* Show collapsed panel toggle */}
 						{chatCollapsed && (
 							<button
 								onClick={handleRestoreChat}
@@ -403,7 +264,7 @@ export function PRDetailLayout({
 									"text-muted-foreground/60 hover:text-muted-foreground hover:border-border",
 									"cursor-pointer transition-all duration-150",
 								)}
-								title="Show conversation"
+								title="Show side panel"
 							>
 								<MessageCircle className="w-3 h-3" />
 								{commentCount > 0 && (
@@ -432,9 +293,9 @@ export function PRDetailLayout({
 						)}
 					</div>
 
-					{/* Right panel (conversation) */}
+					{/* Right panel — side panel with conversation/overview tabs */}
 					<div
-						className="relative min-h-0 flex flex-col pt-2"
+						className="relative min-h-0 flex flex-col"
 						style={{
 							width: `${100 - splitRatio}%`,
 							transition: isDragging
@@ -444,30 +305,111 @@ export function PRDetailLayout({
 					>
 						{!chatCollapsed && (
 							<>
-								{/* Hide collapse button when in Comments tab (full-width mode) */}
-								{activeTab !== "comments" && (
-									<div className="shrink-0 absolute flex items-center px-2 pt-2 left-0 top-1 z-10">
-										<button
-											onClick={() =>
-												persistSplit(
-													100,
-												)
-											}
-											className="flex items-center justify-center w-6 h-6 rounded-full border border-border bg-background text-muted-foreground hover:text-muted-foreground hover:border-border/80 transition-all cursor-pointer"
-											title="Hide conversation"
-										>
-											<ChevronRight className="w-3 h-3" />
-										</button>
+								{/* Side-panel header with tabs + collapse button */}
+								<div className="shrink-0 flex items-center gap-1 pl-3 pr-2 pt-2">
+									<div
+										ref={
+											sidePanelTabRef
+										}
+										className="relative flex items-center gap-0.5"
+									>
+										{[
+											{
+												key: "conversation" as const,
+												label: "Conversation",
+												icon: MessageCircle,
+											},
+											{
+												key: "overview" as const,
+												label: "AI Overview",
+												icon: Sparkles,
+											},
+										].map(
+											({
+												key,
+												label,
+												icon: Icon,
+											}) => (
+												<button
+													key={
+														key
+													}
+													data-tab-active={
+														sidePanelTab ===
+														key
+													}
+													onClick={() =>
+														handleSidePanelTabChange(
+															key,
+														)
+													}
+													className={cn(
+														"relative flex items-center gap-1.5 px-2.5 py-1.5 text-xs whitespace-nowrap transition-colors cursor-pointer rounded-md",
+														sidePanelTab ===
+															key
+															? "text-foreground font-medium"
+															: "text-muted-foreground/60 hover:text-muted-foreground",
+													)}
+												>
+													<Icon className="w-3 h-3" />
+													{
+														label
+													}
+													{key ===
+														"conversation" &&
+														commentCount >
+															0 && (
+															<span
+																className={cn(
+																	"text-[10px] font-mono px-1 py-0.5 rounded-full",
+																	sidePanelTab ===
+																		key
+																		? "bg-muted text-foreground/70"
+																		: "bg-muted/50 text-muted-foreground/60",
+																)}
+															>
+																{
+																	commentCount
+																}
+															</span>
+														)}
+												</button>
+											),
+										)}
+										<div
+											className={cn(
+												"absolute bottom-0 h-0.5 bg-foreground/50 rounded-full",
+												hasTabAnimated
+													? "transition-all duration-200 ease-out"
+													: "",
+											)}
+											style={{
+												left: tabIndicator.left,
+												width: tabIndicator.width,
+											}}
+										/>
 									</div>
-								)}
+									<button
+										onClick={() =>
+											persistSplit(
+												100,
+											)
+										}
+										className="ml-auto flex items-center justify-center w-6 h-6 rounded-full border border-border bg-background text-muted-foreground hover:text-muted-foreground hover:border-border/80 transition-all cursor-pointer"
+										title="Hide panel"
+									>
+										<ChevronRight className="w-3 h-3" />
+									</button>
+								</div>
+
+								{/* Conversation content */}
 								<div
-									className="flex-1 overflow-y-auto overscroll-contain min-h-0 pb-12"
-									onScroll={
-										activeTab ===
-										"comments"
-											? handleScrollForNav
-											: undefined
-									}
+									className={cn(
+										"flex-1 overflow-y-auto overscroll-contain min-h-0 pb-12",
+										sidePanelTab !==
+											"conversation" &&
+											"hidden",
+									)}
 									style={{
 										maskImage: "linear-gradient(to bottom, black calc(100% - 24px), transparent 100%)",
 										WebkitMaskImage:
@@ -479,29 +421,37 @@ export function PRDetailLayout({
 										<PROptimisticCommentsDisplay />
 									</div>
 								</div>
-								{commentForm && (
-									<div className="shrink-0 max-w-[1000px] mx-auto w-full px-3 pb-6">
-										{commentForm}
-									</div>
-								)}
+
+								{/* AI Overview content */}
+								<div
+									className={cn(
+										"flex-1 min-h-0 flex flex-col",
+										sidePanelTab !==
+											"overview" &&
+											"hidden",
+									)}
+								>
+									<OverviewActiveContext.Provider
+										value={
+											sidePanelTab ===
+											"overview"
+										}
+									>
+										{overviewPanel}
+									</OverviewActiveContext.Provider>
+								</div>
+
+								{sidePanelTab === "conversation" &&
+									commentForm && (
+										<div className="shrink-0 max-w-[1000px] mx-auto w-full px-3 pb-6">
+											{
+												commentForm
+											}
+										</div>
+									)}
 							</>
 						)}
 					</div>
-				</div>
-
-				{/* Desktop Overview panel - always mounted, hidden when not on overview */}
-				<div
-					className={cn(
-						"flex-1 min-h-0 border-t overflow-y-auto hidden lg:block",
-						activeTab !== "overview" && "lg:hidden",
-					)}
-					onScroll={handleScrollForNav}
-				>
-					<OverviewActiveContext.Provider
-						value={activeTab === "overview"}
-					>
-						{overviewPanel}
-					</OverviewActiveContext.Provider>
 				</div>
 
 				{/* Mobile panels */}

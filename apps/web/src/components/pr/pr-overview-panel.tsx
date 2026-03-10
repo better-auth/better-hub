@@ -1,16 +1,6 @@
 "use client";
 
-import {
-	useState,
-	useEffect,
-	useCallback,
-	useMemo,
-	useRef,
-	memo,
-	useTransition,
-	type ReactNode,
-} from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback, useMemo, useRef, memo, type ReactNode } from "react";
 import {
 	Check,
 	Loader2,
@@ -20,8 +10,6 @@ import {
 	RefreshCw,
 	AlertCircle,
 	Code2,
-	MessageSquare,
-	AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useOverviewActive } from "./pr-detail-layout";
@@ -30,12 +18,6 @@ import type { SyntaxToken } from "@/lib/shiki";
 import { highlightDiffLinesClient } from "@/lib/shiki-client";
 import { useColorTheme } from "@/components/theme/theme-provider";
 import { DiffSnippetTable } from "./diff-snippet-table";
-import {
-	submitPRReview,
-	type ReviewEvent,
-} from "@/app/(app)/repos/[owner]/[repo]/pulls/pr-actions";
-import { MarkdownEditor } from "@/components/shared/markdown-editor";
-import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 
 const INLINE_MD_RE = /(`[^`]+`|\*\*(?:[^*]|\*(?!\*))+\*\*|\*(?:[^*])+\*)/g;
 
@@ -110,7 +92,19 @@ interface PROverviewPanelProps {
 
 function buildSnippetPatch(snippet: string, startLine?: number): string {
 	if (snippet.includes("@@")) return snippet;
-	const hunkHeader = `@@ -${startLine ?? 1},0 +${startLine ?? 1},0 @@`;
+	const lines = snippet.split("\n").filter((l) => l.length > 0);
+	let oldCount = 0;
+	let newCount = 0;
+	for (const line of lines) {
+		if (line.startsWith("+")) newCount++;
+		else if (line.startsWith("-")) oldCount++;
+		else {
+			oldCount++;
+			newCount++;
+		}
+	}
+	const start = startLine ?? 1;
+	const hunkHeader = `@@ -${start},${oldCount} +${start},${newCount} @@`;
 	return `${hunkHeader}\n${snippet}`;
 }
 
@@ -397,7 +391,7 @@ function ChangeGroupCard({
 								)}
 							</div>
 						))}
-						<div className="flex justify-center">
+						<div className="flex justify-end">
 							<button
 								onClick={(e) => {
 									e.stopPropagation();
@@ -419,185 +413,6 @@ function ChangeGroupCard({
 					</div>
 				</div>
 			</div>
-		</div>
-	);
-}
-
-const REVIEW_OPTIONS: {
-	key: ReviewEvent;
-	label: string;
-	icon: typeof Check;
-	accent: string;
-	activeAccent: string;
-}[] = [
-	{
-		key: "APPROVE",
-		label: "Approve",
-		icon: Check,
-		accent: "text-muted-foreground",
-		activeAccent: "border-success/50 text-success bg-success/5",
-	},
-	{
-		key: "COMMENT",
-		label: "Comment",
-		icon: MessageSquare,
-		accent: "text-muted-foreground",
-		activeAccent:
-			"border-foreground/50 text-foreground bg-muted/60 dark:bg-white/[0.04]",
-	},
-	{
-		key: "REQUEST_CHANGES",
-		label: "Request changes",
-		icon: AlertTriangle,
-		accent: "text-muted-foreground",
-		activeAccent: "border-warning/50 text-warning bg-warning/5",
-	},
-];
-
-function OverviewReviewForm({
-	owner,
-	repo,
-	pullNumber,
-	participants,
-}: {
-	owner: string;
-	repo: string;
-	pullNumber: number;
-	participants?: Array<{ login: string; avatar_url: string }>;
-}) {
-	const router = useRouter();
-	const { emit } = useMutationEvents();
-	const [body, setBody] = useState("");
-	const [selected, setSelected] = useState<ReviewEvent>("APPROVE");
-	const [isPending, startTransition] = useTransition();
-	const [error, setError] = useState<string | null>(null);
-	const [submitted, setSubmitted] = useState(false);
-
-	const handleSubmit = () => {
-		if (selected === "REQUEST_CHANGES" && !body.trim()) return;
-		setError(null);
-		startTransition(async () => {
-			const res = await submitPRReview(
-				owner,
-				repo,
-				pullNumber,
-				selected,
-				body.trim() || undefined,
-			);
-			if (res.error) {
-				setError(res.error);
-			} else {
-				setSubmitted(true);
-				emit({ type: "pr:reviewed", owner, repo, number: pullNumber });
-				router.refresh();
-			}
-		});
-	};
-
-	if (submitted) {
-		return (
-			<div className="flex flex-col items-center gap-2 py-4">
-				<div className="flex items-center gap-2 text-success">
-					<Check className="w-4 h-4" />
-					<span className="text-sm font-medium">
-						Review submitted
-					</span>
-				</div>
-				<button
-					onClick={() => {
-						setSubmitted(false);
-						setBody("");
-						setSelected("APPROVE");
-					}}
-					className="text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors cursor-pointer"
-				>
-					Submit another
-				</button>
-			</div>
-		);
-	}
-
-	return (
-		<div className="space-y-4">
-			<div className="flex items-center gap-1.5">
-				{REVIEW_OPTIONS.map(
-					({ key, label, icon: Icon, accent, activeAccent }) => {
-						const isSelected = selected === key;
-						const isDisabled =
-							key === "REQUEST_CHANGES" &&
-							!body.trim() &&
-							!isSelected;
-
-						return (
-							<button
-								key={key}
-								onClick={() =>
-									!isDisabled &&
-									setSelected(key)
-								}
-								disabled={isDisabled}
-								className={cn(
-									"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider",
-									"border rounded-sm transition-all cursor-pointer",
-									isSelected
-										? activeAccent
-										: cn(
-												"border-transparent",
-												accent,
-												"hover:text-foreground/70",
-											),
-									"disabled:opacity-25 disabled:cursor-not-allowed",
-								)}
-							>
-								<Icon className="w-3 h-3" />
-								{label}
-							</button>
-						);
-					},
-				)}
-			</div>
-
-			<MarkdownEditor
-				value={body}
-				onChange={setBody}
-				placeholder={
-					selected === "REQUEST_CHANGES"
-						? "Describe the changes you'd like to see…"
-						: "Leave a comment (optional)"
-				}
-				rows={5}
-				participants={participants}
-				owner={owner}
-				onKeyDown={(e) => {
-					if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-						e.preventDefault();
-						handleSubmit();
-					}
-				}}
-			/>
-
-			{error && <p className="text-[11px] text-destructive">{error}</p>}
-
-			<div className="flex items-center justify-end">
-				<button
-					onClick={handleSubmit}
-					disabled={
-						isPending ||
-						(selected === "REQUEST_CHANGES" && !body.trim())
-					}
-					className={cn(
-						"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider rounded-sm",
-						"bg-foreground text-background hover:bg-foreground/90",
-						"transition-colors cursor-pointer",
-						"disabled:opacity-40 disabled:cursor-not-allowed",
-					)}
-				>
-					{isPending && <Loader2 className="w-3 h-3 animate-spin" />}
-					Submit review
-				</button>
-			</div>
-
-			<div className="h-64" />
 		</div>
 	);
 }
@@ -801,6 +616,8 @@ export function PROverviewPanel({
 	const totalCount = groups.length;
 	const progressPercent = totalCount > 0 ? Math.round((viewedCount / totalCount) * 100) : 0;
 
+	const showReviewForm = !isLoading && !error && groups.length > 0;
+
 	if (files.length === 0) {
 		return (
 			<div className="flex items-center justify-center h-full text-muted-foreground">
@@ -810,176 +627,196 @@ export function PROverviewPanel({
 	}
 
 	return (
-		<div className="max-w-6xl mx-auto px-8 py-12">
-			<div className="flex items-center justify-between mb-8">
-				<div>
-					<h2 className="text-xl font-semibold">
-						AI Review Overview
-					</h2>
-					<p className="text-sm text-muted-foreground mt-0.5">
-						Changes grouped by feature area in suggested review
-						order
-					</p>
-				</div>
-
-				{hasLoaded && !isLoading && (
-					<div className="flex items-center gap-5">
-						<div className="flex items-center gap-3 text-sm text-muted-foreground">
-							<div className="w-28 h-2 bg-muted rounded-full overflow-hidden">
-								<div
-									className="h-full bg-primary transition-all duration-300"
-									style={{
-										width: `${progressPercent}%`,
-									}}
-								/>
-							</div>
-							<span className="font-mono tabular-nums">
-								{viewedCount}/{totalCount}
-							</span>
+		<div className="flex flex-col h-full min-h-0">
+			<div
+				className="flex-1 overflow-y-auto overscroll-contain min-h-0 pb-12"
+				style={{
+					maskImage: "linear-gradient(to bottom, black calc(100% - 24px), transparent 100%)",
+					WebkitMaskImage:
+						"linear-gradient(to bottom, black calc(100% - 24px), transparent 100%)",
+				}}
+			>
+				<div className="max-w-[1000px] mx-auto px-6 py-6">
+					<div className="flex items-center justify-between mb-6">
+						<div>
+							<p className="text-sm text-muted-foreground">
+								Changes grouped by feature area in
+								suggested review order
+							</p>
 						</div>
-						<button
-							onClick={() => fetchAnalysis(true)}
-							className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-							title="Refresh analysis"
-						>
-							<RefreshCw className="w-4 h-4" />
-							Regenerate
-						</button>
-					</div>
-				)}
-			</div>
 
-			{isLoading && (
-				<div className="flex flex-col items-center justify-center py-20 gap-5">
-					<Loader2 className="w-10 h-10 text-primary animate-spin" />
-					<div className="text-center">
-						<p className="text-base text-foreground font-medium">
-							{loadingPhrase}...
-						</p>
-						<p className="text-sm text-muted-foreground mt-2">
-							This may take a moment for large PRs
-						</p>
-					</div>
-				</div>
-			)}
-
-			{error && (
-				<div className="flex flex-col items-center justify-center py-20 gap-5">
-					<AlertCircle className="w-10 h-10 text-destructive" />
-					<div className="text-center">
-						<p className="text-base text-destructive font-medium">
-							Analysis failed
-						</p>
-						<p className="text-sm text-muted-foreground mt-2">
-							{error}
-						</p>
-					</div>
-					<button
-						onClick={() => fetchAnalysis(true)}
-						className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors cursor-pointer mt-2"
-					>
-						<RefreshCw className="w-4 h-4" />
-						Try again
-					</button>
-				</div>
-			)}
-
-			{!isLoading && !error && groups.length > 0 && (
-				<>
-					<div className="space-y-6">
-						{groups
-							.sort(
-								(a, b) =>
-									a.reviewOrder -
-									b.reviewOrder,
-							)
-							.map((group) => (
-								<div
-									key={group.id}
-									ref={(el) => {
-										if (el) {
-											cardRefs.current.set(
-												group.id,
-												el,
-											);
-										} else {
-											cardRefs.current.delete(
-												group.id,
-											);
-										}
-									}}
-								>
-									<ChangeGroupCard
-										group={group}
-										isViewed={viewedGroups.has(
-											group.id,
-										)}
-										isExpanded={expandedGroups.has(
-											group.id,
-										)}
-										onToggleViewed={() =>
-											toggleViewed(
-												group.id,
-											)
-										}
-										onToggleExpanded={() =>
-											toggleExpanded(
-												group.id,
-											)
-										}
-										additions={group.files.reduce(
-											(sum, f) =>
-												sum +
-												(fileStatsMap.get(
-													f.filename,
-												)
-													?.additions ??
-													0),
-											0,
-										)}
-										deletions={group.files.reduce(
-											(sum, f) =>
-												sum +
-												(fileStatsMap.get(
-													f.filename,
-												)
-													?.deletions ??
-													0),
-											0,
-										)}
-										owner={owner}
-										repo={repo}
-										pullNumber={
-											pullNumber
-										}
-										headSha={headSha}
-									/>
+						{hasLoaded && !isLoading && (
+							<div className="flex items-center gap-5">
+								<div className="flex items-center gap-3 text-sm text-muted-foreground">
+									<div className="w-28 h-2 bg-muted rounded-full overflow-hidden">
+										<div
+											className="h-full bg-primary transition-all duration-300"
+											style={{
+												width: `${progressPercent}%`,
+											}}
+										/>
+									</div>
+									<span className="font-mono tabular-nums">
+										{viewedCount}/
+										{totalCount}
+									</span>
 								</div>
-							))}
+								<button
+									onClick={() =>
+										fetchAnalysis(true)
+									}
+									className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+									title="Refresh analysis"
+								>
+									<RefreshCw className="w-4 h-4" />
+									Regenerate
+								</button>
+							</div>
+						)}
 					</div>
-					<div className="h-10" />
-					<OverviewReviewForm
-						owner={owner}
-						repo={repo}
-						pullNumber={pullNumber}
-						participants={participants}
-					/>
-				</>
-			)}
 
-			{!isLoading && !error && hasLoaded && groups.length === 0 && (
-				<div className="flex flex-col items-center justify-center py-20 gap-5">
-					<Sparkles className="w-10 h-10 text-muted-foreground" />
-					<div className="text-center">
-						<p className="text-base text-muted-foreground">
-							No analysis available
-						</p>
-						<p className="text-sm text-muted-foreground mt-2">
-							Try refreshing to generate an analysis
-						</p>
-					</div>
+					{isLoading && (
+						<div className="flex flex-col items-center justify-center py-20 gap-5">
+							<Loader2 className="w-10 h-10 text-primary animate-spin" />
+							<div className="text-center">
+								<p className="text-base text-foreground font-medium">
+									{loadingPhrase}...
+								</p>
+								<p className="text-sm text-muted-foreground mt-2">
+									This may take a moment for
+									large PRs
+								</p>
+							</div>
+						</div>
+					)}
+
+					{error && (
+						<div className="flex flex-col items-center justify-center py-20 gap-5">
+							<AlertCircle className="w-10 h-10 text-destructive" />
+							<div className="text-center">
+								<p className="text-base text-destructive font-medium">
+									Analysis failed
+								</p>
+								<p className="text-sm text-muted-foreground mt-2">
+									{error}
+								</p>
+							</div>
+							<button
+								onClick={() => fetchAnalysis(true)}
+								className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors cursor-pointer mt-2"
+							>
+								<RefreshCw className="w-4 h-4" />
+								Try again
+							</button>
+						</div>
+					)}
+
+					{showReviewForm && (
+						<div className="space-y-6">
+							{groups
+								.sort(
+									(a, b) =>
+										a.reviewOrder -
+										b.reviewOrder,
+								)
+								.map((group) => (
+									<div
+										key={group.id}
+										ref={(el) => {
+											if (el) {
+												cardRefs.current.set(
+													group.id,
+													el,
+												);
+											} else {
+												cardRefs.current.delete(
+													group.id,
+												);
+											}
+										}}
+									>
+										<ChangeGroupCard
+											group={
+												group
+											}
+											isViewed={viewedGroups.has(
+												group.id,
+											)}
+											isExpanded={expandedGroups.has(
+												group.id,
+											)}
+											onToggleViewed={() =>
+												toggleViewed(
+													group.id,
+												)
+											}
+											onToggleExpanded={() =>
+												toggleExpanded(
+													group.id,
+												)
+											}
+											additions={group.files.reduce(
+												(
+													sum,
+													f,
+												) =>
+													sum +
+													(fileStatsMap.get(
+														f.filename,
+													)
+														?.additions ??
+														0),
+												0,
+											)}
+											deletions={group.files.reduce(
+												(
+													sum,
+													f,
+												) =>
+													sum +
+													(fileStatsMap.get(
+														f.filename,
+													)
+														?.deletions ??
+														0),
+												0,
+											)}
+											owner={
+												owner
+											}
+											repo={repo}
+											pullNumber={
+												pullNumber
+											}
+											headSha={
+												headSha
+											}
+										/>
+									</div>
+								))}
+						</div>
+					)}
+
+					{!isLoading &&
+						!error &&
+						hasLoaded &&
+						groups.length === 0 && (
+							<div className="flex flex-col items-center justify-center py-20 gap-5">
+								<Sparkles className="w-10 h-10 text-muted-foreground" />
+								<div className="text-center">
+									<p className="text-base text-muted-foreground">
+										No analysis
+										available
+									</p>
+									<p className="text-sm text-muted-foreground mt-2">
+										Try refreshing to
+										generate an analysis
+									</p>
+								</div>
+							</div>
+						)}
 				</div>
-			)}
+			</div>
 		</div>
 	);
 }
