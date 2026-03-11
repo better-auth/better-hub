@@ -15,6 +15,7 @@ import { OlderActivityGroup } from "@/components/issue/older-activity-group";
 import { CollapsibleBody } from "@/components/issue/collapsible-body";
 import { ReactionDisplay, type Reactions } from "@/components/shared/reaction-display";
 import { ChatMessageWrapper } from "@/components/pr/chat-message-wrapper";
+import { MessageActionsMenu } from "@/components/pr/message-actions-menu";
 import { UserTooltip } from "@/components/shared/user-tooltip";
 import { canManageComment } from "@/lib/comment-permissions";
 
@@ -27,6 +28,7 @@ interface BaseUser {
 export interface IssueDescriptionEntry {
 	type: "description";
 	id: string;
+	databaseId?: number;
 	user: BaseUser | null;
 	body: string;
 	bodyHtml?: string;
@@ -394,6 +396,7 @@ function ThreadEntry({
 							owner={owner}
 							repo={repo}
 							issueNumber={issueNumber}
+							canEditIssue={canEdit}
 						/>
 					)
 				) : (
@@ -423,6 +426,7 @@ function DescriptionBlock({
 	owner,
 	repo,
 	issueNumber,
+	canEditIssue,
 }: {
 	entry: IssueTimelineEntry;
 	hasBody: boolean;
@@ -431,7 +435,13 @@ function DescriptionBlock({
 	owner: string;
 	repo: string;
 	issueNumber: number;
+	canEditIssue?: boolean;
 }) {
+	const commentUrl =
+		entry.type === "description" && entry.databaseId
+			? `https://github.com/${owner}/${repo}/issues/${issueNumber}#issue-${entry.databaseId}`
+			: `https://github.com/${owner}/${repo}/issues/${issueNumber}`;
+
 	return (
 		<div className="border border-border/60 rounded-lg overflow-hidden">
 			<div className="flex items-center gap-2 px-3.5 py-2 border-b border-border/60 bg-card/80">
@@ -448,6 +458,19 @@ function DescriptionBlock({
 				<span className="text-[11px] text-muted-foreground/50">
 					commented <TimeAgo date={entry.created_at} />
 				</span>
+				<div className="ml-auto">
+					<MessageActionsMenu
+						commentUrl={commentUrl}
+						body={entry.body}
+						canEdit={canEditIssue}
+						editLabel="Edit issue"
+						reportContent={{
+							authorLogin: entry.user?.login,
+							authorType: entry.user?.type,
+						}}
+						ariaLabel="Issue body actions"
+					/>
+				</div>
 			</div>
 
 			{hasBody && renderedBody ? (
@@ -588,6 +611,8 @@ function CommentBlock({
 			issueNumber={issueNumber}
 			commentId={entry.id}
 			body={entry.body}
+			authorLogin={entry.user?.login}
+			authorType={entry.user?.type}
 			canEdit={isOptimistic ? false : canEditComment}
 			canDelete={isOptimistic ? false : canDeleteComment}
 		/>

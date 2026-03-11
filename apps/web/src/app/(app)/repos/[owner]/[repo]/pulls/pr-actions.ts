@@ -382,6 +382,34 @@ export async function updatePRReviewComment(
 	}
 }
 
+export async function updatePRReview(
+	owner: string,
+	repo: string,
+	pullNumber: number,
+	reviewId: number,
+	body: string,
+) {
+	const octokit = await getOctokit();
+	if (!octokit) return { error: "Not authenticated" };
+
+	try {
+		await octokit.request(
+			"PATCH /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}",
+			{
+				owner,
+				repo,
+				pull_number: pullNumber,
+				review_id: reviewId,
+				body,
+			},
+		);
+		await revalidateAfterPRMutation(owner, repo, pullNumber, "review");
+		return { success: true };
+	} catch (e: unknown) {
+		return { error: getErrorMessage(e) || "Failed to update review" };
+	}
+}
+
 export async function deletePRReviewComment(
 	owner: string,
 	repo: string,

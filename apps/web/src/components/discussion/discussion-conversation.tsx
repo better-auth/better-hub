@@ -30,7 +30,7 @@ import { canManageComment } from "@/lib/comment-permissions";
 interface DescriptionEntry {
 	body: string;
 	bodyHtml?: string;
-	author: { login: string; avatar_url: string } | null;
+	author: { login: string; avatar_url: string; type?: string } | null;
 	createdAt: string;
 	discussionId?: string;
 	reactions?: Reactions;
@@ -440,6 +440,16 @@ function DescriptionBlock({
 						<MessageActionsMenu
 							commentUrl={discussionUrl}
 							body={entry.body}
+							editLabel="Edit discussion"
+							reportContent={{
+								authorLogin: entry.author?.login,
+								authorType: entry.author?.type,
+							}}
+							referenceIssue={{
+								owner,
+								repo,
+								authorLogin: entry.author?.login,
+							}}
 							canEdit={
 								!!(
 									canEditDiscussion &&
@@ -643,6 +653,15 @@ function CommentBlock({
 						<MessageActionsMenu
 							commentUrl={commentUrl}
 							body={comment.body}
+							reportContent={{
+								authorLogin: comment.author?.login,
+								authorType: comment.author?.type,
+							}}
+							referenceIssue={{
+								owner,
+								repo,
+								authorLogin: comment.author?.login,
+							}}
 							canEdit={canManage}
 							canDelete={canManage}
 							onEdit={() => {
@@ -828,6 +847,15 @@ function ReplyBlock({
 				<MessageActionsMenu
 					commentUrl={replyUrl}
 					body={reply.body}
+					reportContent={{
+						authorLogin: reply.author?.login,
+						authorType: reply.author?.type,
+					}}
+					referenceIssue={{
+						owner,
+						repo,
+						authorLogin: reply.author?.login,
+					}}
 					canEdit={canManage}
 					canDelete={canManage}
 					onEdit={() => {

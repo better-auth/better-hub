@@ -4103,7 +4103,7 @@ export interface DiscussionDetail {
 	body: string;
 	createdAt: string;
 	updatedAt: string;
-	author: { login: string; avatar_url: string } | null;
+	author: { login: string; avatar_url: string; type?: string } | null;
 	category: { name: string; emoji: string; emojiHTML?: string | null; isAnswerable: boolean };
 	commentsCount: number;
 	upvoteCount: number;

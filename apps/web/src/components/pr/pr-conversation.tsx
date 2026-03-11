@@ -550,6 +550,8 @@ async function ChatMessage({
 			pullNumber={pullNumber}
 			commentId={entry.id as number}
 			body={entry.body}
+			authorLogin={entry.user?.login}
+			authorType={entry.user?.type}
 			canEdit={canManage}
 			canDelete={canManage}
 		/>
@@ -578,24 +580,14 @@ function ReviewCardWrapper({
 		return null;
 	}
 
-	// Pre-render the markdown body on the server
-	const bodyContent = hasBody ? (
-		<div className="px-3 py-2.5">
-			<MarkdownRenderer
-				content={entry.body!}
-				className="ghmd-sm"
-				issueRefContext={{ owner, repo }}
-			/>
-		</div>
-	) : null;
-
 	return (
 		<CollapsibleReviewCard
+			reviewId={entry.id}
 			user={entry.user}
 			state={entry.state}
 			timestamp={entry.submitted_at || entry.created_at}
+			body={hasBody ? entry.body : null}
 			comments={entry.comments}
-			bodyContent={bodyContent}
 			owner={owner}
 			repo={repo}
 			pullNumber={pullNumber}

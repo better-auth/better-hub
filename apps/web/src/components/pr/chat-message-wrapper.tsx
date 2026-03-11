@@ -21,6 +21,8 @@ type ChatMessageWrapperProps = {
 	repo: string;
 	commentId: number;
 	body: string;
+	authorLogin?: string | null;
+	authorType?: string | null;
 	canEdit?: boolean;
 	canDelete?: boolean;
 } & (
@@ -39,6 +41,8 @@ export function ChatMessageWrapper({
 	issueNumber,
 	commentId,
 	body,
+	authorLogin,
+	authorType,
 	canEdit = false,
 	canDelete = false,
 }: ChatMessageWrapperProps) {
@@ -122,6 +126,10 @@ export function ChatMessageWrapper({
 					<MessageActionsMenu
 						commentUrl={commentUrl}
 						body={body}
+						reportContent={{
+							authorLogin,
+							authorType,
+						}}
 						canEdit={canEdit}
 						canDelete={canDelete}
 						onEdit={canEdit ? handleEdit : undefined}

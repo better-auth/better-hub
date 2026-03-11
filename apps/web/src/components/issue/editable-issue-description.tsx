@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Pencil, X, Loader2, AlertCircle } from "lucide-react";
+import { X, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";
@@ -12,10 +12,12 @@ import { CollapsibleBody } from "@/components/issue/collapsible-body";
 import { ReactionDisplay, type Reactions } from "@/components/shared/reaction-display";
 import { UserTooltip } from "@/components/shared/user-tooltip";
 import { MarkdownEditor } from "@/components/shared/markdown-editor";
+import { MessageActionsMenu } from "@/components/pr/message-actions-menu";
 import { updateIssue } from "@/app/(app)/repos/[owner]/[repo]/issues/issue-actions";
 
 interface EditableIssueDescriptionProps {
 	entry: {
+		databaseId?: number;
 		user: { login: string; avatar_url: string } | null;
 		body: string;
 		bodyHtml?: string;
@@ -44,6 +46,9 @@ export function EditableIssueDescription({
 
 	const hasBody = Boolean(entry.body && entry.body.trim().length > 0);
 	const isLong = hasBody && entry.body.length > 800;
+	const commentUrl = entry.databaseId
+		? `https://github.com/${owner}/${repo}/issues/${issueNumber}#issue-${entry.databaseId}`
+		: `https://github.com/${owner}/${repo}/issues/${issueNumber}`;
 
 	const renderedBody = entry.bodyHtml ? (
 		<MarkdownCopyHandler>
@@ -103,13 +108,19 @@ export function EditableIssueDescription({
 					commented <TimeAgo date={entry.created_at} />
 				</span>
 				{!isEditing ? (
-					<button
-						onClick={() => setIsEditing(true)}
-						className="ml-auto p-0.5 rounded text-muted-foreground/40 hover:text-muted-foreground transition-colors cursor-pointer"
-						title="Edit issue"
-					>
-						<Pencil className="w-3.5 h-3.5" />
-					</button>
+					<div className="ml-auto">
+						<MessageActionsMenu
+							commentUrl={commentUrl}
+							body={entry.body}
+							canEdit
+							editLabel="Edit issue"
+							onEdit={() => setIsEditing(true)}
+							reportContent={{
+								authorLogin: entry.user?.login,
+							}}
+							ariaLabel="Issue body actions"
+						/>
+					</div>
 				) : (
 					<button
 						onClick={handleCancel}
