@@ -132,7 +132,7 @@ export async function closeIssue(
 		revalidatePath(`/repos/${owner}/${repo}`, "layout");
 		return { success: true };
 	} catch (e: unknown) {
-		return { error: getErrorMessage(e) };
+		return { error: getGitHubWriteErrorMessage(e) };
 	}
 }
 
@@ -160,7 +160,7 @@ export async function updateIssue(
 		revalidatePath(`/repos/${owner}/${repo}/issues`);
 		return { success: true };
 	} catch (e: unknown) {
-		return { error: getErrorMessage(e) };
+		return { error: getGitHubWriteErrorMessage(e) };
 	}
 }
 
@@ -195,6 +195,6 @@ export async function reopenIssue(
 		revalidatePath(`/repos/${owner}/${repo}`, "layout");
 		return { success: true };
 	} catch (e: unknown) {
-		return { error: getErrorMessage(e) };
+		return { error: getGitHubWriteErrorMessage(e) };
 	}
 }

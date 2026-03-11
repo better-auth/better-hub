@@ -3,7 +3,7 @@
 	"compilerOptions": {
 		"jsx": "react-jsx",
 		"lib": ["dom", "dom.iterable", "ES2022"],
-		"types": ["node"],
+		"types": ["node", "bun-types"],
 		"incremental": true,
 		"declaration": false,
 		"declarationMap": false,
@@ -20,13 +20,6 @@
 			"@/*": ["./src/*"]
 		}
 	},
-	"include": [
-		"next-env.d.ts",
-		"**/*.ts",
-		"**/*.tsx",
-		".next/types/**/*.ts",
-		".next/dev/types/**/*.ts",
-		"**/*.mts"
-	],
+	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "**/*.mts"],
 	"exclude": ["node_modules"]
 }
