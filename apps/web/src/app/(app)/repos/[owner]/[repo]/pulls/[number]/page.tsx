@@ -36,6 +36,7 @@ import { PRReviewForm } from "@/components/pr/pr-review-form";
 import { PRConflictResolver } from "@/components/pr/pr-conflict-resolver";
 import { PRAuthorDossier } from "@/components/pr/pr-author-dossier";
 import { PRChecksPanel } from "@/components/pr/pr-checks-panel";
+import { PROverviewPanel } from "@/components/pr/pr-overview-panel";
 import { ChatPageActivator } from "@/components/shared/chat-page-activator";
 import { TrackView } from "@/components/shared/track-view";
 import { auth } from "@/lib/auth";
@@ -453,6 +454,18 @@ export default async function PRDetailPage({
 						/>
 					) : undefined
 				}
+				overviewPanel={
+					<PROverviewPanel
+						owner={owner}
+						repo={repo}
+						pullNumber={pullNumber}
+						headSha={headSha}
+						files={prFiles}
+						prTitle={pr.title}
+						prBody={pr.body || ""}
+						participants={participants}
+					/>
+				}
 				infoBar={
 					<>
 						<PRHeader
@@ -588,6 +601,13 @@ export default async function PRDetailPage({
 										branchBehindBase={
 											branchBehindBase ??
 											false
+										}
+										checkStatus={
+											checkStatus &&
+											checkStatus.total >
+												0
+												? checkStatus
+												: undefined
 										}
 									/>
 								</div>

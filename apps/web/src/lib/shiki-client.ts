@@ -1,6 +1,8 @@
 import type { Highlighter, BundledLanguage } from "shiki";
 import { getTheme } from "./themes";
 import type { ShikiTheme } from "./themes/types";
+import { parseDiffPatch, getLanguageFromFilename } from "./github-utils";
+import type { SyntaxToken } from "./shiki";
 
 const DEFAULT_LIGHT_THEME = "vitesse-light";
 const DEFAULT_DARK_THEME = "vitesse-black";
@@ -8,15 +10,17 @@ const MAX_TOKENIZE_LENGTH = 200_000;
 
 let highlighterInstance: Highlighter | null = null;
 let highlighterPromise: Promise<Highlighter> | null = null;
+const langLoadPromises = new Map<string, Promise<void>>();
 
 function getClientHighlighter(): Promise<Highlighter> {
 	if (highlighterInstance) return Promise.resolve(highlighterInstance);
 	if (!highlighterPromise) {
 		highlighterPromise = import("shiki")
-			.then(({ createHighlighter }) =>
+			.then(({ createHighlighter, createJavaScriptRegexEngine }) =>
 				createHighlighter({
 					themes: [DEFAULT_LIGHT_THEME, DEFAULT_DARK_THEME],
 					langs: [],
+					engine: createJavaScriptRegexEngine(),
 				}),
 			)
 			.then((h) => {
@@ -25,6 +29,32 @@ function getClientHighlighter(): Promise<Highlighter> {
 			});
 	}
 	return highlighterPromise;
+}
+
+async function ensureLanguageLoaded(highlighter: Highlighter, lang: string): Promise<string> {
+	const loaded = highlighter.getLoadedLanguages();
+	if (loaded.includes(lang)) return lang;
+
+	let pending = langLoadPromises.get(lang);
+	if (!pending) {
+		pending = highlighter
+			.loadLanguage(lang as BundledLanguage)
+			.then(() => {
+				langLoadPromises.delete(lang);
+			})
+			.catch(() => {
+				langLoadPromises.delete(lang);
+				throw new Error(`Failed to load language: ${lang}`);
+			});
+		langLoadPromises.set(lang, pending);
+	}
+	try {
+		await pending;
+		return lang;
+	} catch {
+		if (lang === "text") return "text";
+		return ensureLanguageLoaded(highlighter, "text");
+	}
 }
 
 function escapeHtml(str: string): string {
@@ -151,21 +181,7 @@ export async function highlightCodeClient(
 	const highlighter = await getClientHighlighter();
 	const themes = await getThemePairForClient(highlighter, themeId);
 
-	const loaded = highlighter.getLoadedLanguages();
-	let effectiveLang = lang || "text";
-
-	if (!loaded.includes(effectiveLang)) {
-		try {
-			await highlighter.loadLanguage(effectiveLang as BundledLanguage);
-		} catch {
-			effectiveLang = "text";
-			if (!loaded.includes("text")) {
-				try {
-					await highlighter.loadLanguage("text" as BundledLanguage);
-				} catch {}
-			}
-		}
-	}
+	const effectiveLang = await ensureLanguageLoaded(highlighter, lang || "text");
 
 	try {
 		return highlighter.codeToHtml(code, {
@@ -180,4 +196,70 @@ export async function highlightCodeClient(
 			defaultColor: "light-dark()",
 		});
 	}
+}
+
+export async function highlightDiffLinesClient(
+	patch: string,
+	filename: string,
+	themeId = "default",
+): Promise<Record<string, SyntaxToken[]>> {
+	if (!patch || patch.length > MAX_TOKENIZE_LENGTH) return {};
+
+	const lang = getLanguageFromFilename(filename);
+	const diffLines = parseDiffPatch(patch);
+	const highlighter = await getClientHighlighter();
+	const effectiveLang = await ensureLanguageLoaded(highlighter, lang || "text");
+	const themes = await getThemePairForClient(highlighter, themeId);
+
+	const oldStream: { key: string; content: string }[] = [];
+	const newStream: { key: string; content: string }[] = [];
+
+	for (const line of diffLines) {
+		if (line.type === "header") continue;
+		if (line.type === "context") {
+			oldStream.push({
+				key: `C-old-${line.oldLineNumber}`,
+				content: line.content,
+			});
+			newStream.push({ key: `C-${line.newLineNumber}`, content: line.content });
+		} else if (line.type === "remove" && line.oldLineNumber !== undefined) {
+			oldStream.push({ key: `R-${line.oldLineNumber}`, content: line.content });
+		} else if (line.type === "add" && line.newLineNumber !== undefined) {
+			newStream.push({ key: `A-${line.newLineNumber}`, content: line.content });
+		}
+	}
+
+	const result: Record<string, SyntaxToken[]> = {};
+
+	const tokenizeStream = (stream: { key: string; content: string }[]) => {
+		if (stream.length === 0) return;
+		const code = stream.map((l) => l.content).join("\n");
+		try {
+			const tokenResult = highlighter.codeToTokens(code, {
+				lang: effectiveLang as BundledLanguage,
+				themes: { light: themes.light, dark: themes.dark },
+			});
+			tokenResult.tokens.forEach((lineTokens, i) => {
+				if (i < stream.length) {
+					result[stream[i].key] = lineTokens.map((t) => ({
+						text: t.content,
+						lightColor:
+							(t.htmlStyle as Record<string, string>)
+								?.color || "",
+						darkColor:
+							(t.htmlStyle as Record<string, string>)?.[
+								"--shiki-dark"
+							] || "",
+					}));
+				}
+			});
+		} catch {
+			// tokenization failed; skip
+		}
+	};
+
+	tokenizeStream(oldStream);
+	tokenizeStream(newStream);
+
+	return result;
 }

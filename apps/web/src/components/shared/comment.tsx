@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import { GithubAvatar } from "./github-avatar";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { TimeAgo } from "@/components/ui/time-ago";
 
@@ -22,11 +22,10 @@ export async function Comment({ author, body, createdAt, association }: CommentP
 						href={`/users/${author.login}`}
 						className="flex items-center gap-2 hover:text-foreground transition-colors"
 					>
-						<Image
+						<GithubAvatar
 							src={author.avatar_url}
 							alt={author.login}
-							width={20}
-							height={20}
+							size={20}
 							className="rounded-full"
 						/>
 						<span className="text-xs font-mono font-medium">

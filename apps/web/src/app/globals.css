@@ -85,6 +85,15 @@
 
 /* Default theme: Midnight (dark) */
 :root {
+	--font-geist-sans:
+		"Geist", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+		Roboto, "Helvetica Neue", Arial, sans-serif;
+	--font-geist-mono:
+		"Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+		"Liberation Mono", monospace;
+	--font-code:
+		"JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+		"Liberation Mono", monospace;
 	--radius-sm: 0.25rem;
 	--radius-md: 0.5rem;
 	--radius-lg: 0.75rem;
@@ -394,10 +403,10 @@ tr.diff-search-match-active > td {
 	border-left-color: var(--border) !important;
 }
 
-/* ── GitHub-style Markdown ── */
+/* ── GitHub-style Markdon ── */
 .ghmd {
 	font-size: 16px;
-	line-height: 1.5;
+	line-height: 1.6;
 	word-wrap: break-word;
 	overflow-wrap: break-word;
 	word-break: break-word;
@@ -507,7 +516,7 @@ tr.diff-search-match-active > td {
 	margin: 0;
 	font-size: 85%;
 	white-space: break-spaces;
-	border-radius: 6px;
+	border-radius: var(--radius-sm);
 	font-family: var(--font-mono), ui-monospace, monospace;
 	background-color: var(--inline-code-bg);
 }
@@ -947,6 +956,34 @@ tr.diff-search-match-active > td {
 }
 .ghmd.ghmd-sm ul,
 .ghmd.ghmd-sm ol {
+	margin-bottom: 0.75em;
+}
+
+/* Medium variant for PR overview */
+.ghmd.ghmd-md {
+	font-size: 14.5px;
+}
+.ghmd.ghmd-md h1 {
+	font-size: 1.25em;
+}
+.ghmd.ghmd-md h2 {
+	font-size: 1.1em;
+}
+.ghmd.ghmd-md h3 {
+	font-size: 1em;
+}
+.ghmd.ghmd-md pre {
+	font-size: 12px;
+	padding: 12px;
+}
+.ghmd.ghmd-md p {
+	margin-bottom: 0.75em;
+}
+.ghmd.ghmd-md p:last-child {
+	margin-bottom: 0;
+}
+.ghmd.ghmd-md ul,
+.ghmd.ghmd-md ol {
 	margin-bottom: 0.75em;
 }
 
