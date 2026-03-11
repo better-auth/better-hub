@@ -9,39 +9,34 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { deletePRComment } from "@/app/(app)/repos/[owner]/[repo]/pulls/pr-actions";
-import { deleteIssueComment } from "@/app/(app)/repos/[owner]/[repo]/issues/issue-actions";
+import { cn } from "@/lib/utils";
 
 type MessageActionsMenuProps = {
-	owner: string;
-	repo: string;
-	commentId: number;
+	commentUrl: string;
 	body: string;
-	onDelete?: () => void;
+	canEdit?: boolean;
+	canDelete?: boolean;
 	onEdit?: () => void;
-} & (
-	| { contentType: "pr"; pullNumber: number; issueNumber?: never }
-	| { contentType: "issue"; issueNumber: number; pullNumber?: never }
-);
+	onDelete?: () => Promise<void> | void;
+	triggerClassName?: string;
+	align?: "start" | "center" | "end";
+	ariaLabel?: string;
+};
 
 export function MessageActionsMenu({
-	owner,
-	repo,
-	contentType,
-	pullNumber,
-	issueNumber,
-	commentId,
+	commentUrl,
 	body,
+	canEdit = false,
+	canDelete = false,
 	onDelete,
 	onEdit,
+	triggerClassName,
+	align = "end",
+	ariaLabel = "Comment actions",
 }: MessageActionsMenuProps) {
 	const [copied, setCopied] = useState(false);
 	const [open, setOpen] = useState(false);
 	const [deleting, setDeleting] = useState(false);
-
-	const number = contentType === "pr" ? pullNumber : issueNumber;
-	const urlType = contentType === "pr" ? "pull" : "issues";
-	const commentUrl = `https://github.com/${owner}/${repo}/${urlType}/${number}#issuecomment-${commentId}`;
 
 	useEffect(() => {
 		if (copied) {
@@ -77,26 +72,25 @@ export function MessageActionsMenu({
 
 	const handleDelete = async (e: Event) => {
 		e.preventDefault();
+		if (!canDelete || !onDelete) return;
 		setDeleting(true);
 		setOpen(false);
-		const result =
-			contentType === "pr"
-				? await deletePRComment(owner, repo, pullNumber!, commentId)
-				: await deleteIssueComment(owner, repo, issueNumber!, commentId);
-		if (result.error) {
-			alert(result.error);
-		} else {
-			onDelete?.();
+		try {
+			await onDelete();
+		} finally {
+			setDeleting(false);
 		}
-		setDeleting(false);
 	};
 
 	return (
 		<DropdownMenu open={open} onOpenChange={setOpen}>
 			<DropdownMenuTrigger asChild>
 				<button
-					className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-muted-foreground transition-colors"
-					aria-label="Message actions"
+					className={cn(
+						"p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-muted-foreground transition-colors",
+						triggerClassName,
+					)}
+					aria-label={ariaLabel}
 					disabled={deleting}
 				>
 					{deleting ? (
@@ -108,7 +102,7 @@ export function MessageActionsMenu({
 					)}
 				</button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="w-40">
+			<DropdownMenuContent align={align} className="w-40">
 				<DropdownMenuItem onSelect={handleCopyLink}>
 					<Link className="w-3.5 h-3.5" />
 					<span>Copy link</span>
@@ -121,7 +115,7 @@ export function MessageActionsMenu({
 					<Quote className="w-3.5 h-3.5" />
 					<span>Quote reply</span>
 				</DropdownMenuItem>
-				{onEdit && (
+				{canEdit && onEdit && (
 					<>
 						<DropdownMenuSeparator />
 						<DropdownMenuItem
@@ -136,14 +130,18 @@ export function MessageActionsMenu({
 						</DropdownMenuItem>
 					</>
 				)}
-				<DropdownMenuSeparator />
-				<DropdownMenuItem
-					onSelect={handleDelete}
-					className="text-destructive focus:text-destructive"
-				>
-					<Trash2 className="w-3.5 h-3.5" />
-					<span>Delete</span>
-				</DropdownMenuItem>
+				{canDelete && onDelete && (
+					<>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem
+							onSelect={handleDelete}
+							className="text-destructive focus:text-destructive"
+						>
+							<Trash2 className="w-3.5 h-3.5" />
+							<span>Delete</span>
+						</DropdownMenuItem>
+					</>
+				)}
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);

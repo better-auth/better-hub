@@ -16,6 +16,7 @@ import { CollapsibleBody } from "@/components/issue/collapsible-body";
 import { ReactionDisplay, type Reactions } from "@/components/shared/reaction-display";
 import { ChatMessageWrapper } from "@/components/pr/chat-message-wrapper";
 import { UserTooltip } from "@/components/shared/user-tooltip";
+import { canManageComment } from "@/lib/comment-permissions";
 
 interface BaseUser {
 	login: string;
@@ -326,10 +327,11 @@ function ThreadEntry({
 }) {
 	const hasBody = Boolean(entry.body && entry.body.trim().length > 0);
 	const isLong = hasBody && entry.body.length > 800;
-	const canEditComment = !!(
-		currentUserLogin &&
-		(currentUserLogin === entry.user?.login || viewerHasWriteAccess)
-	);
+	const canManage = canManageComment({
+		authorLogin: entry.user?.login,
+		currentUserLogin,
+		viewerHasWriteAccess,
+	});
 
 	const renderedBody = entry.bodyHtml ? (
 		<MarkdownCopyHandler>
@@ -403,7 +405,8 @@ function ThreadEntry({
 						owner={owner}
 						repo={repo}
 						issueNumber={issueNumber}
-						canEditComment={canEditComment}
+						canEditComment={canManage}
+						canDeleteComment={canManage}
 						onRetry={onRetryComment}
 					/>
 				)}
@@ -485,6 +488,7 @@ function CommentBlock({
 	repo,
 	issueNumber,
 	canEditComment,
+	canDeleteComment,
 	onRetry,
 }: {
 	entry: IssueCommentEntry;
@@ -495,6 +499,7 @@ function CommentBlock({
 	repo: string;
 	issueNumber: number;
 	canEditComment?: boolean;
+	canDeleteComment?: boolean;
 	onRetry?: (entry: IssueCommentEntry) => void;
 }) {
 	const { _optimisticStatus } = entry;
@@ -584,6 +589,7 @@ function CommentBlock({
 			commentId={entry.id}
 			body={entry.body}
 			canEdit={isOptimistic ? false : canEditComment}
+			canDelete={isOptimistic ? false : canDeleteComment}
 		/>
 	);
 }
@@ -607,10 +613,11 @@ function ThreadComment({
 }) {
 	const hasBody = Boolean(entry.body && entry.body.trim().length > 0);
 	const isLong = hasBody && entry.body.length > 800;
-	const canEditComment = !!(
-		currentUserLogin &&
-		(currentUserLogin === entry.user?.login || viewerHasWriteAccess)
-	);
+	const canManage = canManageComment({
+		authorLogin: entry.user?.login,
+		currentUserLogin,
+		viewerHasWriteAccess,
+	});
 
 	const renderedBody = entry.bodyHtml ? (
 		<MarkdownCopyHandler>
@@ -650,7 +657,8 @@ function ThreadComment({
 			owner={owner}
 			repo={repo}
 			issueNumber={issueNumber}
-			canEditComment={canEditComment}
+			canEditComment={canManage}
+			canDeleteComment={canManage}
 			onRetry={onRetryComment}
 		/>
 	);

@@ -23,6 +23,7 @@ import { ChatMessageWrapper } from "./chat-message-wrapper";
 import { PRChecksPanel } from "./pr-checks-panel";
 import type { CheckStatus } from "@/lib/github";
 import { UserTooltip } from "@/components/shared/user-tooltip";
+import { canManageComment } from "@/lib/comment-permissions";
 
 interface BaseUser {
 	login: string;
@@ -179,12 +180,16 @@ export async function PRConversation({
 	repo,
 	pullNumber,
 	checkStatus,
+	currentUserLogin,
+	viewerHasWriteAccess,
 }: {
 	entries: TimelineEntry[];
 	owner: string;
 	repo: string;
 	pullNumber: number;
 	checkStatus?: CheckStatus;
+	currentUserLogin?: string;
+	viewerHasWriteAccess?: boolean;
 }) {
 	const grouped = groupEntries(entries);
 
@@ -224,6 +229,15 @@ export async function PRConversation({
 												}
 												repo={
 													repo
+												}
+												pullNumber={
+													pullNumber
+												}
+												currentUserLogin={
+													currentUserLogin
+												}
+												viewerHasWriteAccess={
+													viewerHasWriteAccess
 												}
 											/>
 										);
@@ -291,6 +305,12 @@ export async function PRConversation({
 											pullNumber={
 												pullNumber
 											}
+											currentUserLogin={
+												currentUserLogin
+											}
+											viewerHasWriteAccess={
+												viewerHasWriteAccess
+											}
 										/>
 									);
 								})}
@@ -316,6 +336,9 @@ export async function PRConversation({
 							entry={entry}
 							owner={owner}
 							repo={repo}
+							pullNumber={pullNumber}
+							currentUserLogin={currentUserLogin}
+							viewerHasWriteAccess={viewerHasWriteAccess}
 						/>
 					);
 				}
@@ -353,6 +376,10 @@ export async function PRConversation({
 								owner={owner}
 								repo={repo}
 								pullNumber={pullNumber}
+								currentUserLogin={currentUserLogin}
+								viewerHasWriteAccess={
+									viewerHasWriteAccess
+								}
 							/>
 							{checkStatus && (
 								<PRChecksPanel
@@ -371,6 +398,8 @@ export async function PRConversation({
 						owner={owner}
 						repo={repo}
 						pullNumber={pullNumber}
+						currentUserLogin={currentUserLogin}
+						viewerHasWriteAccess={viewerHasWriteAccess}
 					/>
 				);
 			})}
@@ -391,11 +420,15 @@ async function ChatMessage({
 	owner,
 	repo,
 	pullNumber,
+	currentUserLogin,
+	viewerHasWriteAccess,
 }: {
 	entry: DescriptionEntry | CommentEntry;
 	owner: string;
 	repo: string;
 	pullNumber: number;
+	currentUserLogin?: string;
+	viewerHasWriteAccess?: boolean;
 }) {
 	const hasBody = entry.body && entry.body.trim().length > 0;
 
@@ -500,6 +533,12 @@ async function ChatMessage({
 		/>
 	);
 
+	const canManage = canManageComment({
+		authorLogin: entry.user?.login,
+		currentUserLogin,
+		viewerHasWriteAccess,
+	});
+
 	return (
 		<ChatMessageWrapper
 			headerContent={headerContent}
@@ -511,6 +550,8 @@ async function ChatMessage({
 			pullNumber={pullNumber}
 			commentId={entry.id as number}
 			body={entry.body}
+			canEdit={canManage}
+			canDelete={canManage}
 		/>
 	);
 }
@@ -519,10 +560,16 @@ function ReviewCardWrapper({
 	entry,
 	owner,
 	repo,
+	pullNumber,
+	currentUserLogin,
+	viewerHasWriteAccess,
 }: {
 	entry: ReviewEntry;
 	owner: string;
 	repo: string;
+	pullNumber: number;
+	currentUserLogin?: string;
+	viewerHasWriteAccess?: boolean;
 }) {
 	const hasBody = entry.body && entry.body.trim().length > 0;
 
@@ -551,6 +598,9 @@ function ReviewCardWrapper({
 			bodyContent={bodyContent}
 			owner={owner}
 			repo={repo}
+			pullNumber={pullNumber}
+			currentUserLogin={currentUserLogin}
+			viewerHasWriteAccess={viewerHasWriteAccess}
 		/>
 	);
 }

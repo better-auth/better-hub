@@ -1,6 +1,11 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { CheckCircle2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";
 import { ReactiveCodeBlocks } from "@/components/shared/reactive-code-blocks";
@@ -8,11 +13,19 @@ import { UserTooltip } from "@/components/shared/user-tooltip";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { CollapsibleBody } from "@/components/issue/collapsible-body";
 import { BotActivityGroup } from "@/components/pr/bot-activity-group";
+import { MessageActionsMenu } from "@/components/pr/message-actions-menu";
+import { MarkdownEditor } from "@/components/shared/markdown-editor";
 import {
 	DiscussionReactionDisplay,
 	type Reactions,
 } from "@/components/discussion/discussion-reaction-display";
+import {
+	deleteDiscussionComment,
+	updateDiscussionBody,
+	updateDiscussionCommentBody,
+} from "@/app/(app)/repos/[owner]/[repo]/discussions/discussion-actions";
 import type { DiscussionComment, DiscussionReply } from "@/lib/github";
+import { canManageComment } from "@/lib/comment-permissions";
 
 interface DescriptionEntry {
 	body: string;
@@ -26,8 +39,14 @@ interface DescriptionEntry {
 }
 
 interface DiscussionConversationProps {
+	owner: string;
+	repo: string;
+	discussionNumber: number;
 	description: DescriptionEntry;
 	comments: DiscussionComment[];
+	currentUserLogin?: string;
+	viewerHasWriteAccess?: boolean;
+	canEditDiscussion?: boolean;
 }
 
 function isBot(comment: DiscussionComment): boolean {
@@ -65,7 +84,16 @@ function groupComments(comments: DiscussionComment[]): GroupedItem[] {
 	return groups;
 }
 
-export function DiscussionConversation({ description, comments }: DiscussionConversationProps) {
+export function DiscussionConversation({
+	owner,
+	repo,
+	discussionNumber,
+	description,
+	comments,
+	currentUserLogin,
+	viewerHasWriteAccess,
+	canEditDiscussion,
+}: DiscussionConversationProps) {
 	const grouped = groupComments(comments);
 
 	return (
@@ -77,7 +105,13 @@ export function DiscussionConversation({ description, comments }: DiscussionConv
 
 			<div className="space-y-4">
 				{/* Description block */}
-				<DescriptionBlock entry={description} />
+				<DescriptionBlock
+					entry={description}
+					owner={owner}
+					repo={repo}
+					discussionNumber={discussionNumber}
+					canEditDiscussion={canEditDiscussion}
+				/>
 
 				{/* Comments */}
 				{grouped.map((item, gi) => {
@@ -120,6 +154,21 @@ export function DiscussionConversation({ description, comments }: DiscussionConv
 														comment={
 															comment
 														}
+														owner={
+															owner
+														}
+														repo={
+															repo
+														}
+														discussionNumber={
+															discussionNumber
+														}
+														currentUserLogin={
+															currentUserLogin
+														}
+														viewerHasWriteAccess={
+															viewerHasWriteAccess
+														}
 													/>
 													{comment
 														.replies
@@ -136,6 +185,21 @@ export function DiscussionConversation({ description, comments }: DiscussionConv
 																		}
 																		reply={
 																			reply
+																		}
+																		owner={
+																			owner
+																		}
+																		repo={
+																			repo
+																		}
+																		discussionNumber={
+																			discussionNumber
+																		}
+																		currentUserLogin={
+																			currentUserLogin
+																		}
+																		viewerHasWriteAccess={
+																			viewerHasWriteAccess
 																		}
 																	/>
 																),
@@ -154,7 +218,16 @@ export function DiscussionConversation({ description, comments }: DiscussionConv
 					const { comment } = item;
 					return (
 						<div key={comment.id}>
-							<CommentBlock comment={comment} />
+							<CommentBlock
+								comment={comment}
+								owner={owner}
+								repo={repo}
+								discussionNumber={discussionNumber}
+								currentUserLogin={currentUserLogin}
+								viewerHasWriteAccess={
+									viewerHasWriteAccess
+								}
+							/>
 							{comment.replies.length > 0 && (
 								<div className="ml-12 mt-2 space-y-2 border-l-2 border-border/30 pl-4">
 									{comment.replies.map(
@@ -165,6 +238,21 @@ export function DiscussionConversation({ description, comments }: DiscussionConv
 												}
 												reply={
 													reply
+												}
+												owner={
+													owner
+												}
+												repo={
+													repo
+												}
+												discussionNumber={
+													discussionNumber
+												}
+												currentUserLogin={
+													currentUserLogin
+												}
+												viewerHasWriteAccess={
+													viewerHasWriteAccess
 												}
 											/>
 										),
@@ -187,9 +275,93 @@ export function DiscussionConversation({ description, comments }: DiscussionConv
 	);
 }
 
-function DescriptionBlock({ entry }: { entry: DescriptionEntry }) {
+function InlineDiscussionEditor({
+	value,
+	onChange,
+	onCancel,
+	onSave,
+	error,
+	isSaving,
+	owner,
+	rows = 5,
+}: {
+	value: string;
+	onChange: (value: string) => void;
+	onCancel: () => void;
+	onSave: () => Promise<void>;
+	error: string | null;
+	isSaving: boolean;
+	owner: string;
+	rows?: number;
+}) {
+	return (
+		<div className="p-3 space-y-2">
+			<MarkdownEditor
+				value={value}
+				onChange={onChange}
+				placeholder="Edit comment..."
+				rows={rows}
+				compact
+				autoFocus
+				owner={owner}
+				onKeyDown={(e) => {
+					if (e.key === "Escape") onCancel();
+					if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+						e.preventDefault();
+						void onSave();
+					}
+				}}
+			/>
+			{error && (
+				<div className="flex items-center gap-2 text-[11px] text-destructive">
+					<AlertCircle className="w-3 h-3 shrink-0" />
+					{error}
+				</div>
+			)}
+			<div className="flex items-center justify-end gap-2">
+				<button
+					type="button"
+					onClick={onCancel}
+					disabled={isSaving}
+					className="px-3 py-1.5 text-[11px] text-muted-foreground/60 hover:text-foreground transition-colors cursor-pointer rounded-md"
+				>
+					Cancel
+				</button>
+				<button
+					type="button"
+					onClick={() => void onSave()}
+					disabled={isSaving}
+					className="flex items-center gap-1.5 px-4 py-1.5 text-[11px] font-medium rounded-md bg-foreground text-background hover:bg-foreground/90 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+				>
+					{isSaving && <Loader2 className="w-3 h-3 animate-spin" />}
+					Save changes
+				</button>
+			</div>
+		</div>
+	);
+}
+
+function DescriptionBlock({
+	entry,
+	owner,
+	repo,
+	discussionNumber,
+	canEditDiscussion,
+}: {
+	entry: DescriptionEntry;
+	owner: string;
+	repo: string;
+	discussionNumber: number;
+	canEditDiscussion?: boolean;
+}) {
 	const hasBody = Boolean(entry.body && entry.body.trim().length > 0);
 	const isLong = hasBody && entry.body.length > 800;
+	const router = useRouter();
+	const queryClient = useQueryClient();
+	const [isEditing, setIsEditing] = useState(false);
+	const [editBody, setEditBody] = useState(entry.body);
+	const [editError, setEditError] = useState<string | null>(null);
+	const [isSaving, setIsSaving] = useState(false);
 
 	const renderedBody = entry.bodyHtml ? (
 		<MarkdownCopyHandler>
@@ -201,6 +373,32 @@ function DescriptionBlock({ entry }: { entry: DescriptionEntry }) {
 			</ReactiveCodeBlocks>
 		</MarkdownCopyHandler>
 	) : null;
+
+	const discussionUrl = `https://github.com/${owner}/${repo}/discussions/${discussionNumber}`;
+
+	const handleSave = async () => {
+		if (!entry.discussionId) return;
+		setIsSaving(true);
+		setEditError(null);
+		const result = await updateDiscussionBody(
+			owner,
+			repo,
+			discussionNumber,
+			entry.discussionId,
+			editBody.trim(),
+		);
+		if (result.error) {
+			setEditError(result.error);
+			setIsSaving(false);
+			return;
+		}
+		await queryClient.invalidateQueries({
+			queryKey: ["discussion-comments", owner, repo, discussionNumber],
+		});
+		setIsSaving(false);
+		setIsEditing(false);
+		router.refresh();
+	};
 
 	return (
 		<div className="flex gap-3 relative">
@@ -239,9 +437,50 @@ function DescriptionBlock({ entry }: { entry: DescriptionEntry }) {
 							started this discussion{" "}
 							<TimeAgo date={entry.createdAt} />
 						</span>
+						<MessageActionsMenu
+							commentUrl={discussionUrl}
+							body={entry.body}
+							canEdit={
+								!!(
+									canEditDiscussion &&
+									entry.discussionId
+								)
+							}
+							onEdit={
+								canEditDiscussion &&
+								entry.discussionId
+									? () => {
+											setEditBody(
+												entry.body,
+											);
+											setEditError(
+												null,
+											);
+											setIsEditing(
+												true,
+											);
+										}
+									: undefined
+							}
+						/>
 					</div>
 
-					{hasBody && renderedBody ? (
+					{isEditing ? (
+						<InlineDiscussionEditor
+							value={editBody}
+							onChange={setEditBody}
+							onCancel={() => {
+								setEditBody(entry.body);
+								setEditError(null);
+								setIsEditing(false);
+							}}
+							onSave={handleSave}
+							error={editError}
+							isSaving={isSaving}
+							owner={owner}
+							rows={8}
+						/>
+					) : hasBody && renderedBody ? (
 						<div className="px-3.5 py-3">
 							{isLong ? (
 								<CollapsibleBody>
@@ -278,9 +517,36 @@ function DescriptionBlock({ entry }: { entry: DescriptionEntry }) {
 	);
 }
 
-function CommentBlock({ comment }: { comment: DiscussionComment }) {
+function CommentBlock({
+	comment,
+	owner,
+	repo,
+	discussionNumber,
+	currentUserLogin,
+	viewerHasWriteAccess,
+}: {
+	comment: DiscussionComment;
+	owner: string;
+	repo: string;
+	discussionNumber: number;
+	currentUserLogin?: string;
+	viewerHasWriteAccess?: boolean;
+}) {
 	const hasBody = Boolean(comment.body && comment.body.trim().length > 0);
 	const isLong = hasBody && comment.body.length > 800;
+	const router = useRouter();
+	const queryClient = useQueryClient();
+	const [deleted, setDeleted] = useState(false);
+	const [isEditing, setIsEditing] = useState(false);
+	const [editBody, setEditBody] = useState(comment.body);
+	const [editError, setEditError] = useState<string | null>(null);
+	const [isSaving, setIsSaving] = useState(false);
+	const canManage = canManageComment({
+		authorLogin: comment.author?.login,
+		currentUserLogin,
+		viewerHasWriteAccess,
+	});
+	const commentUrl = `https://github.com/${owner}/${repo}/discussions/${discussionNumber}#discussioncomment-${comment.databaseId}`;
 
 	const renderedBody = comment.bodyHtml ? (
 		<MarkdownCopyHandler>
@@ -292,6 +558,35 @@ function CommentBlock({ comment }: { comment: DiscussionComment }) {
 			</ReactiveCodeBlocks>
 		</MarkdownCopyHandler>
 	) : null;
+
+	if (deleted) return null;
+
+	const refreshComments = async () => {
+		await queryClient.invalidateQueries({
+			queryKey: ["discussion-comments", owner, repo, discussionNumber],
+		});
+		router.refresh();
+	};
+
+	const handleSave = async () => {
+		setIsSaving(true);
+		setEditError(null);
+		const result = await updateDiscussionCommentBody(
+			owner,
+			repo,
+			discussionNumber,
+			comment.id,
+			editBody.trim(),
+		);
+		if (result.error) {
+			setEditError(result.error);
+			setIsSaving(false);
+			return;
+		}
+		setIsSaving(false);
+		setIsEditing(false);
+		await refreshComments();
+	};
 
 	return (
 		<div className="flex gap-3 relative">
@@ -345,9 +640,49 @@ function CommentBlock({ comment }: { comment: DiscussionComment }) {
 							commented{" "}
 							<TimeAgo date={comment.createdAt} />
 						</span>
+						<MessageActionsMenu
+							commentUrl={commentUrl}
+							body={comment.body}
+							canEdit={canManage}
+							canDelete={canManage}
+							onEdit={() => {
+								setEditBody(comment.body);
+								setEditError(null);
+								setIsEditing(true);
+							}}
+							onDelete={async () => {
+								const result =
+									await deleteDiscussionComment(
+										owner,
+										repo,
+										discussionNumber,
+										comment.id,
+									);
+								if (result.error) {
+									alert(result.error);
+									return;
+								}
+								setDeleted(true);
+								await refreshComments();
+							}}
+						/>
 					</div>
 
-					{hasBody && renderedBody ? (
+					{isEditing ? (
+						<InlineDiscussionEditor
+							value={editBody}
+							onChange={setEditBody}
+							onCancel={() => {
+								setEditBody(comment.body);
+								setEditError(null);
+								setIsEditing(false);
+							}}
+							onSave={handleSave}
+							error={editError}
+							isSaving={isSaving}
+							owner={owner}
+						/>
+					) : hasBody && renderedBody ? (
 						<div className="px-3.5 py-3">
 							{isLong ? (
 								<CollapsibleBody>
@@ -384,7 +719,34 @@ function CommentBlock({ comment }: { comment: DiscussionComment }) {
 	);
 }
 
-function ReplyBlock({ reply }: { reply: DiscussionReply }) {
+function ReplyBlock({
+	reply,
+	owner,
+	repo,
+	discussionNumber,
+	currentUserLogin,
+	viewerHasWriteAccess,
+}: {
+	reply: DiscussionReply;
+	owner: string;
+	repo: string;
+	discussionNumber: number;
+	currentUserLogin?: string;
+	viewerHasWriteAccess?: boolean;
+}) {
+	const router = useRouter();
+	const queryClient = useQueryClient();
+	const [deleted, setDeleted] = useState(false);
+	const [isEditing, setIsEditing] = useState(false);
+	const [editBody, setEditBody] = useState(reply.body);
+	const [editError, setEditError] = useState<string | null>(null);
+	const [isSaving, setIsSaving] = useState(false);
+	const canManage = canManageComment({
+		authorLogin: reply.author?.login,
+		currentUserLogin,
+		viewerHasWriteAccess,
+	});
+	const replyUrl = `https://github.com/${owner}/${repo}/discussions/${discussionNumber}#discussioncomment-${reply.databaseId}`;
 	const renderedBody = reply.bodyHtml ? (
 		<MarkdownCopyHandler>
 			<ReactiveCodeBlocks>
@@ -395,6 +757,35 @@ function ReplyBlock({ reply }: { reply: DiscussionReply }) {
 			</ReactiveCodeBlocks>
 		</MarkdownCopyHandler>
 	) : null;
+
+	if (deleted) return null;
+
+	const refreshComments = async () => {
+		await queryClient.invalidateQueries({
+			queryKey: ["discussion-comments", owner, repo, discussionNumber],
+		});
+		router.refresh();
+	};
+
+	const handleSave = async () => {
+		setIsSaving(true);
+		setEditError(null);
+		const result = await updateDiscussionCommentBody(
+			owner,
+			repo,
+			discussionNumber,
+			reply.id,
+			editBody.trim(),
+		);
+		if (result.error) {
+			setEditError(result.error);
+			setIsSaving(false);
+			return;
+		}
+		setIsSaving(false);
+		setIsEditing(false);
+		await refreshComments();
+	};
 
 	return (
 		<div
@@ -434,8 +825,50 @@ function ReplyBlock({ reply }: { reply: DiscussionReply }) {
 				<span className="text-[10px] text-muted-foreground/40">
 					<TimeAgo date={reply.createdAt} />
 				</span>
+				<MessageActionsMenu
+					commentUrl={replyUrl}
+					body={reply.body}
+					canEdit={canManage}
+					canDelete={canManage}
+					onEdit={() => {
+						setEditBody(reply.body);
+						setEditError(null);
+						setIsEditing(true);
+					}}
+					onDelete={async () => {
+						const result = await deleteDiscussionComment(
+							owner,
+							repo,
+							discussionNumber,
+							reply.id,
+						);
+						if (result.error) {
+							alert(result.error);
+							return;
+						}
+						setDeleted(true);
+						await refreshComments();
+					}}
+				/>
 			</div>
-			{renderedBody && <div className="px-3 py-2">{renderedBody}</div>}
+			{isEditing ? (
+				<InlineDiscussionEditor
+					value={editBody}
+					onChange={setEditBody}
+					onCancel={() => {
+						setEditBody(reply.body);
+						setEditError(null);
+						setIsEditing(false);
+					}}
+					onSave={handleSave}
+					error={editError}
+					isSaving={isSaving}
+					owner={owner}
+					rows={4}
+				/>
+			) : (
+				renderedBody && <div className="px-3 py-2">{renderedBody}</div>
+			)}
 			<div className="px-3 pb-2">
 				<DiscussionReactionDisplay
 					reactions={reply.reactions as Reactions | undefined}

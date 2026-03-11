@@ -312,6 +312,30 @@ export async function addPRComment(owner: string, repo: string, pullNumber: numb
 	}
 }
 
+export async function updatePRComment(
+	owner: string,
+	repo: string,
+	pullNumber: number,
+	commentId: number,
+	body: string,
+) {
+	const octokit = await getOctokit();
+	if (!octokit) return { error: "Not authenticated" };
+
+	try {
+		await octokit.issues.updateComment({
+			owner,
+			repo,
+			comment_id: commentId,
+			body,
+		});
+		await revalidateAfterPRMutation(owner, repo, pullNumber, "comment");
+		return { success: true };
+	} catch (e: unknown) {
+		return { error: getErrorMessage(e) || "Failed to update comment" };
+	}
+}
+
 export async function deletePRComment(
 	owner: string,
 	repo: string,
@@ -331,6 +355,52 @@ export async function deletePRComment(
 		return { success: true };
 	} catch (e: unknown) {
 		return { error: getErrorMessage(e) || "Failed to delete comment" };
+	}
+}
+
+export async function updatePRReviewComment(
+	owner: string,
+	repo: string,
+	pullNumber: number,
+	commentId: number,
+	body: string,
+) {
+	const octokit = await getOctokit();
+	if (!octokit) return { error: "Not authenticated" };
+
+	try {
+		await octokit.pulls.updateReviewComment({
+			owner,
+			repo,
+			comment_id: commentId,
+			body,
+		});
+		await revalidateAfterPRMutation(owner, repo, pullNumber, "reviewComment");
+		return { success: true };
+	} catch (e: unknown) {
+		return { error: getErrorMessage(e) || "Failed to update review comment" };
+	}
+}
+
+export async function deletePRReviewComment(
+	owner: string,
+	repo: string,
+	pullNumber: number,
+	commentId: number,
+) {
+	const octokit = await getOctokit();
+	if (!octokit) return { error: "Not authenticated" };
+
+	try {
+		await octokit.pulls.deleteReviewComment({
+			owner,
+			repo,
+			comment_id: commentId,
+		});
+		await revalidateAfterPRMutation(owner, repo, pullNumber, "reviewComment");
+		return { success: true };
+	} catch (e: unknown) {
+		return { error: getErrorMessage(e) || "Failed to delete review comment" };
 	}
 }
 

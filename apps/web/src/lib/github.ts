@@ -4228,6 +4228,30 @@ const ADD_DISCUSSION_COMMENT_MUTATION = `
 	}
 `;
 
+const UPDATE_DISCUSSION_MUTATION = `
+	mutation($discussionId: ID!, $body: String!) {
+		updateDiscussion(input: { discussionId: $discussionId, body: $body }) {
+			clientMutationId
+		}
+	}
+`;
+
+const UPDATE_DISCUSSION_COMMENT_MUTATION = `
+	mutation($commentId: ID!, $body: String!) {
+		updateDiscussionComment(input: { commentId: $commentId, body: $body }) {
+			clientMutationId
+		}
+	}
+`;
+
+const DELETE_DISCUSSION_COMMENT_MUTATION = `
+	mutation($id: ID!) {
+		deleteDiscussionComment(input: { id: $id }) {
+			clientMutationId
+		}
+	}
+`;
+
 const ADD_DISCUSSION_REACTION_MUTATION = `
 	mutation($subjectId: ID!, $content: ReactionContent!) {
 		addReaction(input: { subjectId: $subjectId, content: $content }) {
@@ -4625,6 +4649,90 @@ export async function addDiscussionCommentViaGraphQL(
 	}
 	const comment = json.data?.addDiscussionComment?.comment;
 	return comment ? { id: comment.id, databaseId: comment.databaseId } : null;
+}
+
+export async function updateDiscussionViaGraphQL(
+	discussionId: string,
+	body: string,
+): Promise<boolean> {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx) return false;
+
+	const response = await fetch("https://api.github.com/graphql", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${authCtx.token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			query: UPDATE_DISCUSSION_MUTATION,
+			variables: { discussionId, body },
+		}),
+	});
+
+	if (!response.ok) {
+		throw new Error(`GraphQL mutation failed: ${response.status}`);
+	}
+	const json = await response.json();
+	if (json.errors?.length) {
+		throw new Error(json.errors.map((e: { message: string }) => e.message).join("; "));
+	}
+	return true;
+}
+
+export async function updateDiscussionCommentViaGraphQL(
+	commentId: string,
+	body: string,
+): Promise<boolean> {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx) return false;
+
+	const response = await fetch("https://api.github.com/graphql", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${authCtx.token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			query: UPDATE_DISCUSSION_COMMENT_MUTATION,
+			variables: { commentId, body },
+		}),
+	});
+
+	if (!response.ok) {
+		throw new Error(`GraphQL mutation failed: ${response.status}`);
+	}
+	const json = await response.json();
+	if (json.errors?.length) {
+		throw new Error(json.errors.map((e: { message: string }) => e.message).join("; "));
+	}
+	return true;
+}
+
+export async function deleteDiscussionCommentViaGraphQL(commentId: string): Promise<boolean> {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx) return false;
+
+	const response = await fetch("https://api.github.com/graphql", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${authCtx.token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			query: DELETE_DISCUSSION_COMMENT_MUTATION,
+			variables: { id: commentId },
+		}),
+	});
+
+	if (!response.ok) {
+		throw new Error(`GraphQL mutation failed: ${response.status}`);
+	}
+	const json = await response.json();
+	if (json.errors?.length) {
+		throw new Error(json.errors.map((e: { message: string }) => e.message).join("; "));
+	}
+	return true;
 }
 
 const CREATE_DISCUSSION_MUTATION = `

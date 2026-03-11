@@ -145,6 +145,7 @@ export default async function PRDetailPage({
 	const canWrite = permissions.push || permissions.admin || permissions.maintain;
 	const canTriage = canWrite || permissions.triage;
 	const isOpen = pr.state === "open" && !pr.merged_at;
+	const currentUserLogin = currentUser?.login;
 
 	// Start highlighting in parallel with second batch
 	const prFiles = (files ?? []) as GitHubPRFile[];
@@ -669,6 +670,8 @@ export default async function PRDetailPage({
 							owner={owner}
 							repo={repo}
 							pullNumber={pullNumber}
+							currentUserLogin={currentUserLogin}
+							viewerHasWriteAccess={canWrite}
 							checkStatus={
 								checkStatus && checkStatus.total > 0
 									? checkStatus
