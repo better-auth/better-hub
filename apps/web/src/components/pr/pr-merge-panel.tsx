@@ -28,6 +28,14 @@ import {
 	DialogDescription,
 	DialogFooter,
 } from "@/components/ui/dialog";
+import {
+	Sheet,
+	SheetContent,
+	SheetHeader,
+	SheetTitle,
+	SheetDescription,
+	SheetFooter,
+} from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
 	mergePullRequest,
@@ -40,6 +48,8 @@ import {
 } from "@/app/(app)/repos/[owner]/[repo]/pulls/pr-actions";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { useQueryClient } from "@tanstack/react-query";
+import { PRChecksPanel } from "@/components/pr/pr-checks-panel";
+import type { CheckStatus } from "@/lib/github";
 
 interface PRMergePanelProps {
 	owner: string;
@@ -61,6 +71,7 @@ interface PRMergePanelProps {
 	canTriage?: boolean;
 	isAuthor?: boolean;
 	branchBehindBase?: boolean;
+	checkStatus?: CheckStatus;
 }
 
 const mergeMethodLabels: Record<MergeMethod, { short: string; description: string }> = {
@@ -98,6 +109,7 @@ export function PRMergePanel({
 	canTriage = true,
 	isAuthor = false,
 	branchBehindBase = false,
+	checkStatus,
 }: PRMergePanelProps) {
 	const hasPermission = canTriage || isAuthor;
 	const availableMethods: MergeMethod[] = [
@@ -111,8 +123,8 @@ export function PRMergePanel({
 	const { emit } = useMutationEvents();
 	const queryClient = useQueryClient();
 	const [method, setMethod] = useState<MergeMethod>(availableMethods[0] ?? "merge");
-	const [dropdownOpen, setDropdownOpen] = useState(false);
-	const [squashDialogOpen, setSquashDialogOpen] = useState(false);
+	const [mergeSheetOpen, setMergeSheetOpen] = useState(false);
+	const [sheetMethodDropdownOpen, setSheetMethodDropdownOpen] = useState(false);
 	const [commitTitle, setCommitTitle] = useState("");
 	const [commitMessage, setCommitMessage] = useState("");
 	const [isPending, startTransition] = useTransition();
@@ -126,8 +138,8 @@ export function PRMergePanel({
 	const [isMerged, setIsMerged] = useState(false);
 	const [isGenerating, setIsGenerating] = useState(false);
 	const [toolsDropdownOpen, setToolsDropdownOpen] = useState(false);
-	const dropdownRef = useRef<HTMLDivElement>(null);
 	const toolsDropdownRef = useRef<HTMLDivElement>(null);
+	const sheetMethodDropdownRef = useRef<HTMLDivElement>(null);
 
 	const isOpen = state === "open" && !merged && !isMerged;
 	const showUpdateBranch =
@@ -137,13 +149,13 @@ export function PRMergePanel({
 	const canMarkReady = isOpen && (canWrite || isAuthor) && draft;
 
 	useClickOutside(
-		dropdownRef,
-		useCallback(() => setDropdownOpen(false), []),
+		toolsDropdownRef,
+		useCallback(() => setToolsDropdownOpen(false), []),
 	);
 
 	useClickOutside(
-		toolsDropdownRef,
-		useCallback(() => setToolsDropdownOpen(false), []),
+		sheetMethodDropdownRef,
+		useCallback(() => setSheetMethodDropdownOpen(false), []),
 	);
 
 	const handleFixWithGhost = () => {
@@ -233,14 +245,14 @@ export function PRMergePanel({
 			);
 			if (res.error) {
 				setMergeError(res.error);
-				if (!squashDialogOpen) {
+				if (!mergeSheetOpen) {
 					setMergeErrorDialogOpen(true);
 				}
 			} else {
 				setMergeError(null);
 				emit({ type: "pr:merged", owner, repo, number: pullNumber });
 				invalidatePRQueries();
-				setSquashDialogOpen(false);
+				setMergeSheetOpen(false);
 				setIsMerged(true);
 				router.refresh();
 			}
@@ -249,17 +261,17 @@ export function PRMergePanel({
 
 	const handleMergeClick = () => {
 		setMergeError(null);
-		if (method === "squash") {
-			setCommitTitle(`${prTitle} (#${pullNumber})`);
-			setCommitMessage("");
-			setSquashDialogOpen(true);
-		} else {
-			doMerge(method);
-		}
+		setCommitTitle(`${prTitle} (#${pullNumber})`);
+		setCommitMessage("");
+		setMergeSheetOpen(true);
 	};
 
-	const handleSquashConfirm = () => {
-		doMerge("squash", commitTitle || undefined, commitMessage || undefined);
+	const handleConfirmMerge = () => {
+		if (method === "squash") {
+			doMerge("squash", commitTitle || undefined, commitMessage || undefined);
+		} else {
+			doMerge(method, commitTitle || undefined, commitMessage || undefined);
+		}
 	};
 
 	const handleClose = () => {
@@ -409,178 +421,47 @@ export function PRMergePanel({
 	return (
 		<>
 			<div className="flex items-center gap-2">
-				{/* Merge button with dropdown */}
+				{/* Merge button */}
 				{canWrite && (
-					<div ref={dropdownRef} className="relative">
-						<div
-							className={cn(
-								"flex items-center divide-x rounded-sm overflow-hidden",
-								mergeable === false
-									? "border border-amber-500/40 divide-amber-500/20"
-									: "border border-foreground/80 divide-foreground/20",
-							)}
-						>
-							<button
-								onClick={
-									mergeable === false || draft
-										? undefined
-										: handleMergeClick
-								}
-								disabled={
-									isPending ||
-									mergeable === false ||
-									draft
-								}
-								className={cn(
-									"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider rounded-l-sm transition-colors disabled:cursor-not-allowed",
-									mergeable === false || draft
-										? "bg-amber-500/80 text-background opacity-90"
-										: "bg-foreground text-background hover:bg-foreground/90 cursor-pointer disabled:opacity-50",
-								)}
-								title={
-									draft
-										? "This PR is still a draft"
-										: mergeable ===
-											  false
-											? "Resolve conflicts before merging"
-											: undefined
-								}
-							>
-								{isPending &&
-								pendingAction === "merge" ? (
-									<Loader2 className="w-3 h-3 animate-spin" />
-								) : mergeable === false ? (
-									<>
-										<GitMerge className="w-3 h-3" />
-										<span className="text-[9px] opacity-70">
-											⚠
-										</span>
-									</>
-								) : (
-									<GitMerge className="w-3 h-3" />
-								)}
-								{draft
-									? "Draft"
-									: mergeable === false
-										? "Conflicts"
-										: mergeMethodLabels[
-												method
-											].short}
-							</button>
-
-							<button
-								onClick={() =>
-									setDropdownOpen((o) => !o)
-								}
-								disabled={isPending}
-								className={cn(
-									"flex items-center self-stretch px-1.5 rounded-r-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
-									mergeable === false || draft
-										? "bg-amber-500/80 text-background hover:bg-amber-500/70"
-										: "bg-foreground text-background hover:bg-foreground/90",
-								)}
-							>
-								<ChevronDown className="w-3 h-3" />
-							</button>
-						</div>
-
-						{dropdownOpen && (
-							<div className="absolute top-full right-0 mt-1 w-52 bg-background border border-border shadow-lg dark:shadow-2xl z-50 py-1 rounded-sm">
-								{availableMethods.map((m) => {
-									const disabled =
-										mergeable === false;
-									return (
-										<button
-											key={m}
-											disabled={
-												disabled
-											}
-											onClick={() => {
-												if (
-													disabled
-												)
-													return;
-												setMethod(
-													m,
-												);
-												setDropdownOpen(
-													false,
-												);
-											}}
-											className={cn(
-												"w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors",
-												disabled
-													? "opacity-40 cursor-not-allowed"
-													: "cursor-pointer",
-												!disabled &&
-													method ===
-														m
-													? "bg-muted/50 dark:bg-white/[0.04] text-foreground"
-													: !disabled
-														? "text-muted-foreground hover:bg-muted/40 dark:hover:bg-white/[0.03] hover:text-foreground"
-														: "text-muted-foreground",
-											)}
-										>
-											{!disabled &&
-											method ===
-												m ? (
-												<Check className="w-3 h-3 shrink-0" />
-											) : (
-												<div className="w-3 h-3 shrink-0" />
-											)}
-											<span className="text-xs">
-												{
-													mergeMethodLabels[
-														m
-													]
-														.description
-												}
-											</span>
-										</button>
-									);
-								})}
-								{mergeable === false && (
-									<>
-										<div className="border-t border-border/40 my-1" />
-										<button
-											onClick={() => {
-												setDropdownOpen(
-													false,
-												);
-												router.push(
-													`?resolve=conflicts`,
-												);
-											}}
-											className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-amber-500 hover:bg-amber-500/10 transition-colors cursor-pointer"
-										>
-											<GitMerge className="w-3 h-3 shrink-0" />
-											<span className="text-xs">
-												Resolve
-												conflicts
-											</span>
-										</button>
-										<button
-											onClick={() => {
-												setDropdownOpen(
-													false,
-												);
-												handleFixWithGhost();
-											}}
-											className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-amber-500 hover:bg-amber-500/10 transition-colors cursor-pointer"
-										>
-											<Ghost className="w-3 h-3 shrink-0" />
-											<span className="text-xs">
-												Fix
-												conflicts
-												with
-												Ghost
-											</span>
-										</button>
-									</>
-								)}
-							</div>
+					<button
+						onClick={
+							mergeable === false || draft
+								? undefined
+								: handleMergeClick
+						}
+						disabled={isPending || mergeable === false || draft}
+						className={cn(
+							"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider rounded-sm transition-colors disabled:cursor-not-allowed",
+							mergeable === false || draft
+								? "bg-amber-500/80 text-background opacity-90 border border-amber-500/40"
+								: "bg-foreground text-background hover:bg-foreground/90 cursor-pointer disabled:opacity-50 border border-foreground/80",
 						)}
-					</div>
+						title={
+							draft
+								? "This PR is still a draft"
+								: mergeable === false
+									? "Resolve conflicts before merging"
+									: undefined
+						}
+					>
+						{isPending && pendingAction === "merge" ? (
+							<Loader2 className="w-3 h-3 animate-spin" />
+						) : mergeable === false ? (
+							<>
+								<GitMerge className="w-3 h-3" />
+								<span className="text-[9px] opacity-70">
+									⚠
+								</span>
+							</>
+						) : (
+							<GitMerge className="w-3 h-3" />
+						)}
+						{draft
+							? "Draft"
+							: mergeable === false
+								? "Conflicts"
+								: "Merge"}
+					</button>
 				)}
 
 				{/* Tools dropdown */}
@@ -793,66 +674,83 @@ export function PRMergePanel({
 				</DialogContent>
 			</Dialog>
 
-			{/* Squash merge dialog */}
-			<Dialog open={squashDialogOpen} onOpenChange={setSquashDialogOpen}>
-				<DialogContent className="sm:max-w-xl">
-					<DialogHeader>
-						<DialogTitle className="text-sm font-mono">
-							Squash and merge
-						</DialogTitle>
-						<DialogDescription className="text-xs text-muted-foreground">
-							All commits will be squashed into a single
-							commit.
-						</DialogDescription>
-					</DialogHeader>
-					{mergeable === false && (
-						<div className="flex items-center gap-2.5 px-3 py-2.5 border border-amber-500/30 bg-amber-500/5 rounded-sm">
-							<GitMerge className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-							<div className="flex-1 min-w-0">
-								<p className="text-xs font-medium text-amber-600 dark:text-amber-400">
-									This branch has merge
-									conflicts
-								</p>
-								<p className="text-[11px] text-muted-foreground mt-0.5">
-									Resolve conflicts before
-									merging, or let Ghost fix
-									them.
-								</p>
+			{/* Merge sheet */}
+			<Sheet open={mergeSheetOpen} onOpenChange={setMergeSheetOpen}>
+				<SheetContent
+					side="right"
+					showCloseButton={false}
+					className="sm:max-w-2xl flex flex-col"
+				>
+					<SheetHeader>
+						<SheetTitle className="text-sm font-mono truncate">
+							{prTitle}
+						</SheetTitle>
+						<SheetDescription className="text-xs text-muted-foreground">
+							{mergeMethodLabels[method].description} into{" "}
+							<span className="font-mono text-foreground/70">
+								{baseBranch}
+							</span>
+						</SheetDescription>
+					</SheetHeader>
+					<div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+						{checkStatus && checkStatus.total > 0 && (
+							<PRChecksPanel
+								checkStatus={checkStatus}
+								owner={owner}
+								repo={repo}
+							/>
+						)}
+						{mergeable === false && (
+							<div className="flex items-center gap-2.5 px-3 py-2.5 border border-amber-500/30 bg-amber-500/5 rounded-sm">
+								<GitMerge className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+								<div className="flex-1 min-w-0">
+									<p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+										This branch has
+										merge conflicts
+									</p>
+									<p className="text-[11px] text-muted-foreground mt-0.5">
+										Resolve conflicts
+										before merging, or
+										let Ghost fix them.
+									</p>
+								</div>
+								<button
+									type="button"
+									onClick={() => {
+										setMergeSheetOpen(
+											false,
+										);
+										handleFixWithGhost();
+									}}
+									className="flex items-center gap-1 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer rounded-sm shrink-0"
+								>
+									<Ghost className="w-3 h-3" />
+									Fix
+								</button>
 							</div>
-							<button
-								type="button"
-								onClick={() => {
-									setSquashDialogOpen(false);
-									handleFixWithGhost();
-								}}
-								className="flex items-center gap-1 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer rounded-sm shrink-0"
-							>
-								<Ghost className="w-3 h-3" />
-								Fix
-							</button>
-						</div>
-					)}
-					{mergeError && (
-						<div className="flex items-start gap-2.5 px-3 py-2.5 border border-destructive/30 bg-destructive/5 rounded-sm">
-							<XCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-							<div className="flex-1 min-w-0">
-								<p className="text-xs font-medium text-destructive">
-									Merge failed
-								</p>
-								<p className="text-[11px] text-muted-foreground mt-0.5">
-									{mergeError}
-								</p>
+						)}
+						{mergeError && (
+							<div className="flex items-start gap-2.5 px-3 py-2.5 border border-destructive/30 bg-destructive/5 rounded-sm">
+								<XCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+								<div className="flex-1 min-w-0">
+									<p className="text-xs font-medium text-destructive">
+										Merge failed
+									</p>
+									<p className="text-[11px] text-muted-foreground mt-0.5">
+										{mergeError}
+									</p>
+								</div>
+								<button
+									type="button"
+									onClick={() =>
+										setMergeError(null)
+									}
+									className="p-0.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer rounded-sm shrink-0"
+								>
+									<XCircle className="w-3.5 h-3.5" />
+								</button>
 							</div>
-							<button
-								type="button"
-								onClick={() => setMergeError(null)}
-								className="p-0.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer rounded-sm shrink-0"
-							>
-								<XCircle className="w-3.5 h-3.5" />
-							</button>
-						</div>
-					)}
-					<div className="space-y-3">
+						)}
 						<div>
 							<label className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground block mb-1.5">
 								Commit message
@@ -904,44 +802,126 @@ export function PRMergePanel({
 										e.target.value,
 									)
 								}
-								rows={4}
+								rows={6}
 								className="w-full bg-transparent border border-border px-3 py-2 text-sm font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/20 focus:ring-[3px] focus:ring-ring/50 transition-colors rounded-md resize-none"
 								placeholder="Add an optional extended description..."
 							/>
 						</div>
 					</div>
-					<DialogFooter>
+					<SheetFooter>
 						<button
-							onClick={() => setSquashDialogOpen(false)}
+							onClick={() => setMergeSheetOpen(false)}
 							className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider border border-border rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer"
 						>
 							Cancel
 						</button>
-						<button
-							onClick={handleSquashConfirm}
-							disabled={
-								isPending ||
-								!commitTitle.trim() ||
-								mergeable === false ||
-								draft
-							}
-							className={cn(
-								"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
-								mergeable === false || draft
-									? "bg-amber-500/80 text-background border border-amber-500/40 cursor-not-allowed"
-									: "bg-foreground text-background hover:bg-foreground/90 border border-foreground/80 cursor-pointer",
-							)}
+						<div
+							ref={sheetMethodDropdownRef}
+							className="relative"
 						>
-							{isPending ? (
-								<Loader2 className="w-3 h-3 animate-spin" />
-							) : (
-								<GitMerge className="w-3 h-3" />
+							<div
+								className={cn(
+									"flex items-center divide-x rounded-sm overflow-hidden",
+									mergeable === false || draft
+										? "border border-amber-500/40 divide-amber-500/20"
+										: "border border-foreground/80 divide-foreground/20",
+								)}
+							>
+								<button
+									onClick={handleConfirmMerge}
+									disabled={
+										isPending ||
+										!commitTitle.trim() ||
+										mergeable ===
+											false ||
+										draft
+									}
+									className={cn(
+										"flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider rounded-l-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
+										mergeable ===
+											false ||
+											draft
+											? "bg-amber-500/80 text-background cursor-not-allowed"
+											: "bg-foreground text-background hover:bg-foreground/90 cursor-pointer",
+									)}
+								>
+									{isPending ? (
+										<Loader2 className="w-3 h-3 animate-spin" />
+									) : (
+										<GitMerge className="w-3 h-3" />
+									)}
+									{
+										mergeMethodLabels[
+											method
+										].description
+									}
+								</button>
+								<button
+									onClick={() =>
+										setSheetMethodDropdownOpen(
+											(o) => !o,
+										)
+									}
+									disabled={isPending}
+									className={cn(
+										"flex items-center self-stretch px-1.5 rounded-r-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
+										mergeable ===
+											false ||
+											draft
+											? "bg-amber-500/80 text-background hover:bg-amber-500/70"
+											: "bg-foreground text-background hover:bg-foreground/90",
+									)}
+								>
+									<ChevronDown className="w-3 h-3" />
+								</button>
+							</div>
+							{sheetMethodDropdownOpen && (
+								<div className="absolute bottom-full right-0 mb-1 w-52 bg-background border border-border shadow-lg dark:shadow-2xl z-50 py-1 rounded-sm">
+									{availableMethods.map(
+										(m) => (
+											<button
+												key={
+													m
+												}
+												onClick={() => {
+													setMethod(
+														m,
+													);
+													setSheetMethodDropdownOpen(
+														false,
+													);
+												}}
+												className={cn(
+													"w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors cursor-pointer",
+													method ===
+														m
+														? "bg-muted/50 dark:bg-white/[0.04] text-foreground"
+														: "text-muted-foreground hover:bg-muted/40 dark:hover:bg-white/[0.03] hover:text-foreground",
+												)}
+											>
+												{method ===
+												m ? (
+													<Check className="w-3 h-3 shrink-0" />
+												) : (
+													<div className="w-3 h-3 shrink-0" />
+												)}
+												<span className="text-xs">
+													{
+														mergeMethodLabels[
+															m
+														]
+															.description
+													}
+												</span>
+											</button>
+										),
+									)}
+								</div>
 							)}
-							Confirm squash and merge
-						</button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+						</div>
+					</SheetFooter>
+				</SheetContent>
+			</Sheet>
 
 			{/* Action error dialog */}
 			<Dialog

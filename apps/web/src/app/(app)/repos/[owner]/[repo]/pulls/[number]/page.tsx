@@ -602,6 +602,13 @@ export default async function PRDetailPage({
 											branchBehindBase ??
 											false
 										}
+										checkStatus={
+											checkStatus &&
+											checkStatus.total >
+												0
+												? checkStatus
+												: undefined
+										}
 									/>
 								</div>
 							}
