@@ -3,7 +3,6 @@
 import { useState, useCallback, useEffect, useMemo, memo } from "react";
 import Link from "next/link";
 import { GithubAvatar } from "@/components/shared/github-avatar";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ChevronDown, FileCode2, AlertCircle, Loader2 } from "lucide-react";
 import type { Highlighter, BundledLanguage } from "shiki";
