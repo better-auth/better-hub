@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Download, Palette, FolderTree, BadgeCheck, Check, Loader2 } from "lucide-react";
+import { Download, Palette, FolderTree, BadgeCheck, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ThemeStoreExtensionListItem } from "@/lib/theme-store-types";
@@ -45,21 +45,13 @@ export function ExtensionCard({
 	}
 
 	return (
-		<Link
-			href={`/theme-store/${ext.slug}`}
-			className={cn(
-				"group relative flex flex-col gap-3 border p-4 transition-colors rounded-md",
-				installed
-					? "border-primary/30 bg-primary/[0.03] hover:border-primary/40 hover:bg-primary/[0.05]"
-					: "border-border hover:border-foreground/15 hover:bg-muted/30",
-			)}
-		>
+		<div className="relative">
 			<button
 				type="button"
 				onClick={handleToggle}
 				disabled={busy}
 				className={cn(
-					"install-btn absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-medium transition-colors cursor-pointer",
+					"absolute top-2.5 right-2.5 z-10 flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-medium transition-colors cursor-pointer",
 					installed
 						? "bg-primary/10 text-primary hover:bg-destructive/15 hover:text-destructive"
 						: "bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary",
@@ -68,71 +60,73 @@ export function ExtensionCard({
 				{busy ? (
 					<Loader2 className="size-3 animate-spin" />
 				) : installed ? (
-					<>
-						<Check className="size-3 [.install-btn:hover_&]:hidden" />
-						<span className="[.install-btn:hover_&]:hidden">
-							Installed
-						</span>
-						<span className="hidden [.install-btn:hover_&]:inline">
-							Uninstall
-						</span>
-					</>
+					"Uninstall"
 				) : (
-					<span>Install</span>
+					"Install"
 				)}
 			</button>
-			<div className="flex items-start gap-3">
-				{ext.iconUrl ? (
-					<img
-						src={ext.iconUrl}
-						alt=""
-						className="size-10 rounded-md object-cover shrink-0"
-					/>
-				) : (
-					<div className="size-10 rounded-md bg-muted flex items-center justify-center shrink-0">
-						<TypeIcon className="size-5 text-muted-foreground" />
-					</div>
+			<Link
+				href={`/theme-store/${ext.slug}`}
+				className={cn(
+					"flex flex-col gap-3 border p-4 transition-colors rounded-md",
+					installed
+						? "border-primary/30 bg-primary/[0.03] hover:border-primary/40 hover:bg-primary/[0.05]"
+						: "border-border hover:border-foreground/15 hover:bg-muted/30",
 				)}
-				<div className="min-w-0 flex-1">
-					<div className="flex items-center gap-1.5">
-						<span className="text-sm font-medium text-foreground truncate">
-							{ext.name}
-						</span>
-						{ext.verified && (
-							<BadgeCheck className="size-3.5 text-primary shrink-0" />
-						)}
-					</div>
-					<p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-						{ext.description}
-					</p>
-				</div>
-			</div>
-			<div className="flex items-center justify-between mt-auto">
-				<div className="flex items-center gap-2">
-					{ext.authorAvatarUrl && (
+			>
+				<div className="flex items-start gap-3">
+					{ext.iconUrl ? (
 						<img
-							src={ext.authorAvatarUrl}
+							src={ext.iconUrl}
 							alt=""
-							className="size-4 rounded-full"
+							className="size-10 rounded-md object-cover shrink-0"
 						/>
+					) : (
+						<div className="size-10 rounded-md bg-muted flex items-center justify-center shrink-0">
+							<TypeIcon className="size-5 text-muted-foreground" />
+						</div>
 					)}
-					<span className="text-[11px] text-muted-foreground/70 font-mono">
-						{ext.authorName}
-					</span>
+					<div className="min-w-0 flex-1">
+						<div className="flex items-center gap-1.5">
+							<span className="text-sm font-medium text-foreground truncate">
+								{ext.name}
+							</span>
+							{ext.verified && (
+								<BadgeCheck className="size-3.5 text-primary shrink-0" />
+							)}
+						</div>
+						<p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+							{ext.description}
+						</p>
+					</div>
 				</div>
-				<div className="flex items-center gap-3">
-					<Badge
-						variant="outline"
-						className="text-[10px] px-1.5 py-0"
-					>
-						{ext.type === "theme" ? "Theme" : "Icons"}
-					</Badge>
-					<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
-						<Download className="size-3" />
-						{formatDownloads(ext.downloads)}
-					</span>
+				<div className="flex items-center justify-between mt-auto">
+					<div className="flex items-center gap-2">
+						{ext.authorAvatarUrl && (
+							<img
+								src={ext.authorAvatarUrl}
+								alt=""
+								className="size-4 rounded-full"
+							/>
+						)}
+						<span className="text-[11px] text-muted-foreground/70 font-mono">
+							{ext.authorName}
+						</span>
+					</div>
+					<div className="flex items-center gap-3">
+						<Badge
+							variant="outline"
+							className="text-[10px] px-1.5 py-0"
+						>
+							{ext.type === "theme" ? "Theme" : "Icons"}
+						</Badge>
+						<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
+							<Download className="size-3" />
+							{formatDownloads(ext.downloads)}
+						</span>
+					</div>
 				</div>
-			</div>
-		</Link>
+			</Link>
+		</div>
 	);
 }
