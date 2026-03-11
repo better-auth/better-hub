@@ -531,6 +531,8 @@ export function CollapsibleReviewCard({
 								<MessageActionsMenu
 									commentUrl={reviewUrl}
 									body={body ?? ""}
+									ariaLabel="Review actions"
+									editLabel="Edit review"
 									reportContent={{
 										authorLogin:
 											user?.login,

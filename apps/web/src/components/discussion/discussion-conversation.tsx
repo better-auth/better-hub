@@ -440,6 +440,7 @@ function DescriptionBlock({
 						<MessageActionsMenu
 							commentUrl={discussionUrl}
 							body={entry.body}
+							ariaLabel="Discussion actions"
 							editLabel="Edit discussion"
 							reportContent={{
 								authorLogin: entry.author?.login,

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { buildReferenceIssueDraft, buildReportContentUrl } from "./comment-actions";
+import {
+	buildReferenceIssueDraft,
+	buildReportContentUrl,
+	mergeReferenceIssueRepositories,
+	parseReferenceIssueRepositoryQuery,
+} from "./comment-actions";
 
 describe("buildReferenceIssueDraft", () => {
 	it("uses the first non-empty line as the issue title and appends attribution", () => {
@@ -74,5 +79,38 @@ describe("buildReportContentUrl", () => {
 		).toBe(
 			"https://github.com/contact/report-content?content_url=https%3A%2F%2Fgithub.com%2Fbetter-auth%2Fbetter-hub%2Fpull%2F238%23discussion_r2&report=better-hub%5Bbot%5D+%28bot%29",
 		);
+	});
+});
+
+describe("parseReferenceIssueRepositoryQuery", () => {
+	it("parses a trimmed owner/repo query", () => {
+		expect(parseReferenceIssueRepositoryQuery(" better-auth/better-hub ")).toEqual({
+			owner: "better-auth",
+			repo: "better-hub",
+		});
+	});
+
+	it("rejects incomplete or spaced repository queries", () => {
+		expect(parseReferenceIssueRepositoryQuery("better-auth")).toBeNull();
+		expect(parseReferenceIssueRepositoryQuery("better auth/better-hub")).toBeNull();
+		expect(parseReferenceIssueRepositoryQuery("better-auth/better hub")).toBeNull();
+	});
+});
+
+describe("mergeReferenceIssueRepositories", () => {
+	it("keeps the current repo first and dedupes case-insensitively", () => {
+		expect(
+			mergeReferenceIssueRepositories(
+				{ owner: "better-auth", repo: "better-hub" },
+				[
+					{ owner: "Better-Auth", repo: "Better-Hub" },
+					{ owner: "openai", repo: "openai-node" },
+				],
+				{ owner: "OPENAI", repo: "openai-node" },
+			),
+		).toEqual([
+			{ owner: "better-auth", repo: "better-hub" },
+			{ owner: "OPENAI", repo: "openai-node" },
+		]);
 	});
 });

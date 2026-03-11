@@ -46,6 +46,7 @@ type MessageActionsMenuProps = {
 		owner: string;
 		repo: string;
 		authorLogin?: string | null;
+		dialogLabel?: string;
 	};
 };
 
@@ -224,6 +225,7 @@ export function MessageActionsMenu({
 					sourceBody={body}
 					sourceUrl={commentUrl}
 					authorLogin={referenceIssue.authorLogin}
+					label={referenceIssue.dialogLabel}
 				/>
 			)}
 		</>
