@@ -12,6 +12,7 @@ import {
 	Command,
 	Settings,
 	Bell,
+	Store,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 
@@ -276,6 +277,15 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 											<Command className="w-2 h-2" />
 											K
 										</DropdownMenuShortcut>
+									</DropdownMenuItem>
+									<DropdownMenuItem
+										asChild
+										className="text-[11px] gap-2 h-7"
+									>
+										<Link href="/theme-store">
+											<Store className="w-3.5 h-3.5" />
+											Theme Store
+										</Link>
 									</DropdownMenuItem>
 								</DropdownMenuGroup>
 

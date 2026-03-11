@@ -1,3 +1,5 @@
+"use client";
+
 import {
 	File,
 	FileCode,
@@ -9,6 +11,8 @@ import {
 	Folder,
 	FolderOpen,
 } from "lucide-react";
+import { useIconTheme } from "@/components/theme-store/icon-theme-provider";
+import type { IconMapping } from "@/lib/theme-store-types";
 
 const langColors: Record<string, string> = {
 	ts: "#3178c6",
@@ -139,6 +143,42 @@ function getFileIcon(name: string): { Icon: LucideIcon; color?: string } {
 	return { Icon: File };
 }
 
+function resolveCustomIcon(
+	name: string,
+	type: "file" | "dir",
+	mapping: IconMapping,
+	isOpen?: boolean,
+): string | null {
+	const toUrl = (iconName: string) => `${mapping.baseURL}/${iconName}.svg`;
+
+	if (type === "dir") {
+		const lower = name.toLowerCase();
+		const match = mapping.folderIcons?.find((d) =>
+			d.folderNames.some((fn) => fn.toLowerCase() === lower),
+		);
+		if (match) return toUrl(match.name);
+		if (isOpen && mapping.defaultFolderOpen) return toUrl(mapping.defaultFolderOpen);
+		return mapping.defaultFolder ? toUrl(mapping.defaultFolder) : null;
+	}
+
+	const lower = name.toLowerCase();
+	const ext = lower.split(".").pop() || "";
+
+	const byName = mapping.fileIcons?.find((d) =>
+		d.fileNames?.some((fn) => fn.toLowerCase() === lower),
+	);
+	if (byName) return toUrl(byName.name);
+
+	if (ext) {
+		const byExt = mapping.fileIcons?.find((d) =>
+			d.fileExtensions?.some((fe) => fe.toLowerCase() === ext),
+		);
+		if (byExt) return toUrl(byExt.name);
+	}
+
+	return mapping.defaultFile ? toUrl(mapping.defaultFile) : null;
+}
+
 export function FileTypeIcon({
 	name,
 	type,
@@ -150,6 +190,27 @@ export function FileTypeIcon({
 	className?: string;
 	isOpen?: boolean;
 }) {
+	let iconMapping: IconMapping | null = null;
+	try {
+		const ctx = useIconTheme();
+		iconMapping = ctx.iconMapping;
+	} catch {
+		// Not inside provider, use defaults
+	}
+
+	if (iconMapping) {
+		const custom = resolveCustomIcon(name, type, iconMapping, isOpen);
+		if (custom) {
+			return (
+				<span
+					className={`${className} inline-flex items-center justify-center`}
+				>
+					<img src={custom} alt="" className="w-full h-full" />
+				</span>
+			);
+		}
+	}
+
 	if (type === "dir") {
 		const Icon = isOpen ? FolderOpen : Folder;
 		return <Icon className={`${className} text-muted-foreground/60`} />;

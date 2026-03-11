@@ -7,6 +7,7 @@ const APP_ROUTES = new Set([
 	"dashboard",
 	"repos",
 	"issues",
+	"theme-store",
 	"prs",
 	"stars",
 	"settings",

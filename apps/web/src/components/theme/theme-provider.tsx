@@ -6,6 +6,8 @@ import {
 	applyTheme,
 	getTheme,
 	listThemes,
+	listStoreThemes,
+	registerStoreTheme,
 	migrateLegacyThemeId,
 	STORAGE_KEY,
 	MODE_KEY,
@@ -13,6 +15,7 @@ import {
 	DEFAULT_MODE,
 	type ThemeDefinition,
 } from "@/lib/themes";
+import type { ExtensionThemeData } from "@/lib/theme-store-types";
 import {
 	applyBorderRadius,
 	getBorderRadiusPreset,
@@ -35,8 +38,10 @@ interface ColorThemeContext {
 	toggleMode: (e?: { clientX: number; clientY: number }) => void;
 	/** Set border radius preset */
 	setBorderRadius: (preset: BorderRadiusPreset) => void;
-	/** All themes */
+	/** Built-in themes */
 	themes: ThemeDefinition[];
+	/** Theme Store (installed) themes */
+	storeThemes: ThemeDefinition[];
 }
 
 const Ctx = createContext<ColorThemeContext | null>(null);
@@ -93,15 +98,84 @@ function getStoredPreferences(): { themeId: string; mode: "dark" | "light" } {
 	return { themeId: DEFAULT_THEME_ID, mode };
 }
 
+function parseStoreTheme(ext: {
+	id: string;
+	slug: string;
+	name: string;
+	description: string;
+	dataJson: string | null;
+}): ThemeDefinition | null {
+	if (!ext.dataJson) return null;
+	try {
+		const data = JSON.parse(ext.dataJson) as ExtensionThemeData;
+		if (!data.dark?.colors || !data.light?.colors) return null;
+		return {
+			id: `mp:${ext.slug}`,
+			name: ext.name,
+			description: ext.description,
+			dark: data.dark,
+			light: data.light,
+		};
+	} catch {
+		return null;
+	}
+}
+
 export function ColorThemeProvider({ children }: { children: React.ReactNode }) {
 	const { setTheme: setNextTheme } = useTheme();
 	const [themeId, setThemeIdState] = useState(DEFAULT_THEME_ID);
 	const [mode, setModeState] = useState<"dark" | "light">(DEFAULT_MODE);
 	const [borderRadius, setBorderRadiusState] =
 		useState<BorderRadiusPreset>(DEFAULT_BORDER_RADIUS);
+	const [mpThemes, setMpThemes] = useState<ThemeDefinition[]>([]);
 	const syncedToDb = useRef(false);
+	const mpLoaded = useRef(false);
 
 	const themes = listThemes();
+
+	useEffect(() => {
+		if (mpLoaded.current) return;
+		mpLoaded.current = true;
+
+		fetch("/api/theme-store/installed?type=theme")
+			.then((r) => (r.ok ? r.json() : []))
+			.then(
+				(
+					exts: Array<{
+						id: string;
+						slug: string;
+						name: string;
+						description: string;
+						dataJson: string | null;
+					}>,
+				) => {
+					const parsed: ThemeDefinition[] = [];
+					for (const ext of exts) {
+						const td = parseStoreTheme(ext);
+						if (td) {
+							registerStoreTheme(td);
+							parsed.push(td);
+						}
+					}
+					setMpThemes(parsed);
+
+					const stored = localStorage.getItem(STORAGE_KEY);
+					if (
+						stored &&
+						stored.startsWith("mp:") &&
+						getTheme(stored)
+					) {
+						const storedMode =
+							(localStorage.getItem(MODE_KEY) as
+								| "dark"
+								| "light") || DEFAULT_MODE;
+						setThemeIdState(stored);
+						applyTheme(stored, storedMode);
+					}
+				},
+			)
+			.catch(() => {});
+	}, []);
 
 	useEffect(() => {
 		const prefs = getStoredPreferences();
@@ -226,6 +300,7 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 				toggleMode,
 				setBorderRadius: setBorderRadiusCallback,
 				themes,
+				storeThemes: mpThemes,
 			}}
 		>
 			{children}

@@ -1,19 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, memo, useEffect, useRef } from "react";
-import {
-	ChevronRight,
-	FilePlus2,
-	FileX2,
-	FileEdit,
-	ArrowRight,
-	FileText,
-	Check,
-	Search,
-	X,
-	FolderTree,
-	List,
-} from "lucide-react";
+import { ChevronRight, Check, Search, X, FolderTree, List } from "lucide-react";
 import { FileTypeIcon } from "@/components/shared/file-icon";
 import { cn } from "@/lib/utils";
 import {
@@ -32,38 +20,6 @@ interface DiffFileTreeProps {
 	threadsByFile: Map<string, ReviewThread[]>;
 	onToggleViewed: (filename: string) => void;
 	onSetFilesViewed: (filenames: string[], viewed: boolean) => void;
-}
-
-function getFileStatusIcon(status: string) {
-	switch (status) {
-		case "added":
-			return FilePlus2;
-		case "removed":
-			return FileX2;
-		case "modified":
-			return FileEdit;
-		case "renamed":
-		case "copied":
-			return ArrowRight;
-		default:
-			return FileText;
-	}
-}
-
-function getFileStatusColor(status: string) {
-	switch (status) {
-		case "added":
-			return "text-success";
-		case "removed":
-			return "text-destructive";
-		case "modified":
-			return "text-warning";
-		case "renamed":
-		case "copied":
-			return "text-info";
-		default:
-			return "text-muted-foreground/60";
-	}
 }
 
 interface SearchEntry {
@@ -207,9 +163,6 @@ function DiffFileSearchBar({
 						</p>
 					) : (
 						suggestions.map((node, i) => {
-							const Icon = getFileStatusIcon(
-								node.status ?? "modified",
-							);
 							return (
 								<button
 									key={node.path}
@@ -227,14 +180,10 @@ function DiffFileSearchBar({
 											: "hover:bg-muted/40",
 									)}
 								>
-									<Icon
-										className={cn(
-											"w-3.5 h-3.5 shrink-0",
-											getFileStatusColor(
-												node.status ??
-													"modified",
-											),
-										)}
+									<FileTypeIcon
+										name={node.name}
+										type="file"
+										className="w-3.5 h-3.5 shrink-0"
 									/>
 									<span className="text-[11px] font-mono truncate flex-1">
 										<span className="text-foreground">
@@ -405,7 +354,6 @@ const DiffTreeNode = memo(function DiffTreeNode({
 	const isActive = node.fileIndex === activeIndex;
 	const isViewed = viewedFiles.has(node.path);
 	const fileThreads = threadsByFile.get(node.path);
-	const Icon = getFileStatusIcon(node.status ?? "modified");
 
 	return (
 		<div
@@ -430,11 +378,10 @@ const DiffTreeNode = memo(function DiffTreeNode({
 			{isViewed ? (
 				<Check className="w-3 h-3 shrink-0 text-primary" />
 			) : (
-				<Icon
-					className={cn(
-						"w-3 h-3 shrink-0",
-						getFileStatusColor(node.status ?? "modified"),
-					)}
+				<FileTypeIcon
+					name={node.name}
+					type="file"
+					className="w-3.5 h-3.5 shrink-0"
 				/>
 			)}
 			<span
@@ -517,7 +464,6 @@ const FlatFileItem = memo(function FlatFileItem({
 	onSelectFile,
 	onToggleViewed,
 }: FlatFileItemProps) {
-	const Icon = getFileStatusIcon(file.status);
 	const lastSlash = file.filename.lastIndexOf("/");
 	const dirPath = lastSlash > 0 ? file.filename.slice(0, lastSlash + 1) : "";
 	const fileName = lastSlash > 0 ? file.filename.slice(lastSlash + 1) : file.filename;
@@ -537,11 +483,10 @@ const FlatFileItem = memo(function FlatFileItem({
 			{isViewed ? (
 				<Check className="w-3 h-3 shrink-0 text-primary" />
 			) : (
-				<Icon
-					className={cn(
-						"w-3 h-3 shrink-0",
-						getFileStatusColor(file.status),
-					)}
+				<FileTypeIcon
+					name={fileName}
+					type="file"
+					className="w-3.5 h-3.5 shrink-0"
 				/>
 			)}
 			<span

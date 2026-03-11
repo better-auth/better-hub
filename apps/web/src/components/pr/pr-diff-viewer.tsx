@@ -15,12 +15,9 @@ import { useColorTheme } from "@/components/theme/theme-provider";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { GithubAvatar } from "@/components/shared/github-avatar";
+import { FileTypeIcon } from "@/components/shared/file-icon";
 import {
 	File,
-	FileText,
-	FilePlus2,
-	FileX2,
-	FileEdit,
 	ArrowRight,
 	ChevronLeft,
 	ChevronRight,
@@ -1186,8 +1183,6 @@ function SingleFileDiff({
 		? file.filename.slice(0, file.filename.lastIndexOf("/") + 1)
 		: "";
 	const name = file.filename.slice(dir.length);
-	const FileIcon = getFileIcon(file.status);
-
 	// Index comments by line number for quick lookup
 	const commentsByLine = new Map<string, ReviewComment[]>();
 	for (const c of fileComments) {
@@ -1387,11 +1382,10 @@ function SingleFileDiff({
 						)}
 					</button>
 
-					<FileIcon
-						className={cn(
-							"w-3.5 h-3.5 shrink-0",
-							getFileIconColor(file.status),
-						)}
+					<FileTypeIcon
+						name={name}
+						type="file"
+						className="w-3.5 h-3.5 shrink-0"
 					/>
 
 					<span className="text-xs font-mono truncate flex-1 min-w-0">
@@ -5227,38 +5221,6 @@ function ReviewStateBadge({ state }: { state: string }) {
 			);
 		default:
 			return null;
-	}
-}
-
-function getFileIcon(status: string) {
-	switch (status) {
-		case "added":
-			return FilePlus2;
-		case "removed":
-			return FileX2;
-		case "modified":
-			return FileEdit;
-		case "renamed":
-		case "copied":
-			return ArrowRight;
-		default:
-			return FileText;
-	}
-}
-
-function getFileIconColor(status: string) {
-	switch (status) {
-		case "added":
-			return "text-success";
-		case "removed":
-			return "text-destructive";
-		case "modified":
-			return "text-warning";
-		case "renamed":
-		case "copied":
-			return "text-info";
-		default:
-			return "text-muted-foreground/60";
 	}
 }
 

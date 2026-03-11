@@ -51,12 +51,35 @@ export const DEFAULT_MODE: "dark" | "light" = "dark";
 
 const themeMap = new Map(themes.map((t) => [t.id, t]));
 
+const storeThemes: ThemeDefinition[] = [];
+
 export function listThemes(): ThemeDefinition[] {
 	return themes;
 }
 
+export function listStoreThemes(): ThemeDefinition[] {
+	return storeThemes;
+}
+
+export function listAllThemes(): ThemeDefinition[] {
+	return [...themes, ...storeThemes];
+}
+
 export function getTheme(id: string): ThemeDefinition | undefined {
 	return themeMap.get(id);
+}
+
+export function registerStoreTheme(theme: ThemeDefinition): void {
+	if (themeMap.has(theme.id)) return;
+	themeMap.set(theme.id, theme);
+	storeThemes.push(theme);
+}
+
+export function clearStoreThemes(): void {
+	for (const t of storeThemes) {
+		themeMap.delete(t.id);
+	}
+	storeThemes.length = 0;
 }
 
 export function getThemeVariant(id: string, mode: "dark" | "light"): ThemeVariant | undefined {
