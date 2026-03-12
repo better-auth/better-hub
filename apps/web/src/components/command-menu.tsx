@@ -2676,6 +2676,12 @@ export function CommandMenu() {
 																mapping.baseURL &&
 																mapping.fileIcons
 															) {
+																const base =
+																	mapping.baseURL.endsWith(
+																		"/",
+																	)
+																		? mapping.baseURL
+																		: `${mapping.baseURL}/`;
 																const samples =
 																	[
 																		"typescript",
@@ -2720,7 +2726,7 @@ export function CommandMenu() {
 																			match.name,
 																		);
 																		previewUrls.push(
-																			`${mapping.baseURL}/${match.name}.svg`,
+																			`${base}${match.name}.svg`,
 																		);
 																	}
 																}

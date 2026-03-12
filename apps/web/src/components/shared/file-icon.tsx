@@ -14,7 +14,7 @@ import {
 import { useIconTheme } from "@/components/theme-store/icon-theme-provider";
 import type { IconMapping } from "@/lib/theme-store-types";
 
-const langColors: Record<string, string> = {
+export const langColors: Record<string, string> = {
 	ts: "#3178c6",
 	tsx: "#3178c6",
 	mts: "#3178c6",
@@ -82,7 +82,7 @@ const langColors: Record<string, string> = {
 
 type LucideIcon = typeof File;
 
-function getFileIcon(name: string): { Icon: LucideIcon; color?: string } {
+export function getFileIcon(name: string): { Icon: LucideIcon; color?: string } {
 	const lower = name.toLowerCase();
 	const ext = lower.split(".").pop() || "";
 
@@ -149,7 +149,8 @@ function resolveCustomIcon(
 	mapping: IconMapping,
 	isOpen?: boolean,
 ): string | null {
-	const toUrl = (iconName: string) => `${mapping.baseURL}/${iconName}.svg`;
+	const base = mapping.baseURL.endsWith("/") ? mapping.baseURL : `${mapping.baseURL}/`;
+	const toUrl = (iconName: string) => `${base}${iconName}.svg`;
 
 	if (type === "dir") {
 		const lower = name.toLowerCase();

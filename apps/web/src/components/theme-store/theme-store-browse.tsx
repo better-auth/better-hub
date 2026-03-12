@@ -48,12 +48,17 @@ export function ThemeStoreBrowse() {
 			body: JSON.stringify({ extensionId: id }),
 		});
 		if (res.ok) {
+			const data = await res.json();
 			setInstalledIds((prev) => new Set(prev).add(id));
-			setExtensions((prev) =>
-				prev.map((e) =>
-					e.id === id ? { ...e, downloads: e.downloads + 1 } : e,
-				),
-			);
+			if (!data.alreadyInstalled) {
+				setExtensions((prev) =>
+					prev.map((e) =>
+						e.id === id
+							? { ...e, downloads: e.downloads + 1 }
+							: e,
+					),
+				);
+			}
 		}
 	}, []);
 
@@ -113,29 +118,31 @@ export function ThemeStoreBrowse() {
 	return (
 		<div className="flex flex-col h-full">
 			<div className="border-b border-border px-4 sm:px-6 py-4">
-				<div className="flex items-center justify-between gap-4 mb-4">
-					<div>
+				<div className="flex items-center justify-between gap-3 mb-4">
+					<div className="min-w-0">
 						<h1 className="text-lg font-semibold text-foreground">
 							Theme Store
 						</h1>
-						<p className="text-xs text-muted-foreground mt-0.5">
+						<p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">
 							Discover and install themes and icon packs
 						</p>
 					</div>
-					<Link href="/theme-store/publish">
+					<Link href="/theme-store/publish" className="shrink-0">
 						<Button
 							size="sm"
 							variant="outline"
 							className="gap-1.5"
 						>
 							<Plus className="size-3.5" />
-							Publish
+							<span className="hidden sm:inline">
+								Publish
+							</span>
 						</Button>
 					</Link>
 				</div>
 
-				<div className="flex items-center gap-3">
-					<div className="relative flex-1 max-w-sm">
+				<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+					<div className="relative flex-1 sm:max-w-sm">
 						<Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/50" />
 						<input
 							type="text"
@@ -145,7 +152,7 @@ export function ThemeStoreBrowse() {
 							className="w-full h-8 pl-8 pr-3 text-xs bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/40"
 						/>
 					</div>
-					<div className="flex items-center gap-1 bg-muted/40 border border-border rounded-md p-0.5">
+					<div className="flex items-center gap-1 bg-muted/40 border border-border rounded-md p-0.5 self-start">
 						{FILTERS.map((f) => (
 							<button
 								key={f.id}

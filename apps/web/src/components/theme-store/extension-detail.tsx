@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import type { ThemeStoreExtensionDetail } from "@/lib/theme-store-types";
 import { ThemePreview } from "./theme-preview";
+import { IconThemePreview } from "./icon-theme-preview";
 import { ExtensionIcon } from "./default-extension-icon";
 import { UserTooltip } from "../shared/user-tooltip";
 
@@ -67,10 +68,15 @@ export function ExtensionDetail({ slug }: { slug: string }) {
 				body: JSON.stringify({ extensionId: ext.id }),
 			});
 			if (res.ok) {
+				const data = await res.json();
 				setInstalled(true);
-				setExt((prev) =>
-					prev ? { ...prev, downloads: prev.downloads + 1 } : prev,
-				);
+				if (!data.alreadyInstalled) {
+					setExt((prev) =>
+						prev
+							? { ...prev, downloads: prev.downloads + 1 }
+							: prev,
+					);
+				}
 			}
 		} finally {
 			setInstalling(false);
@@ -130,8 +136,10 @@ export function ExtensionDetail({ slug }: { slug: string }) {
 			});
 			if (res.ok) {
 				const data = await res.json();
-				setExt(data);
-				setInstalled(!!data.installed);
+				setExt((prev) => ({
+					...data,
+					downloads: prev?.downloads ?? data.downloads,
+				}));
 			}
 		} finally {
 			setUpdating(false);
@@ -172,18 +180,55 @@ export function ExtensionDetail({ slug }: { slug: string }) {
 			</div>
 
 			<div className="flex-1 px-4 sm:px-6 py-6">
-				<div className="flex flex-col lg:flex-row gap-6">
-					<div className="flex-1 min-w-0">
-						<div className="flex items-start gap-4 mb-6">
+				<div className="flex flex-col lg:flex-row gap-6 max-w-5xl mx-auto">
+					<div className="flex-1 min-w-0 order-2 lg:order-1">
+						{ext.dataJson && (
+							<div className="mb-6">
+								{ext.type === "theme" ? (
+									<ThemePreview
+										dataJson={
+											ext.dataJson
+										}
+									/>
+								) : (
+									<IconThemePreview
+										dataJson={
+											ext.dataJson
+										}
+									/>
+								)}
+							</div>
+						)}
+
+						{ext.readmeHtml ? (
+							<div className="border border-border rounded-md p-3 sm:p-5">
+								<div
+									className="ghmd"
+									dangerouslySetInnerHTML={{
+										__html: ext.readmeHtml,
+									}}
+								/>
+							</div>
+						) : (
+							<div className="border border-border rounded-md p-8 text-center">
+								<p className="text-sm text-muted-foreground/60">
+									No README available
+								</p>
+							</div>
+						)}
+					</div>
+
+					<div className="w-full lg:w-64 shrink-0 order-1 lg:order-2">
+						<div className="flex flex-row lg:flex-col items-start gap-4 mb-5">
 							<ExtensionIcon
 								iconUrl={ext.iconUrl}
 								type={ext.type}
-								className="size-14 rounded-lg"
-								iconClassName="size-7"
+								className="size-12 sm:size-14 rounded-lg shrink-0"
+								iconClassName="size-6 sm:size-7"
 							/>
 							<div className="min-w-0 flex-1">
-								<div className="flex items-center gap-2">
-									<h1 className="text-xl font-semibold text-foreground">
+								<div className="flex items-center gap-2 flex-wrap">
+									<h1 className="text-lg sm:text-xl font-semibold text-foreground">
 										{ext.name}
 									</h1>
 									{ext.verified && (
@@ -248,33 +293,6 @@ export function ExtensionDetail({ slug }: { slug: string }) {
 							</div>
 						</div>
 
-						{ext.type === "theme" && ext.dataJson && (
-							<div className="mb-6">
-								<ThemePreview
-									dataJson={ext.dataJson}
-								/>
-							</div>
-						)}
-
-						{ext.readmeHtml ? (
-							<div className="border border-border rounded-md p-5">
-								<div
-									className="gh-markdown prose prose-sm dark:prose-invert max-w-none"
-									dangerouslySetInnerHTML={{
-										__html: ext.readmeHtml,
-									}}
-								/>
-							</div>
-						) : (
-							<div className="border border-border rounded-md p-8 text-center">
-								<p className="text-sm text-muted-foreground/60">
-									No README available
-								</p>
-							</div>
-						)}
-					</div>
-
-					<div className="w-full lg:w-64 shrink-0">
 						<div className="border border-border rounded-md divide-y divide-border">
 							<div className="p-4">
 								<h3 className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-2">

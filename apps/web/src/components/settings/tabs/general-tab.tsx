@@ -159,7 +159,7 @@ function IconThemeCard({
 					{previewNames.map((name) => (
 						<img
 							key={name}
-							src={`${mapping!.baseURL}/${name}.svg`}
+							src={`${mapping!.baseURL.endsWith("/") ? mapping!.baseURL : `${mapping!.baseURL}/`}${name}.svg`}
 							alt={name}
 							className="w-4 h-4"
 						/>

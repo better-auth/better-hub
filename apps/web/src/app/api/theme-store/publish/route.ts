@@ -1,8 +1,15 @@
 import { Octokit } from "@octokit/rest";
 import { z } from "zod";
 import { scanExtensionRepo, ScanError } from "@/lib/extension-scanner";
-import { publishExtension } from "@/lib/theme-store";
+import {
+	publishExtension,
+	countExtensionsByAuthor,
+	extensionExistsBySlug,
+	toSlug,
+} from "@/lib/theme-store";
 import { getServerSession } from "@/lib/auth";
+
+const MAX_EXTENSIONS_PER_USER = 5;
 
 const bodySchema = z.object({
 	owner: z.string().min(1).max(100),
@@ -31,14 +38,33 @@ export async function POST(request: Request) {
 	}
 
 	const octokit = new Octokit({ auth: token });
+	const ghUser = serverSession.githubUser;
+	const isAdmin = (serverSession.user as { role?: string }).role === "admin";
+	const authorGithubId = String(ghUser?.id ?? serverSession.user.id);
+
+	if (!isAdmin) {
+		const slug = toSlug(owner, repo);
+		const [existing, isUpdate] = await Promise.all([
+			countExtensionsByAuthor(authorGithubId),
+			extensionExistsBySlug(slug),
+		]);
+		// Currently we only allow a max of 5 uploads per user
+		// until we have more thought around this this.
+		if (!isUpdate && existing >= MAX_EXTENSIONS_PER_USER) {
+			return Response.json(
+				{
+					error: `You can publish up to ${MAX_EXTENSIONS_PER_USER} extensions. Please remove one before publishing another.`,
+				},
+				{ status: 403 },
+			);
+		}
+	}
 
 	try {
 		const scan = await scanExtensionRepo(octokit, owner, repo);
-		const ghUser = serverSession.githubUser;
-		const isAdmin = (serverSession.user as { role?: string }).role === "admin";
 		const extension = await publishExtension(
 			scan,
-			String(ghUser?.id ?? serverSession.user.id),
+			authorGithubId,
 			(ghUser?.login as string) ?? serverSession.user.name,
 			(ghUser?.avatar_url as string) ?? serverSession.user.image ?? null,
 			{ verified: isAdmin },

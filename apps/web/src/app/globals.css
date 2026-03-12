@@ -827,6 +827,30 @@ tr.diff-search-match-active > td {
 	margin-top: 1em;
 }
 
+/* HTML align attribute support (common in GitHub READMEs) */
+.ghmd [align="center"] {
+	text-align: center;
+}
+.ghmd [align="center"] > img,
+.ghmd [align="center"] > a {
+	display: inline-block;
+}
+.ghmd img[align="center"] {
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+}
+.ghmd [align="right"] {
+	text-align: right;
+}
+.ghmd [align="right"] > img,
+.ghmd [align="right"] > a {
+	display: inline-block;
+}
+.ghmd [align="left"] {
+	text-align: left;
+}
+
 /* Horizontal rule */
 .ghmd hr {
 	height: 0.25em;

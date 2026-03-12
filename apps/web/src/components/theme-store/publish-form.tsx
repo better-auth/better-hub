@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, AlertCircle, Check, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +12,6 @@ import { ExtensionIcon } from "./default-extension-icon";
 type Step = "input" | "scanning" | "preview" | "error";
 
 export function PublishForm() {
-	const router = useRouter();
 	const [step, setStep] = useState<Step>("input");
 	const [repoUrl, setRepoUrl] = useState("");
 	const [error, setError] = useState("");
@@ -216,7 +214,7 @@ export function PublishForm() {
 							<ThemePreview dataJson={result.dataJson} />
 						)}
 
-						<div className="flex items-center gap-3">
+						<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
 							<Link
 								href={`/theme-store/${result.slug}`}
 								className="flex-1"
@@ -228,6 +226,7 @@ export function PublishForm() {
 							</Link>
 							<Button
 								variant="outline"
+								className="w-full sm:w-auto"
 								onClick={() => {
 									setStep("input");
 									setRepoUrl("");

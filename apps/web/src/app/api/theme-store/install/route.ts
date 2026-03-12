@@ -24,8 +24,8 @@ export async function POST(request: Request) {
 		return Response.json({ error: "Extension not found" }, { status: 404 });
 	}
 
-	await installExtension(session.user.id, parsed.data.extensionId);
-	return Response.json({ ok: true });
+	const result = await installExtension(session.user.id, parsed.data.extensionId);
+	return Response.json({ ok: true, alreadyInstalled: result.alreadyInstalled });
 }
 
 export async function DELETE(request: Request) {

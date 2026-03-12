@@ -197,19 +197,30 @@ export async function getExtensionBySlug(
 	return toDetail(row, installed);
 }
 
-export async function installExtension(userId: string, extensionId: string): Promise<void> {
+export async function installExtension(
+	userId: string,
+	extensionId: string,
+): Promise<{ alreadyInstalled: boolean }> {
+	const existing = await prisma.userExtensionInstall.findUnique({
+		where: { userId_extensionId: { userId, extensionId } },
+	});
+
+	if (existing) {
+		return { alreadyInstalled: true };
+	}
+
 	const now = new Date().toISOString();
 	await prisma.$transaction([
-		prisma.userExtensionInstall.upsert({
-			where: { userId_extensionId: { userId, extensionId } },
-			create: { userId, extensionId, installedAt: now },
-			update: {},
+		prisma.userExtensionInstall.create({
+			data: { userId, extensionId, installedAt: now },
 		}),
 		prisma.marketplaceExtension.update({
 			where: { id: extensionId },
 			data: { downloads: { increment: 1 } },
 		}),
 	]);
+
+	return { alreadyInstalled: false };
 }
 
 export async function uninstallExtension(userId: string, extensionId: string): Promise<void> {
@@ -272,6 +283,18 @@ export async function unpublishExtension(slug: string, authorGithubId: string): 
 
 export async function getExtensionById(id: string) {
 	return prisma.marketplaceExtension.findUnique({ where: { id } });
+}
+
+export async function countExtensionsByAuthor(authorGithubId: string): Promise<number> {
+	return prisma.marketplaceExtension.count({ where: { authorGithubId } });
+}
+
+export async function extensionExistsBySlug(slug: string): Promise<boolean> {
+	const row = await prisma.marketplaceExtension.findUnique({
+		where: { slug },
+		select: { id: true },
+	});
+	return !!row;
 }
 
 export { toSlug };
