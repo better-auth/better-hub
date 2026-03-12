@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Download, Palette, FolderTree, BadgeCheck, Loader2 } from "lucide-react";
+import { Download, BadgeCheck, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ThemeStoreExtensionListItem } from "@/lib/theme-store-types";
+import { ExtensionIcon } from "./default-extension-icon";
 
 function formatDownloads(n: number): string {
 	if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -25,8 +26,6 @@ export function ExtensionCard({
 	onUninstall?: (id: string) => Promise<void>;
 }) {
 	const [busy, setBusy] = useState(false);
-	const typeIcon = ext.type === "theme" ? Palette : FolderTree;
-	const TypeIcon = typeIcon;
 
 	async function handleToggle(e: React.MouseEvent) {
 		e.preventDefault();
@@ -45,7 +44,7 @@ export function ExtensionCard({
 	}
 
 	return (
-		<div className="relative">
+		<div className="relative h-full">
 			<button
 				type="button"
 				onClick={handleToggle}
@@ -68,24 +67,19 @@ export function ExtensionCard({
 			<Link
 				href={`/theme-store/${ext.slug}`}
 				className={cn(
-					"flex flex-col gap-3 border p-4 transition-colors rounded-md",
+					"flex flex-col gap-3 border p-4 transition-colors rounded-md h-full",
 					installed
 						? "border-primary/30 bg-primary/[0.03] hover:border-primary/40 hover:bg-primary/[0.05]"
 						: "border-border hover:border-foreground/15 hover:bg-muted/30",
 				)}
 			>
 				<div className="flex items-start gap-3">
-					{ext.iconUrl ? (
-						<img
-							src={ext.iconUrl}
-							alt=""
-							className="size-10 rounded-md object-cover shrink-0"
-						/>
-					) : (
-						<div className="size-10 rounded-md bg-muted flex items-center justify-center shrink-0">
-							<TypeIcon className="size-5 text-muted-foreground" />
-						</div>
-					)}
+					<ExtensionIcon
+						iconUrl={ext.iconUrl}
+						type={ext.type}
+						className="size-10 rounded-md"
+						iconClassName="size-5"
+					/>
 					<div className="min-w-0 flex-1">
 						<div className="flex items-center gap-1.5">
 							<span className="text-sm font-medium text-foreground truncate">

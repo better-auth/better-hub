@@ -2,20 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-	ArrowLeft,
-	Loader2,
-	AlertCircle,
-	Check,
-	Palette,
-	FolderTree,
-	ExternalLink,
-} from "lucide-react";
+import { ArrowLeft, Loader2, AlertCircle, Check, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import type { ThemeStoreExtensionDetail } from "@/lib/theme-store-types";
 import { ThemePreview } from "./theme-preview";
+import { ExtensionIcon } from "./default-extension-icon";
 
 type Step = "input" | "scanning" | "preview" | "error";
 
@@ -185,22 +178,12 @@ export function PublishForm() {
 
 						<div className="border border-border rounded-md p-4">
 							<div className="flex items-start gap-3">
-								{result.iconUrl ? (
-									<img
-										src={result.iconUrl}
-										alt=""
-										className="size-10 rounded-md object-cover shrink-0 bg-muted"
-									/>
-								) : (
-									<div className="size-10 rounded-md bg-muted flex items-center justify-center shrink-0">
-										{result.type ===
-										"theme" ? (
-											<Palette className="size-5 text-muted-foreground" />
-										) : (
-											<FolderTree className="size-5 text-muted-foreground" />
-										)}
-									</div>
-								)}
+								<ExtensionIcon
+									iconUrl={result.iconUrl}
+									type={result.type}
+									className="size-10 rounded-md"
+									iconClassName="size-5"
+								/>
 								<div className="min-w-0 flex-1">
 									<div className="text-sm font-medium text-foreground">
 										{result.name}

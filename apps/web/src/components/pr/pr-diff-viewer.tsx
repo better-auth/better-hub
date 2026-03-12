@@ -59,8 +59,15 @@ import { ClientMarkdown } from "@/components/shared/client-markdown";
 import { CheckStatusBadge } from "@/components/pr/check-status-badge";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { UserTooltip } from "@/components/shared/user-tooltip";
-import { getDiffPreferences, setSplitView, setWordWrap } from "@/lib/diff-preferences";
+import {
+	type DiffViewMode,
+	type DiffFontSize,
+	getDiffPreferences,
+	setSplitView,
+	setWordWrap,
+} from "@/lib/diff-preferences";
 import { DiffFileTree } from "./diff-file-tree";
+import { DiffTreeSettingsPopover } from "./diff-tree-settings";
 
 interface DiffFile {
 	filename: string;
@@ -212,6 +219,15 @@ export function PRDiffViewer({
 	});
 	const [wordWrap, setWordWrapState] = useState(() => getDiffPreferences().wordWrap);
 	const [splitView, setSplitViewState] = useState(() => getDiffPreferences().splitView);
+	const [treeDefaultViewMode, setTreeDefaultViewMode] = useState<DiffViewMode>(
+		() => getDiffPreferences().defaultViewMode,
+	);
+	const [treeFontSize, setTreeFontSize] = useState<DiffFontSize>(
+		() => getDiffPreferences().fontSize,
+	);
+	const [showFolderDiffCount, setShowFolderDiffCount] = useState(
+		() => getDiffPreferences().showFolderDiffCount,
+	);
 	const [sidebarWidth, setSidebarWidth] = useState(300);
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 	const [isDragging, setIsDragging] = useState(false);
@@ -457,6 +473,19 @@ export function PRDiffViewer({
 										</span>
 									)}
 								</button>
+								<DiffTreeSettingsPopover
+									onSettingsChange={(p) => {
+										setTreeDefaultViewMode(
+											p.defaultViewMode,
+										);
+										setTreeFontSize(
+											p.fontSize,
+										);
+										setShowFolderDiffCount(
+											p.showFolderDiffCount,
+										);
+									}}
+								/>
 							</div>
 						</div>
 						{
@@ -495,6 +524,13 @@ export function PRDiffViewer({
 									}
 									onSetFilesViewed={
 										setFilesViewed
+									}
+									defaultViewMode={
+										treeDefaultViewMode
+									}
+									fontSize={treeFontSize}
+									showFolderDiffCount={
+										showFolderDiffCount
 									}
 								/>
 							) : sidebarMode === "commits" ? (

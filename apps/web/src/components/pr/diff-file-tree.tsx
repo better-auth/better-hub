@@ -11,6 +11,7 @@ import {
 	getAncestorPaths,
 } from "@/lib/file-tree";
 import type { ReviewThread } from "@/lib/github";
+import type { DiffViewMode, DiffFontSize } from "@/lib/diff-preferences";
 
 interface DiffFileTreeProps {
 	files: DiffFile[];
@@ -20,7 +21,22 @@ interface DiffFileTreeProps {
 	threadsByFile: Map<string, ReviewThread[]>;
 	onToggleViewed: (filename: string) => void;
 	onSetFilesViewed: (filenames: string[], viewed: boolean) => void;
+	defaultViewMode?: DiffViewMode;
+	fontSize?: DiffFontSize;
+	showFolderDiffCount?: boolean;
 }
+
+const FONT_SIZE_CLASS: Record<DiffFontSize, string> = {
+	sm: "text-[11px]",
+	md: "text-xs",
+	lg: "text-sm",
+};
+
+const DIR_FONT_SIZE_CLASS: Record<DiffFontSize, string> = {
+	sm: "text-[9px]",
+	md: "text-[10px]",
+	lg: "text-[11px]",
+};
 
 interface SearchEntry {
 	node: DiffTreeNode;
@@ -214,6 +230,8 @@ interface TreeNodeProps {
 	onToggle: (path: string) => void;
 	onToggleViewed: (filename: string) => void;
 	onSetFilesViewed: (filenames: string[], viewed: boolean) => void;
+	fontSize: DiffFontSize;
+	showFolderDiffCount: boolean;
 }
 
 function collectFilePaths(node: DiffTreeNode): string[] {
@@ -240,6 +258,8 @@ const DiffTreeNode = memo(function DiffTreeNode({
 	onToggle,
 	onToggleViewed,
 	onSetFilesViewed,
+	fontSize,
+	showFolderDiffCount,
 }: TreeNodeProps) {
 	const isExpanded = expandedPaths.has(node.path);
 	const paddingLeft = depth * 16 + 8;
@@ -279,16 +299,31 @@ const DiffTreeNode = memo(function DiffTreeNode({
 						className="w-3.5 h-3.5 shrink-0"
 						isOpen={isExpanded}
 					/>
-					<span className="text-[11px] font-mono truncate flex-1">
+					<span
+						className={cn(
+							FONT_SIZE_CLASS[fontSize],
+							"font-mono truncate flex-1",
+						)}
+					>
 						{node.name}
 					</span>
-					{(node.additions ?? 0) > 0 && (
-						<span className="text-[9px] font-mono text-success tabular-nums shrink-0 group-hover:hidden">
+					{showFolderDiffCount && (node.additions ?? 0) > 0 && (
+						<span
+							className={cn(
+								DIR_FONT_SIZE_CLASS[fontSize],
+								"font-mono text-success tabular-nums shrink-0 group-hover:hidden",
+							)}
+						>
 							+{node.additions}
 						</span>
 					)}
-					{(node.deletions ?? 0) > 0 && (
-						<span className="text-[9px] font-mono text-destructive tabular-nums shrink-0 group-hover:hidden">
+					{showFolderDiffCount && (node.deletions ?? 0) > 0 && (
+						<span
+							className={cn(
+								DIR_FONT_SIZE_CLASS[fontSize],
+								"font-mono text-destructive tabular-nums shrink-0 group-hover:hidden",
+							)}
+						>
 							-{node.deletions}
 						</span>
 					)}
@@ -343,6 +378,10 @@ const DiffTreeNode = memo(function DiffTreeNode({
 								onToggle={onToggle}
 								onToggleViewed={onToggleViewed}
 								onSetFilesViewed={onSetFilesViewed}
+								fontSize={fontSize}
+								showFolderDiffCount={
+									showFolderDiffCount
+								}
 							/>
 						))}
 					</div>
@@ -386,7 +425,8 @@ const DiffTreeNode = memo(function DiffTreeNode({
 			)}
 			<span
 				className={cn(
-					"text-[11px] font-mono truncate flex-1 group-hover/file:text-foreground",
+					FONT_SIZE_CLASS[fontSize],
+					"font-mono truncate flex-1 group-hover/file:text-foreground",
 					isViewed
 						? "text-muted-foreground/60 line-through"
 						: "text-foreground/80",
@@ -400,10 +440,20 @@ const DiffTreeNode = memo(function DiffTreeNode({
 					title={`${fileThreads.length} review thread${fileThreads.length !== 1 ? "s" : ""}`}
 				/>
 			)}
-			<span className="text-[9px] font-mono text-success tabular-nums shrink-0 group-hover/file:hidden">
+			<span
+				className={cn(
+					DIR_FONT_SIZE_CLASS[fontSize],
+					"font-mono text-success tabular-nums shrink-0 group-hover/file:hidden",
+				)}
+			>
 				+{node.additions ?? 0}
 			</span>
-			<span className="text-[9px] font-mono text-destructive tabular-nums shrink-0 group-hover/file:hidden">
+			<span
+				className={cn(
+					DIR_FONT_SIZE_CLASS[fontSize],
+					"font-mono text-destructive tabular-nums shrink-0 group-hover/file:hidden",
+				)}
+			>
 				-{node.deletions ?? 0}
 			</span>
 			<button
@@ -453,6 +503,7 @@ interface FlatFileItemProps {
 	threads: ReviewThread[] | undefined;
 	onSelectFile: (index: number) => void;
 	onToggleViewed: (filename: string) => void;
+	fontSize: DiffFontSize;
 }
 
 const FlatFileItem = memo(function FlatFileItem({
@@ -463,6 +514,7 @@ const FlatFileItem = memo(function FlatFileItem({
 	threads,
 	onSelectFile,
 	onToggleViewed,
+	fontSize,
 }: FlatFileItemProps) {
 	const lastSlash = file.filename.lastIndexOf("/");
 	const dirPath = lastSlash > 0 ? file.filename.slice(0, lastSlash + 1) : "";
@@ -496,7 +548,8 @@ const FlatFileItem = memo(function FlatFileItem({
 				{dirPath && (
 					<span
 						className={cn(
-							"text-[9px] truncate min-w-0 shrink",
+							DIR_FONT_SIZE_CLASS[fontSize],
+							"truncate min-w-0 shrink",
 							isViewed
 								? "text-muted-foreground/40 line-through"
 								: "text-muted-foreground/50",
@@ -507,7 +560,8 @@ const FlatFileItem = memo(function FlatFileItem({
 				)}
 				<span
 					className={cn(
-						"text-[11px] shrink-0",
+						FONT_SIZE_CLASS[fontSize],
+						"shrink-0",
 						isViewed
 							? "text-muted-foreground/60 line-through"
 							: "text-foreground/80",
@@ -522,10 +576,20 @@ const FlatFileItem = memo(function FlatFileItem({
 					title={`${threads.length} review thread${threads.length !== 1 ? "s" : ""}`}
 				/>
 			)}
-			<span className="text-[9px] font-mono text-success tabular-nums shrink-0 group-hover/file:hidden">
+			<span
+				className={cn(
+					DIR_FONT_SIZE_CLASS[fontSize],
+					"font-mono text-success tabular-nums shrink-0 group-hover/file:hidden",
+				)}
+			>
 				+{file.additions}
 			</span>
-			<span className="text-[9px] font-mono text-destructive tabular-nums shrink-0 group-hover/file:hidden">
+			<span
+				className={cn(
+					DIR_FONT_SIZE_CLASS[fontSize],
+					"font-mono text-destructive tabular-nums shrink-0 group-hover/file:hidden",
+				)}
+			>
 				-{file.deletions}
 			</span>
 			<button
@@ -561,6 +625,9 @@ export function DiffFileTree({
 	threadsByFile,
 	onToggleViewed,
 	onSetFilesViewed,
+	defaultViewMode = "tree",
+	fontSize = "sm",
+	showFolderDiffCount = true,
 }: DiffFileTreeProps) {
 	const tree = useMemo(() => buildDiffFileTree(files), [files]);
 	const searchIndex = useMemo(() => buildSearchIndex(tree), [tree]);
@@ -568,7 +635,15 @@ export function DiffFileTree({
 	const allDirPaths = useMemo(() => collectAllDirPaths(tree), [tree]);
 
 	const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => new Set<string>());
-	const [viewMode, setViewMode] = useState<ViewMode>("tree");
+	const [viewMode, setViewMode] = useState<ViewMode>(defaultViewMode);
+
+	const defaultViewModeRef = useRef(defaultViewMode);
+	useEffect(() => {
+		if (defaultViewModeRef.current !== defaultViewMode) {
+			defaultViewModeRef.current = defaultViewMode;
+			setViewMode(defaultViewMode);
+		}
+	}, [defaultViewMode]);
 
 	const initializedRef = useRef(false);
 	useEffect(() => {
@@ -641,6 +716,10 @@ export function DiffFileTree({
 									onSetFilesViewed={
 										onSetFilesViewed
 									}
+									fontSize={fontSize}
+									showFolderDiffCount={
+										showFolderDiffCount
+									}
 								/>
 							))
 						: files.map((file, index) => (
@@ -664,6 +743,7 @@ export function DiffFileTree({
 									onToggleViewed={
 										onToggleViewed
 									}
+									fontSize={fontSize}
 								/>
 							))}
 				</div>

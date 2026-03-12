@@ -1,13 +1,22 @@
 const STORAGE_KEY = "better-github-diff-preferences";
 
+export type DiffViewMode = "tree" | "flat";
+export type DiffFontSize = "sm" | "md" | "lg";
+
 export interface DiffPreferences {
 	splitView: boolean;
 	wordWrap: boolean;
+	defaultViewMode: DiffViewMode;
+	fontSize: DiffFontSize;
+	showFolderDiffCount: boolean;
 }
 
 const DEFAULT_PREFERENCES: DiffPreferences = {
 	splitView: false,
 	wordWrap: true,
+	defaultViewMode: "tree",
+	fontSize: "sm",
+	showFolderDiffCount: true,
 };
 
 export function getDiffPreferences(): DiffPreferences {
@@ -40,4 +49,16 @@ export function setSplitView(splitView: boolean): void {
 
 export function setWordWrap(wordWrap: boolean): void {
 	setDiffPreferences({ wordWrap });
+}
+
+export function setDefaultViewMode(defaultViewMode: DiffViewMode): void {
+	setDiffPreferences({ defaultViewMode });
+}
+
+export function setFontSize(fontSize: DiffFontSize): void {
+	setDiffPreferences({ fontSize });
+}
+
+export function setShowFolderDiffCount(showFolderDiffCount: boolean): void {
+	setDiffPreferences({ showFolderDiffCount });
 }

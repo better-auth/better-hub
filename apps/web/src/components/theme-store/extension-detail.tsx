@@ -7,8 +7,6 @@ import {
 	ArrowLeft,
 	Download,
 	ExternalLink,
-	Palette,
-	FolderTree,
 	BadgeCheck,
 	Check,
 	Loader2,
@@ -28,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import type { ThemeStoreExtensionDetail } from "@/lib/theme-store-types";
 import { ThemePreview } from "./theme-preview";
+import { ExtensionIcon } from "./default-extension-icon";
 import { UserTooltip } from "../shared/user-tooltip";
 
 function formatDownloads(n: number): string {
@@ -160,8 +159,6 @@ export function ExtensionDetail({ slug }: { slug: string }) {
 		);
 	}
 
-	const TypeIcon = ext.type === "theme" ? Palette : FolderTree;
-
 	return (
 		<div className="flex flex-col h-full overflow-y-auto">
 			<div className="border-b border-border px-4 sm:px-6 py-3">
@@ -178,17 +175,12 @@ export function ExtensionDetail({ slug }: { slug: string }) {
 				<div className="flex flex-col lg:flex-row gap-6">
 					<div className="flex-1 min-w-0">
 						<div className="flex items-start gap-4 mb-6">
-							{ext.iconUrl ? (
-								<img
-									src={ext.iconUrl}
-									alt=""
-									className="size-14 rounded-lg object-cover shrink-0"
-								/>
-							) : (
-								<div className="size-14 rounded-lg bg-muted flex items-center justify-center shrink-0">
-									<TypeIcon className="size-7 text-muted-foreground" />
-								</div>
-							)}
+							<ExtensionIcon
+								iconUrl={ext.iconUrl}
+								type={ext.type}
+								className="size-14 rounded-lg"
+								iconClassName="size-7"
+							/>
 							<div className="min-w-0 flex-1">
 								<div className="flex items-center gap-2">
 									<h1 className="text-xl font-semibold text-foreground">
