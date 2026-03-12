@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpen, Palette, FolderTree, Copy, Check } from "lucide-react";
+import { BookOpen, Palette, FolderTree, Copy, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -84,6 +84,76 @@ const ICON_THEME_DATA = `{
   ]
 }`;
 
+const COLOR_THEME_PROMPT = `Create a Better Hub color theme in this repo. Generate the following files:
+
+1. \`better-hub-extension.json\` (at repo root) — the manifest:
+{
+  "$schema": "https://better-hub.com/schemas/theme-manifest.schema.json",
+  "name": "<theme name>",
+  "description": "<short description>",
+  "version": "1.0.0",
+  "type": "theme",
+  "main": "theme.json",
+  "icon": "icon.png",
+  "license": "MIT"
+}
+
+2. \`theme.json\` — the theme data file with a "dark" and "light" variant. Each variant needs:
+- "accentPreview": a hex color string for the accent preview dot (e.g. "#7c3aed")
+- "bgPreview": a hex color string for the background preview dot (e.g. "#09090b")
+- "colors": an object mapping CSS custom property names to HSL values (without the hsl() wrapper, e.g. "0 0% 3.9%")
+
+The "colors" object MUST include ALL of these keys:
+--background, --foreground, --card, --card-foreground, --primary, --primary-foreground, --secondary, --secondary-foreground, --muted, --muted-foreground, --accent, --accent-foreground, --border, --input, --ring, --destructive, --success, --warning, --scrollbar-thumb, --scrollbar-thumb-hover, --shader-bg, --shader-filter, --hero-border, --diff-add-bar, --diff-del-bar, --diff-mod-bar, --link, --info, --code-bg, --code-block-bg, --inline-code-bg, --line-gutter, --line-highlight, --search-highlight, --search-highlight-active, --selection-bg, --table-row-alt, --diff-add-bg, --diff-del-bg, --diff-add-text, --diff-del-text, --diff-add-gutter, --diff-del-gutter, --diff-word-add, --diff-word-del, --alert-note, --alert-tip, --alert-important, --alert-warning, --alert-caution, --contrib-0, --contrib-1, --contrib-2, --contrib-3, --contrib-4
+
+Use "$schema": "https://better-hub.com/schemas/theme-data.schema.json" at the top of theme.json for validation.
+
+Design a cohesive, visually appealing theme with good contrast and readability. Make sure the dark and light variants feel related but are properly tuned for their respective modes.`;
+
+const ICON_THEME_PROMPT = `Create a Better Hub file icon theme in this repo. Generate the following files:
+
+1. \`better-hub-extension.json\` (at repo root) — the manifest:
+{
+  "$schema": "https://better-hub.com/schemas/icon-theme-manifest.schema.json",
+  "name": "<theme name>",
+  "description": "<short description>",
+  "version": "1.0.0",
+  "type": "icon-theme",
+  "main": "icons/icon-theme.json",
+  "icon": "icon.png",
+  "license": "MIT"
+}
+
+2. \`icons/icon-theme.json\` — the icon mapping file:
+{
+  "$schema": "https://better-hub.com/schemas/icon-theme-data.schema.json",
+  "baseURL": "https://raw.githubusercontent.com/<owner>/<repo>/HEAD/icons/",
+  "defaultFile": "file",
+  "defaultFolder": "folder",
+  "fileIcons": [
+    { "name": "typescript", "fileExtensions": ["ts", "tsx", "mts", "cts"] },
+    { "name": "javascript", "fileExtensions": ["js", "jsx", "mjs", "cjs"] },
+    { "name": "json", "fileExtensions": ["json", "jsonc", "json5"] },
+    { "name": "markdown", "fileExtensions": ["md", "mdx"] },
+    { "name": "docker", "fileNames": ["Dockerfile", "docker-compose.yml"] },
+    { "name": "git", "fileNames": [".gitignore", ".gitattributes"] },
+    { "name": "package", "fileNames": ["package.json"] }
+  ],
+  "folderIcons": [
+    { "name": "folder-src", "folderNames": ["src", "source", "lib"] },
+    { "name": "folder-test", "folderNames": ["test", "tests", "__tests__"] },
+    { "name": "folder-config", "folderNames": ["config", "configs", ".config"] },
+    { "name": "folder-public", "folderNames": ["public", "static", "assets"] },
+    { "name": "folder-component", "folderNames": ["components", "ui"] }
+  ]
+}
+
+3. SVG icon files in the \`icons/\` folder — one \`.svg\` file for each icon name referenced above (e.g. \`typescript.svg\`, \`folder-src.svg\`, \`file.svg\`, \`folder.svg\`).
+
+Each icon should be a clean, minimal SVG at 24x24 or 16x16 viewBox. Use a consistent visual style across all icons. The "baseURL" + icon name + ".svg" forms the final URL, so filenames must match exactly.
+
+Update the baseURL to point to the actual GitHub raw URL for this repo.`;
+
 function CopyButton({ text }: { text: string }) {
 	const [copied, setCopied] = useState(false);
 
@@ -97,6 +167,28 @@ function CopyButton({ text }: { text: string }) {
 			className="absolute top-2 right-2 p-1 rounded-sm bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
 		>
 			{copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+		</button>
+	);
+}
+
+function CopyPromptButton({ prompt }: { prompt: string }) {
+	const [copied, setCopied] = useState(false);
+
+	return (
+		<button
+			onClick={() => {
+				navigator.clipboard.writeText(prompt);
+				setCopied(true);
+				setTimeout(() => setCopied(false), 2000);
+			}}
+			className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium rounded-md border transition-colors shrink-0 ${
+				copied
+					? "border-success/30 bg-success/5 text-success"
+					: "border-border bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted"
+			}`}
+		>
+			{copied ? <Check className="size-3" /> : <Sparkles className="size-3" />}
+			{copied ? "Copied!" : "Copy Prompt"}
 		</button>
 	);
 }
@@ -337,29 +429,38 @@ export function DocsDialog() {
 					</DialogDescription>
 				</DialogHeader>
 
-				<div className="flex items-center gap-1 bg-muted/40 border border-border rounded-md p-0.5 w-fit">
-					<button
-						onClick={() => setDocType("theme")}
-						className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
+				<div className="flex items-center justify-between gap-2">
+					<div className="flex items-center gap-1 bg-muted/40 border border-border rounded-md p-0.5">
+						<button
+							onClick={() => setDocType("theme")}
+							className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
+								docType === "theme"
+									? "bg-background text-foreground shadow-sm"
+									: "text-muted-foreground hover:text-foreground"
+							}`}
+						>
+							<Palette className="size-3" />
+							Color Theme
+						</button>
+						<button
+							onClick={() => setDocType("icon-theme")}
+							className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
+								docType === "icon-theme"
+									? "bg-background text-foreground shadow-sm"
+									: "text-muted-foreground hover:text-foreground"
+							}`}
+						>
+							<FolderTree className="size-3" />
+							File Icon Theme
+						</button>
+					</div>
+					<CopyPromptButton
+						prompt={
 							docType === "theme"
-								? "bg-background text-foreground shadow-sm"
-								: "text-muted-foreground hover:text-foreground"
-						}`}
-					>
-						<Palette className="size-3" />
-						Color Theme
-					</button>
-					<button
-						onClick={() => setDocType("icon-theme")}
-						className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
-							docType === "icon-theme"
-								? "bg-background text-foreground shadow-sm"
-								: "text-muted-foreground hover:text-foreground"
-						}`}
-					>
-						<FolderTree className="size-3" />
-						File Icon Theme
-					</button>
+								? COLOR_THEME_PROMPT
+								: ICON_THEME_PROMPT
+						}
+					/>
 				</div>
 
 				{docType === "theme" ? <ColorThemeDocs /> : <IconThemeDocs />}

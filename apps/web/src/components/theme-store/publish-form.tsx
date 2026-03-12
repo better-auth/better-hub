@@ -68,7 +68,7 @@ export function PublishForm() {
 
 	return (
 		<div className="flex flex-col h-full overflow-y-auto">
-			<div className="border-b border-border px-4 sm:px-6 py-3">
+			<div className="px-4 sm:px-6 py-3">
 				<Link
 					href="/theme-store"
 					className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
