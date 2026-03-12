@@ -1291,25 +1291,45 @@ export function UserProfileContent({
 											<div className="flex md:hidden items-center flex-wrap gap-x-3 gap-y-1 mt-1.5">
 												{repo.language && (
 													<span className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60 font-mono">
-														<span className="w-2 h-2 rounded-full" style={{ backgroundColor: getLanguageColor(repo.language) }} />
-														{repo.language}
+														<span
+															className="w-2 h-2 rounded-full"
+															style={{
+																backgroundColor:
+																	getLanguageColor(
+																		repo.language,
+																	),
+															}}
+														/>
+														{
+															repo.language
+														}
 													</span>
 												)}
-												{repo.stargazers_count > 0 && (
+												{repo.stargazers_count >
+													0 && (
 													<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
 														<Star className="w-3 h-3" />
-														{formatNumber(repo.stargazers_count)}
+														{formatNumber(
+															repo.stargazers_count,
+														)}
 													</span>
 												)}
-												{repo.forks_count > 0 && (
+												{repo.forks_count >
+													0 && (
 													<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
 														<GitFork className="w-3 h-3" />
-														{formatNumber(repo.forks_count)}
+														{formatNumber(
+															repo.forks_count,
+														)}
 													</span>
 												)}
 												{repo.updated_at && (
 													<span className="text-[11px] text-muted-foreground font-mono">
-														<TimeAgo date={repo.updated_at} />
+														<TimeAgo
+															date={
+																repo.updated_at
+															}
+														/>
 													</span>
 												)}
 											</div>
