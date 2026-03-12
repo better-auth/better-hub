@@ -67,7 +67,7 @@ export async function POST(request: Request) {
 			authorGithubId,
 			(ghUser?.login as string) ?? serverSession.user.name,
 			(ghUser?.avatar_url as string) ?? serverSession.user.image ?? null,
-			{ verified: isAdmin },
+			{ verified: true },
 		);
 
 		return Response.json(extension, { status: 201 });

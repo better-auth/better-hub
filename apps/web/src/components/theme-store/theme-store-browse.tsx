@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Search, Plus, Palette, FolderTree, Layers } from "lucide-react";
+import {
+	Search,
+	Plus,
+	Palette,
+	FolderTree,
+	Layers,
+	CheckCircle2,
+	CircleDashed,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ExtensionCard } from "./extension-card";
 import { DocsDialog } from "./docs-dialog";
@@ -9,8 +17,9 @@ import Link from "next/link";
 import type { ThemeStoreExtensionListItem, ExtensionType } from "@/lib/theme-store-types";
 
 type FilterType = "all" | ExtensionType;
+type InstallFilter = "all" | "installed" | "not-installed";
 
-const FILTERS: {
+const TYPE_FILTERS: {
 	id: FilterType;
 	label: string;
 	icon: React.ComponentType<{ className?: string }>;
@@ -20,12 +29,23 @@ const FILTERS: {
 	{ id: "icon-theme", label: "Icons", icon: FolderTree },
 ];
 
+const INSTALL_FILTERS: {
+	id: InstallFilter;
+	label: string;
+	icon: React.ComponentType<{ className?: string }>;
+}[] = [
+	{ id: "all", label: "All", icon: Layers },
+	{ id: "installed", label: "Installed", icon: CheckCircle2 },
+	{ id: "not-installed", label: "Not Installed", icon: CircleDashed },
+];
+
 export function ThemeStoreBrowse() {
 	const [extensions, setExtensions] = useState<ThemeStoreExtensionListItem[]>([]);
 	const [total, setTotal] = useState(0);
 	const [loading, setLoading] = useState(true);
 	const [search, setSearch] = useState("");
 	const [filter, setFilter] = useState<FilterType>("all");
+	const [installFilter, setInstallFilter] = useState<InstallFilter>("all");
 	const [page, setPage] = useState(1);
 	const [installedIds, setInstalledIds] = useState<Set<string>>(new Set());
 	const installedLoaded = useRef(false);
@@ -113,6 +133,15 @@ export function ThemeStoreBrowse() {
 		setPage(1);
 	}, [filter, search]);
 
+	const filteredExtensions =
+		installFilter === "all"
+			? extensions
+			: extensions.filter((ext) =>
+					installFilter === "installed"
+						? installedIds.has(ext.id)
+						: !installedIds.has(ext.id),
+				);
+
 	const perPage = 24;
 	const totalPages = Math.ceil(total / perPage);
 
@@ -157,12 +186,30 @@ export function ThemeStoreBrowse() {
 						/>
 					</div>
 					<div className="flex items-center gap-1 bg-muted/40 border border-border rounded-md p-0.5 self-start">
-						{FILTERS.map((f) => (
+						{TYPE_FILTERS.map((f) => (
 							<button
 								key={f.id}
 								onClick={() => setFilter(f.id)}
 								className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-sm transition-colors ${
 									filter === f.id
+										? "bg-background text-foreground shadow-sm"
+										: "text-muted-foreground hover:text-foreground"
+								}`}
+							>
+								<f.icon className="size-3" />
+								{f.label}
+							</button>
+						))}
+					</div>
+					<div className="flex items-center gap-1 bg-muted/40 border border-border rounded-md p-0.5 self-start">
+						{INSTALL_FILTERS.map((f) => (
+							<button
+								key={f.id}
+								onClick={() =>
+									setInstallFilter(f.id)
+								}
+								className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-sm transition-colors ${
+									installFilter === f.id
 										? "bg-background text-foreground shadow-sm"
 										: "text-muted-foreground hover:text-foreground"
 								}`}
@@ -185,7 +232,7 @@ export function ThemeStoreBrowse() {
 							/>
 						))}
 					</div>
-				) : extensions.length === 0 ? (
+				) : filteredExtensions.length === 0 ? (
 					<div className="flex flex-col items-center justify-center py-20 text-center">
 						<Layers className="size-10 text-muted-foreground/30 mb-3" />
 						<p className="text-sm text-muted-foreground">
@@ -194,13 +241,15 @@ export function ThemeStoreBrowse() {
 						<p className="text-xs text-muted-foreground/60 mt-1">
 							{search
 								? "Try a different search term"
-								: "Be the first to publish an extension"}
+								: installFilter !== "all"
+									? "No matching extensions for this filter"
+									: "Be the first to publish an extension"}
 						</p>
 					</div>
 				) : (
 					<>
 						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-							{extensions.map((ext) => (
+							{filteredExtensions.map((ext) => (
 								<ExtensionCard
 									key={ext.id}
 									ext={ext}

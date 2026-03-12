@@ -83,6 +83,7 @@ export async function PATCH(_request: Request, { params }: { params: Promise<{ s
 			String(ghId),
 			(ghUser?.login as string) ?? serverSession.user.name,
 			(ghUser?.avatar_url as string) ?? serverSession.user.image ?? null,
+			{ verified: existing.verified },
 		);
 
 		return Response.json({ ...updated, isAuthor: true });

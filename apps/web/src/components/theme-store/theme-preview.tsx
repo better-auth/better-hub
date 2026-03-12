@@ -3,6 +3,12 @@
 import { useState, useMemo } from "react";
 import type { ExtensionThemeData } from "@/lib/theme-store-types";
 
+function hsl(v: string | undefined): string {
+	if (!v) return "transparent";
+	if (v.startsWith("#") || v.startsWith("rgb") || v.startsWith("hsl(")) return v;
+	return `hsl(${v})`;
+}
+
 export function ThemePreview({ dataJson }: { dataJson: string }) {
 	const [previewMode, setPreviewMode] = useState<"dark" | "light">("dark");
 
@@ -19,7 +25,7 @@ export function ThemePreview({ dataJson }: { dataJson: string }) {
 	const variant = themeData[previewMode];
 	if (!variant?.colors) return null;
 
-	const colors = variant.colors;
+	const c = variant.colors;
 
 	return (
 		<div className="border border-border rounded-md overflow-hidden">
@@ -50,70 +56,364 @@ export function ThemePreview({ dataJson }: { dataJson: string }) {
 					</button>
 				</div>
 			</div>
+
 			<div
-				className="p-4 min-h-[180px]"
+				className="p-4 space-y-3"
 				style={{
-					backgroundColor: colors["--background"],
-					color: colors["--foreground"],
+					backgroundColor: hsl(c["--background"]),
+					color: hsl(c["--foreground"]),
 				}}
 			>
-				<div className="flex gap-3 mb-3">
+				{/* Buttons row */}
+				<div className="flex items-center gap-2">
 					<div
-						className="h-7 w-20 rounded-md"
-						style={{ backgroundColor: colors["--primary"] }}
-					/>
-					<div
-						className="h-7 w-16 rounded-md border"
+						className="h-7 px-3 rounded-md flex items-center text-[10px] font-medium"
 						style={{
-							backgroundColor: colors["--secondary"],
-							borderColor: colors["--border"],
+							backgroundColor: hsl(c["--primary"]),
+							color: hsl(c["--primary-foreground"]),
 						}}
-					/>
+					>
+						Primary
+					</div>
+					<div
+						className="h-7 px-3 rounded-md flex items-center text-[10px] font-medium"
+						style={{
+							backgroundColor: hsl(c["--secondary"]),
+							color: hsl(c["--secondary-foreground"]),
+						}}
+					>
+						Secondary
+					</div>
+					<div
+						className="h-7 px-3 rounded-md flex items-center text-[10px] font-medium text-white"
+						style={{
+							backgroundColor: hsl(c["--destructive"]),
+						}}
+					>
+						Delete
+					</div>
+					<div
+						className="h-7 px-3 rounded-md flex items-center text-[10px] font-medium text-white"
+						style={{
+							backgroundColor: hsl(c["--success"]),
+						}}
+					>
+						Save
+					</div>
 				</div>
+
+				{/* Card with text, link, input, inline code */}
 				<div
-					className="rounded-md border p-3 mb-3"
+					className="rounded-md border p-3 space-y-2.5"
 					style={{
-						backgroundColor: colors["--card"],
-						borderColor: colors["--border"],
-						color: colors["--card-foreground"],
+						backgroundColor: hsl(c["--card"]),
+						borderColor: hsl(c["--border"]),
+						color: hsl(c["--card-foreground"]),
 					}}
 				>
-					<div className="text-xs font-medium mb-1">Card Title</div>
-					<div
-						className="text-[10px]"
-						style={{ color: colors["--muted-foreground"] }}
-					>
-						This is how card content looks with this theme.
-					</div>
-				</div>
-				<div className="flex gap-2">
-					<div
-						className="h-5 w-24 rounded-sm"
-						style={{ backgroundColor: colors["--accent"] }}
-					/>
-					<div
-						className="h-5 w-16 rounded-sm"
-						style={{ backgroundColor: colors["--muted"] }}
-					/>
-				</div>
-				<div className="mt-3 text-[10px] font-mono space-y-0.5">
-					<div
-						className="px-2 py-0.5 rounded-sm"
-						style={{
-							backgroundColor: colors["--diff-add-bg"],
-							color: colors["--diff-add-text"],
-						}}
-					>
-						+ added line
+					<div className="flex items-center justify-between">
+						<div className="text-xs font-medium">
+							Repository Overview
+						</div>
+						<div
+							className="text-[10px] px-1.5 py-0.5 rounded-full border font-medium"
+							style={{
+								borderColor: hsl(c["--border"]),
+								color: hsl(c["--muted-foreground"]),
+							}}
+						>
+							v2.1.0
+						</div>
 					</div>
 					<div
-						className="px-2 py-0.5 rounded-sm"
+						className="text-[10px] leading-relaxed"
 						style={{
-							backgroundColor: colors["--diff-del-bg"],
-							color: colors["--diff-del-text"],
+							color: hsl(c["--muted-foreground"]),
 						}}
 					>
-						- removed line
+						A modern UI toolkit with{" "}
+						<span
+							className="underline underline-offset-2 cursor-pointer"
+							style={{ color: hsl(c["--link"]) }}
+						>
+							full documentation
+						</span>{" "}
+						and built-in support for{" "}
+						<span
+							className="px-1 py-0.5 rounded text-[9px] font-mono"
+							style={{
+								backgroundColor: hsl(
+									c["--inline-code-bg"],
+								),
+							}}
+						>
+							dark mode
+						</span>
+						.
+					</div>
+
+					<div
+						className="h-7 rounded-md border px-2.5 flex items-center text-[10px]"
+						style={{
+							borderColor: hsl(c["--input"]),
+							backgroundColor: hsl(c["--background"]),
+							color: hsl(c["--muted-foreground"]),
+						}}
+					>
+						Search files...
+					</div>
+				</div>
+
+				{/* Code block */}
+				<div
+					className="rounded-md border overflow-hidden text-[10px] font-mono"
+					style={{
+						borderColor: hsl(c["--border"]),
+						backgroundColor: hsl(c["--code-block-bg"]),
+					}}
+				>
+					<div
+						className="flex"
+						style={{
+							backgroundColor: hsl(c["--line-highlight"]),
+						}}
+					>
+						<div
+							className="w-8 shrink-0 text-right pr-2 py-0.5 select-none"
+							style={{
+								color: hsl(c["--line-gutter"]),
+							}}
+						>
+							1
+						</div>
+						<div className="py-0.5 px-2">
+							<span
+								style={{
+									color: hsl(
+										c["--foreground"],
+									),
+								}}
+							>
+								export function{" "}
+							</span>
+							<span style={{ color: hsl(c["--link"]) }}>
+								setup
+							</span>
+							<span
+								style={{
+									color: hsl(
+										c["--foreground"],
+									),
+								}}
+							>
+								() {"{"}
+							</span>
+						</div>
+					</div>
+					<div className="flex">
+						<div
+							className="w-8 shrink-0 text-right pr-2 py-0.5 select-none"
+							style={{
+								color: hsl(c["--line-gutter"]),
+							}}
+						>
+							2
+						</div>
+						<div className="py-0.5 px-2">
+							<span
+								style={{
+									color: hsl(
+										c["--foreground"],
+									),
+								}}
+							>
+								{"  "}return{" "}
+							</span>
+							<span
+								style={{
+									color: hsl(c["--success"]),
+								}}
+							>
+								&quot;ready&quot;
+							</span>
+						</div>
+					</div>
+					<div className="flex">
+						<div
+							className="w-8 shrink-0 text-right pr-2 py-0.5 select-none"
+							style={{
+								color: hsl(c["--line-gutter"]),
+							}}
+						>
+							3
+						</div>
+						<div className="py-0.5 px-2">
+							<span
+								style={{
+									color: hsl(
+										c["--foreground"],
+									),
+								}}
+							>
+								{"}"}
+							</span>
+						</div>
+					</div>
+				</div>
+
+				{/* Diff */}
+				<div
+					className="rounded-md border overflow-hidden text-[10px] font-mono"
+					style={{ borderColor: hsl(c["--border"]) }}
+				>
+					<div
+						className="flex"
+						style={{ backgroundColor: hsl(c["--diff-del-bg"]) }}
+					>
+						<div
+							className="w-8 shrink-0 text-right pr-2 py-0.5 select-none"
+							style={{
+								color: hsl(c["--diff-del-gutter"]),
+							}}
+						>
+							4
+						</div>
+						<div
+							className="w-4 shrink-0 text-center py-0.5"
+							style={{
+								color: hsl(c["--diff-del-text"]),
+							}}
+						>
+							-
+						</div>
+						<div
+							className="py-0.5 pr-2"
+							style={{
+								color: hsl(c["--diff-del-text"]),
+							}}
+						>
+							const old ={" "}
+							<span
+								className="px-0.5 rounded-sm"
+								style={{
+									backgroundColor: hsl(
+										c[
+											"--diff-word-del"
+										],
+									),
+								}}
+							>
+								&quot;deprecated&quot;
+							</span>
+						</div>
+					</div>
+					<div
+						className="flex"
+						style={{ backgroundColor: hsl(c["--diff-add-bg"]) }}
+					>
+						<div
+							className="w-8 shrink-0 text-right pr-2 py-0.5 select-none"
+							style={{
+								color: hsl(c["--diff-add-gutter"]),
+							}}
+						>
+							4
+						</div>
+						<div
+							className="w-4 shrink-0 text-center py-0.5"
+							style={{
+								color: hsl(c["--diff-add-text"]),
+							}}
+						>
+							+
+						</div>
+						<div
+							className="py-0.5 pr-2"
+							style={{
+								color: hsl(c["--diff-add-text"]),
+							}}
+						>
+							const val ={" "}
+							<span
+								className="px-0.5 rounded-sm"
+								style={{
+									backgroundColor: hsl(
+										c[
+											"--diff-word-add"
+										],
+									),
+								}}
+							>
+								&quot;updated&quot;
+							</span>
+						</div>
+					</div>
+				</div>
+
+				{/* Bottom row: contribution graph + alerts */}
+				<div className="flex items-end justify-between gap-3">
+					{/* Contribution graph */}
+					<div className="flex gap-[3px]">
+						{[
+							[0, 1, 2, 0, 3],
+							[1, 0, 3, 4, 2],
+							[0, 2, 4, 1, 0],
+							[3, 1, 0, 2, 4],
+							[2, 4, 1, 3, 0],
+							[0, 3, 2, 0, 1],
+							[1, 0, 4, 3, 2],
+						].map((col, ci) => (
+							<div
+								key={ci}
+								className="flex flex-col gap-[3px]"
+							>
+								{col.map((level, ri) => (
+									<div
+										key={ri}
+										className="size-[7px] rounded-[2px]"
+										style={{
+											backgroundColor:
+												hsl(
+													c[
+														`--contrib-${level}` as keyof typeof c
+													],
+												),
+										}}
+									/>
+								))}
+							</div>
+						))}
+					</div>
+
+					{/* Alert badges */}
+					<div className="flex gap-1.5 flex-wrap justify-end">
+						{(
+							[
+								["Note", "--alert-note"],
+								["Tip", "--alert-tip"],
+								["Warn", "--alert-warning"],
+								["Err", "--alert-caution"],
+							] as const
+						).map(([label, key]) => (
+							<div
+								key={label}
+								className="text-[9px] font-medium px-1.5 py-0.5 rounded-sm border"
+								style={{
+									borderColor: hsl(
+										c[
+											key as keyof typeof c
+										],
+									),
+									color: hsl(
+										c[
+											key as keyof typeof c
+										],
+									),
+								}}
+							>
+								{label}
+							</div>
+						))}
 					</div>
 				</div>
 			</div>

@@ -8,6 +8,41 @@ import { cn } from "@/lib/utils";
 import type { ThemeStoreExtensionListItem } from "@/lib/theme-store-types";
 import { ExtensionIcon } from "./default-extension-icon";
 
+function hsl(v: string): string {
+	if (v.startsWith("#") || v.startsWith("rgb") || v.startsWith("hsl(")) return v;
+	return `hsl(${v})`;
+}
+
+function ThemeColorPreview({ colors }: { colors: string[] }) {
+	return (
+		<div className="flex items-center gap-1">
+			{colors.map((c, i) => (
+				<div
+					key={i}
+					className="size-4 rounded-full ring-1 ring-border/40"
+					style={{ backgroundColor: hsl(c) }}
+				/>
+			))}
+		</div>
+	);
+}
+
+function IconPreview({ urls }: { urls: string[] }) {
+	return (
+		<div className="flex items-center gap-1.5">
+			{urls.map((url, i) => (
+				<img
+					key={i}
+					src={url}
+					alt=""
+					className="size-4 object-contain"
+					loading="lazy"
+				/>
+			))}
+		</div>
+	);
+}
+
 function formatDownloads(n: number): string {
 	if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
 	if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
@@ -94,6 +129,12 @@ export function ExtensionCard({
 						</p>
 					</div>
 				</div>
+				{ext.previewColors && ext.previewColors.length > 0 && (
+					<ThemeColorPreview colors={ext.previewColors} />
+				)}
+				{ext.previewIconUrls && ext.previewIconUrls.length > 0 && (
+					<IconPreview urls={ext.previewIconUrls} />
+				)}
 				<div className="flex items-center justify-between mt-auto">
 					<div className="flex items-center gap-2">
 						{ext.authorAvatarUrl && (

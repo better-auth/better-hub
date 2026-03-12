@@ -229,15 +229,24 @@ export async function scanExtensionRepo(
 			: validateIconMapping(dataJson);
 
 	let readmeHtml: string | null = null;
-	try {
-		const readmeContent = await fetchFileContent(octokit, owner, repo, "README.md");
-		readmeHtml = await renderMarkdownToHtml(readmeContent, {
-			owner,
-			repo,
-			branch: "HEAD",
-		});
-	} catch {
-		// README is optional
+	const readmeCandidates = ["README.md", "readme.md", "README", "readme"];
+	for (const candidate of readmeCandidates) {
+		try {
+			const readmeContent = await fetchFileContent(
+				octokit,
+				owner,
+				repo,
+				candidate,
+			);
+			readmeHtml = await renderMarkdownToHtml(readmeContent, {
+				owner,
+				repo,
+				branch: "HEAD",
+			});
+			break;
+		} catch {
+			// try next candidate
+		}
 	}
 
 	const iconUrl = manifest.icon ? resolveIconUrl(owner, repo, manifest.icon) : null;

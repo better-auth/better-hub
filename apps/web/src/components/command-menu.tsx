@@ -151,6 +151,7 @@ export function CommandMenu() {
 		toggleMode,
 		setBorderRadius,
 		themes: colorThemes,
+		storeThemes: installedColorThemes,
 	} = useColorTheme();
 	const { activeIconThemeId, installedIconThemes, setActiveIconTheme } = useIconTheme();
 	const { emit } = useMutationEvents();
@@ -1242,7 +1243,7 @@ export function CommandMenu() {
 	]);
 
 	// --- Theme mode items ---
-	const { regularThemes, brandedThemes } = useMemo(() => {
+	const { installedThemes, regularThemes, brandedThemes } = useMemo(() => {
 		const filterFn = (t: (typeof colorThemes)[0]) => {
 			if (!search.trim()) return true;
 			const s = search.toLowerCase();
@@ -1252,8 +1253,13 @@ export function CommandMenu() {
 			);
 		};
 
+		const installed: typeof colorThemes = [];
 		const regular: typeof colorThemes = [];
 		const branded: typeof colorThemes = [];
+
+		for (const theme of installedColorThemes) {
+			if (filterFn(theme)) installed.push(theme);
+		}
 
 		for (const theme of colorThemes) {
 			if (!filterFn(theme)) continue;
@@ -1264,16 +1270,20 @@ export function CommandMenu() {
 			}
 		}
 
-		return { regularThemes: regular, brandedThemes: branded };
-	}, [mode, search, colorThemes]);
+		return {
+			installedThemes: installed,
+			regularThemes: regular,
+			brandedThemes: branded,
+		};
+	}, [mode, search, colorThemes, installedColorThemes]);
 
 	const themeItems = useMemo(() => {
-		return [...regularThemes, ...brandedThemes].map((t) => ({
+		return [...installedThemes, ...regularThemes, ...brandedThemes].map((t) => ({
 			id: `theme-${t.id}`,
 			action: () => setColorTheme(t.id),
 			keepOpen: true,
 		}));
-	}, [regularThemes, brandedThemes, setColorTheme]);
+	}, [installedThemes, regularThemes, brandedThemes, setColorTheme]);
 
 	// --- Radius mode items ---
 	const RADIUS_OPTIONS: { id: BorderRadiusPreset; label: string; description: string }[] = [
@@ -1578,7 +1588,7 @@ export function CommandMenu() {
 		prevModeRef.current = mode;
 
 		if (enteredThemeMode && !search.trim()) {
-			const allThemes = [...regularThemes, ...brandedThemes];
+			const allThemes = [...installedThemes, ...regularThemes, ...brandedThemes];
 			const currentThemeIndex = allThemes.findIndex(
 				(t) => t.id === currentThemeId,
 			);
@@ -1586,7 +1596,7 @@ export function CommandMenu() {
 				setSelectedIndex(currentThemeIndex);
 			}
 		}
-	}, [mode, search, regularThemes, brandedThemes, currentThemeId]);
+	}, [mode, search, installedThemes, regularThemes, brandedThemes, currentThemeId]);
 
 	useEffect(() => {
 		if (!listRef.current) return;
@@ -2395,6 +2405,75 @@ export function CommandMenu() {
 												</span>
 											</button>
 										</div>
+										{installedThemes.length >
+											0 && (
+											<CommandGroup title="Installed Themes">
+												{installedThemes.map(
+													(
+														theme,
+													) => {
+														const idx =
+															getNextIndex();
+														const isActive =
+															currentThemeId ===
+															theme.id;
+														const variant =
+															theme[
+																currentMode
+															];
+														return (
+															<CommandItemButton
+																key={
+																	theme.id
+																}
+																index={
+																	idx
+																}
+																selected={
+																	selectedIndex ===
+																	idx
+																}
+																onClick={() =>
+																	setColorTheme(
+																		theme.id,
+																	)
+																}
+															>
+																<span className="flex items-center gap-1 shrink-0">
+																	<span
+																		className="w-3 h-3 rounded-full border border-border/40"
+																		style={{
+																			backgroundColor:
+																				variant.bgPreview,
+																		}}
+																	/>
+																	<span
+																		className="w-3 h-3 rounded-full border border-border/40"
+																		style={{
+																			backgroundColor:
+																				variant.accentPreview,
+																		}}
+																	/>
+																</span>
+																<span className="text-[13px] text-foreground flex-1">
+																	{
+																		theme.name
+																	}
+																</span>
+																<span className="text-[11px] text-muted-foreground hidden sm:block">
+																	{
+																		theme.description
+																	}
+																</span>
+																{isActive && (
+																	<Check className="size-3.5 text-success shrink-0" />
+																)}
+															</CommandItemButton>
+														);
+													},
+												)}
+											</CommandGroup>
+										)}
 										{regularThemes.length >
 											0 && (
 											<CommandGroup title="Themes">
@@ -2525,6 +2604,8 @@ export function CommandMenu() {
 											</CommandGroup>
 										)}
 										{hasQuery &&
+											installedThemes.length ===
+												0 &&
 											regularThemes.length ===
 												0 &&
 											brandedThemes.length ===

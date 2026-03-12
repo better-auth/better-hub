@@ -78,6 +78,10 @@ export interface ThemeStoreExtensionListItem {
 	verified: boolean;
 	featured: boolean;
 	publishedAt: string;
+	/** Theme: array of HSL/hex color strings from the dark variant */
+	previewColors?: string[];
+	/** Icon theme: array of resolved SVG icon URLs */
+	previewIconUrls?: string[];
 }
 
 export interface ThemeStoreExtensionDetail extends ThemeStoreExtensionListItem {

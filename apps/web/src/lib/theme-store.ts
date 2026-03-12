@@ -3,12 +3,61 @@ import { ScanError } from "./extension-scanner";
 import type {
 	ExtensionScanResult,
 	ExtensionType,
+	ExtensionThemeData,
+	IconMapping,
 	ThemeStoreExtensionListItem,
 	ThemeStoreExtensionDetail,
 } from "./theme-store-types";
 
 function toSlug(owner: string, repo: string): string {
 	return `${owner.toLowerCase()}--${repo.toLowerCase()}`;
+}
+
+const PREVIEW_COLOR_KEYS = [
+	"--background",
+	"--primary",
+	"--accent",
+	"--secondary",
+	"--destructive",
+	"--success",
+] as const;
+
+const PREVIEW_ICON_EXTS = ["ts", "js", "py", "json", "css", "html"];
+
+function extractPreview(
+	type: string,
+	dataJson: string | null,
+): { previewColors?: string[]; previewIconUrls?: string[] } {
+	if (!dataJson) return {};
+	try {
+		if (type === "theme") {
+			const data = JSON.parse(dataJson) as ExtensionThemeData;
+			const colors = data.dark?.colors;
+			if (!colors) return {};
+			return {
+				previewColors: PREVIEW_COLOR_KEYS.map((k) => colors[k]).filter(
+					Boolean,
+				),
+			};
+		}
+		if (type === "icon-theme") {
+			const mapping = JSON.parse(dataJson) as IconMapping;
+			if (!mapping.baseURL || !mapping.fileIcons) return {};
+			const base = mapping.baseURL.endsWith("/")
+				? mapping.baseURL
+				: `${mapping.baseURL}/`;
+			const urls: string[] = [];
+			for (const ext of PREVIEW_ICON_EXTS) {
+				if (urls.length >= 6) break;
+				const def = mapping.fileIcons.find((d) =>
+					d.fileExtensions?.includes(ext),
+				);
+				if (def) urls.push(`${base}${def.name}.svg`);
+			}
+			return urls.length > 0 ? { previewIconUrls: urls } : {};
+		}
+	} catch {}
+	return {};
 }
 
 function toListItem(row: {
@@ -25,6 +74,7 @@ function toListItem(row: {
 	verified: boolean;
 	featured: boolean;
 	publishedAt: string;
+	dataJson?: string | null;
 }): ThemeStoreExtensionListItem {
 	return {
 		id: row.id,
@@ -40,6 +90,7 @@ function toListItem(row: {
 		verified: row.verified,
 		featured: row.featured,
 		publishedAt: row.publishedAt,
+		...extractPreview(row.type, row.dataJson ?? null),
 	};
 }
 

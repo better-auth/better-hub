@@ -54,11 +54,28 @@ export function useColorTheme(): ColorThemeContext {
 
 const THEME_COOKIE_KEY = "color-theme";
 const MODE_COOKIE_KEY = "color-mode";
+const MP_THEME_DATA_COOKIE = "mp-theme-data";
+const MP_THEME_CACHE_KEY = "mp-theme-data";
 
 function setThemeCookies(themeId: string, mode: "dark" | "light") {
 	const maxAge = 365 * 24 * 60 * 60;
 	document.cookie = `${THEME_COOKIE_KEY}=${encodeURIComponent(themeId)};path=/;max-age=${maxAge};samesite=lax`;
 	document.cookie = `${MODE_COOKIE_KEY}=${mode};path=/;max-age=${maxAge};samesite=lax`;
+}
+
+function setMpThemeDataCookie(theme: ThemeDefinition) {
+	const maxAge = 365 * 24 * 60 * 60;
+	const payload = JSON.stringify({
+		dark: { colors: theme.dark.colors },
+		light: { colors: theme.light.colors },
+	});
+	document.cookie = `${MP_THEME_DATA_COOKIE}=${encodeURIComponent(payload)};path=/;max-age=${maxAge};samesite=lax`;
+	localStorage.setItem(MP_THEME_CACHE_KEY, payload);
+}
+
+function clearMpThemeDataCookie() {
+	document.cookie = `${MP_THEME_DATA_COOKIE}=;path=/;max-age=0`;
+	localStorage.removeItem(MP_THEME_CACHE_KEY);
 }
 
 function getStoredPreferences(): { themeId: string; mode: "dark" | "light" } {
@@ -87,6 +104,16 @@ function getStoredPreferences(): { themeId: string; mode: "dark" | "light" } {
 					? "dark"
 					: "light");
 			localStorage.setItem(MODE_KEY, mode);
+			return { themeId: storedTheme, mode };
+		}
+		// Marketplace themes aren't registered yet at initial load — preserve
+		// the stored preference so the async fetch can apply it later.
+		if (storedTheme.startsWith("mp:")) {
+			const mode =
+				storedMode ??
+				(window.matchMedia?.("(prefers-color-scheme: dark)").matches
+					? "dark"
+					: "light");
 			return { themeId: storedTheme, mode };
 		}
 	}
@@ -165,12 +192,17 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 						stored.startsWith("mp:") &&
 						getTheme(stored)
 					) {
+						const theme = getTheme(stored)!;
 						const storedMode =
 							(localStorage.getItem(MODE_KEY) as
 								| "dark"
 								| "light") || DEFAULT_MODE;
 						setThemeIdState(stored);
+						setModeState(storedMode);
 						applyTheme(stored, storedMode);
+						setThemeCookies(stored, storedMode);
+						setMpThemeDataCookie(theme);
+						setNextTheme(storedMode);
 					}
 				},
 			)
@@ -244,6 +276,11 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 				setThemeIdState(id);
 				applyTheme(id, mode);
 				setThemeCookies(id, mode);
+				if (id.startsWith("mp:")) {
+					setMpThemeDataCookie(theme);
+				} else {
+					clearMpThemeDataCookie();
+				}
 			});
 
 			fetch("/api/user-settings", {
