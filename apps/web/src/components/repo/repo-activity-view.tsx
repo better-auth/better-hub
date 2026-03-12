@@ -207,7 +207,7 @@ export function RepoActivityView({ owner, repo, events, commitActivity }: RepoAc
 						</span>
 					</div>
 					<div
-						className="flex items-end gap-[3px]"
+						className="flex items-end gap-0.75"
 						style={{ height: chartHeight }}
 					>
 						{weeks.map((week, i) => {
@@ -225,7 +225,7 @@ export function RepoActivityView({ owner, repo, events, commitActivity }: RepoAc
 								>
 									<div
 										className={cn(
-											"w-full rounded-t-[2px] transition-colors",
+											"w-full rounded-t-xs transition-colors",
 											week.total ===
 												0
 												? "bg-muted/40"
@@ -273,13 +273,16 @@ export function RepoActivityView({ owner, repo, events, commitActivity }: RepoAc
 			)}
 
 			{/* Filter tabs */}
-			<div className="flex items-center gap-1 text-[11px] font-mono">
+			<div
+				className="flex items-center gap-1 text-[11px] font-mono overflow-x-auto"
+				style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+			>
 				{filters.map((f) => (
 					<button
 						key={f.key}
 						onClick={() => setFilter(f.key)}
 						className={cn(
-							"px-3 py-1 rounded-md transition-colors cursor-pointer",
+							"px-3 py-1 rounded-md transition-colors cursor-pointer whitespace-nowrap",
 							filter === f.key
 								? "bg-muted text-foreground"
 								: "text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/40",
@@ -288,7 +291,7 @@ export function RepoActivityView({ owner, repo, events, commitActivity }: RepoAc
 						{f.label}
 					</button>
 				))}
-				<span className="text-muted-foreground ml-2">
+				<span className="text-muted-foreground ml-2 whitespace-nowrap">
 					{filtered.length} events
 				</span>
 			</div>
