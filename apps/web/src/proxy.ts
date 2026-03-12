@@ -19,6 +19,7 @@ const APP_ROUTES = new Set([
 	"api",
 	"debug",
 	"_next",
+	"schemas",
 ]);
 
 const GIT_SERVICES = new Set(["git-upload-pack", "git-receive-pack"]);

@@ -1,6 +1,6 @@
 {
 	"$schema": "http://json-schema.org/draft-07/schema#",
-	"$id": "https://betterhub.dev/schemas/icon-theme-manifest.json",
+	"$id": "https://better-hub.com/schemas/icon-theme-manifest.schema.json",
 	"title": "Better Hub Icon Theme Manifest",
 	"description": "Schema for the better-hub-extension.json manifest file when publishing an icon theme to the Better Hub marketplace.",
 	"type": "object",
@@ -48,7 +48,7 @@
 	},
 	"examples": [
 		{
-			"$schema": "https://betterhub.dev/schemas/icon-theme-manifest.json",
+			"$schema": "https://better-hub.com/schemas/icon-theme-manifest.schema.json",
 			"name": "My Icon Theme",
 			"description": "A beautiful file icon theme for Better Hub",
 			"version": "1.0.0",

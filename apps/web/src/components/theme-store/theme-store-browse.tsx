@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Search, Plus, Palette, FolderTree, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ExtensionCard } from "./extension-card";
+import { DocsDialog } from "./docs-dialog";
 import Link from "next/link";
 import type { ThemeStoreExtensionListItem, ExtensionType } from "@/lib/theme-store-types";
 
@@ -127,18 +128,21 @@ export function ThemeStoreBrowse() {
 							Discover and install themes and icon packs
 						</p>
 					</div>
-					<Link href="/theme-store/publish" className="shrink-0">
-						<Button
-							size="sm"
-							variant="outline"
-							className="gap-1.5"
-						>
-							<Plus className="size-3.5" />
-							<span className="hidden sm:inline">
-								Publish
-							</span>
-						</Button>
-					</Link>
+					<div className="flex items-center gap-2 shrink-0">
+						<DocsDialog />
+						<Link href="/theme-store/publish">
+							<Button
+								size="sm"
+								variant="outline"
+								className="gap-1.5"
+							>
+								<Plus className="size-3.5" />
+								<span className="hidden sm:inline">
+									Publish
+								</span>
+							</Button>
+						</Link>
+					</div>
 				</div>
 
 				<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">

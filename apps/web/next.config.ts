@@ -22,6 +22,7 @@ const KNOWN_ROUTES = [
 	"trending",
 	"users",
 	"_next",
+	"schemas",
 ];
 
 const nextConfig: NextConfig = {
