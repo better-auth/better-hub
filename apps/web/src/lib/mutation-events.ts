@@ -136,6 +136,17 @@ export type PinAddedEvent = {
 };
 export type PinRemovedEvent = { type: "pin:removed"; owner: string; repo: string; url: string };
 
+// ── Custom Theme Events ───────────────────────────────────────
+
+export type CustomThemeInstalledEvent = {
+	type: "customTheme:installed";
+	themeType: "theme" | "icon-theme";
+};
+export type CustomThemeUninstalledEvent = {
+	type: "customTheme:uninstalled";
+	themeType: "theme" | "icon-theme";
+};
+
 // ── Settings Events ───────────────────────────────────────────
 
 export type SettingsOpenEvent = { type: "settings:open"; tab?: string };
@@ -190,6 +201,8 @@ export type MutationEvent =
 	| GitHubAccountAddedEvent
 	| GitHubAccountRemovedEvent
 	| GitHubAccountSwitchedEvent
+	| CustomThemeInstalledEvent
+	| CustomThemeUninstalledEvent
 	| NotificationReadEvent
 	| NotificationAllReadEvent;
 

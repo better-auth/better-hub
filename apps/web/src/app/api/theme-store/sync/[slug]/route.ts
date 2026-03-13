@@ -1,6 +1,6 @@
 import { Octokit } from "@octokit/rest";
-import { getExtensionBySlug, syncExtensionData } from "@/lib/theme-store";
-import { scanExtensionRepo, ScanError } from "@/lib/extension-scanner";
+import { getCustomThemeBySlug, syncCustomThemeData } from "@/lib/theme-store";
+import { scanCustomThemeRepo, ScanError } from "@/lib/extension-scanner";
 import { getServerSession } from "@/lib/auth";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
@@ -10,9 +10,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ sl
 		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
-	const existing = await getExtensionBySlug(slug);
+	const existing = await getCustomThemeBySlug(slug);
 	if (!existing) {
-		return Response.json({ error: "Extension not found" }, { status: 404 });
+		return Response.json({ error: "Custom theme not found" }, { status: 404 });
 	}
 
 	const token = serverSession.githubUser?.accessToken;
@@ -23,14 +23,17 @@ export async function POST(_request: Request, { params }: { params: Promise<{ sl
 	const octokit = new Octokit({ auth: token });
 
 	try {
-		const scan = await scanExtensionRepo(octokit, existing.owner, existing.repo);
-		await syncExtensionData(slug, JSON.stringify(scan.data), scan.readmeHtml);
+		const scan = await scanCustomThemeRepo(octokit, existing.owner, existing.repo);
+		await syncCustomThemeData(slug, JSON.stringify(scan.data), scan.readmeHtml);
 		return Response.json({ ok: true });
 	} catch (err) {
 		if (err instanceof ScanError) {
 			return Response.json({ error: err.message }, { status: err.statusCode });
 		}
-		console.error("Failed to sync extension:", err);
-		return Response.json({ error: "Failed to sync extension data" }, { status: 500 });
+		console.error("Failed to sync custom theme:", err);
+		return Response.json(
+			{ error: "Failed to sync custom theme data" },
+			{ status: 500 },
+		);
 	}
 }

@@ -1,45 +1,62 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ArrowLeft, Loader2, AlertCircle, Check, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+	Combobox,
+	ComboboxInput,
+	ComboboxContent,
+	ComboboxList,
+	ComboboxItem,
+	ComboboxEmpty,
+} from "@/components/ui/combobox";
 import Link from "next/link";
-import type { ThemeStoreExtensionDetail } from "@/lib/theme-store-types";
+import type { ThemeStoreDetail } from "@/lib/theme-store-types";
 import { ThemePreview } from "./theme-preview";
-import { ExtensionIcon } from "./default-extension-icon";
+import { ExtensionIcon } from "./default-theme-icon";
+
+interface RepoEntry {
+	name: string;
+	fullName: string;
+	description: string | null;
+}
 
 type Step = "input" | "scanning" | "preview" | "error";
 
 export function PublishForm() {
 	const [step, setStep] = useState<Step>("input");
-	const [repoUrl, setRepoUrl] = useState("");
+	const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
 	const [error, setError] = useState("");
-	const [result, setResult] = useState<ThemeStoreExtensionDetail | null>(null);
+	const [result, setResult] = useState<ThemeStoreDetail | null>(null);
 
-	function parseRepoUrl(input: string): { owner: string; repo: string } | null {
-		const trimmed = input.trim().replace(/\/+$/, "");
+	const [repos, setRepos] = useState<RepoEntry[]>([]);
+	const [reposLoading, setReposLoading] = useState(true);
+	const [ghLogin, setGhLogin] = useState<string | null>(null);
 
-		const ghRegex = /(?:https?:\/\/)?(?:www\.)?github\.com\/([^/]+)\/([^/]+)/;
-		const match = trimmed.match(ghRegex);
-		if (match) return { owner: match[1], repo: match[2] };
-
-		const slashParts = trimmed.split("/");
-		if (
-			slashParts.length === 2 &&
-			slashParts[0].length > 0 &&
-			slashParts[1].length > 0
-		) {
-			return { owner: slashParts[0], repo: slashParts[1] };
+	const fetchRepos = useCallback(async () => {
+		setReposLoading(true);
+		try {
+			const res = await fetch("/api/theme-store/repos");
+			if (!res.ok) return;
+			const data = await res.json();
+			setRepos(data.repos ?? []);
+			setGhLogin(data.login ?? null);
+		} catch {
+			// non-fatal
+		} finally {
+			setReposLoading(false);
 		}
+	}, []);
 
-		return null;
-	}
+	useEffect(() => {
+		fetchRepos();
+	}, [fetchRepos]);
 
 	async function handleScan() {
-		const parsed = parseRepoUrl(repoUrl);
-		if (!parsed) {
-			setError("Enter a valid GitHub repository URL or owner/repo format");
+		if (!selectedRepo) {
+			setError("Select a repository to publish");
 			return;
 		}
 
@@ -50,7 +67,7 @@ export function PublishForm() {
 			const res = await fetch("/api/theme-store/publish", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(parsed),
+				body: JSON.stringify({ repo: selectedRepo }),
 			});
 			const data = await res.json();
 			if (!res.ok) {
@@ -83,7 +100,8 @@ export function PublishForm() {
 					Publish Extension
 				</h1>
 				<p className="text-xs text-muted-foreground mb-6">
-					Enter a GitHub repository URL that contains a{" "}
+					Select one of your public GitHub repositories that contains
+					a{" "}
 					<code className="text-[11px] bg-muted px-1 py-0.5 rounded">
 						better-hub-extension.json
 					</code>{" "}
@@ -96,20 +114,93 @@ export function PublishForm() {
 							<label className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-2 block">
 								Repository
 							</label>
-							<input
-								type="text"
-								placeholder="owner/repo or https://github.com/owner/repo"
-								value={repoUrl}
-								onChange={(e) => {
-									setRepoUrl(e.target.value);
-									setError("");
-								}}
-								onKeyDown={(e) => {
-									if (e.key === "Enter")
-										handleScan();
-								}}
-								className="w-full h-9 px-3 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/40"
-							/>
+							{reposLoading ? (
+								<div className="flex items-center gap-2 h-9 px-3 text-sm text-muted-foreground border border-border rounded-md">
+									<Loader2 className="size-3.5 animate-spin" />
+									Loading repositories...
+								</div>
+							) : (
+								<Combobox
+									value={selectedRepo}
+									onValueChange={(val) => {
+										setSelectedRepo(
+											val as
+												| string
+												| null,
+										);
+										setError("");
+									}}
+								>
+									<ComboboxInput
+										placeholder={
+											repos.length >
+											0
+												? "Search your repositories..."
+												: "No public repositories found"
+										}
+										disabled={
+											repos.length ===
+											0
+										}
+										className="w-full"
+									/>
+									<ComboboxContent>
+										<ComboboxList>
+											{repos.map(
+												(
+													repo,
+												) => (
+													<ComboboxItem
+														key={
+															repo.name
+														}
+														value={
+															repo.name
+														}
+													>
+														<div className="flex flex-col min-w-0">
+															<span className="text-sm truncate">
+																{ghLogin && (
+																	<span className="text-muted-foreground">
+																		{
+																			ghLogin
+																		}
+																		/
+																	</span>
+																)}
+																{
+																	repo.name
+																}
+															</span>
+															{repo.description && (
+																<span className="text-[11px] text-muted-foreground/60 truncate">
+																	{
+																		repo.description
+																	}
+																</span>
+															)}
+														</div>
+													</ComboboxItem>
+												),
+											)}
+											<ComboboxEmpty>
+												No
+												matching
+												repositories
+											</ComboboxEmpty>
+										</ComboboxList>
+									</ComboboxContent>
+								</Combobox>
+							)}
+							{selectedRepo && ghLogin && (
+								<p className="text-[11px] text-muted-foreground/60 mt-1.5">
+									Will publish from{" "}
+									<span className="text-muted-foreground">
+										{ghLogin}/
+										{selectedRepo}
+									</span>
+								</p>
+							)}
 						</div>
 
 						{error && (
@@ -123,7 +214,7 @@ export function PublishForm() {
 
 						<Button
 							onClick={handleScan}
-							disabled={!repoUrl.trim()}
+							disabled={!selectedRepo}
 							className="w-full"
 						>
 							Scan Repository
@@ -229,7 +320,7 @@ export function PublishForm() {
 								className="w-full sm:w-auto"
 								onClick={() => {
 									setStep("input");
-									setRepoUrl("");
+									setSelectedRepo(null);
 									setResult(null);
 								}}
 							>

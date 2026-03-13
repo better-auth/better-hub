@@ -5,8 +5,8 @@ import Link from "next/link";
 import { Download, BadgeCheck, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { ThemeStoreExtensionListItem } from "@/lib/theme-store-types";
-import { ExtensionIcon } from "./default-extension-icon";
+import type { ThemeStoreListItem } from "@/lib/theme-store-types";
+import { ExtensionIcon } from "./default-theme-icon";
 
 function hsl(v: string): string {
 	if (v.startsWith("#") || v.startsWith("rgb") || v.startsWith("hsl(")) return v;
@@ -55,7 +55,7 @@ export function ExtensionCard({
 	onInstall,
 	onUninstall,
 }: {
-	ext: ThemeStoreExtensionListItem;
+	ext: ThemeStoreListItem;
 	installed?: boolean;
 	onInstall?: (id: string) => Promise<void>;
 	onUninstall?: (id: string) => Promise<void>;

@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { useColorTheme } from "@/components/theme/theme-provider";
 import { useIconTheme } from "@/components/theme-store/icon-theme-provider";
 import type { ThemeDefinition } from "@/lib/themes";
-import type { IconMapping, ThemeStoreExtensionDetail } from "@/lib/theme-store-types";
+import type { IconMapping, ThemeStoreDetail } from "@/lib/theme-store-types";
 import { BORDER_RADIUS_PRESETS, type BorderRadiusPreset } from "@/lib/themes/border-radius";
 import type { UserSettings } from "@/lib/user-settings-store";
 import Link from "next/link";
@@ -99,7 +99,7 @@ function IconThemeCard({
 	isActive,
 	onSelect,
 }: {
-	ext: ThemeStoreExtensionDetail;
+	ext: ThemeStoreDetail;
 	isActive: boolean;
 	onSelect: () => void;
 }) {

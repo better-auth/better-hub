@@ -1,12 +1,12 @@
 import { prisma } from "./db";
 import { ScanError } from "./extension-scanner";
 import type {
-	ExtensionScanResult,
-	ExtensionType,
-	ExtensionThemeData,
+	CustomThemeScanResult,
+	CustomThemeType,
+	CustomThemeData,
 	IconMapping,
-	ThemeStoreExtensionListItem,
-	ThemeStoreExtensionDetail,
+	ThemeStoreListItem,
+	ThemeStoreDetail,
 } from "./theme-store-types";
 
 function toSlug(owner: string, repo: string): string {
@@ -31,7 +31,7 @@ function extractPreview(
 	if (!dataJson) return {};
 	try {
 		if (type === "theme") {
-			const data = JSON.parse(dataJson) as ExtensionThemeData;
+			const data = JSON.parse(dataJson) as CustomThemeData;
 			const colors = data.dark?.colors;
 			if (!colors) return {};
 			return {
@@ -50,7 +50,7 @@ function extractPreview(
 			for (const ext of PREVIEW_ICON_EXTS) {
 				if (urls.length >= 6) break;
 				const def = mapping.fileIcons.find((d) =>
-					d.fileExtensions?.includes(ext),
+					d.fileExtensions?.some((fe) => fe.toLowerCase() === ext),
 				);
 				if (def) urls.push(`${base}${def.name}.svg`);
 			}
@@ -75,13 +75,13 @@ function toListItem(row: {
 	featured: boolean;
 	publishedAt: string;
 	dataJson?: string | null;
-}): ThemeStoreExtensionListItem {
+}): ThemeStoreListItem {
 	return {
 		id: row.id,
 		slug: row.slug,
 		name: row.name,
 		description: row.description,
-		type: row.type as ExtensionType,
+		type: row.type as CustomThemeType,
 		version: row.version,
 		iconUrl: row.iconUrl,
 		authorName: row.authorName,
@@ -118,7 +118,7 @@ function toDetail(
 		dataJson: string | null;
 	},
 	installed?: boolean,
-): ThemeStoreExtensionDetail {
+): ThemeStoreDetail {
 	return {
 		...toListItem(row),
 		owner: row.owner,
@@ -127,18 +127,19 @@ function toDetail(
 		readmeHtml: row.readmeHtml,
 		dataJson: row.dataJson,
 		authorGithubId: row.authorGithubId,
+		createdAt: row.publishedAt,
 		updatedAt: row.updatedAt,
 		installed,
 	};
 }
 
-export async function publishExtension(
-	scan: ExtensionScanResult,
+export async function publishCustomTheme(
+	scan: CustomThemeScanResult,
 	authorGithubId: string,
 	authorName: string,
 	authorAvatarUrl: string | null,
 	opts?: { verified?: boolean },
-): Promise<ThemeStoreExtensionDetail> {
+): Promise<ThemeStoreDetail> {
 	const now = new Date().toISOString();
 	const slug = toSlug(scan.owner, scan.repo);
 	const verified = opts?.verified ?? false;
@@ -152,7 +153,7 @@ export async function publishExtension(
 		);
 	}
 
-	const row = await prisma.marketplaceExtension.upsert({
+	const row = await prisma.customTheme.upsert({
 		where: { slug },
 		create: {
 			slug,
@@ -194,12 +195,12 @@ export async function publishExtension(
 	return toDetail(row);
 }
 
-export async function listExtensions(opts: {
-	type?: ExtensionType;
+export async function listCustomThemes(opts: {
+	type?: CustomThemeType;
 	search?: string;
 	page?: number;
 	perPage?: number;
-}): Promise<{ items: ThemeStoreExtensionListItem[]; total: number }> {
+}): Promise<{ items: ThemeStoreListItem[]; total: number }> {
 	const { type, search, page = 1, perPage = 24 } = opts;
 	const skip = (page - 1) * perPage;
 
@@ -214,7 +215,7 @@ export async function listExtensions(opts: {
 	}
 
 	const [items, total] = await Promise.all([
-		prisma.marketplaceExtension.findMany({
+		prisma.customTheme.findMany({
 			where,
 			orderBy: [
 				{ featured: "desc" },
@@ -224,23 +225,23 @@ export async function listExtensions(opts: {
 			skip,
 			take: perPage,
 		}),
-		prisma.marketplaceExtension.count({ where }),
+		prisma.customTheme.count({ where }),
 	]);
 
 	return { items: items.map(toListItem), total };
 }
 
-export async function getExtensionBySlug(
+export async function getCustomThemeBySlug(
 	slug: string,
 	userId?: string,
-): Promise<ThemeStoreExtensionDetail | null> {
-	const row = await prisma.marketplaceExtension.findUnique({ where: { slug } });
+): Promise<ThemeStoreDetail | null> {
+	const row = await prisma.customTheme.findUnique({ where: { slug } });
 	if (!row) return null;
 
 	let installed = false;
 	if (userId) {
-		const install = await prisma.userExtensionInstall.findUnique({
-			where: { userId_extensionId: { userId, extensionId: row.id } },
+		const install = await prisma.userThemeInstall.findUnique({
+			where: { userId_customThemeId: { userId, customThemeId: row.id } },
 		});
 		installed = !!install;
 	}
@@ -248,12 +249,12 @@ export async function getExtensionBySlug(
 	return toDetail(row, installed);
 }
 
-export async function installExtension(
+export async function installCustomTheme(
 	userId: string,
-	extensionId: string,
+	customThemeId: string,
 ): Promise<{ alreadyInstalled: boolean }> {
-	const existing = await prisma.userExtensionInstall.findUnique({
-		where: { userId_extensionId: { userId, extensionId } },
+	const existing = await prisma.userThemeInstall.findUnique({
+		where: { userId_customThemeId: { userId, customThemeId } },
 	});
 
 	if (existing) {
@@ -262,11 +263,11 @@ export async function installExtension(
 
 	const now = new Date().toISOString();
 	await prisma.$transaction([
-		prisma.userExtensionInstall.create({
-			data: { userId, extensionId, installedAt: now },
+		prisma.userThemeInstall.create({
+			data: { userId, customThemeId, installedAt: now },
 		}),
-		prisma.marketplaceExtension.update({
-			where: { id: extensionId },
+		prisma.customTheme.update({
+			where: { id: customThemeId },
 			data: { downloads: { increment: 1 } },
 		}),
 	]);
@@ -274,74 +275,74 @@ export async function installExtension(
 	return { alreadyInstalled: false };
 }
 
-export async function uninstallExtension(userId: string, extensionId: string): Promise<void> {
-	const deleted = await prisma.userExtensionInstall
+export async function uninstallCustomTheme(userId: string, customThemeId: string): Promise<void> {
+	const deleted = await prisma.userThemeInstall
 		.delete({
-			where: { userId_extensionId: { userId, extensionId } },
+			where: { userId_customThemeId: { userId, customThemeId } },
 		})
 		.catch(() => null);
 
 	if (deleted) {
-		await prisma.marketplaceExtension
+		await prisma.customTheme
 			.update({
-				where: { id: extensionId },
+				where: { id: customThemeId },
 				data: { downloads: { decrement: 1 } },
 			})
 			.catch(() => {});
 	}
 }
 
-export async function getInstalledExtensions(
+export async function getInstalledCustomThemes(
 	userId: string,
-	type?: ExtensionType,
-): Promise<ThemeStoreExtensionDetail[]> {
+	type?: CustomThemeType,
+): Promise<ThemeStoreDetail[]> {
 	const where: Record<string, unknown> = { userId };
 	if (type) {
-		where.extension = { type };
+		where.customTheme = { type };
 	}
 
-	const installs = await prisma.userExtensionInstall.findMany({
+	const installs = await prisma.userThemeInstall.findMany({
 		where,
-		include: { extension: true },
+		include: { customTheme: true },
 		orderBy: { installedAt: "desc" },
 	});
 
-	return installs.map((i) => toDetail(i.extension, true));
+	return installs.map((i) => toDetail(i.customTheme, true));
 }
 
-export async function syncExtensionData(
+export async function syncCustomThemeData(
 	slug: string,
 	dataJson: string,
 	readmeHtml: string | null,
 ): Promise<void> {
 	const now = new Date().toISOString();
-	await prisma.marketplaceExtension.update({
+	await prisma.customTheme.update({
 		where: { slug },
 		data: { dataJson, readmeHtml, dataCachedAt: now, updatedAt: now },
 	});
 }
 
-export async function unpublishExtension(slug: string, authorGithubId: string): Promise<boolean> {
-	const row = await prisma.marketplaceExtension.findUnique({ where: { slug } });
+export async function unpublishCustomTheme(slug: string, authorGithubId: string): Promise<boolean> {
+	const row = await prisma.customTheme.findUnique({ where: { slug } });
 	if (!row || row.authorGithubId !== authorGithubId) return false;
 
 	await prisma.$transaction([
-		prisma.userExtensionInstall.deleteMany({ where: { extensionId: row.id } }),
-		prisma.marketplaceExtension.delete({ where: { id: row.id } }),
+		prisma.userThemeInstall.deleteMany({ where: { customThemeId: row.id } }),
+		prisma.customTheme.delete({ where: { id: row.id } }),
 	]);
 	return true;
 }
 
-export async function getExtensionById(id: string) {
-	return prisma.marketplaceExtension.findUnique({ where: { id } });
+export async function getCustomThemeById(id: string) {
+	return prisma.customTheme.findUnique({ where: { id } });
 }
 
-export async function countExtensionsByAuthor(authorGithubId: string): Promise<number> {
-	return prisma.marketplaceExtension.count({ where: { authorGithubId } });
+export async function countCustomThemesByAuthor(authorGithubId: string): Promise<number> {
+	return prisma.customTheme.count({ where: { authorGithubId } });
 }
 
-export async function extensionExistsBySlug(slug: string): Promise<boolean> {
-	const row = await prisma.marketplaceExtension.findUnique({
+export async function customThemeExistsBySlug(slug: string): Promise<boolean> {
+	const row = await prisma.customTheme.findUnique({
 		where: { slug },
 		select: { id: true },
 	});

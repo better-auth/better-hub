@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { getInstalledExtensions } from "@/lib/theme-store";
-import type { ExtensionType } from "@/lib/theme-store-types";
+import { getInstalledCustomThemes } from "@/lib/theme-store";
+import type { CustomThemeType } from "@/lib/theme-store-types";
 
 export async function GET(request: Request) {
 	const session = await auth.api.getSession({ headers: await headers() });
@@ -10,13 +10,13 @@ export async function GET(request: Request) {
 	}
 
 	const url = new URL(request.url);
-	const type = url.searchParams.get("type") as ExtensionType | null;
-	const validTypes: ExtensionType[] = ["theme", "icon-theme"];
+	const type = url.searchParams.get("type") as CustomThemeType | null;
+	const validTypes: CustomThemeType[] = ["theme", "icon-theme"];
 
-	const extensions = await getInstalledExtensions(
+	const themes = await getInstalledCustomThemes(
 		session.user.id,
 		type && validTypes.includes(type) ? type : undefined,
 	);
 
-	return Response.json(extensions);
+	return Response.json(themes);
 }

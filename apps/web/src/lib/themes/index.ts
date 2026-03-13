@@ -93,6 +93,13 @@ export function migrateLegacyThemeId(
 	return LEGACY_THEME_MAP[legacyId];
 }
 
+const RAW_HSL_RE = /^\d+(\.\d+)?\s+\d+(\.\d+)?%\s+\d+(\.\d+)?%/;
+
+function normalizeCssColor(value: string): string {
+	if (RAW_HSL_RE.test(value)) return `hsl(${value})`;
+	return value;
+}
+
 export function applyTheme(themeId: string, mode: "dark" | "light"): void {
 	const el = document.documentElement;
 	const theme = getTheme(themeId);
@@ -112,7 +119,7 @@ export function applyTheme(themeId: string, mode: "dark" | "light"): void {
 	}
 
 	for (const key of allKeys) {
-		el.style.setProperty(key, variant.colors[key]);
+		el.style.setProperty(key, normalizeCssColor(variant.colors[key]));
 	}
 
 	if (mode === "dark") {

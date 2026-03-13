@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { Palette, FolderTree } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ExtensionType } from "@/lib/theme-store-types";
+import type { CustomThemeType } from "@/lib/theme-store-types";
 
-const config: Record<ExtensionType, { Icon: typeof Palette; gradient: string }> = {
+const config: Record<CustomThemeType, { Icon: typeof Palette; gradient: string }> = {
 	theme: {
 		Icon: Palette,
 		gradient: "from-violet-500/20 via-fuchsia-500/15 to-pink-500/20",
@@ -21,7 +21,7 @@ export function DefaultExtensionIcon({
 	className,
 	iconClassName,
 }: {
-	type: ExtensionType;
+	type: CustomThemeType;
 	className?: string;
 	iconClassName?: string;
 }) {
@@ -48,7 +48,7 @@ export function ExtensionIcon({
 	imgClassName,
 }: {
 	iconUrl: string | null;
-	type: ExtensionType;
+	type: CustomThemeType;
 	className?: string;
 	iconClassName?: string;
 	imgClassName?: string;

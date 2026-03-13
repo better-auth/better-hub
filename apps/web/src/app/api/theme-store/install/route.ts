@@ -1,10 +1,10 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { z } from "zod";
-import { installExtension, uninstallExtension, getExtensionById } from "@/lib/theme-store";
+import { installCustomTheme, uninstallCustomTheme, getCustomThemeById } from "@/lib/theme-store";
 
 const bodySchema = z.object({
-	extensionId: z.string().min(1),
+	customThemeId: z.string().min(1),
 });
 
 export async function POST(request: Request) {
@@ -19,12 +19,12 @@ export async function POST(request: Request) {
 		return Response.json({ error: "Invalid request" }, { status: 400 });
 	}
 
-	const ext = await getExtensionById(parsed.data.extensionId);
-	if (!ext) {
-		return Response.json({ error: "Extension not found" }, { status: 404 });
+	const theme = await getCustomThemeById(parsed.data.customThemeId);
+	if (!theme) {
+		return Response.json({ error: "Custom theme not found" }, { status: 404 });
 	}
 
-	const result = await installExtension(session.user.id, parsed.data.extensionId);
+	const result = await installCustomTheme(session.user.id, parsed.data.customThemeId);
 	return Response.json({ ok: true, alreadyInstalled: result.alreadyInstalled });
 }
 
@@ -40,6 +40,6 @@ export async function DELETE(request: Request) {
 		return Response.json({ error: "Invalid request" }, { status: 400 });
 	}
 
-	await uninstallExtension(session.user.id, parsed.data.extensionId);
+	await uninstallCustomTheme(session.user.id, parsed.data.customThemeId);
 	return Response.json({ ok: true });
 }

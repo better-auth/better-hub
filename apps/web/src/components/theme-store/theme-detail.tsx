@@ -24,11 +24,12 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import type { ThemeStoreExtensionDetail } from "@/lib/theme-store-types";
+import type { ThemeStoreDetail } from "@/lib/theme-store-types";
 import { ThemePreview } from "./theme-preview";
 import { IconThemePreview } from "./icon-theme-preview";
-import { ExtensionIcon } from "./default-extension-icon";
+import { ExtensionIcon } from "./default-theme-icon";
 import { UserTooltip } from "../shared/user-tooltip";
+import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 
 function formatDownloads(n: number): string {
 	if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -36,9 +37,34 @@ function formatDownloads(n: number): string {
 	return String(n);
 }
 
-export function ExtensionDetail({ slug }: { slug: string }) {
+function formatRelativeDate(iso: string): string {
+	const ms = Date.now() - new Date(iso).getTime();
+	const sec = Math.floor(ms / 1000);
+	if (sec < 60) return "just now";
+	const min = Math.floor(sec / 60);
+	if (min < 60) return `${min}m ago`;
+	const hr = Math.floor(min / 60);
+	if (hr < 24) return `${hr}h ago`;
+	const days = Math.floor(hr / 24);
+	if (days < 30) return `${days}d ago`;
+	const months = Math.floor(days / 30);
+	if (months < 12) return `${months}mo ago`;
+	const years = Math.floor(months / 12);
+	return `${years}y ago`;
+}
+
+function formatDate(iso: string): string {
+	return new Date(iso).toLocaleDateString("en-US", {
+		year: "numeric",
+		month: "short",
+		day: "numeric",
+	});
+}
+
+export function ThemeDetail({ slug }: { slug: string }) {
 	const router = useRouter();
-	const [ext, setExt] = useState<ThemeStoreExtensionDetail | null>(null);
+	const { emit } = useMutationEvents();
+	const [ext, setExt] = useState<ThemeStoreDetail | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [installing, setInstalling] = useState(false);
 	const [installed, setInstalled] = useState(false);
@@ -65,7 +91,7 @@ export function ExtensionDetail({ slug }: { slug: string }) {
 			const res = await fetch("/api/theme-store/install", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ extensionId: ext.id }),
+				body: JSON.stringify({ customThemeId: ext.id }),
 			});
 			if (res.ok) {
 				const data = await res.json();
@@ -77,6 +103,7 @@ export function ExtensionDetail({ slug }: { slug: string }) {
 							: prev,
 					);
 				}
+				emit({ type: "customTheme:installed", themeType: ext.type });
 			}
 		} finally {
 			setInstalling(false);
@@ -90,7 +117,7 @@ export function ExtensionDetail({ slug }: { slug: string }) {
 			const res = await fetch("/api/theme-store/install", {
 				method: "DELETE",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ extensionId: ext.id }),
+				body: JSON.stringify({ customThemeId: ext.id }),
 			});
 			if (res.ok) {
 				setInstalled(false);
@@ -105,6 +132,7 @@ export function ExtensionDetail({ slug }: { slug: string }) {
 							}
 						: prev,
 				);
+				emit({ type: "customTheme:uninstalled", themeType: ext.type });
 			}
 		} finally {
 			setInstalling(false);
@@ -420,6 +448,38 @@ export function ExtensionDetail({ slug }: { slug: string }) {
 									</span>
 								</div>
 							)}
+							<div className="p-4 grid grid-cols-2 gap-3">
+								<div>
+									<h3 className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1">
+										Published
+									</h3>
+									<span
+										className="text-sm font-medium text-foreground"
+										title={formatDate(
+											ext.createdAt,
+										)}
+									>
+										{formatRelativeDate(
+											ext.createdAt,
+										)}
+									</span>
+								</div>
+								<div>
+									<h3 className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1">
+										Updated
+									</h3>
+									<span
+										className="text-sm font-medium text-foreground"
+										title={formatDate(
+											ext.updatedAt,
+										)}
+									>
+										{formatRelativeDate(
+											ext.updatedAt,
+										)}
+									</span>
+								</div>
+							</div>
 						</div>
 
 						{ext.isAuthor && (

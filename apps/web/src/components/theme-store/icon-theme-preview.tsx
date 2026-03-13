@@ -78,16 +78,18 @@ function resolveFileIcon(base: string, mapping: IconMapping, file: PreviewFile):
 	if (!mapping.fileIcons) return null;
 
 	if (file.fileName) {
+		const lower = file.fileName.toLowerCase();
 		for (const def of mapping.fileIcons) {
-			if (def.fileNames?.includes(file.fileName)) {
+			if (def.fileNames?.some((fn) => fn.toLowerCase() === lower)) {
 				return `${base}${def.name}.svg`;
 			}
 		}
 	}
 
 	if (file.ext) {
+		const lower = file.ext.toLowerCase();
 		for (const def of mapping.fileIcons) {
-			if (def.fileExtensions?.includes(file.ext)) {
+			if (def.fileExtensions?.some((fe) => fe.toLowerCase() === lower)) {
 				return `${base}${def.name}.svg`;
 			}
 		}
@@ -106,8 +108,9 @@ function resolveFolderIcon(
 	folder: PreviewFolder,
 ): string | null {
 	if (mapping.folderIcons) {
+		const lower = folder.folderName.toLowerCase();
 		for (const def of mapping.folderIcons) {
-			if (def.folderNames.includes(folder.folderName)) {
+			if (def.folderNames.some((fn) => fn.toLowerCase() === lower)) {
 				return `${base}${def.name}.svg`;
 			}
 		}

@@ -1,12 +1,12 @@
 import type { ThemeColors, ShikiTheme } from "./themes/types";
 
-export type ExtensionType = "theme" | "icon-theme";
+export type CustomThemeType = "theme" | "icon-theme";
 
-export interface ExtensionManifest {
+export interface CustomThemeManifest {
 	name: string;
 	description: string;
 	version: string;
-	type: ExtensionType;
+	type: CustomThemeType;
 	/** Relative path to the main data file (theme JSON or icon-theme JSON) */
 	main: string;
 	/** Relative path to an icon image */
@@ -14,16 +14,16 @@ export interface ExtensionManifest {
 	license?: string;
 }
 
-export interface ExtensionThemeVariant {
+export interface CustomThemeVariant {
 	accentPreview: string;
 	bgPreview: string;
 	colors: ThemeColors;
 	syntax?: ShikiTheme;
 }
 
-export interface ExtensionThemeData {
-	dark: ExtensionThemeVariant;
-	light: ExtensionThemeVariant;
+export interface CustomThemeData {
+	dark: CustomThemeVariant;
+	light: CustomThemeVariant;
 }
 
 export interface FileIconDefinition {
@@ -55,21 +55,21 @@ export interface IconMapping {
 	defaultFolderOpen?: string;
 }
 
-export interface ExtensionScanResult {
-	manifest: ExtensionManifest;
-	data: ExtensionThemeData | IconMapping;
+export interface CustomThemeScanResult {
+	manifest: CustomThemeManifest;
+	data: CustomThemeData | IconMapping;
 	readmeHtml: string | null;
 	iconUrl: string | null;
 	owner: string;
 	repo: string;
 }
 
-export interface ThemeStoreExtensionListItem {
+export interface ThemeStoreListItem {
 	id: string;
 	slug: string;
 	name: string;
 	description: string;
-	type: ExtensionType;
+	type: CustomThemeType;
 	version: string;
 	iconUrl: string | null;
 	authorName: string;
@@ -84,13 +84,14 @@ export interface ThemeStoreExtensionListItem {
 	previewIconUrls?: string[];
 }
 
-export interface ThemeStoreExtensionDetail extends ThemeStoreExtensionListItem {
+export interface ThemeStoreDetail extends ThemeStoreListItem {
 	owner: string;
 	repo: string;
 	license: string | null;
 	readmeHtml: string | null;
 	dataJson: string | null;
 	authorGithubId: string;
+	createdAt: string;
 	updatedAt: string;
 	installed?: boolean;
 	isAuthor?: boolean;

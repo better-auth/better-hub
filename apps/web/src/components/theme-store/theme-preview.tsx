@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import type { ExtensionThemeData } from "@/lib/theme-store-types";
+import type { CustomThemeData } from "@/lib/theme-store-types";
 
 function hsl(v: string | undefined): string {
 	if (!v) return "transparent";
@@ -9,10 +9,81 @@ function hsl(v: string | undefined): string {
 	return `hsl(${v})`;
 }
 
+type CodeSegment = { text: string; color: string };
+type CodeLine = { highlighted?: boolean; segments: CodeSegment[] };
+
+const CODE_PREVIEW_LINES: CodeLine[] = [
+	{
+		segments: [{ text: "// Fetch user repositories", color: "--muted-foreground" }],
+	},
+	{
+		highlighted: true,
+		segments: [
+			{ text: "async function ", color: "--foreground" },
+			{ text: "fetchRepos", color: "--link" },
+			{ text: "(", color: "--foreground" },
+			{ text: "user", color: "--warning" },
+			{ text: ") {", color: "--foreground" },
+		],
+	},
+	{
+		segments: [
+			{ text: "  const url = ", color: "--foreground" },
+			{ text: '"https://api.github.com"', color: "--success" },
+			{ text: ";", color: "--foreground" },
+		],
+	},
+	{
+		segments: [
+			{ text: "  const res = await ", color: "--foreground" },
+			{ text: "fetch", color: "--link" },
+			{ text: "(url);", color: "--foreground" },
+		],
+	},
+	{ segments: [{ text: " ", color: "--foreground" }] },
+	{
+		segments: [
+			{ text: "  if (!res.", color: "--foreground" },
+			{ text: "ok", color: "--info" },
+			{ text: ") {", color: "--foreground" },
+		],
+	},
+	{
+		segments: [
+			{ text: "    throw new ", color: "--foreground" },
+			{ text: "Error", color: "--link" },
+			{ text: "(", color: "--foreground" },
+			{ text: '"request failed"', color: "--success" },
+			{ text: ");", color: "--foreground" },
+		],
+	},
+	{ segments: [{ text: "  }", color: "--foreground" }] },
+	{ segments: [{ text: " ", color: "--foreground" }] },
+	{
+		segments: [
+			{ text: "  const repos = await res.", color: "--foreground" },
+			{ text: "json", color: "--link" },
+			{ text: "();", color: "--foreground" },
+		],
+	},
+	{
+		segments: [
+			{ text: "  return repos.", color: "--foreground" },
+			{ text: "filter", color: "--link" },
+			{ text: "(r => r.", color: "--foreground" },
+			{ text: "stars", color: "--info" },
+			{ text: " > ", color: "--foreground" },
+			{ text: "50", color: "--warning" },
+			{ text: ");", color: "--foreground" },
+		],
+	},
+	{ segments: [{ text: "}", color: "--foreground" }] },
+];
+
 export function ThemePreview({ dataJson }: { dataJson: string }) {
 	const [previewMode, setPreviewMode] = useState<"dark" | "light">("dark");
 
-	const themeData = useMemo<ExtensionThemeData | null>(() => {
+	const themeData = useMemo<CustomThemeData | null>(() => {
 		try {
 			return JSON.parse(dataJson);
 		} catch {
@@ -172,93 +243,51 @@ export function ThemePreview({ dataJson }: { dataJson: string }) {
 						backgroundColor: hsl(c["--code-block-bg"]),
 					}}
 				>
-					<div
-						className="flex"
-						style={{
-							backgroundColor: hsl(c["--line-highlight"]),
-						}}
-					>
+					{CODE_PREVIEW_LINES.map((line, i) => (
 						<div
-							className="w-8 shrink-0 text-right pr-2 py-0.5 select-none"
-							style={{
-								color: hsl(c["--line-gutter"]),
-							}}
+							key={i}
+							className="flex"
+							style={
+								line.highlighted
+									? {
+											backgroundColor:
+												hsl(
+													c[
+														"--line-highlight"
+													],
+												),
+										}
+									: undefined
+							}
 						>
-							1
-						</div>
-						<div className="py-0.5 px-2">
-							<span
+							<div
+								className="w-8 shrink-0 text-right pr-2 py-0.5 select-none"
 								style={{
 									color: hsl(
-										c["--foreground"],
+										c["--line-gutter"],
 									),
 								}}
 							>
-								export function{" "}
-							</span>
-							<span style={{ color: hsl(c["--link"]) }}>
-								setup
-							</span>
-							<span
-								style={{
-									color: hsl(
-										c["--foreground"],
-									),
-								}}
-							>
-								() {"{"}
-							</span>
+								{i + 1}
+							</div>
+							<div className="py-0.5 px-2">
+								{line.segments.map((seg, j) => (
+									<span
+										key={j}
+										style={{
+											color: hsl(
+												c[
+													seg.color as keyof typeof c
+												],
+											),
+										}}
+									>
+										{seg.text}
+									</span>
+								))}
+							</div>
 						</div>
-					</div>
-					<div className="flex">
-						<div
-							className="w-8 shrink-0 text-right pr-2 py-0.5 select-none"
-							style={{
-								color: hsl(c["--line-gutter"]),
-							}}
-						>
-							2
-						</div>
-						<div className="py-0.5 px-2">
-							<span
-								style={{
-									color: hsl(
-										c["--foreground"],
-									),
-								}}
-							>
-								{"  "}return{" "}
-							</span>
-							<span
-								style={{
-									color: hsl(c["--success"]),
-								}}
-							>
-								&quot;ready&quot;
-							</span>
-						</div>
-					</div>
-					<div className="flex">
-						<div
-							className="w-8 shrink-0 text-right pr-2 py-0.5 select-none"
-							style={{
-								color: hsl(c["--line-gutter"]),
-							}}
-						>
-							3
-						</div>
-						<div className="py-0.5 px-2">
-							<span
-								style={{
-									color: hsl(
-										c["--foreground"],
-									),
-								}}
-							>
-								{"}"}
-							</span>
-						</div>
-					</div>
+					))}
 				</div>
 
 				{/* Diff */}

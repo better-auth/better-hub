@@ -1,15 +1,33 @@
 import { Octokit } from "@octokit/rest";
 import { renderMarkdownToHtml } from "@/components/shared/markdown-renderer";
 import type {
-	ExtensionManifest,
-	ExtensionScanResult,
-	ExtensionThemeData,
+	CustomThemeManifest,
+	CustomThemeScanResult,
+	CustomThemeData,
 	IconMapping,
-	ExtensionType,
+	CustomThemeType,
 } from "./theme-store-types";
 
 const MANIFEST_FILENAME = "better-hub-extension.json";
-const VALID_TYPES: ExtensionType[] = ["theme", "icon-theme"];
+const VALID_TYPES: CustomThemeType[] = ["theme", "icon-theme"];
+
+const ALLOWED_GITHUB_HOSTNAMES = new Set([
+	"raw.githubusercontent.com",
+	"github.com",
+	"www.github.com",
+]);
+
+function isGitHubUrl(url: string): boolean {
+	try {
+		const parsed = new URL(url);
+		if (parsed.protocol !== "https:") return false;
+		if (ALLOWED_GITHUB_HOSTNAMES.has(parsed.hostname)) return true;
+		if (parsed.hostname.endsWith(".github.io")) return true;
+		return false;
+	} catch {
+		return false;
+	}
+}
 
 class ScanError extends Error {
 	constructor(
@@ -36,7 +54,7 @@ async function fetchFileContent(
 	return Buffer.from(data.content, "base64").toString("utf-8");
 }
 
-function validateManifest(raw: unknown): ExtensionManifest {
+function validateManifest(raw: unknown): CustomThemeManifest {
 	if (!raw || typeof raw !== "object") {
 		throw new ScanError("Manifest must be a JSON object");
 	}
@@ -48,7 +66,7 @@ function validateManifest(raw: unknown): ExtensionManifest {
 	if (typeof obj.description !== "string" || obj.description.trim().length === 0) {
 		throw new ScanError("Manifest must include a non-empty 'description' string");
 	}
-	if (typeof obj.type !== "string" || !VALID_TYPES.includes(obj.type as ExtensionType)) {
+	if (typeof obj.type !== "string" || !VALID_TYPES.includes(obj.type as CustomThemeType)) {
 		throw new ScanError(`Manifest 'type' must be one of: ${VALID_TYPES.join(", ")}`);
 	}
 	if (typeof obj.main !== "string" || obj.main.trim().length === 0) {
@@ -61,14 +79,14 @@ function validateManifest(raw: unknown): ExtensionManifest {
 		name: obj.name.trim(),
 		description: obj.description.trim(),
 		version: typeof obj.version === "string" ? obj.version.trim() : "1.0.0",
-		type: obj.type as ExtensionType,
+		type: obj.type as CustomThemeType,
 		main: obj.main.trim(),
 		icon: typeof obj.icon === "string" ? obj.icon.trim() : undefined,
 		license: typeof obj.license === "string" ? obj.license.trim() : undefined,
 	};
 }
 
-function validateThemeData(raw: unknown): ExtensionThemeData {
+function validateThemeData(raw: unknown): CustomThemeData {
 	if (!raw || typeof raw !== "object") {
 		throw new ScanError("Theme data must be a JSON object");
 	}
@@ -105,7 +123,7 @@ function validateThemeData(raw: unknown): ExtensionThemeData {
 		}
 	}
 
-	return raw as ExtensionThemeData;
+	return raw as CustomThemeData;
 }
 
 function validateIconMapping(raw: unknown): IconMapping {
@@ -116,6 +134,11 @@ function validateIconMapping(raw: unknown): IconMapping {
 
 	if (typeof obj.baseURL !== "string" || obj.baseURL.trim().length === 0) {
 		throw new ScanError("Icon theme data must include a non-empty 'baseURL' string");
+	}
+	if (!isGitHubUrl(obj.baseURL.trim())) {
+		throw new ScanError(
+			"Icon theme 'baseURL' must be an HTTPS URL on a GitHub domain (e.g. raw.githubusercontent.com)",
+		);
 	}
 
 	if (
@@ -183,11 +206,11 @@ function resolveIconUrl(owner: string, repo: string, iconPath: string): string {
 	return `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${iconPath}`;
 }
 
-export async function scanExtensionRepo(
+export async function scanCustomThemeRepo(
 	octokit: Octokit,
 	owner: string,
 	repo: string,
-): Promise<ExtensionScanResult> {
+): Promise<CustomThemeScanResult> {
 	let manifestRaw: string;
 	try {
 		manifestRaw = await fetchFileContent(octokit, owner, repo, MANIFEST_FILENAME);
@@ -227,6 +250,16 @@ export async function scanExtensionRepo(
 		manifest.type === "theme"
 			? validateThemeData(dataJson)
 			: validateIconMapping(dataJson);
+
+	if (manifest.type === "icon-theme") {
+		const iconData = data as IconMapping;
+		const expectedPrefix = `https://raw.githubusercontent.com/${owner}/${repo}/`;
+		if (!iconData.baseURL.startsWith(expectedPrefix)) {
+			throw new ScanError(
+				`Icon theme 'baseURL' must point to this repository (expected prefix: ${expectedPrefix})`,
+			);
+		}
+	}
 
 	let readmeHtml: string | null = null;
 	const readmeCandidates = ["README.md", "readme.md", "README", "readme"];

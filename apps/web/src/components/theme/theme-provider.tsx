@@ -8,6 +8,7 @@ import {
 	listThemes,
 	listStoreThemes,
 	registerStoreTheme,
+	clearStoreThemes,
 	migrateLegacyThemeId,
 	STORAGE_KEY,
 	MODE_KEY,
@@ -15,7 +16,7 @@ import {
 	DEFAULT_MODE,
 	type ThemeDefinition,
 } from "@/lib/themes";
-import type { ExtensionThemeData } from "@/lib/theme-store-types";
+import type { CustomThemeData } from "@/lib/theme-store-types";
 import {
 	applyBorderRadius,
 	getBorderRadiusPreset,
@@ -24,6 +25,7 @@ import {
 	DEFAULT_BORDER_RADIUS,
 	type BorderRadiusPreset,
 } from "@/lib/themes/border-radius";
+import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 
 interface ColorThemeContext {
 	/** Currently active theme id */
@@ -134,7 +136,7 @@ function parseStoreTheme(ext: {
 }): ThemeDefinition | null {
 	if (!ext.dataJson) return null;
 	try {
-		const data = JSON.parse(ext.dataJson) as ExtensionThemeData;
+		const data = JSON.parse(ext.dataJson) as CustomThemeData;
 		if (!data.dark?.colors || !data.light?.colors) return null;
 		return {
 			id: `mp:${ext.slug}`,
@@ -157,13 +159,11 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 	const [mpThemes, setMpThemes] = useState<ThemeDefinition[]>([]);
 	const syncedToDb = useRef(false);
 	const mpLoaded = useRef(false);
+	const { subscribe } = useMutationEvents();
 
 	const themes = listThemes();
 
-	useEffect(() => {
-		if (mpLoaded.current) return;
-		mpLoaded.current = true;
-
+	const fetchInstalledThemes = useCallback(() => {
 		fetch("/api/theme-store/installed?type=theme")
 			.then((r) => (r.ok ? r.json() : []))
 			.then(
@@ -176,6 +176,7 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 						dataJson: string | null;
 					}>,
 				) => {
+					clearStoreThemes();
 					const parsed: ThemeDefinition[] = [];
 					for (const ext of exts) {
 						const td = parseStoreTheme(ext);
@@ -207,7 +208,25 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 				},
 			)
 			.catch(() => {});
-	}, []);
+	}, [setNextTheme]);
+
+	useEffect(() => {
+		if (mpLoaded.current) return;
+		mpLoaded.current = true;
+		fetchInstalledThemes();
+	}, [fetchInstalledThemes]);
+
+	useEffect(() => {
+		return subscribe((event) => {
+			if (
+				(event.type === "customTheme:installed" ||
+					event.type === "customTheme:uninstalled") &&
+				event.themeType === "theme"
+			) {
+				fetchInstalledThemes();
+			}
+		});
+	}, [subscribe, fetchInstalledThemes]);
 
 	useEffect(() => {
 		const prefs = getStoredPreferences();

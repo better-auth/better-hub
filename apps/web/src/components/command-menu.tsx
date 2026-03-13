@@ -2793,7 +2793,7 @@ export function CommandMenu() {
 																					(
 																						e,
 																					) =>
-																						e ===
+																						e.toLowerCase() ===
 																						s,
 																				),
 																		);

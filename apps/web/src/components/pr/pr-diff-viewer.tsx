@@ -174,14 +174,19 @@ export function PRDiffViewer({
 	const onAddContext = globalChat?.addCodeContext;
 	const searchParams = useSearchParams();
 
-	const { themeId } = useColorTheme();
+	const { themeId, storeThemes } = useColorTheme();
 	const initialThemeRef = useRef(themeId);
 	const [clientHighlightData, setClientHighlightData] =
 		useState<Record<string, Record<string, SyntaxToken[]>>>(highlightData);
 
+	const isMpTheme = themeId.startsWith("mp:");
+
 	useEffect(() => {
-		if (themeId === initialThemeRef.current) {
+		if (themeId === initialThemeRef.current && !isMpTheme) {
 			setClientHighlightData(highlightData);
+			return;
+		}
+		if (isMpTheme && storeThemes.length === 0) {
 			return;
 		}
 		let cancelled = false;
@@ -206,7 +211,7 @@ export function PRDiffViewer({
 		return () => {
 			cancelled = true;
 		};
-	}, [themeId, files, highlightData]);
+	}, [themeId, isMpTheme, storeThemes, files, highlightData]);
 
 	// Resolve initial index from ?file= query param
 	const [activeIndex, setActiveIndex] = useState(() => {

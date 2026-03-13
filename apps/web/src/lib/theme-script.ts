@@ -48,7 +48,8 @@ export function generateThemeScript(themes: ThemeDefinition[]): string {
 		`else{d.classList.remove("dark");d.classList.add("light");d.style.colorScheme="light"}`,
 		`localStorage.setItem("theme",mode);`,
 		// Apply CSS variables (skip for default dark to use stylesheet defaults)
-		`if(!(id==="hub"&&mode==="dark")){for(var k in v.colors){d.style.setProperty(k,v.colors[k])}}`,
+		`var hslRe=/^\\d+(\\.\\d+)?\\s+\\d+(\\.\\d+)?%\\s+\\d+(\\.\\d+)?%/;`,
+		`if(!(id==="hub"&&mode==="dark")){for(var k in v.colors){var cv=v.colors[k];d.style.setProperty(k,hslRe.test(cv)?"hsl("+cv+")":cv)}}`,
 		"}catch(e){}})()",
 	].join("");
 }

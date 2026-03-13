@@ -395,7 +395,7 @@ model PrOverviewAnalysis {
   @@map("pr_overview_analyses")
 }
 
-model MarketplaceExtension {
+model CustomTheme {
   id              String  @id @default(cuid())
   slug            String  @unique
   owner           String
@@ -419,7 +419,7 @@ model MarketplaceExtension {
   updatedAt       String
   dataCachedAt    String?
 
-  installs UserExtensionInstall[]
+  installs UserThemeInstall[]
 
   @@unique([owner, repo])
   @@index([type])
@@ -427,14 +427,14 @@ model MarketplaceExtension {
   @@map("theme_store_extensions")
 }
 
-model UserExtensionInstall {
-  userId      String
-  extensionId String
-  installedAt String
+model UserThemeInstall {
+  userId        String
+  customThemeId String  @map("extensionId")
+  installedAt   String
 
-  extension MarketplaceExtension @relation(fields: [extensionId], references: [id], onDelete: Cascade)
+  customTheme CustomTheme @relation(fields: [customThemeId], references: [id], onDelete: Cascade)
 
-  @@id([userId, extensionId])
+  @@id([userId, customThemeId])
   @@index([userId])
   @@map("user_theme_store_installs")
 }

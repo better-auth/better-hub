@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
 	LogOut,
 	ExternalLink,
@@ -38,6 +39,7 @@ import { cn } from "@/lib/utils";
 import { NotificationSheet } from "@/components/layout/notification-sheet";
 import { $Session } from "@/lib/auth";
 import type { NotificationItem } from "@/lib/github-types";
+import { APP_ROUTES } from "@/app-routes";
 
 interface AppNavbarProps {
 	session: $Session;
@@ -48,6 +50,9 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 	const { mode, toggleMode } = useColorTheme();
 	const { subscribe } = useMutationEvents();
 	const { isNavHidden } = useNavVisibility();
+	const pathname = usePathname();
+	const segments = pathname.split("/").filter(Boolean);
+	const isRepoPage = segments.length >= 2 && !APP_ROUTES.has(segments[0]);
 	const gh = session.githubUser;
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [settingsTab, setSettingsTab] = useState<TabId | undefined>();
@@ -77,7 +82,12 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 				isNavHidden && "-translate-y-full",
 			)}
 		>
-			<nav className="top-0 flex h-full items-center justify-between border-border px-2 sm:px-4 border-b">
+			<nav
+				className={cn(
+					"top-0 flex h-full items-center justify-between border-border px-2 sm:px-4",
+					!isRepoPage && "border-b",
+				)}
+			>
 				<div className="flex items-center gap-0" id="navbar-breadcrumb">
 					<Link
 						className="shrink-0 flex items-center text-foreground gap-1.5 transition-colors text-xs tracking-tight"

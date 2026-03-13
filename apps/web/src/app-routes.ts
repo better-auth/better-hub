@@ -1,0 +1,18 @@
+export const APP_ROUTES = new Set([
+	"dashboard",
+	"repos",
+	"issues",
+	"theme-store",
+	"prs",
+	"stars",
+	"settings",
+	"search",
+	"trending",
+	"notifications",
+	"orgs",
+	"users",
+	"api",
+	"debug",
+	"_next",
+	"schemas",
+]);

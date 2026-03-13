@@ -11,12 +11,13 @@ import {
 	CircleDashed,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ExtensionCard } from "./extension-card";
+import { ExtensionCard } from "./theme-card";
 import { DocsDialog } from "./docs-dialog";
+import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import Link from "next/link";
-import type { ThemeStoreExtensionListItem, ExtensionType } from "@/lib/theme-store-types";
+import type { ThemeStoreListItem, CustomThemeType } from "@/lib/theme-store-types";
 
-type FilterType = "all" | ExtensionType;
+type FilterType = "all" | CustomThemeType;
 type InstallFilter = "all" | "installed" | "not-installed";
 
 const TYPE_FILTERS: {
@@ -40,7 +41,7 @@ const INSTALL_FILTERS: {
 ];
 
 export function ThemeStoreBrowse() {
-	const [extensions, setExtensions] = useState<ThemeStoreExtensionListItem[]>([]);
+	const [extensions, setExtensions] = useState<ThemeStoreListItem[]>([]);
 	const [total, setTotal] = useState(0);
 	const [loading, setLoading] = useState(true);
 	const [search, setSearch] = useState("");
@@ -49,6 +50,9 @@ export function ThemeStoreBrowse() {
 	const [page, setPage] = useState(1);
 	const [installedIds, setInstalledIds] = useState<Set<string>>(new Set());
 	const installedLoaded = useRef(false);
+	const { emit } = useMutationEvents();
+	const extensionsRef = useRef(extensions);
+	extensionsRef.current = extensions;
 
 	useEffect(() => {
 		if (installedLoaded.current) return;
@@ -62,32 +66,48 @@ export function ThemeStoreBrowse() {
 			.catch(() => {});
 	}, []);
 
-	const handleInstall = useCallback(async (id: string) => {
-		const res = await fetch("/api/theme-store/install", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ extensionId: id }),
-		});
-		if (res.ok) {
-			const data = await res.json();
-			setInstalledIds((prev) => new Set(prev).add(id));
-			if (!data.alreadyInstalled) {
-				setExtensions((prev) =>
-					prev.map((e) =>
-						e.id === id
-							? { ...e, downloads: e.downloads + 1 }
-							: e,
-					),
-				);
+	const handleInstall = useCallback(
+		async (id: string) => {
+			const res = await fetch("/api/theme-store/install", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ customThemeId: id }),
+			});
+			if (res.ok) {
+				const data = await res.json();
+				setInstalledIds((prev) => new Set(prev).add(id));
+				if (!data.alreadyInstalled) {
+					setExtensions((prev) =>
+						prev.map((e) =>
+							e.id === id
+								? {
+										...e,
+										downloads:
+											e.downloads +
+											1,
+									}
+								: e,
+						),
+					);
+				}
+				const ext = extensionsRef.current.find((e) => e.id === id);
+				if (ext) {
+					emit({
+						type: "customTheme:installed",
+						themeType: ext.type,
+					});
+				}
 			}
-		}
-	}, []);
+		},
+		[emit],
+	);
 
 	const handleUninstall = useCallback(async (id: string) => {
+		const ext = extensionsRef.current.find((e) => e.id === id);
 		const res = await fetch("/api/theme-store/install", {
 			method: "DELETE",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ extensionId: id }),
+			body: JSON.stringify({ customThemeId: id }),
 		});
 		if (res.ok) {
 			setInstalledIds((prev) => {
@@ -102,6 +122,9 @@ export function ThemeStoreBrowse() {
 						: e,
 				),
 			);
+			if (ext) {
+				emit({ type: "customTheme:uninstalled", themeType: ext.type });
+			}
 		}
 	}, []);
 

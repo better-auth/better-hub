@@ -1,15 +1,11 @@
 import type { Metadata } from "next";
-import { ExtensionDetail } from "@/components/theme-store/extension-detail";
+import { ThemeDetail } from "@/components/theme-store/theme-detail";
 
 export const metadata: Metadata = {
-	title: "Extension Details",
+	title: "Theme StoreDetails",
 };
 
-export default async function ExtensionDetailPage({
-	params,
-}: {
-	params: Promise<{ slug: string }>;
-}) {
+export default async function ThemeDetailPage({ params }: { params: Promise<{ slug: string }> }) {
 	const { slug } = await params;
-	return <ExtensionDetail slug={slug} />;
+	return <ThemeDetail slug={slug} />;
 }

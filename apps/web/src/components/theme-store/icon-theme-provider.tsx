@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState, useRef } from "react";
-import type { IconMapping, ThemeStoreExtensionDetail } from "@/lib/theme-store-types";
+import type { IconMapping, ThemeStoreDetail } from "@/lib/theme-store-types";
+import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 
 const STORAGE_KEY = "icon-theme-id";
 const DEFAULT_SENTINEL = "__default__";
@@ -9,7 +10,7 @@ const DEFAULT_SENTINEL = "__default__";
 interface IconThemeContext {
 	iconMapping: IconMapping | null;
 	activeIconThemeId: string | null;
-	installedIconThemes: ThemeStoreExtensionDetail[];
+	installedIconThemes: ThemeStoreDetail[];
 	setActiveIconTheme: (id: string | null) => void;
 	loading: boolean;
 }
@@ -37,24 +38,20 @@ function parseMapping(dataJson: string | null): IconMapping | null {
 }
 
 export function IconThemeProvider({ children }: { children: React.ReactNode }) {
-	const [installedIconThemes, setInstalledIconThemes] = useState<ThemeStoreExtensionDetail[]>(
-		[],
-	);
+	const [installedIconThemes, setInstalledIconThemes] = useState<ThemeStoreDetail[]>([]);
 	const [activeId, setActiveId] = useState<string | null>(null);
 	const [iconMapping, setIconMapping] = useState<IconMapping | null>(null);
 	const [loading, setLoading] = useState(true);
 	const loaded = useRef(false);
+	const { subscribe } = useMutationEvents();
 
-	useEffect(() => {
-		if (loaded.current) return;
-		loaded.current = true;
-
+	const fetchInstalledIconThemes = useCallback(() => {
 		const storedId =
 			typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
 
 		fetch("/api/theme-store/installed?type=icon-theme")
 			.then((r) => (r.ok ? r.json() : []))
-			.then((exts: ThemeStoreExtensionDetail[]) => {
+			.then((exts: ThemeStoreDetail[]) => {
 				setInstalledIconThemes(exts);
 
 				if (storedId === DEFAULT_SENTINEL) {
@@ -81,6 +78,24 @@ export function IconThemeProvider({ children }: { children: React.ReactNode }) {
 			.catch(() => {})
 			.finally(() => setLoading(false));
 	}, []);
+
+	useEffect(() => {
+		if (loaded.current) return;
+		loaded.current = true;
+		fetchInstalledIconThemes();
+	}, [fetchInstalledIconThemes]);
+
+	useEffect(() => {
+		return subscribe((event) => {
+			if (
+				(event.type === "customTheme:installed" ||
+					event.type === "customTheme:uninstalled") &&
+				event.themeType === "icon-theme"
+			) {
+				fetchInstalledIconThemes();
+			}
+		});
+	}, [subscribe, fetchInstalledIconThemes]);
 
 	const setActiveIconTheme = useCallback(
 		(id: string | null) => {
