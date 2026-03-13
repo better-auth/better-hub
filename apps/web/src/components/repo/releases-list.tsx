@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { fetchReleasesPage } from "@/app/(app)/repos/[owner]/[repo]/releases/actions";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/shared/ghes-image";
 import {
 	Tag,
 	Download,
@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { cn, formatNumber } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
+import { GITHUB_WEB_URL } from "@/lib/github-config";
 
 type Asset = {
 	id: number;
@@ -395,7 +396,7 @@ export function ReleasesList({
 					</p>
 				</div>
 				<a
-					href={`https://github.com/${owner}/${repo}/releases/new`}
+					href={`${GITHUB_WEB_URL}/${owner}/${repo}/releases/new`}
 					data-no-github-intercept
 					target="_blank"
 					rel="noopener noreferrer"
@@ -419,7 +420,7 @@ export function ReleasesList({
 					{releases.length === 1 ? "release" : "releases"}
 				</h2>
 				<a
-					href={`https://github.com/${owner}/${repo}/releases`}
+					href={`${GITHUB_WEB_URL}/${owner}/${repo}/releases`}
 					data-no-github-intercept
 					target="_blank"
 					rel="noopener noreferrer"

@@ -14,6 +14,7 @@ import {
 	revalidateBranches,
 	revalidateTags,
 } from "@/app/(app)/repos/[owner]/[repo]/readme-actions";
+import { GITHUB_WEB_URL, GITHUB_HOSTNAME } from "@/lib/github-config";
 
 interface CodeContentWrapperProps {
 	owner: string;
@@ -43,10 +44,10 @@ function CloneDownloadButtons({
 
 	const cloneUrl =
 		cloneProtocol === "https"
-			? `https://github.com/${owner}/${repo}.git`
-			: `git@github.com:${owner}/${repo}.git`;
+			? `${GITHUB_WEB_URL}/${owner}/${repo}.git`
+			: `git@${GITHUB_HOSTNAME}:${owner}/${repo}.git`;
 
-	const zipUrl = `https://github.com/${owner}/${repo}/archive/${currentRef}.zip`;
+	const zipUrl = `${GITHUB_WEB_URL}/${owner}/${repo}/archive/${currentRef}.zip`;
 
 	function handleCopy() {
 		navigator.clipboard.writeText(cloneUrl);
@@ -128,7 +129,7 @@ function CloneDownloadButtons({
 							</button>
 						</div>
 						<a
-							href={`x-github-client://openRepo/https://github.com/${owner}/${repo}`}
+							href={`x-github-client://openRepo/${GITHUB_WEB_URL}/${owner}/${repo}`}
 							className="mt-3 pt-3 border-t border-border flex items-center gap-2 text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors"
 						>
 							<Monitor className="w-3.5 h-3.5" />

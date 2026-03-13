@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/shared/ghes-image";
 import { cn, formatNumber } from "@/lib/utils";
 import type { CommitActivityWeek } from "@/lib/github";
 

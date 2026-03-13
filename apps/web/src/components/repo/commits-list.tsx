@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useMemo, useRef, useEffect, useCallback } from "react";
-import Image from "next/image";
+import Image from "@/components/shared/ghes-image";
 import Link from "next/link";
 import {
 	GitBranch,

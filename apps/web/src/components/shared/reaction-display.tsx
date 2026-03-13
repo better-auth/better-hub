@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useTransition } from "react";
 import { createPortal } from "react-dom";
-import Image from "next/image";
+import Image from "@/components/shared/ghes-image";
 import Link from "next/link";
 import { SmilePlus } from "lucide-react";
 import { cn } from "@/lib/utils";

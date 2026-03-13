@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { GITHUB_WEB_URL } from "@/lib/github-config";
 
 interface CopyLinkButtonProps {
 	owner: string;
@@ -19,7 +20,7 @@ export function CopyLinkButton({ owner, repo, number, type, iconOnly }: CopyLink
 		e.stopPropagation();
 		const githubType = type === "pulls" ? "pull" : "issues";
 		navigator.clipboard.writeText(
-			`https://github.com/${owner}/${repo}/${githubType}/${number}`,
+			`${GITHUB_WEB_URL}/${owner}/${repo}/${githubType}/${number}`,
 		);
 		setCopied(true);
 		setTimeout(() => setCopied(false), 1200);

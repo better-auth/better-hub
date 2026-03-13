@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/shared/ghes-image";
 import { useQuery } from "@tanstack/react-query";
 import { cn, formatNumber } from "@/lib/utils";
 import type { CommitActivityWeek, CheckStatus } from "@/lib/github";

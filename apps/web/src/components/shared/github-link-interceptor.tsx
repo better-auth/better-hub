@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { parseGitHubUrl, toInternalUrl } from "@/lib/github-utils";
+import { GITHUB_HOSTNAME } from "@/lib/github-config";
 
 export function GitHubLinkInterceptor({ children }: { children: React.ReactNode }) {
 	const router = useRouter();
@@ -27,7 +28,7 @@ export function GitHubLinkInterceptor({ children }: { children: React.ReactNode 
 			// Only intercept github.com links
 			try {
 				const url = new URL(href);
-				if (url.hostname !== "github.com") return;
+				if (url.hostname !== GITHUB_HOSTNAME) return;
 			} catch {
 				return;
 			}

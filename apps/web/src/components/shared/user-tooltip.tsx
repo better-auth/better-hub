@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/shared/ghes-image";
 import { useQuery } from "@tanstack/react-query";
 import {
 	Users,

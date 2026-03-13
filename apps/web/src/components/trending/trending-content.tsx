@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryState, parseAsStringLiteral } from "nuqs";
-import Image from "next/image";
+import Image from "@/components/shared/ghes-image";
 import Link from "next/link";
 import { Star, GitFork, Flame } from "lucide-react";
 import { cn, formatNumber } from "@/lib/utils";

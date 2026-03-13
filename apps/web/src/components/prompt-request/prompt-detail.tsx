@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useOptimistic, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/shared/ghes-image";
 import { useRouter } from "next/navigation";
 import {
 	ArrowLeft,

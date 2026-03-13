@@ -40,6 +40,9 @@ const nextConfig: NextConfig = {
 	},
 	// reactCompiler: true,
 	images: {
+		// GHES private mode requires cookie auth for avatars — the optimizer can't fetch them.
+		// Disable optimization when targeting GHES so images load directly in the browser.
+		...(process.env.NEXT_PUBLIC_GITHUB_WEB_URL && { unoptimized: true }),
 		...(process.env.NODE_ENV === "development" && {
 			dangerouslyAllowLocalIP: true,
 		}),
@@ -53,6 +56,23 @@ const nextConfig: NextConfig = {
 			{ protocol: "https", hostname: "repository-images.githubusercontent.com" },
 			{ protocol: "https", hostname: "better-hub.com" },
 			{ protocol: "https", hostname: "images.better-auth.com" },
+			// GHES hostname for avatars etc. (reads NEXT_PUBLIC_GITHUB_WEB_URL at build time)
+			...(process.env.NEXT_PUBLIC_GITHUB_WEB_URL
+				? [
+						{
+							protocol: "https" as const,
+							hostname: new URL(
+								process.env
+									.NEXT_PUBLIC_GITHUB_WEB_URL,
+							).hostname,
+						},
+						// GHES serves avatars from avatars.<hostname>
+						{
+							protocol: "https" as const,
+							hostname: `avatars.${new URL(process.env.NEXT_PUBLIC_GITHUB_WEB_URL).hostname}`,
+						},
+					]
+				: []),
 		],
 	},
 	async headers() {

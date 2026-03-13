@@ -23,9 +23,10 @@ import {
 import { setCachedRepoTree } from "@/lib/repo-data-cache";
 import { waitUntil } from "@vercel/functions";
 import { ExternalLink, ShieldAlert, AlertCircle } from "lucide-react";
+import { GITHUB_WEB_URL } from "@/lib/github-config";
 
 function RepoErrorPage({ owner, repo, error }: { owner: string; repo: string; error: string }) {
-	const githubUrl = `https://github.com/${owner}/${repo}`;
+	const githubUrl = `${GITHUB_WEB_URL}/${owner}/${repo}`;
 	const isOAuthRestriction = error.includes("OAuth App access restrictions");
 	const isNotFound = error === "Repository not found";
 

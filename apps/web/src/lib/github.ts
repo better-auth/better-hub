@@ -2,6 +2,7 @@ import { Octokit } from "@octokit/rest";
 import { headers } from "next/headers";
 import { cache } from "react";
 import { $Session, getServerSession } from "./auth";
+import { GITHUB_API_URL, GITHUB_GRAPHQL_URL, GITHUB_WEB_URL } from "./github-config";
 import {
 	claimDueGithubSyncJobs,
 	deleteGithubCacheByPrefix,
@@ -480,7 +481,7 @@ const getGitHubAuthContext = cache(async (): Promise<GitHubAuthContext | null> =
 	return {
 		userId: session.user.id,
 		token,
-		octokit: new Octokit({ auth: token }),
+		octokit: new Octokit({ auth: token, baseUrl: GITHUB_API_URL }),
 		forceRefresh,
 		githubUser: session.githubUser,
 	};
@@ -673,7 +674,7 @@ async function fetchUserEventsFromGitHub(octokit: Octokit, username: string, per
 
 async function fetchUserEventsPublicUnauthenticated(username: string, perPage: number) {
 	const response = await fetch(
-		`https://api.github.com/users/${encodeURIComponent(username)}/events/public?per_page=${perPage}`,
+		`${GITHUB_API_URL}/users/${encodeURIComponent(username)}/events/public?per_page=${perPage}`,
 		{
 			headers: {
 				Accept: "application/vnd.github+json",
@@ -857,7 +858,7 @@ async function fetchContributionsFromGitHub(token: string, username: string) {
 	  `;
 
 	const [calendarResponse, prResponse, prReviewResponse, issueResponse] = await Promise.all([
-		fetch("https://api.github.com/graphql", {
+		fetch(GITHUB_GRAPHQL_URL, {
 			method: "POST",
 			headers,
 			body: JSON.stringify({
@@ -865,7 +866,7 @@ async function fetchContributionsFromGitHub(token: string, username: string) {
 				variables: { username },
 			}),
 		}),
-		fetch("https://api.github.com/graphql", {
+		fetch(GITHUB_GRAPHQL_URL, {
 			method: "POST",
 			headers,
 			body: JSON.stringify({
@@ -873,7 +874,7 @@ async function fetchContributionsFromGitHub(token: string, username: string) {
 				variables: { username },
 			}),
 		}),
-		fetch("https://api.github.com/graphql", {
+		fetch(GITHUB_GRAPHQL_URL, {
 			method: "POST",
 			headers,
 			body: JSON.stringify({
@@ -881,7 +882,7 @@ async function fetchContributionsFromGitHub(token: string, username: string) {
 				variables: { username },
 			}),
 		}),
-		fetch("https://api.github.com/graphql", {
+		fetch(GITHUB_GRAPHQL_URL, {
 			method: "POST",
 			headers,
 			body: JSON.stringify({
@@ -916,7 +917,7 @@ async function fetchContributionsFromGitHub(token: string, username: string) {
 				}
 			}
 		`;
-		const yearsResponse = await fetch("https://api.github.com/graphql", {
+		const yearsResponse = await fetch(GITHUB_GRAPHQL_URL, {
 			method: "POST",
 			headers: {
 				Authorization: `Bearer ${token}`,
@@ -955,7 +956,7 @@ async function fetchContributionsFromGitHub(token: string, username: string) {
 					}
 				}
 			`;
-			const yearsResponse = await fetch("https://api.github.com/graphql", {
+			const yearsResponse = await fetch(GITHUB_GRAPHQL_URL, {
 				method: "POST",
 				headers: {
 					Authorization: `Bearer ${token}`,
@@ -1025,7 +1026,7 @@ async function fetchContributionsFromGitHub(token: string, username: string) {
 			}
 		`;
 
-		const historicalResponse = await fetch("https://api.github.com/graphql", {
+		const historicalResponse = await fetch(GITHUB_GRAPHQL_URL, {
 			method: "POST",
 			headers: {
 				Authorization: `Bearer ${token}`,
@@ -1402,7 +1403,7 @@ async function fetchUserProfileFromGitHub(octokit: Octokit, username: string) {
 					?.avatar_url as string) ?? "",
 			html_url:
 				(appData.html_url as string) ??
-				`https://github.com/apps/${username.toLowerCase()}`,
+				`${GITHUB_WEB_URL}/apps/${username.toLowerCase()}`,
 			bio: (appData.description as string) ?? null,
 			blog: (appData.external_url as string) ?? null,
 			location: null,
@@ -1455,7 +1456,7 @@ async function enrichMissingRepoLanguagesFromGraphQL<
 	const query = `query(${variableDefinitions}) { ${aliases.join("\n")} }`;
 
 	try {
-		const response = await fetch("https://api.github.com/graphql", {
+		const response = await fetch(GITHUB_GRAPHQL_URL, {
 			method: "POST",
 			headers: {
 				Authorization: `Bearer ${token}`,
@@ -1647,7 +1648,7 @@ async function ghConditionalGet(
 		"X-GitHub-Api-Version": "2022-11-28",
 	};
 	if (etag) headers["If-None-Match"] = etag;
-	const resp = await fetch(`https://api.github.com${path}`, { headers, cache: "no-store" });
+	const resp = await fetch(`${GITHUB_API_URL}${path}`, { headers, cache: "no-store" });
 	if (resp.status === 304) return { notModified: true };
 	if (!resp.ok) {
 		const body = await resp.text().catch(() => "");
@@ -2699,7 +2700,7 @@ export async function checkIsStarred(owner: string, repo: string): Promise<boole
 	if (!token) return false;
 	try {
 		const res = await fetch(
-			`https://api.github.com/user/starred/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`,
+			`${GITHUB_API_URL}/user/starred/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`,
 			{
 				headers: {
 					Authorization: `Bearer ${token}`,
@@ -3032,7 +3033,7 @@ export async function getPullRequestReviewThreads(
   `;
 
 	try {
-		const response = await fetch("https://api.github.com/graphql", {
+		const response = await fetch(GITHUB_GRAPHQL_URL, {
 			method: "POST",
 			headers: {
 				Authorization: `Bearer ${token}`,
@@ -3621,7 +3622,7 @@ async function fetchPRBundleFromGitHub(
 	pullNumber: number,
 ): Promise<PRBundleData | null> {
 	try {
-		const response = await fetch("https://api.github.com/graphql", {
+		const response = await fetch(GITHUB_GRAPHQL_URL, {
 			method: "POST",
 			headers: {
 				Authorization: `Bearer ${token}`,
@@ -4407,7 +4408,7 @@ async function fetchRepoDiscussionsPageGraphQL(
 	repo: string,
 	after?: string | null,
 ): Promise<RepoDiscussionsPageData> {
-	const response = await fetch("https://api.github.com/graphql", {
+	const response = await fetch(GITHUB_GRAPHQL_URL, {
 		method: "POST",
 		headers: {
 			Authorization: `Bearer ${token}`,
@@ -4467,7 +4468,7 @@ async function fetchDiscussionDetailGraphQL(
 	repo: string,
 	number: number,
 ): Promise<{ detail: DiscussionDetail; comments: DiscussionComment[] } | null> {
-	const response = await fetch("https://api.github.com/graphql", {
+	const response = await fetch(GITHUB_GRAPHQL_URL, {
 		method: "POST",
 		headers: {
 			Authorization: `Bearer ${token}`,
@@ -4604,7 +4605,7 @@ export async function addDiscussionCommentViaGraphQL(
 	const authCtx = await getGitHubAuthContext();
 	if (!authCtx) return null;
 
-	const response = await fetch("https://api.github.com/graphql", {
+	const response = await fetch(GITHUB_GRAPHQL_URL, {
 		method: "POST",
 		headers: {
 			Authorization: `Bearer ${authCtx.token}`,
@@ -4644,7 +4645,7 @@ export async function createDiscussionViaGraphQL(
 	const authCtx = await getGitHubAuthContext();
 	if (!authCtx) return null;
 
-	const response = await fetch("https://api.github.com/graphql", {
+	const response = await fetch(GITHUB_GRAPHQL_URL, {
 		method: "POST",
 		headers: {
 			Authorization: `Bearer ${authCtx.token}`,
@@ -4686,7 +4687,7 @@ export async function addDiscussionReaction(
 	const authCtx = await getGitHubAuthContext();
 	if (!authCtx) return { success: false, error: "Not authenticated" };
 
-	const response = await fetch("https://api.github.com/graphql", {
+	const response = await fetch(GITHUB_GRAPHQL_URL, {
 		method: "POST",
 		headers: {
 			Authorization: `Bearer ${authCtx.token}`,
@@ -4716,7 +4717,7 @@ export async function removeDiscussionReaction(
 	const authCtx = await getGitHubAuthContext();
 	if (!authCtx) return { success: false, error: "Not authenticated" };
 
-	const response = await fetch("https://api.github.com/graphql", {
+	const response = await fetch(GITHUB_GRAPHQL_URL, {
 		method: "POST",
 		headers: {
 			Authorization: `Bearer ${authCtx.token}`,
@@ -4749,7 +4750,7 @@ export async function toggleDiscussionUpvote(
 		? REMOVE_DISCUSSION_UPVOTE_MUTATION
 		: ADD_DISCUSSION_UPVOTE_MUTATION;
 
-	const response = await fetch("https://api.github.com/graphql", {
+	const response = await fetch(GITHUB_GRAPHQL_URL, {
 		method: "POST",
 		headers: {
 			Authorization: `Bearer ${authCtx.token}`,
@@ -4789,7 +4790,7 @@ export async function toggleDiscussionCommentUpvote(
 		? REMOVE_DISCUSSION_COMMENT_UPVOTE_MUTATION
 		: ADD_DISCUSSION_COMMENT_UPVOTE_MUTATION;
 
-	const response = await fetch("https://api.github.com/graphql", {
+	const response = await fetch(GITHUB_GRAPHQL_URL, {
 		method: "POST",
 		headers: {
 			Authorization: `Bearer ${authCtx.token}`,
@@ -4961,7 +4962,7 @@ async function fetchRepoIssuesPageGraphQL(
 	owner: string,
 	repo: string,
 ): Promise<RepoIssuesPageData> {
-	const response = await fetch("https://api.github.com/graphql", {
+	const response = await fetch(GITHUB_GRAPHQL_URL, {
 		method: "POST",
 		headers: {
 			Authorization: `Bearer ${token}`,
@@ -5157,7 +5158,7 @@ export async function enrichPRsWithStats(owner: string, repo: string, prs: { num
 	const query = `query { repository(owner: "${owner}", name: "${repo}") { ${prFragments.join(" ")} } }`;
 
 	try {
-		const response = await fetch("https://api.github.com/graphql", {
+		const response = await fetch(GITHUB_GRAPHQL_URL, {
 			method: "POST",
 			headers: {
 				Authorization: `Bearer ${token}`,
@@ -5369,7 +5370,7 @@ export async function getRepoPullRequestsWithStats(
 	}`;
 
 	try {
-		const response = await fetch("https://api.github.com/graphql", {
+		const response = await fetch(GITHUB_GRAPHQL_URL, {
 			method: "POST",
 			headers: {
 				Authorization: `Bearer ${token}`,
@@ -5632,7 +5633,7 @@ export async function batchFetchCheckStatuses(
 	}`;
 
 	try {
-		const response = await fetch("https://api.github.com/graphql", {
+		const response = await fetch(GITHUB_GRAPHQL_URL, {
 			method: "POST",
 			headers: {
 				Authorization: `Bearer ${token}`,
@@ -6708,7 +6709,7 @@ async function fetchRepoPageDataGraphQL(
 		}
 	`;
 
-	const response = await fetch("https://api.github.com/graphql", {
+	const response = await fetch(GITHUB_GRAPHQL_URL, {
 		method: "POST",
 		headers: {
 			Authorization: `Bearer ${token}`,
@@ -6809,7 +6810,7 @@ async function fetchRepoPageDataGraphQL(
 				: null,
 			pushed_at: r.pushedAt ?? "",
 			size: r.diskUsage ?? 0,
-			html_url: r.url ?? `https://github.com/${owner}/${repo}`,
+			html_url: r.url ?? `${GITHUB_WEB_URL}/${owner}/${repo}`,
 			homepage: r.homepageUrl || null,
 			parent: parentNode
 				? {
@@ -7182,7 +7183,7 @@ export async function getAuthorDossier(
 			}
 		`;
 
-		const response = await fetch("https://api.github.com/graphql", {
+		const response = await fetch(GITHUB_GRAPHQL_URL, {
 			method: "POST",
 			headers: {
 				Authorization: `Bearer ${token}`,

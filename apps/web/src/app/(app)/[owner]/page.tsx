@@ -13,6 +13,7 @@ import {
 import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { OrgDetailContent } from "@/components/orgs/org-detail-content";
 import { UserProfileContent } from "@/components/users/user-profile-content";
+import { GITHUB_WEB_URL } from "@/lib/github-config";
 
 export async function generateMetadata({
 	params,
@@ -78,7 +79,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 					avatar_url: orgData.avatar_url,
 					html_url:
 						orgData.html_url ??
-						`https://github.com/${orgData.login}`,
+						`${GITHUB_WEB_URL}/${orgData.login}`,
 					description: orgData.description ?? null,
 					blog: orgData.blog || null,
 					location: orgData.location || null,

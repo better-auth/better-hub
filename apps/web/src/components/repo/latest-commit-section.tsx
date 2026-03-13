@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import Image from "next/image";
+import Image from "@/components/shared/ghes-image";
 import Link from "next/link";
 import { GitCommit } from "lucide-react";
 import { TimeAgo } from "@/components/ui/time-ago";

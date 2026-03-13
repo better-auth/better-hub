@@ -50,6 +50,7 @@ import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { useQueryClient } from "@tanstack/react-query";
 import { PRChecksPanel } from "@/components/pr/pr-checks-panel";
 import type { CheckStatus } from "@/lib/github";
+import { GITHUB_WEB_URL } from "@/lib/github-config";
 
 interface PRMergePanelProps {
 	owner: string;
@@ -593,7 +594,7 @@ export function PRMergePanel({
 								)}
 								<div className="border-t border-border/40 my-1" />
 								<a
-									href={`https://github.com/${owner}/${repo}/pull/${pullNumber}`}
+									href={`${GITHUB_WEB_URL}/${owner}/${repo}/pull/${pullNumber}`}
 									data-no-github-intercept="true"
 									target="_blank"
 									rel="noopener noreferrer"

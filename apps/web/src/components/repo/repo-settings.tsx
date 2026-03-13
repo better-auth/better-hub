@@ -27,6 +27,7 @@ import {
 	archiveRepository,
 	deleteRepository,
 } from "@/app/(app)/repos/[owner]/[repo]/settings/actions";
+import { GITHUB_WEB_URL } from "@/lib/github-config";
 
 interface RepoData {
 	name: string;
@@ -621,7 +622,7 @@ export function RepoSettings({ owner, repo, repoData, branches }: RepoSettingsPr
 								shared on social media
 							</p>
 							<a
-								href={`https://github.com/${owner}/${repo}/settings`}
+								href={`${GITHUB_WEB_URL}/${owner}/${repo}/settings`}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="inline-flex items-center gap-1 mt-2 text-[11px] text-muted-foreground/50 hover:text-foreground/70 transition-colors"
