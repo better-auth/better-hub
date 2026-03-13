@@ -81,18 +81,18 @@ async function getGhesWebSession(): Promise<string | null> {
 export async function GET(request: NextRequest) {
 	const url = request.nextUrl.searchParams.get("url");
 	if (!url) {
-		return new NextResponse("Missing url parameter", { status: 400 });
+		return NextResponse.json({ error: "Missing url parameter" }, { status: 400 });
 	}
 
 	let parsed: URL;
 	try {
 		parsed = new URL(url);
 	} catch {
-		return new NextResponse("Invalid URL", { status: 400 });
+		return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
 	}
 
 	if (!allowedHosts.has(parsed.hostname)) {
-		return new NextResponse("Host not allowed", { status: 403 });
+		return NextResponse.json({ error: "Host not allowed" }, { status: 403 });
 	}
 
 	try {
@@ -106,8 +106,23 @@ export async function GET(request: NextRequest) {
 			}
 		}
 
-		const upstream = await fetch(url, { headers, redirect: "follow" });
-		const contentType = upstream.headers.get("content-type") || "";
+		let upstream = await fetch(url, { headers, redirect: "follow" });
+		let contentType = upstream.headers.get("content-type") || "";
+
+		// If we got a non-image response and have a session, it may have expired — retry once
+		if (
+			IS_GHES &&
+			headers.Cookie &&
+			(!upstream.ok || !contentType.startsWith("image/"))
+		) {
+			ghesSession = null;
+			const freshCookies = await getGhesWebSession();
+			if (freshCookies) {
+				headers.Cookie = freshCookies;
+				upstream = await fetch(url, { headers, redirect: "follow" });
+				contentType = upstream.headers.get("content-type") || "";
+			}
+		}
 
 		if (upstream.ok && contentType.startsWith("image/")) {
 			return new NextResponse(upstream.body, {
@@ -117,11 +132,6 @@ export async function GET(request: NextRequest) {
 					"X-Content-Type-Options": "nosniff",
 				},
 			});
-		}
-
-		// If we got HTML back, session may have expired
-		if (contentType.includes("text/html")) {
-			ghesSession = null; // Clear cached session
 		}
 
 		// Fallback: generate a colored circle SVG based on user ID
@@ -149,6 +159,6 @@ export async function GET(request: NextRequest) {
 			},
 		});
 	} catch {
-		return new NextResponse("Failed to fetch avatar", { status: 502 });
+		return NextResponse.json({ error: "Failed to fetch avatar" }, { status: 502 });
 	}
 }

@@ -21,7 +21,7 @@ async function getOctokitUser(token: string) {
 	if (cached) return { data: cached };
 	const octokit = new Octokit({ auth: token, baseUrl: GITHUB_API_URL });
 	const githubUser = await octokit.users.getAuthenticated();
-	waitUntil(redis.set(cacheKey, JSON.stringify(githubUser.data), { ex: 3600 }));
+	waitUntil(redis.set(cacheKey, githubUser.data, { ex: 3600 }));
 	return githubUser;
 }
 
@@ -93,6 +93,11 @@ export const auth = betterAuth({
 								headers,
 							}),
 						]);
+						if (!userRes.ok) {
+							throw new Error(
+								`GitHub /user returned ${userRes.status}`,
+							);
+						}
 						const user = await userRes.json();
 						let email = user.email;
 						if (!email) {
