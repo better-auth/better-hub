@@ -120,9 +120,10 @@ export const auth = betterAuth({
 							login: user.login,
 						};
 					},
-					mapProfileToUser: async (profile) => ({
-						githubLogin: profile.login,
-					}),
+					mapProfileToUser: async (profile) =>
+						({
+							githubLogin: profile.login,
+						}) as Record<string, unknown>,
 				},
 			],
 		}),
