@@ -82,44 +82,26 @@ export const auth = betterAuth({
 					tokenUrl: `${GITHUB_WEB_URL}/login/oauth/access_token`,
 					scopes: ["read:user", "user:email", "public_repo"],
 					async getUserInfo(tokens) {
-						const headers = {
-							Authorization: `Bearer ${tokens.accessToken}`,
-						};
-						const [userRes, emailsRes] = await Promise.all([
-							fetch(`${GITHUB_API_URL}/user`, {
-								headers,
-							}),
-							fetch(`${GITHUB_API_URL}/user/emails`, {
-								headers,
-							}),
-						]);
-						if (!userRes.ok) {
-							throw new Error(
-								`GitHub /user returned ${userRes.status}`,
-							);
-						}
-						const user = await userRes.json();
-						let email = user.email;
-						if (!email) {
-							const emails = await emailsRes
-								.json()
-								.catch(() => []);
-							const primary = Array.isArray(emails)
-								? emails.find(
-										(e: any) =>
-											e.primary &&
-											e.verified,
-									)
-								: null;
-							email =
-								primary?.email ??
-								emails?.[0]?.email ??
-								null;
-						}
+						const octokit = new Octokit({
+							auth: tokens.accessToken,
+							baseUrl: GITHUB_API_URL,
+						});
+						const [{ data: user }, { data: emails }] =
+							await Promise.all([
+								octokit.users.getAuthenticated(),
+								octokit.users.listEmailsForAuthenticatedUser(),
+							]);
+						const primary = emails.find(
+							(e) => e.primary && e.verified,
+						);
 						return {
 							id: String(user.id),
 							name: user.name || user.login,
-							email,
+							email:
+								user.email ||
+								primary?.email ||
+								emails[0]?.email ||
+								null,
 							image: user.avatar_url,
 							emailVerified: true,
 							login: user.login,
