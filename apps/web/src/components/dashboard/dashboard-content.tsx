@@ -3,7 +3,7 @@
 import { noSSR } from "foxact/no-ssr";
 import { Suspense, useEffect, useState, useCallback, useTransition, useMemo } from "react";
 import { useQueryState, parseAsStringLiteral } from "nuqs";
-import Image from "@/components/shared/ghes-image";
+import Image from "@/components/shared/github-image";
 import Link from "next/link";
 import {
 	GitPullRequest,

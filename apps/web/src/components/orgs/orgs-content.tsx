@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Image from "@/components/shared/ghes-image";
+import Image from "@/components/shared/github-image";
 import Link from "next/link";
 import { Building2, ChevronRight, ExternalLink, Search } from "lucide-react";
 

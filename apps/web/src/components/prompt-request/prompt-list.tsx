@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useTransition, useEffect } from "react";
 import Link from "next/link";
-import Image from "@/components/shared/ghes-image";
+import Image from "@/components/shared/github-image";
 import { useRouter } from "next/navigation";
 import {
 	Sparkles,

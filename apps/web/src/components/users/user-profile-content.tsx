@@ -27,7 +27,7 @@ import {
 	Users,
 	X,
 } from "lucide-react";
-import Image from "@/components/shared/ghes-image";
+import Image from "@/components/shared/github-image";
 import Link from "next/link";
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

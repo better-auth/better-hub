@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { fetchReleasesPage } from "@/app/(app)/repos/[owner]/[repo]/releases/actions";
 import Link from "next/link";
-import Image from "@/components/shared/ghes-image";
+import Image from "@/components/shared/github-image";
 import {
 	Tag,
 	Download,

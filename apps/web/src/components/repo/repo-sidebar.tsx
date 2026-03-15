@@ -1,4 +1,4 @@
-import Image from "@/components/shared/ghes-image";
+import Image from "@/components/shared/github-image";
 import Link from "next/link";
 import { GitFork, Eye, Scale, HardDrive, LinkIcon } from "lucide-react";
 import { formatNumber } from "@/lib/utils";

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
-import Image from "@/components/shared/ghes-image";
+import Image from "@/components/shared/github-image";
 import { parseDiffPatch, type DiffLine, type DiffSegment } from "@/lib/github-utils";
 import type { SyntaxToken } from "@/lib/shiki";
 import { cn } from "@/lib/utils";

@@ -24,7 +24,7 @@ import {
 	Quote,
 	Search,
 } from "lucide-react";
-import Image from "@/components/shared/ghes-image";
+import Image from "@/components/shared/github-image";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";

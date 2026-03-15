@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "@/components/shared/ghes-image";
+import Image from "@/components/shared/github-image";
 import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";

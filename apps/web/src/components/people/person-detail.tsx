@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import Image from "@/components/shared/ghes-image";
+import Image from "@/components/shared/github-image";
 import { cn } from "@/lib/utils";
 import type { PersonRepoActivity, ContributorWeek } from "@/lib/github";
 

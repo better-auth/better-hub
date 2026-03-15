@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useQueryState, parseAsString, parseAsStringLiteral } from "nuqs";
 import Link from "next/link";
-import Image from "@/components/shared/ghes-image";
+import Image from "@/components/shared/github-image";
 import {
 	GitPullRequest,
 	GitMerge,

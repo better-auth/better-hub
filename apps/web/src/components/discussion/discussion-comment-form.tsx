@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "@/components/shared/ghes-image";
+import Image from "@/components/shared/github-image";
 import { Loader2, CornerDownLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
