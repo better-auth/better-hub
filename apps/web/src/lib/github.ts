@@ -2794,7 +2794,7 @@ export async function getRepoReleases(owner: string, repo: string) {
 	const authCtx = await getGitHubAuthContext();
 	const cacheKey = buildRepoReleasesCacheKey(owner, repo);
 
-	return readLocalFirstGitData({
+	const releases = await readLocalFirstGitData({
 		authCtx,
 		cacheKey,
 		cacheType: "repo_releases",
@@ -2803,6 +2803,18 @@ export async function getRepoReleases(owner: string, repo: string) {
 		jobPayload: { owner, repo },
 		fetchRemote: (octokit) => fetchRepoReleasesFromGitHub(octokit, owner, repo),
 	});
+
+	if (releases.length > 0 || !authCtx?.octokit) return releases;
+
+	try {
+		const fresh = await fetchRepoReleasesFromGitHub(authCtx.octokit, owner, repo);
+		upsertGithubCacheEntry(authCtx.userId, cacheKey, "repo_releases", fresh).catch(
+			() => {},
+		);
+		return fresh;
+	} catch {
+		return releases;
+	}
 }
 
 export async function getRepoReleasesPage(owner: string, repo: string, page: number) {
@@ -2836,20 +2848,20 @@ export async function getRepoReleaseByTag(owner: string, repo: string, tag: stri
 	const authCtx = await getGitHubAuthContext();
 	if (!authCtx?.octokit) return null;
 
-	if (tag === "latest") {
-		try {
-			const { data } = await authCtx.octokit.repos.getLatestRelease({
-				owner,
-				repo,
-			});
-			return data;
-		} catch {
-			return null;
-		}
-	}
-
 	try {
 		const { data } = await authCtx.octokit.repos.getReleaseByTag({ owner, repo, tag });
+		return data;
+	} catch {
+		return null;
+	}
+}
+
+export async function getLatestRepoRelease(owner: string, repo: string) {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx?.octokit) return null;
+
+	try {
+		const { data } = await authCtx.octokit.repos.getLatestRelease({ owner, repo });
 		return data;
 	} catch {
 		return null;
