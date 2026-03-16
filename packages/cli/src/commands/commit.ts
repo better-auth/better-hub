@@ -4,7 +4,6 @@ import { requireAuth } from "../lib/client.js";
 import {
 	cancel,
 	confirm,
-	intro,
 	isCancel,
 	log,
 	multiselect,
@@ -17,6 +16,86 @@ import {
 } from "@clack/prompts";
 import { betterHubIntro } from "../lib/intro.js";
 import { sleep } from "../lib/utils.js";
+import { execSync, execFileSync, spawn } from "child_process";
+
+let _repoRoot: string | undefined;
+function repoRoot(): string {
+	if (!_repoRoot) {
+		_repoRoot = execSync("git rev-parse --show-toplevel", { encoding: "utf-8" }).trim();
+	}
+	return _repoRoot;
+}
+
+function git(cmd: string): string {
+	return execSync(`git ${cmd}`, { encoding: "utf-8", cwd: repoRoot() }).trim();
+}
+
+type FileStatus = "modified" | "added" | "deleted" | "renamed";
+
+interface ChangedFile {
+	raw: string;
+	status: FileStatus;
+	diff: { additions: number; deletions: number } | null;
+}
+
+function getChangedFiles(): ChangedFile[] {
+	const porcelain = execSync("git status --porcelain", {
+		encoding: "utf-8",
+		cwd: repoRoot(),
+	}).trimEnd();
+	if (!porcelain) return [];
+
+	const numstat = new Map<string, { additions: number; deletions: number }>();
+	for (const cmd of ["diff --numstat", "diff --cached --numstat"]) {
+		try {
+			const output = git(cmd);
+			if (!output) continue;
+			for (const line of output.split("\n").filter(Boolean)) {
+				const [add, del, ...rest] = line.split("\t");
+				const file = rest.join("\t");
+				const additions = parseInt(add!) || 0;
+				const deletions = parseInt(del!) || 0;
+				const existing = numstat.get(file);
+				if (existing) {
+					existing.additions += additions;
+					existing.deletions += deletions;
+				} else {
+					numstat.set(file, { additions, deletions });
+				}
+			}
+		} catch {}
+	}
+
+	const files: ChangedFile[] = [];
+	for (const line of porcelain.split("\n").filter(Boolean)) {
+		const xy = line.slice(0, 2);
+		const rest = line.slice(3);
+
+		let status: FileStatus;
+		if (xy.includes("?")) status = "added";
+		else if (xy.includes("A")) status = "added";
+		else if (xy.includes("D")) status = "deleted";
+		else if (xy.includes("R")) status = "renamed";
+		else status = "modified";
+
+		const filePath = rest.includes(" -> ") ? rest.split(" -> ")[1]! : rest;
+		files.push({
+			raw: filePath,
+			status,
+			diff: numstat.get(filePath) ?? null,
+		});
+	}
+
+	return files;
+}
+
+function getCurrentBranch(): string {
+	try {
+		return git("branch --show-current");
+	} catch {
+		return git("rev-parse --short HEAD");
+	}
+}
 
 export const commitCommand = new Command("commit")
 	.alias("push")
@@ -30,31 +109,16 @@ export const commitCommand = new Command("commit")
 	.action(async (opts: { message?: string | boolean; all?: boolean; push?: boolean }) => {
 		requireAuth();
 		betterHubIntro("Commit & Push");
-		const fakeFiles: {
-			raw: string;
-			status: "modified" | "added" | "deleted" | "renamed";
-			diff: { additions: number; deletions: number } | null;
-		}[] = [
-			{
-				raw: "src/lib/auth.ts",
-				status: "modified",
-				diff: { additions: 10, deletions: 5 },
-			},
-			{
-				raw: "src/components/navbar.tsx",
-				status: "modified",
-				diff: { additions: 10, deletions: 5 },
-			},
-			{ raw: "src/app/settings/page.tsx", status: "added", diff: null },
-			{
-				raw: "src/utils/format.ts",
-				status: "modified",
-				diff: { additions: 10, deletions: 5 },
-			},
-			{ raw: "tests/auth.test.ts", status: "deleted", diff: null },
-		];
 
-		const maxLen = Math.max(...fakeFiles.map((f) => f.raw.length));
+		const changedFiles = getChangedFiles();
+		if (changedFiles.length === 0) {
+			log.warn("No changes to commit.");
+			outro(pc.dim("Nothing to do."));
+			return;
+		}
+
+		const branch = getCurrentBranch();
+		const maxLen = Math.max(...changedFiles.map((f) => f.raw.length));
 
 		const statusColor = (s: string) => {
 			if (s === "added") return pc.green(s);
@@ -62,10 +126,7 @@ export const commitCommand = new Command("commit")
 			return pc.yellowBright(s);
 		};
 
-		const formatPath = (
-			raw: string,
-			status: "modified" | "added" | "deleted" | "renamed",
-		) => {
+		const formatPath = (raw: string, status: FileStatus) => {
 			const sep = raw.lastIndexOf("/");
 			const dir = raw.slice(0, sep + 1);
 			const file = raw.slice(sep + 1);
@@ -95,14 +156,14 @@ export const commitCommand = new Command("commit")
 		};
 
 		log.info(
-			`${pc.dim("On branch")} ${pc.cyan("feat/custom-storage")} ${pc.dim("· 5 changed files")}`,
+			`${pc.dim("On branch")} ${pc.cyan(branch)} ${pc.dim(`· ${changedFiles.length} changed file(s)`)}`,
 		);
 
 		const staged = opts.all
 			? (() => {
 					log.step("Staging all changed files:");
 					const logs: string[] = [];
-					for (const f of fakeFiles) {
+					for (const f of changedFiles) {
 						const padding = " ".repeat(
 							maxLen - f.raw.length + 2,
 						);
@@ -116,11 +177,11 @@ export const commitCommand = new Command("commit")
 						);
 					}
 					log.message(logs.join("\n"));
-					return fakeFiles.map((f) => f.raw);
+					return changedFiles.map((f) => f.raw);
 				})()
 			: await multiselect({
 					message: "Select files to stage:",
-					options: fakeFiles.map((f) => {
+					options: changedFiles.map((f) => {
 						const padding = " ".repeat(
 							maxLen - f.raw.length + 2,
 						);
@@ -133,7 +194,7 @@ export const commitCommand = new Command("commit")
 							value: f.raw,
 						};
 					}),
-					initialValues: fakeFiles.map((x) => x.raw),
+					initialValues: changedFiles.map((x) => x.raw),
 				});
 
 		if (isCancel(staged)) {
@@ -184,12 +245,31 @@ export const commitCommand = new Command("commit")
 			shouldPush = answer;
 		}
 
-		const shortHash = Math.random().toString(16).slice(2, 9);
+		const selectedFiles = staged as string[];
+		try {
+			execFileSync("git", ["add", "--", ...selectedFiles], { cwd: repoRoot() });
+		} catch (e) {
+			log.error(`Failed to stage files: ${(e as Error).message}`);
+			process.exit(1);
+		}
+
+		try {
+			execFileSync("git", ["commit", "-m", commitMsg], { cwd: repoRoot() });
+		} catch (e) {
+			log.error(`Commit failed: ${(e as Error).message}`);
+			process.exit(1);
+		}
+
+		const shortHash = git("rev-parse --short HEAD");
+		let diffSummary: string;
+		try {
+			diffSummary = git('show --shortstat --format=""');
+		} catch {
+			diffSummary = `${selectedFiles.length} file(s) changed`;
+		}
 
 		log.success(`Committed ${pc.bold(shortHash)} ${pc.dim("→")} ${pc.cyan(commitMsg)}`);
-		log.message(
-			`${pc.dim(`${(staged as string[]).length} file(s) changed, 47 insertions(+), 12 deletions(-)`)}`,
-		);
+		log.message(pc.dim(diffSummary));
 
 		if (!shouldPush) {
 			outro(pc.green("Done!"));
@@ -197,19 +277,72 @@ export const commitCommand = new Command("commit")
 		}
 
 		const p = progress({ max: 100 });
-		p.start(`Pushing to ${pc.cyan("origin/feat/custom-storage")}`);
-		await sleep(800);
-		p.advance(15, "Enumerating objects...");
-		await sleep(600);
-		p.advance(30, "Counting objects...");
-		await sleep(700);
-		p.advance(50, "Compressing objects...");
-		await sleep(800);
-		p.advance(70, "Writing objects...");
-		await sleep(900);
-		p.advance(90, "Resolving deltas...");
-		await sleep(600);
-		p.stop(`${pc.green("✓")} Pushed to ${pc.cyan("origin/feat/custom-storage")}`);
+		p.start(`Pushing to ${pc.cyan(`better-hub/${branch}`)}`);
+
+		try {
+			await new Promise<void>((resolve, reject) => {
+				const child = spawn(
+					"git",
+					["push", "-u", "better-hub", "HEAD", "--progress"],
+					{
+						cwd: repoRoot(),
+					},
+				);
+				let stderr = "";
+
+				const STAGES: [RegExp, number, string][] = [
+					[/enumerating objects/i, 10, "Enumerating objects..."],
+					[/counting objects/i, 25, "Counting objects..."],
+					[/compressing objects/i, 45, "Compressing objects..."],
+					[/writing objects/i, 65, "Writing objects..."],
+					[/resolving deltas/i, 85, "Resolving deltas..."],
+					[/remote:/i, 92, "Remote processing..."],
+				];
+				let reached = 0;
+
+				const advance = (chunk: string) => {
+					for (const [pattern, pct, label] of STAGES) {
+						if (pct > reached && pattern.test(chunk)) {
+							reached = pct;
+							p.advance(pct, label);
+						}
+					}
+				};
+
+				child.stderr.on("data", (data: Buffer) => {
+					const text = data.toString();
+					stderr += text;
+					advance(text);
+				});
+
+				child.stdout.on("data", (data: Buffer) => {
+					advance(data.toString());
+				});
+
+				child.on("close", (code) => {
+					if (code === 0) {
+						p.advance(100, "Done");
+						resolve();
+					} else {
+						reject(
+							new Error(
+								stderr ||
+									`git push exited with code ${code}`,
+							),
+						);
+					}
+				});
+
+				child.on("error", reject);
+			});
+
+			p.stop(`${pc.green("✓")} Pushed to ${pc.cyan(`better-hub/${branch}`)}`);
+		} catch (e) {
+			p.stop(`${pc.red("✗")} Push failed`);
+			log.error((e as Error).message);
+			process.exit(1);
+		}
+
 		log.info(`${pc.bold("Running Actions")} ${pc.dim("— watching CI run...")}`);
 
 		await streamCIResults();
