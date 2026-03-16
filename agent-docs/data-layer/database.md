@@ -4,7 +4,7 @@ Better Hub uses PostgreSQL as its primary database, accessed through Prisma ORM 
 
 ## Key Files
 
-- `apps/web/prisma/schema.prisma` -- Database schema (20 models)
+- `apps/web/prisma/schema/` -- Database schema (multi-file: `base.prisma` for config, `auth.prisma` for better-auth tables, `app.prisma` for app tables)
 - `apps/web/prisma/migrations/` -- Prisma migrations
 - `apps/web/src/lib/db.ts` -- Prisma client initialization and connection pool config
 - `apps/web/src/generated/prisma/` -- Auto-generated Prisma client
@@ -13,11 +13,11 @@ Better Hub uses PostgreSQL as its primary database, accessed through Prisma ORM 
 
 The pool is configured in `db.ts` with environment-aware settings:
 
-| Setting | Development | Production |
-|---|---|---|
-| `max` connections | 20 | 5 |
-| `idleTimeoutMillis` | 10,000 | 30,000 |
-| `connectionTimeoutMillis` | 0 (unlimited) | 5,000 |
+| Setting                   | Development   | Production |
+| ------------------------- | ------------- | ---------- |
+| `max` connections         | 20            | 5          |
+| `idleTimeoutMillis`       | 10,000        | 30,000     |
+| `connectionTimeoutMillis` | 0 (unlimited) | 5,000      |
 
 Development uses a larger pool because Next.js spawns 10-15 child processes, each needing its own connections. Docker Compose sets `max_connections=300` on PostgreSQL. Production sits behind a managed pooler (PgBouncer/Neon).
 
@@ -27,65 +27,65 @@ The pool is attached to `process` as a singleton (`_proc.__dbPool`) to survive H
 
 ### Authentication (managed by better-auth)
 
-| Model | Purpose |
-|---|---|
-| `User` | User accounts. Extended with `githubPat`, `onboardingDone`, `aiMessageCount`, `stripeCustomerId`, ban fields |
-| `Session` | Active sessions with token, expiry, IP, user agent. Supports impersonation (`impersonatedBy`) |
-| `Account` | OAuth accounts (GitHub). Stores encrypted access/refresh tokens, scopes |
-| `Verification` | Email/token verification records |
+| Model          | Purpose                                                                                                      |
+| -------------- | ------------------------------------------------------------------------------------------------------------ |
+| `User`         | User accounts. Extended with `githubPat`, `onboardingDone`, `aiMessageCount`, `stripeCustomerId`, ban fields |
+| `Session`      | Active sessions with token, expiry, IP, user agent. Supports impersonation (`impersonatedBy`)                |
+| `Account`      | OAuth accounts (GitHub). Stores encrypted access/refresh tokens, scopes                                      |
+| `Verification` | Email/token verification records                                                                             |
 
 ### GitHub Data Sync
 
-| Model | Purpose |
-|---|---|
+| Model              | Purpose                                                                                                    |
+| ------------------ | ---------------------------------------------------------------------------------------------------------- |
 | `GithubCacheEntry` | DB-level cache for GitHub API responses. Keyed by `(userId, cacheKey)`. Stores JSON data + etag + syncedAt |
-| `GithubSyncJob` | Background sync job queue. Deduplicated by `(userId, dedupeKey)`. Tracks status, attempts, errors |
+| `GithubSyncJob`    | Background sync job queue. Deduplicated by `(userId, dedupeKey)`. Tracks status, attempts, errors          |
 
 ### AI / Chat
 
-| Model | Purpose |
-|---|---|
-| `ChatConversation` | Ghost AI conversations. Keyed by `(userId, contextKey)`. Tracks active stream ID for resumability |
-| `ChatMessage` | Individual messages in a conversation. Stores role, content, and `partsJson` for multi-part AI SDK messages |
-| `GhostTab` | Ghost panel tab state (tab ID, label, position) |
-| `GhostTabState` | Per-user active tab and counter |
+| Model              | Purpose                                                                                                     |
+| ------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `ChatConversation` | Ghost AI conversations. Keyed by `(userId, contextKey)`. Tracks active stream ID for resumability           |
+| `ChatMessage`      | Individual messages in a conversation. Stores role, content, and `partsJson` for multi-part AI SDK messages |
+| `GhostTab`         | Ghost panel tab state (tab ID, label, position)                                                             |
+| `GhostTabState`    | Per-user active tab and counter                                                                             |
 
 ### Search
 
-| Model | Purpose |
-|---|---|
+| Model             | Purpose                                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ |
 | `SearchEmbedding` | Semantic search embeddings for viewed PRs/issues. Stores embedding vectors as JSON, content hashes for dedup |
 
 ### User Preferences
 
-| Model | Purpose |
-|---|---|
-| `UserSettings` | User preferences: theme, color theme, Ghost model, code theme, font, API keys, onboarding status |
-| `CustomCodeTheme` | User-created custom code syntax themes |
-| `PinnedItem` | Pinned issues/PRs per repo per user |
+| Model             | Purpose                                                                                          |
+| ----------------- | ------------------------------------------------------------------------------------------------ |
+| `UserSettings`    | User preferences: theme, color theme, Ghost model, code theme, font, API keys, onboarding status |
+| `CustomCodeTheme` | User-created custom code syntax themes                                                           |
+| `PinnedItem`      | Pinned issues/PRs per repo per user                                                              |
 
 ### Billing
 
-| Model | Purpose |
-|---|---|
-| `Subscription` | Stripe subscription state (plan, status, period, cancellation) |
-| `UsageLog` | Per-AI-call billing records. Links to `AiCallLog`. Tracks Stripe reporting status |
-| `AiCallLog` | Detailed AI call logs: provider, model, token counts, cost breakdown |
-| `CreditLedger` | Credit transactions (grants and expirations) |
-| `SpendingLimit` | Per-user monthly spending cap |
+| Model           | Purpose                                                                           |
+| --------------- | --------------------------------------------------------------------------------- |
+| `Subscription`  | Stripe subscription state (plan, status, period, cancellation)                    |
+| `UsageLog`      | Per-AI-call billing records. Links to `AiCallLog`. Tracks Stripe reporting status |
+| `AiCallLog`     | Detailed AI call logs: provider, model, token counts, cost breakdown              |
+| `CreditLedger`  | Credit transactions (grants and expirations)                                      |
+| `SpendingLimit` | Per-user monthly spending cap                                                     |
 
 ### Prompt Requests
 
-| Model | Purpose |
-|---|---|
-| `PromptRequest` | Community prompt requests tied to repos. Has title, body, status (open/accepted/closed) |
-| `PromptRequestComment` | Comments on prompt requests |
-| `PromptRequestReaction` | Reactions (emoji) on prompt requests |
+| Model                   | Purpose                                                                                 |
+| ----------------------- | --------------------------------------------------------------------------------------- |
+| `PromptRequest`         | Community prompt requests tied to repos. Has title, body, status (open/accepted/closed) |
+| `PromptRequestComment`  | Comments on prompt requests                                                             |
+| `PromptRequestReaction` | Reactions (emoji) on prompt requests                                                    |
 
 ### PR Analysis
 
-| Model | Purpose |
-|---|---|
+| Model                | Purpose                                                                                                   |
+| -------------------- | --------------------------------------------------------------------------------------------------------- |
 | `PrOverviewAnalysis` | Cached AI-generated PR analysis. Keyed by `(owner, repo, pullNumber)`, invalidated when `headSha` changes |
 
 ## Prisma Commands

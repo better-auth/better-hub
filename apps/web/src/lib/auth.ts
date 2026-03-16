@@ -4,16 +4,21 @@ import { prisma } from "./db";
 import { Octokit } from "@octokit/rest";
 import { redis } from "./redis";
 import { waitUntil } from "@vercel/functions";
+import { createAuthMiddleware } from "better-auth/api";
 import { all } from "better-all";
 import { headers } from "next/headers";
 import { cache } from "react";
 import { dash, sentinel } from "@better-auth/infra";
 import { createHash } from "@better-auth/utils/hash";
-import { admin, oAuthProxy } from "better-auth/plugins";
+import { admin, bearer, deviceAuthorization, oAuthProxy, organization } from "better-auth/plugins";
 import { stripe } from "@better-auth/stripe";
 import { getStripeClient, isStripeEnabled } from "./billing/stripe";
 import { grantSignupCredits } from "./billing/credit";
 import { patSignIn } from "./auth-plugins/pat-signin";
+import { storagePlugin } from "@better-hub/storage/plugin";
+import { backfillGithubLogin } from "./auth-hooks/backfill-github-login";
+import { backfillUncreatedUserOrgs } from "./auth-hooks/backfill-uncreated-user-orgs";
+import { createDefaultOrganization } from "./auth-hooks/create-default-user-org";
 
 async function getOctokitUser(token: string) {
 	const cached = await redis.get<ReturnType<(typeof octokit)["users"]["getAuthenticated"]>>(
@@ -35,57 +40,22 @@ export const auth = betterAuth({
 	experimental: {
 		joins: true,
 	},
-	plugins: [
-		dash({
-			activityTracking: {
-				enabled: true,
-			},
-		}),
-		sentinel(),
-		admin(),
-		patSignIn(),
-		...(isStripeEnabled
-			? [
-					stripe({
-						stripeClient: getStripeClient(),
-						stripeWebhookSecret:
-							process.env.STRIPE_WEBHOOK_SECRET!,
-						createCustomerOnSignUp: true,
-						onCustomerCreate: async ({ user }) => {
-							await grantSignupCredits(user.id);
-						},
-						subscription: {
-							enabled: true,
-							plans: [
-								{
-									name: "base",
-									priceId: process.env
-										.STRIPE_BASE_PRICE_ID!,
-									lineItems: [
-										{
-											price: process
-												.env
-												.STRIPE_METERED_PRICE_ID!,
-										},
-									],
-								},
-							],
-						},
-					}),
-				]
-			: []),
-		...(process.env.VERCEL
-			? [oAuthProxy({ productionURL: "https://www.better-hub.com" })]
-			: []),
-	],
 	user: {
 		additionalFields: {
 			githubPat: {
 				type: "string",
 				required: false,
 			},
+			githubLogin: {
+				type: "string",
+				required: false,
+			},
 			onboardingDone: {
 				type: "boolean",
+				required: false,
+			},
+			aiMessageCount: {
+				type: "number",
 				required: false,
 			},
 		},
@@ -133,6 +103,74 @@ export const auth = betterAuth({
 			ipAddressHeaders: ["x-vercel-forwarded-for", "x-forwarded-for"],
 		},
 	},
+	databaseHooks: {
+		user: {
+			create: {
+				after: async (user) => {
+					await createDefaultOrganization(user);
+				},
+			},
+		},
+	},
+	hooks: {
+		after: createAuthMiddleware(async (ctx) => {
+			// Could return an updated user obj from get-session
+			const result = await backfillGithubLogin(ctx);
+			await backfillUncreatedUserOrgs(result ?? null, ctx);
+			if (result) return result;
+		}),
+	},
+	plugins: [
+		dash({
+			activityTracking: {
+				enabled: true,
+			},
+		}),
+		sentinel(),
+		admin(),
+		organization(),
+		storagePlugin(),
+		patSignIn(),
+		bearer(),
+		deviceAuthorization(),
+		...(isStripeEnabled
+			? ([
+					stripe({
+						stripeClient: getStripeClient(),
+						stripeWebhookSecret:
+							process.env.STRIPE_WEBHOOK_SECRET!,
+						createCustomerOnSignUp: true,
+						onCustomerCreate: async ({ user }) => {
+							await grantSignupCredits(user.id);
+						},
+						subscription: {
+							enabled: true,
+							plans: [
+								{
+									name: "base",
+									priceId: process.env
+										.STRIPE_BASE_PRICE_ID!,
+									lineItems: [
+										{
+											price: process
+												.env
+												.STRIPE_METERED_PRICE_ID!,
+										},
+									],
+								},
+							],
+						},
+					}),
+				] as unknown as [])
+			: []),
+		...(process.env.VERCEL
+			? [
+					oAuthProxy({
+						productionURL: "https://www.better-hub.com",
+					}),
+				]
+			: []),
+	],
 });
 
 export const getServerSession = cache(async () => {

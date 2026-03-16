@@ -60,16 +60,16 @@ If a change is significant enough that it would surprise a future agent reading 
 
 ### Critical Files
 
-| File                                     | Purpose                                        |
-| ---------------------------------------- | ---------------------------------------------- |
-| `apps/web/src/lib/github.ts`             | All GitHub API data fetching (~7300 lines)     |
-| `apps/web/src/lib/auth.ts`               | Authentication config and `getServerSession()` |
-| `apps/web/src/lib/db.ts`                 | Database client and connection pool            |
-| `apps/web/src/proxy.ts`                  | Middleware (auth + URL rewriting)              |
-| `apps/web/src/app/api/ai/ghost/route.ts` | Ghost AI endpoint (~3500 lines)                |
-| `apps/web/prisma/schema.prisma`          | Database schema                                |
-| `apps/web/next.config.ts`                | Next.js configuration                          |
-| `apps/web/.env.example`                  | Environment variable template                  |
+| File                                     | Purpose                                               |
+| ---------------------------------------- | ----------------------------------------------------- |
+| `apps/web/src/lib/github.ts`             | All GitHub API data fetching (~7300 lines)            |
+| `apps/web/src/lib/auth.ts`               | Authentication config and `getServerSession()`        |
+| `apps/web/src/lib/db.ts`                 | Database client and connection pool                   |
+| `apps/web/src/proxy.ts`                  | Middleware (auth + URL rewriting)                     |
+| `apps/web/src/app/api/ai/ghost/route.ts` | Ghost AI endpoint (~3500 lines)                       |
+| `apps/web/prisma/schema/`                | Database schema (multi-file: auth.prisma, app.prisma) |
+| `apps/web/next.config.ts`                | Next.js configuration                                 |
+| `apps/web/.env.example`                  | Environment variable template                         |
 
 ### Common Tasks
 
@@ -81,6 +81,6 @@ If a change is significant enough that it would surprise a future agent reading 
 
 **Fetching GitHub data**: Add a function in `apps/web/src/lib/github.ts` using the `localFirstGitRead` pattern. Define the cache key, job type, and remote fetcher.
 
-**Adding a database model**: Update `apps/web/prisma/schema.prisma`, run `bunx prisma migrate dev --name your_migration`, then `bunx prisma generate`.
+**Adding a database model**: Add to the appropriate file in `apps/web/prisma/schema/` (`auth.prisma` for better-auth tables, `app.prisma` for everything else), run `bunx prisma migrate dev --name your_migration`, then `bunx prisma generate`.
 
 **Running checks before PR**: Run `bun check` from the repo root (lint + format + typecheck).

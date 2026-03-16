@@ -1,0 +1,40 @@
+{
+	"name": "@better-hub/storage",
+	"version": "0.1.0",
+	"description": "Git storage plugin for Better Hub — repo creation, access control, and Code.Storage integration",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/better-auth/better-hub.git",
+		"directory": "packages/storage"
+	},
+	"files": [
+		"dist"
+	],
+	"type": "module",
+	"exports": {
+		".": "./dist/index.mjs",
+		"./adapter": "./dist/adapter.mjs",
+		"./client": "./dist/client.mjs",
+		"./db-schema": "./dist/db-schema.mjs",
+		"./plugin": "./dist/plugin.mjs",
+		"./package.json": "./package.json"
+	},
+	"scripts": {
+		"build": "tsdown",
+		"dev": "tsc --watch --emitDeclarationOnly",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@pierre/storage": "^1.3.2",
+		"better-auth": "catalog:",
+		"zod": "^4.3.6"
+	},
+	"devDependencies": {
+		"@types/node": "^25.3.0",
+		"tsdown": "latest"
+	},
+	"inlinedDependencies": {
+		"better-call": "1.3.2"
+	}
+}
