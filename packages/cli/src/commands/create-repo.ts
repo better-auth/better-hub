@@ -243,16 +243,45 @@ export const createRepoCommand = new Command("create")
 		const defaultBranch = repo.data.defaultBranch || "main";
 
 		if (shouldInit) {
-			execSync(`git init -b "${defaultBranch}"`, { cwd: path });
+			try {
+				execSync(`git init -b "${defaultBranch}"`, { cwd: path });
+			} catch (error) {
+				log.error(`Failed to initialize Git repository: ${error}`);
+				process.exit(1);
+			}
 			gitCLIDetails.push(pc.dim("✓ Initialized Git repository"));
 		} else {
 			gitCLIDetails.push(pc.dim("→ Using existing Git repository"));
 		}
 
 		if (repo.data.remoteURL) {
-			execSync(`cd ${path} && git remote add better-hub ${repo.data.remoteURL}`, {
-				cwd: path,
-			});
+			try {
+				execSync(
+					`cd ${path} && git remote add better-hub ${repo.data.remoteURL}`,
+					{
+						cwd: path,
+					},
+				);
+			} catch (error) {
+				log.error(`Failed to add remote repository: ${error}`);
+				process.exit(1);
+			}
+			try {
+				execSync(`git config remote.pushDefault better-hub`, {
+					cwd: path,
+				});
+			} catch (error) {
+				log.error(`Failed to set remote.pushDefault: ${error}`);
+				process.exit(1);
+			}
+			try {
+				execSync(`git config push.autoSetupRemote true`, {
+					cwd: path,
+				});
+			} catch (error) {
+				log.error(`Failed to set push.autoSetupRemote: ${error}`);
+				process.exit(1);
+			}
 			gitCLIDetails.push(pc.dim("✓ Registered remote repository"));
 		} else {
 			gitCLIDetails.push(
