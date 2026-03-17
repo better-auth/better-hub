@@ -23,7 +23,7 @@ const DEFAULT_WIDTH = 340;
 const MAX_WIDTH = 400;
 const MIN_WIDTH = 200;
 const SNAP_THRESHOLD = 120;
-const SPRING = { type: "spring" as const, stiffness: 500, damping: 35 };
+const SPRING = { type: "spring" as const, stiffness: 500, damping: 45 };
 
 export function RepoLayoutWrapper({
 	sidebar,
@@ -199,10 +199,10 @@ export function RepoLayoutWrapper({
 			<AnimatePresence>
 				{!collapsed && (
 					<motion.div
-						className="hidden lg:flex shrink-0 flex-col items-center"
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						exit={{ opacity: 0 }}
+						className="hidden lg:flex shrink-0 flex-col items-center overflow-hidden"
+						initial={{ opacity: 0, width: "auto" }}
+						animate={{ opacity: 1, width: "auto" }}
+						exit={{ opacity: 0, width: 0 }}
 						transition={{ duration: 0.15 }}
 					>
 						<div
