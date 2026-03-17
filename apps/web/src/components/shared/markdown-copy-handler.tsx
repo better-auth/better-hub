@@ -26,16 +26,30 @@ export function MarkdownCopyHandler({ children }: { children: ReactNode }) {
 		const container = ref.current;
 		if (!container) return;
 
-		// Restore saved package-manager preference on mount
-		const saved = localStorage.getItem(STORAGE_KEY);
-		if (saved != null) {
-			syncAllTabs(container, Number(saved));
+		function injectAll() {
+			// Restore saved package-manager preference on mount
+			const saved = localStorage.getItem(STORAGE_KEY);
+			if (saved != null) {
+				syncAllTabs(container!, Number(saved));
+			}
+
+			// Inject copy buttons, both for code blocks and headings
+			injectCopyButtons(container!);
+			injectHeadingCopyButtons(container!);
 		}
 
-		// Inject copy buttons on every <pre> that doesn't already have one
-		injectCopyButtons(container);
-		// Inject copy buttons on headings
-		injectHeadingCopyButtons(container);
+		// Inject on mount
+		injectAll();
+
+		// Re-inject on readme refresh or other DOM changes
+		let injecting = false;
+		const observer = new MutationObserver(() => {
+			if (injecting) return;
+			injecting = true;
+			injectAll();
+			injecting = false;
+		});
+		observer.observe(container, { childList: true, subtree: true });
 
 		function handleClick(e: MouseEvent) {
 			const target = e.target as HTMLElement;
@@ -101,6 +115,7 @@ export function MarkdownCopyHandler({ children }: { children: ReactNode }) {
 		container.addEventListener("click", handleClick);
 		container.addEventListener("change", handleChange);
 		return () => {
+			observer.disconnect();
 			container.removeEventListener("click", handleClick);
 			container.removeEventListener("change", handleChange);
 		};
