@@ -2,7 +2,12 @@ import { spawn } from "node:child_process";
 import { Command } from "commander";
 import pc from "picocolors";
 import { select, isCancel, cancel, outro, log } from "@clack/prompts";
-import { fuzzyFindRepos, getRepoPath, listRegisteredRepos } from "../lib/repo-registry.js";
+import {
+	fuzzyFindRepos,
+	getRepoEntries,
+	listRegisteredRepos,
+	pruneStaleRepos,
+} from "../lib/repo-registry.js";
 import { betterHubIntro } from "../lib/intro.js";
 
 export const cdCommand = new Command("cd")
@@ -10,6 +15,14 @@ export const cdCommand = new Command("cd")
 	.argument("[slug]", "Repository slug (org/name)")
 	.action(async (slug?: string) => {
 		betterHubIntro("Change Directory");
+
+		const pruned = pruneStaleRepos();
+		if (pruned.length > 0) {
+			log.warn(
+				`Removed ${pruned.length} stale ${pruned.length === 1 ? "repo" : "repos"} (path no longer exists): ${pruned.map((r) => pc.dim(r.slug)).join(", ")}`,
+			);
+		}
+
 		if (!slug) {
 			const repos = listRegisteredRepos();
 			if (!repos.length) {
@@ -24,7 +37,7 @@ export const cdCommand = new Command("cd")
 					const segments = r.slug.split("/");
 					return {
 						label: `${pc.cyan(segments[0]! + "/")}${pc.cyan(pc.bold(segments[1]!))} ${pc.dim(r.path)}`,
-						value: r.slug,
+						value: { slug: r.slug, path: r.path } as const,
 					};
 				}),
 			});
@@ -34,10 +47,41 @@ export const cdCommand = new Command("cd")
 				process.exit(0);
 			}
 
-			slug = selected;
+			const segments = selected.slug.split("/");
+			outro(
+				pc.green(`${pc.bold("Directory changed to")}`) +
+					" " +
+					`${pc.cyan(segments[0]! + "/")}${pc.cyan(pc.bold(segments[1]!))}`,
+			);
+
+			spawn(process.env["SHELL"]!, {
+				stdio: "inherit",
+				cwd: selected.path,
+			});
+			return;
 		}
 
-		let repoPath = getRepoPath(slug);
+		let repoPath: string | null = null;
+
+		const exactEntries = getRepoEntries(slug);
+		if (exactEntries.length === 1) {
+			repoPath = exactEntries[0]!.path;
+		} else if (exactEntries.length > 1) {
+			const selected = await select({
+				message: `Multiple clones of "${slug}":`,
+				options: exactEntries.map((e) => ({
+					label: `${pc.cyan(e.slug)} ${pc.dim(e.path)}`,
+					value: e.path,
+				})),
+			});
+
+			if (isCancel(selected)) {
+				cancel("Operation cancelled.");
+				process.exit(0);
+			}
+
+			repoPath = selected;
+		}
 
 		if (!repoPath) {
 			const matches = fuzzyFindRepos(slug);
@@ -62,13 +106,10 @@ export const cdCommand = new Command("cd")
 			} else {
 				const selected = await select({
 					message: `Multiple repos match "${slug}":`,
-					options: matches.map((m) => {
-						const segments = m.entry.slug.split("/");
-						return {
-							label: `${pc.cyan(segments[0]! + "/")}${pc.cyan(pc.bold(segments[1]!))} ${pc.dim(m.entry.path)}`,
-							value: m.entry.slug,
-						};
-					}),
+					options: matches.map((m) => ({
+						label: `${pc.cyan(m.entry.slug)} ${pc.dim(m.entry.path)}`,
+						value: m.entry.path,
+					})),
 				});
 
 				if (isCancel(selected)) {
@@ -76,8 +117,9 @@ export const cdCommand = new Command("cd")
 					process.exit(0);
 				}
 
-				slug = selected;
-				repoPath = getRepoPath(slug)!;
+				repoPath = selected;
+				const match = matches.find((m) => m.entry.path === selected);
+				if (match) slug = match.entry.slug;
 			}
 		}
 

@@ -119,6 +119,13 @@ export const commitCommand = new Command("commit")
 
 		const branch = getCurrentBranch();
 		const maxLen = Math.max(...changedFiles.map((f) => f.raw.length));
+		const maxStatusLen = Math.max(...changedFiles.map((f) => f.status.length));
+		const maxAddLen = Math.max(
+			...changedFiles.map((f) => (f.diff ? `+${f.diff.additions}`.length : 0)),
+		);
+		const maxDelLen = Math.max(
+			...changedFiles.map((f) => (f.diff ? `-${f.diff.deletions}`.length : 0)),
+		);
 
 		const statusColor = (s: string) => {
 			if (s === "added") return pc.green(s);
@@ -167,13 +174,24 @@ export const commitCommand = new Command("commit")
 						const padding = " ".repeat(
 							maxLen - f.raw.length + 2,
 						);
+						const statusPad = " ".repeat(
+							maxStatusLen - f.status.length,
+						);
 
 						let diff = "";
 						if (f.diff) {
-							diff = ` ${pc.dim(pc.green(`+${f.diff.additions}`) + " " + `${pc.red(`-${f.diff.deletions}`)}`)}`;
+							const addStr =
+								`+${f.diff.additions}`.padStart(
+									maxAddLen,
+								);
+							const delStr =
+								`-${f.diff.deletions}`.padStart(
+									maxDelLen,
+								);
+							diff = ` ${pc.dim(pc.green(addStr) + " " + pc.red(delStr))}`;
 						}
 						logs.push(
-							`  ${formatPath(f.raw, f.status)}${padding}${pc.dim(`${statusColor(f.status)}${diff}`)}`,
+							`  ${formatPath(f.raw, f.status)}${padding}${pc.dim(statusColor(f.status))}${statusPad}  ${diff}`,
 						);
 					}
 					log.message(logs.join("\n"));
@@ -185,12 +203,23 @@ export const commitCommand = new Command("commit")
 						const padding = " ".repeat(
 							maxLen - f.raw.length + 2,
 						);
+						const statusPad = " ".repeat(
+							maxStatusLen - f.status.length,
+						);
 						let diff = "";
 						if (f.diff) {
-							diff = ` ${pc.dim(pc.green(`+${f.diff.additions}`) + " " + `${pc.red(`-${f.diff.deletions}`)}`)}`;
+							const addStr =
+								`+${f.diff.additions}`.padStart(
+									maxAddLen,
+								);
+							const delStr =
+								`-${f.diff.deletions}`.padStart(
+									maxDelLen,
+								);
+							diff = ` ${pc.dim(pc.green(addStr) + " " + pc.red(delStr))}`;
 						}
 						return {
-							label: `${formatPath(f.raw, f.status)}${padding}${pc.dim(`${statusColor(f.status)}${diff}`)}`,
+							label: `${formatPath(f.raw, f.status)}${padding} ${pc.dim(statusColor(f.status))}${statusPad} ${diff}`,
 							value: f.raw,
 						};
 					}),

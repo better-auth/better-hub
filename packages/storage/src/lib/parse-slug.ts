@@ -1,6 +1,7 @@
 import type { AuthContext } from "better-auth";
 import type { Organization } from "better-auth/plugins";
 import type { Repository } from "../db-schema";
+import { slugSchema } from "../zod-schema";
 
 export const parseSlugInit =
 	(ctx: AuthContext) =>
@@ -50,3 +51,24 @@ export const parseSlugInit =
 		}
 		return [result.organization, result.repository] as any;
 	};
+
+/**
+ * Returns a boolean indicating if the slug is valid in terms of syntax
+ * Example:
+ * ```ts
+ * if (ctx.body.newSlug) {
+ *     const isValidSlug = validateSlugSyntax(ctx.body.newSlug);
+ *     if (!isValidSlug) {
+ *         throw ctx.error("BAD_REQUEST", {
+ *             message: "Invalid slug syntax",
+ *             code: "INVALID_SLUG_SYNTAX",
+ *         });
+ *     }
+ * }
+ * ```
+ * @param slug
+ * @returns
+ */
+export const isValidSlugSyntax = (slug: string | `${string}/${string}`) => {
+	return slugSchema.safeParse(slug).success;
+};

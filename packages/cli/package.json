@@ -26,7 +26,8 @@
 		"commander": "^13.1.0",
 		"fzf": "^0.5.2",
 		"open": "^11.0.0",
-		"picocolors": "^1.1.1"
+		"picocolors": "^1.1.1",
+		"terminal-link": "^5.0.0"
 	},
 	"devDependencies": {
 		"@types/node": "^25.3.0"

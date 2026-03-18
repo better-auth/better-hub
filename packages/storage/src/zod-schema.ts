@@ -5,4 +5,8 @@ const slugSegmentSchema = z
 	.min(1)
 	.max(100)
 	.regex(/^[a-z0-9-_]+$/);
+
 export const slugSchema = z.templateLiteral([slugSegmentSchema, "/", slugSegmentSchema]);
+export const repositoryNameSchema = z.string().min(1).max(100);
+export const repositoryDescriptionSchema = z.string().max(1000).optional();
+export const repositoryVisibilitySchema = z.enum(["public", "private"]);

@@ -3,7 +3,7 @@ import { requireAuth } from "../lib/client.js";
 import { getAuthClient } from "../lib/auth-client.js";
 import { cancel, confirm, isCancel, log, outro, select, spinner } from "@clack/prompts";
 import { betterHubIntro } from "../lib/intro.js";
-import { getRepoPath, syncRegistry, unregisterRepo } from "../lib/repo-registry.js";
+import { getRepoEntries, syncRegistry, unregisterRepo } from "../lib/repo-registry.js";
 import fs from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { Command } from "commander";
@@ -111,24 +111,31 @@ export const deleteRepoCommand = new Command("delete")
 			process.exit(1);
 		}
 
-		const localPath = getRepoPath(targetRepo.slug);
+		const localEntries = getRepoEntries(targetRepo.slug).filter((e) =>
+			existsSync(e.path),
+		);
 		unregisterRepo(targetRepo.slug);
 
 		s.stop(`${pc.bold("Repository deleted")} ${pc.green("✓")}`);
 
-		if (localPath && existsSync(localPath)) {
+		for (const entry of localEntries) {
 			const deleteLocal = await confirm({
-				message: `Delete local files at ${pc.dim(localPath)}?`,
+				message: `Delete local files at ${pc.dim(entry.path)}?`,
 				initialValue: false,
 				active: pc.red("Yes"),
 				inactive: pc.green("No"),
 			});
 
-			if (!isCancel(deleteLocal) && deleteLocal) {
+			if (isCancel(deleteLocal)) {
+				cancel("Skipped remaining local cleanup.");
+				break;
+			}
+
+			if (deleteLocal) {
 				const ds = spinner({});
 				ds.start("Removing local files...");
 				try {
-					await fs.rm(localPath, { recursive: true, force: true });
+					await fs.rm(entry.path, { recursive: true, force: true });
 					ds.stop(
 						`${pc.bold("Local files removed")} ${pc.green("✓")}`,
 					);
@@ -137,7 +144,7 @@ export const deleteRepoCommand = new Command("delete")
 						`${pc.bold("Failed to remove local files")} ${pc.red("✗")}`,
 					);
 					log.error(
-						`Could not delete ${pc.dim(localPath)}: ${err instanceof Error ? err.message : String(err)}`,
+						`Could not delete ${pc.dim(entry.path)}: ${err instanceof Error ? err.message : String(err)}`,
 					);
 				}
 			}

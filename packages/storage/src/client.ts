@@ -6,6 +6,7 @@ export const storageClient = () => {
 		id: "storage-client",
 		$InferServerPlugin: {} as ReturnType<typeof storagePlugin>,
 		pathMethods: {
+			"/storage/clone-repo": "POST",
 			"/storage/delete-repo": "POST",
 		},
 	} satisfies BetterAuthClientPlugin;

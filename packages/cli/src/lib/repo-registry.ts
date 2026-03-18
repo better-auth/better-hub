@@ -42,7 +42,7 @@ function writeRegistry(registry: RepoRegistry) {
 
 export function registerRepo(slug: string, path: string): RepoEntry {
 	const registry = readRegistry();
-	const existing = registry.repos.findIndex((r) => r.slug === slug);
+	const existing = registry.repos.findIndex((r) => r.slug === slug && r.path === path);
 
 	const entry: RepoEntry = {
 		slug,
@@ -60,10 +60,12 @@ export function registerRepo(slug: string, path: string): RepoEntry {
 	return entry;
 }
 
-export function unregisterRepo(slug: string): boolean {
+export function unregisterRepo(slug: string, path?: string): boolean {
 	const registry = readRegistry();
 	const before = registry.repos.length;
-	registry.repos = registry.repos.filter((r) => r.slug !== slug);
+	registry.repos = registry.repos.filter(
+		(r) => !(r.slug === slug && (path == null || r.path === path)),
+	);
 	if (registry.repos.length === before) return false;
 	writeRegistry(registry);
 	return true;
@@ -74,8 +76,27 @@ export function getRepoPath(slug: string): string | null {
 	return registry.repos.find((r) => r.slug === slug)?.path ?? null;
 }
 
+export function getRepoEntries(slug: string): RepoEntry[] {
+	const registry = readRegistry();
+	return registry.repos.filter((r) => r.slug === slug);
+}
+
 export function listRegisteredRepos(): RepoEntry[] {
 	return readRegistry().repos;
+}
+
+/**
+ * Removes registry entries whose paths no longer exist on disk.
+ * Returns the pruned entries so callers can inform the user.
+ */
+export function pruneStaleRepos(): RepoEntry[] {
+	const registry = readRegistry();
+	const stale = registry.repos.filter((r) => !existsSync(r.path));
+	if (stale.length > 0) {
+		registry.repos = registry.repos.filter((r) => existsSync(r.path));
+		writeRegistry(registry);
+	}
+	return stale;
 }
 
 /**

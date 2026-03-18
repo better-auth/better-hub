@@ -1,15 +1,20 @@
 import { createAuthEndpoint, sessionMiddleware } from "better-auth/api";
 import { storageAdapter } from "../adapter";
 import * as z from "zod/v4";
-import { slugSchema } from "../zod-schema";
+import {
+	repositoryDescriptionSchema,
+	repositoryNameSchema,
+	repositoryVisibilitySchema,
+	slugSchema,
+} from "../zod-schema";
 import { storageMiddleware } from "../lib/middleware";
 import { storage } from "..";
 
 const body = z.object({
-	name: z.string().min(1),
+	name: repositoryNameSchema,
 	slug: slugSchema,
-	description: z.string().optional(),
-	visibility: z.enum(["public", "private"]),
+	description: repositoryDescriptionSchema,
+	visibility: repositoryVisibilitySchema,
 });
 
 export const createRepo = createAuthEndpoint(

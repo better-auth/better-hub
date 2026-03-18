@@ -1,4 +1,4 @@
-import type { GenericEndpointContext, User } from "better-auth";
+import { APIError, type GenericEndpointContext, type User } from "better-auth";
 import { storage } from ".";
 import type {
 	RepositoryMember,
@@ -41,7 +41,7 @@ export const storageAdapter = (ctx: GenericEndpointContext) => {
 			});
 
 			if (checkExisting) {
-				return ctx.error("BAD_REQUEST", {
+				throw new APIError("BAD_REQUEST", {
 					message: "Repository already exists",
 					code: "REPOSITORY_ALREADY_EXISTS",
 				});
@@ -78,6 +78,14 @@ export const storageAdapter = (ctx: GenericEndpointContext) => {
 				select: ["id"],
 			});
 			return !!checkExisting;
+		},
+		findRepoBySlug: async (slug: `${string}/${string}`) => {
+			const adapter = ctx.context.adapter;
+			const repo = await adapter.findOne<Repository>({
+				model: "repository",
+				where: [{ field: "slug", value: slug }],
+			});
+			return repo;
 		},
 		deleteRepo: async (id: string) => {
 			const adapter = ctx.context.adapter;
