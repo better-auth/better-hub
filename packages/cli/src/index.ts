@@ -8,6 +8,7 @@ import { createRepoCommand } from "./commands/create-repo.js";
 import { deleteRepoCommand } from "./commands/delete.js";
 import { listRepoCommand } from "./commands/list-repo.js";
 import { configCommand } from "./commands/config.js";
+import { logCommand } from "./commands/log.js";
 import { statusCommand } from "./commands/status.js";
 
 const program = new Command()
@@ -23,6 +24,7 @@ program.addCommand(createRepoCommand);
 program.addCommand(commitCommand);
 program.addCommand(deleteRepoCommand);
 program.addCommand(listRepoCommand);
+program.addCommand(logCommand);
 program.addCommand(statusCommand);
 
 program.parse();
