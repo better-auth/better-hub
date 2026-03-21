@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useMutationSubscription } from "@/hooks/use-mutation-subscription";
 import { isRepoEvent, type MutationEvent } from "@/lib/mutation-events";
+import { useNavVisibility } from "@/components/shared/nav-visibility-provider";
 
 interface RepoNavProps {
 	owner: string;
@@ -203,45 +204,64 @@ export function RepoNav({
 		updateIndicator();
 	}, [pathname, updateIndicator]);
 
+	const { isNavHidden } = useNavVisibility();
+
 	return (
 		<div
-			ref={containerRef}
-			className="relative flex items-center gap-1 pt-2 pb-0 overflow-x-auto no-scrollbar"
+			className={cn(
+				"grid transition-[grid-template-rows,opacity] duration-200 ease-out",
+				isNavHidden
+					? "grid-rows-[0fr] opacity-0"
+					: "grid-rows-[1fr] opacity-100",
+			)}
 		>
-			{tabs.map((tab) => (
-				<Link
-					key={tab.label}
-					href={tab.href}
-					data-active={tab.active}
-					className={cn(
-						"relative flex items-center gap-2 px-2 sm:px-3 py-2 text-xs sm:text-sm whitespace-nowrap shrink-0 transition-colors",
-						tab.active
-							? "text-foreground font-medium"
-							: "text-muted-foreground/70 hover:text-muted-foreground",
-					)}
+			<div className="overflow-hidden">
+				<div
+					ref={containerRef}
+					className="relative flex items-center gap-1 pb-0 overflow-x-auto no-scrollbar"
 				>
-					{tab.label}
-					{tab.count !== undefined && tab.count > 0 && (
-						<span
+					{tabs.map((tab) => (
+						<Link
+							key={tab.label}
+							href={tab.href}
+							data-active={tab.active}
 							className={cn(
-								"text-[10px] font-mono px-1.5 py-0.5 rounded-full",
+								"relative flex items-center gap-2 px-2 sm:px-3 py-2 text-xs sm:text-sm whitespace-nowrap shrink-0 transition-colors",
 								tab.active
-									? "bg-muted text-foreground/70"
-									: "bg-muted/50 text-muted-foreground/60",
+									? "text-foreground font-medium"
+									: "text-muted-foreground/70 hover:text-muted-foreground",
 							)}
 						>
-							{tab.count}
-						</span>
-					)}
-				</Link>
-			))}
-			<div
-				className={cn(
-					"absolute bottom-0 h-0.5 bg-foreground/50",
-					hasAnimated ? "transition-all duration-200 ease-out" : "",
-				)}
-				style={{ left: indicator.left, width: indicator.width }}
-			/>
+							{tab.label}
+							{tab.count !== undefined &&
+								tab.count > 0 && (
+									<span
+										className={cn(
+											"text-[10px] font-mono px-1.5 py-0.5 rounded-full",
+											tab.active
+												? "bg-muted text-foreground/70"
+												: "bg-muted/50 text-muted-foreground/60",
+										)}
+									>
+										{tab.count}
+									</span>
+								)}
+						</Link>
+					))}
+					<div
+						className={cn(
+							"absolute bottom-0 h-0.5 bg-foreground/50",
+							hasAnimated
+								? "transition-all duration-200 ease-out"
+								: "",
+						)}
+						style={{
+							left: indicator.left,
+							width: indicator.width,
+						}}
+					/>
+				</div>
+			</div>
 		</div>
 	);
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
-import Image from "next/image";
+import { GithubAvatar } from "@/components/shared/github-avatar";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { ClientMarkdown } from "@/components/shared/client-markdown";
 
@@ -107,11 +107,10 @@ export function PROptimisticCommentsDisplay() {
 				>
 					<div className="flex items-center gap-2 px-3 py-1.5 border-b border-border/60 bg-card/50">
 						{c.userAvatarUrl ? (
-							<Image
+							<GithubAvatar
 								src={c.userAvatarUrl}
 								alt=""
-								width={16}
-								height={16}
+								size={16}
 								className="rounded-full shrink-0"
 							/>
 						) : (

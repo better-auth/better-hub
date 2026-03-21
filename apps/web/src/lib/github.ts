@@ -1265,6 +1265,62 @@ export async function isBranchBehindBase(
 	}
 }
 
+export interface CompareLinkStatus {
+	aheadBy: number;
+	hasPr: boolean;
+}
+
+export async function getCompareLinkStatus(params: {
+	baseOwner: string;
+	baseRepo: string;
+	headOwner: string;
+	headRepo: string;
+	baseBranch: string;
+	headBranch: string;
+}): Promise<CompareLinkStatus | null> {
+	const octokit = await getOctokit();
+	if (!octokit) return null;
+
+	const { baseOwner, baseRepo, headOwner, headRepo, baseBranch, headBranch } = params;
+	const headRef = `${headOwner}:${headBranch}`;
+
+	let aheadBy = 0;
+	try {
+		const { data } = await octokit.repos.compareCommits({
+			owner: baseOwner,
+			repo: baseRepo,
+			base: baseBranch,
+			head: headRef,
+		});
+		aheadBy = data.ahead_by ?? 0;
+	} catch {
+		return null;
+	}
+
+	const hasPrInRepo = async (owner: string, repo: string): Promise<boolean> => {
+		try {
+			const { data } = await octokit.pulls.list({
+				owner,
+				repo,
+				state: "all",
+				head: headRef,
+				per_page: 1,
+			});
+			return Array.isArray(data) && data.length > 0;
+		} catch {
+			return false;
+		}
+	};
+
+	const hasPrOnBase = await hasPrInRepo(baseOwner, baseRepo);
+	const hasPrOnHead =
+		baseOwner === headOwner && baseRepo === headRepo
+			? false
+			: await hasPrInRepo(headOwner, headRepo);
+
+	return { aheadBy, hasPr: hasPrOnBase || hasPrOnHead };
+}
+
 async function fetchPullRequestFilesFromGitHub(
 	octokit: Octokit,
 	owner: string,
@@ -2794,7 +2850,7 @@ export async function getRepoReleases(owner: string, repo: string) {
 	const authCtx = await getGitHubAuthContext();
 	const cacheKey = buildRepoReleasesCacheKey(owner, repo);
 
-	return readLocalFirstGitData({
+	const releases = await readLocalFirstGitData({
 		authCtx,
 		cacheKey,
 		cacheType: "repo_releases",
@@ -2803,6 +2859,18 @@ export async function getRepoReleases(owner: string, repo: string) {
 		jobPayload: { owner, repo },
 		fetchRemote: (octokit) => fetchRepoReleasesFromGitHub(octokit, owner, repo),
 	});
+
+	if (releases.length > 0 || !authCtx?.octokit) return releases;
+
+	try {
+		const fresh = await fetchRepoReleasesFromGitHub(authCtx.octokit, owner, repo);
+		upsertGithubCacheEntry(authCtx.userId, cacheKey, "repo_releases", fresh).catch(
+			() => {},
+		);
+		return fresh;
+	} catch {
+		return releases;
+	}
 }
 
 export async function getRepoReleasesPage(owner: string, repo: string, page: number) {
@@ -2836,20 +2904,20 @@ export async function getRepoReleaseByTag(owner: string, repo: string, tag: stri
 	const authCtx = await getGitHubAuthContext();
 	if (!authCtx?.octokit) return null;
 
-	if (tag === "latest") {
-		try {
-			const { data } = await authCtx.octokit.repos.getLatestRelease({
-				owner,
-				repo,
-			});
-			return data;
-		} catch {
-			return null;
-		}
-	}
-
 	try {
 		const { data } = await authCtx.octokit.repos.getReleaseByTag({ owner, repo, tag });
+		return data;
+	} catch {
+		return null;
+	}
+}
+
+export async function getLatestRepoRelease(owner: string, repo: string) {
+	const authCtx = await getGitHubAuthContext();
+	if (!authCtx?.octokit) return null;
+
+	try {
+		const { data } = await authCtx.octokit.repos.getLatestRelease({ owner, repo });
 		return data;
 	} catch {
 		return null;
@@ -3149,6 +3217,10 @@ export interface PRBundleData {
 			message: string;
 			author: { name: string; date: string } | null;
 			committer: { name: string; date: string } | null;
+			verification?: {
+				verified: boolean;
+				reason: string;
+			};
 		};
 		author: { login: string; avatar_url: string } | null;
 	}[];
@@ -3258,6 +3330,10 @@ const PR_BUNDLE_QUERY = `
               message
               author { name date user { login avatarUrl } }
               committer { name date user { login avatarUrl } }
+              signature {
+                isValid
+                state
+              }
             }
             resourcePath
           }
@@ -3390,6 +3466,10 @@ interface GQLCommitNode {
 			name: string;
 			date: string;
 			user?: { login: string; avatarUrl: string } | null;
+		} | null;
+		signature?: {
+			isValid: boolean;
+			state: string;
 		} | null;
 	};
 	resourcePath: string;
@@ -3561,6 +3641,12 @@ function transformGraphQLPRBundle(node: GQLPRNode): PRBundleData {
 				committer: c.committer
 					? { name: c.committer.name, date: c.committer.date }
 					: null,
+				verification: c.signature
+					? {
+							verified: c.signature.isValid,
+							reason: c.signature.state,
+						}
+					: undefined,
 			},
 			author: authorUser
 				? { login: authorUser.login, avatar_url: authorUser.avatarUrl }

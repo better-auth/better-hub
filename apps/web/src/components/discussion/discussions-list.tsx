@@ -154,14 +154,23 @@ export function DiscussionsList({
 			)}
 
 			{/* Tabs + Search */}
-			<div className="flex items-center gap-2 mb-3">
-				<div className="flex items-center gap-1">
+			<div className="flex flex-col md:flex-row md:items-center gap-2 mb-3">
+				<div className="w-full md:flex-1 md:max-w-xs md:order-2">
+					<input
+						type="text"
+						value={search}
+						onChange={(e) => setSearch(e.target.value)}
+						placeholder="Filter discussions..."
+						className="w-full h-7 px-2.5 text-xs bg-transparent border border-border/40 rounded placeholder:text-muted-foreground/30 focus:outline-none focus:border-foreground/20"
+					/>
+				</div>
+				<div className="flex items-center gap-1 md:order-1">
 					{tabs.map((t) => (
 						<button
 							key={t.value}
 							onClick={() => setTab(t.value)}
 							className={cn(
-								"flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded transition-colors cursor-pointer",
+								"flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded transition-colors cursor-pointer whitespace-nowrap",
 								tab === t.value
 									? "text-foreground bg-muted/60"
 									: "text-muted-foreground/60 hover:text-foreground",
@@ -183,16 +192,7 @@ export function DiscussionsList({
 						</button>
 					))}
 				</div>
-				<div className="flex-1 max-w-xs">
-					<input
-						type="text"
-						value={search}
-						onChange={(e) => setSearch(e.target.value)}
-						placeholder="Filter discussions..."
-						className="w-full h-7 px-2.5 text-xs bg-transparent border border-border/40 rounded placeholder:text-muted-foreground/30 focus:outline-none focus:border-foreground/20"
-					/>
-				</div>
-				<div className="ml-auto">
+				<div className="ml-auto md:order-3 shrink-0">
 					<CreateDiscussionDialog
 						owner={owner}
 						repo={repo}

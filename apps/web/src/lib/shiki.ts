@@ -1,5 +1,6 @@
 import {
 	createHighlighter,
+	createJavaScriptRegexEngine,
 	type Highlighter,
 	type BundledLanguage,
 	type BundledTheme,
@@ -30,6 +31,7 @@ function getHighlighter(): Promise<Highlighter> {
 		highlighterPromise = createHighlighter({
 			themes: [...FALLBACK_THEMES],
 			langs: [],
+			engine: createJavaScriptRegexEngine(),
 		});
 	}
 	return highlighterPromise;

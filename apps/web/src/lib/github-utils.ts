@@ -129,6 +129,9 @@ export function toInternalUrl(htmlUrl: string): string {
 	if (type === "blob" && path) return `${base}/blob/${path}`;
 	if (type === "commits") return `${base}/commits`;
 	if (type === "commit" && path) return `${base}/commits/${path}`;
+	if (type === "releases") return `${base}/releases`;
+	if (type === "release" && path) return `${base}/releases/${encodeURIComponent(path)}`;
+	if (type === "release_latest") return `${base}/releases/_latest`;
 	if (type === "repo") return base;
 
 	return htmlUrl;
@@ -202,7 +205,17 @@ type ParsedGitHubUrl =
 	| {
 			owner: string;
 			repo: string;
-			type: "repo" | "pull" | "issue" | "tree" | "blob" | "commits" | "commit";
+			type:
+				| "repo"
+				| "pull"
+				| "issue"
+				| "tree"
+				| "blob"
+				| "commits"
+				| "commit"
+				| "releases"
+				| "release"
+				| "release_latest";
 			number?: number;
 			path?: string;
 	  }
@@ -286,6 +299,17 @@ export function parseGitHubUrl(htmlUrl: string): ParsedGitHubUrl | null {
 				tag: rest[2],
 				filename: rest.slice(3).join("/"),
 			};
+		if (rest[0] === "releases" && rest.length === 1)
+			return { owner, repo, type: "releases" };
+		if (rest[0] === "releases" && rest[1] === "tag" && rest[2])
+			return {
+				owner,
+				repo,
+				type: "release",
+				path: decodeURIComponent(rest.slice(2).join("/")),
+			};
+		if (rest[0] === "releases" && rest[1] === "latest")
+			return { owner, repo, type: "release_latest" };
 		if (rest[0] === "actions") {
 			// /actions/runs/:runId or /actions/runs/:runId/jobs/:jobId
 			if (rest[1] === "runs" && rest[2]) {

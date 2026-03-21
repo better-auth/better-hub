@@ -4,6 +4,8 @@ import { AppNavbar } from "@/components/layout/navbar";
 import { GlobalChatProvider } from "@/components/shared/global-chat-provider";
 import { GlobalChatPanel } from "@/components/shared/global-chat-panel";
 import { NavigationProgress } from "@/components/shared/navigation-progress";
+import { NavVisibilityProvider } from "@/components/shared/nav-visibility-provider";
+import { NavAwareContent } from "@/components/layout/nav-aware-content";
 import { getServerSession } from "@/lib/auth";
 import { getNotifications, checkIsStarred } from "@/lib/github";
 import { type GhostTabState } from "@/lib/chat-store";
@@ -65,20 +67,24 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 						<GitHubLinkInterceptor>
 							<TooltipProvider>
 								<NavigationProgress />
-								<div className="flex flex-col h-dvh overflow-y-auto lg:overflow-hidden">
-									<AppNavbar
-										session={session}
-										notifications={
-											notifications
-										}
-									/>
-									<div className="mt-10 lg:h-[calc(100dvh-var(--spacing)*10)] flex flex-col px-2 sm:px-4 pt-2 lg:overflow-auto overflow-x-hidden">
-										{children}
+								<NavVisibilityProvider>
+									<div className="flex flex-col h-dvh overflow-y-auto lg:overflow-hidden">
+										<AppNavbar
+											session={
+												session
+											}
+											notifications={
+												notifications
+											}
+										/>
+										<NavAwareContent>
+											{children}
+										</NavAwareContent>
+										<Suspense>
+											<GlobalChatPanel />
+										</Suspense>
 									</div>
-									<Suspense>
-										<GlobalChatPanel />
-									</Suspense>
-								</div>
+								</NavVisibilityProvider>
 								<OnboardingOverlay
 									userName={
 										session?.githubUser

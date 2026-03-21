@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import { JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
@@ -68,6 +69,13 @@ export default function RootLayout({
 	return (
 		<html lang="en" suppressHydrationWarning>
 			<head>
+				{process.env.NODE_ENV === "development" && (
+					<Script
+						src="//unpkg.com/react-grab/dist/index.global.js"
+						crossOrigin="anonymous"
+						strategy="beforeInteractive"
+					/>
+				)}
 				<script
 					dangerouslySetInnerHTML={{
 						__html: generateThemeScript(listThemes()),

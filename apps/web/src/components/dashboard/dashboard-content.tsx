@@ -746,6 +746,23 @@ function ItemRow({ item, type }: { item: IssueItem; type: "pr" | "issue" }) {
 				<span className="text-sm truncate block group-hover:text-foreground transition-colors">
 					{item.title}
 				</span>
+				<div className="sm:hidden flex flex-wrap gap-1.5 mt-1">
+					{item.labels
+						.filter((l) => l.name)
+						.slice(0, 2)
+						.map((label) => (
+							<span
+								key={label.name}
+								className="text-[9px] font-mono px-1 rounded-sm"
+								style={{
+									color: `#${label.color || "888"}`,
+									backgroundColor: `#${label.color || "888"}14`,
+								}}
+							>
+								{label.name}
+							</span>
+						))}
+				</div>
 				<div className="flex items-center gap-2 mt-px">
 					<span className="text-[11px] font-mono text-muted-foreground/70">
 						{repo}#{item.number}
@@ -765,7 +782,7 @@ function ItemRow({ item, type }: { item: IssueItem; type: "pr" | "issue" }) {
 						.map((label) => (
 							<span
 								key={label.name}
-								className="text-[9px] font-mono px-1 rounded-sm"
+								className="hidden sm:inline text-[9px] font-mono px-1 rounded-sm"
 								style={{
 									color: `#${label.color || "888"}`,
 									backgroundColor: `#${label.color || "888"}14`,

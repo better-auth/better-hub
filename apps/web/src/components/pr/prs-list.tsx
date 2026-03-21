@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useCallback, useTransition, useEffect } from
 import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import { GithubAvatar } from "@/components/shared/github-avatar";
 import {
 	GitPullRequest,
 	GitPullRequestClosed,
@@ -522,7 +522,7 @@ function PRPeekSheet({
 										</span>
 										{data.user && (
 											<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
-												<Image
+												<GithubAvatar
 													src={
 														data
 															.user
@@ -533,10 +533,7 @@ function PRPeekSheet({
 															.user
 															.login
 													}
-													width={
-														14
-													}
-													height={
+													size={
 														14
 													}
 													className="rounded-full"
@@ -1318,38 +1315,38 @@ export function PRsList({
 			{/* Toolbar */}
 			<div className="sticky top-0 z-10 bg-background pb-3 pt-4 before:content-[''] before:absolute before:left-0 before:right-0 before:bottom-full before:h-8 before:bg-background">
 				{/* Row 1: Search + Open/Closed + Sort */}
-				<div className="flex items-center gap-2 mb-3 flex-wrap">
-					<ListSearchInput
-						placeholder="Search pull requests..."
-						value={search}
-						onChange={setSearch}
-					/>
-
-					<SortCycleButton
-						sort={sort}
-						cycle={sortCycle}
-						labels={sortLabels}
-						onSort={setSort}
-					/>
-
-					<FiltersButton
-						open={showFilters}
-						activeCount={activeFilterCount}
-						onToggle={() => setShowFilters((v) => !v)}
-					/>
-
-					<ClearFiltersButton
-						show={activeFilterCount > 0}
-						onClear={clearAllFilters}
-					/>
-
-					<Link
-						href={`/repos/${owner}/${repo}/pulls/new`}
-						className="flex ms-auto items-center gap-1.5 px-3 py-1.5 text-xs bg-primary hover:bg-primary/90 text-background transition-colors cursor-pointer rounded-sm"
-					>
-						<Plus className="w-3 h-3" />
-						New PR
-					</Link>
+				<div className="flex flex-col md:flex-row md:items-center gap-2 mb-3">
+					<div className="w-full md:contents">
+						<ListSearchInput
+							placeholder="Search pull requests..."
+							value={search}
+							onChange={setSearch}
+						/>
+					</div>
+					<div className="flex items-center gap-2 md:contents">
+						<SortCycleButton
+							sort={sort}
+							cycle={sortCycle}
+							labels={sortLabels}
+							onSort={setSort}
+						/>
+						<FiltersButton
+							open={showFilters}
+							activeCount={activeFilterCount}
+							onToggle={() => setShowFilters((v) => !v)}
+						/>
+						<ClearFiltersButton
+							show={activeFilterCount > 0}
+							onClear={clearAllFilters}
+						/>
+						<Link
+							href={`/repos/${owner}/${repo}/pulls/new`}
+							className="flex ml-auto items-center gap-1.5 px-3 py-1.5 text-xs bg-primary hover:bg-primary/90 text-background transition-colors cursor-pointer rounded-sm"
+						>
+							<Plus className="w-3 h-3" />
+							New PR
+						</Link>
+					</div>
 				</div>
 
 				{/* Advanced filters panel */}
@@ -1497,15 +1494,14 @@ export function PRsList({
 										}}
 										className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-mono border border-foreground/30 bg-muted/50 dark:bg-white/4 text-foreground transition-colors cursor-pointer"
 									>
-										<Image
+										<GithubAvatar
 											src={
 												selectedAuthorData.avatar_url
 											}
 											alt={
 												selectedAuthorData.login
 											}
-											width={14}
-											height={14}
+											size={14}
 											className="rounded-full"
 										/>
 										{
@@ -1585,17 +1581,14 @@ export function PRsList({
 																}}
 																className="flex items-center gap-2 w-full px-2.5 py-1.5 text-[11px] font-mono text-muted-foreground hover:bg-muted/60 dark:hover:bg-white/3 hover:text-foreground transition-colors cursor-pointer"
 															>
-																<Image
+																<GithubAvatar
 																	src={
 																		author.avatar_url
 																	}
 																	alt={
 																		author.login
 																	}
-																	width={
-																		16
-																	}
-																	height={
+																	size={
 																		16
 																	}
 																	className="rounded-full"
@@ -1761,7 +1754,7 @@ export function PRsList({
 								{tab.count}
 							</span>
 							{state === tab.key && (
-								<span className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground" />
+								<span className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground" />
 							)}
 						</button>
 					))}
@@ -1794,7 +1787,7 @@ export function PRsList({
 							onContextMenu={(e) =>
 								handleContextMenu(e, pr)
 							}
-							className="group flex items-start gap-3 px-4 py-3 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors"
+							className="group flex items-start gap-3 px-4 py-3 hover:bg-muted/50 dark:hover:bg-white/2 transition-colors"
 						>
 							{isMerged ? (
 								<GitMerge className="w-3.5 h-3.5 shrink-0 mt-0.5 text-alert-important" />
@@ -1863,17 +1856,14 @@ export function PRsList({
 															<Link
 																href={`/users/${r.login}`}
 															>
-																<Image
+																<GithubAvatar
 																	src={
 																		r.avatar_url
 																	}
 																	alt={
 																		r.login
 																	}
-																	width={
-																		16
-																	}
-																	height={
+																	size={
 																		16
 																	}
 																	className="rounded-full border border-border hover:ring-2 hover:ring-primary/50 transition-all"
@@ -1899,7 +1889,7 @@ export function PRsList({
 												href={`/users/${pr.user.login}`}
 												className="flex items-center gap-1 text-[11px] text-muted-foreground/60 hover:text-foreground transition-colors"
 											>
-												<Image
+												<GithubAvatar
 													src={
 														pr
 															.user
@@ -1910,10 +1900,7 @@ export function PRsList({
 															.user
 															.login
 													}
-													width={
-														14
-													}
-													height={
+													size={
 														14
 													}
 													className="rounded-full"
@@ -2048,17 +2035,14 @@ export function PRsList({
 															<Link
 																href={`/users/${a.login}`}
 															>
-																<Image
+																<GithubAvatar
 																	src={
 																		a.avatar_url
 																	}
 																	alt={
 																		a.login
 																	}
-																	width={
-																		16
-																	}
-																	height={
+																	size={
 																		16
 																	}
 																	className="rounded-full border border-border hover:ring-2 hover:ring-primary/50 transition-all"

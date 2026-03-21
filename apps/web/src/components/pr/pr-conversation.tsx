@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import { GithubAvatar } from "@/components/shared/github-avatar";
 import {
 	GitCommitHorizontal,
 	GitPullRequest,
@@ -79,6 +79,10 @@ export interface CommitEntry {
 	user: BaseUser | null;
 	committer_name: string | null;
 	created_at: string;
+	verification?: {
+		verified: boolean;
+		reason: string;
+	};
 }
 
 export interface StateChangeEntry {
@@ -438,11 +442,10 @@ async function ChatMessage({
 						href={`/users/${entry.user.login}`}
 						className="flex items-center gap-2 hover:text-foreground transition-colors"
 					>
-						<Image
+						<GithubAvatar
 							src={entry.user.avatar_url}
 							alt={entry.user.login}
-							width={16}
-							height={16}
+							size={16}
 							className="rounded-full shrink-0"
 						/>
 						<span className="text-xs font-medium text-foreground/80 hover:underline">
@@ -578,7 +581,7 @@ function CommitGroup({ commits }: { commits: CommitEntry[] }) {
 										href={`/users/${commit.user.login}`}
 										className="relative z-10"
 									>
-										<Image
+										<GithubAvatar
 											src={
 												commit
 													.user
@@ -589,8 +592,7 @@ function CommitGroup({ commits }: { commits: CommitEntry[] }) {
 													.user
 													.login
 											}
-											width={16}
-											height={16}
+											size={16}
 											className="rounded-full border border-background"
 										/>
 									</Link>
@@ -620,9 +622,18 @@ function CommitGroup({ commits }: { commits: CommitEntry[] }) {
 						<span className="text-xs text-foreground/80 truncate flex-1 min-w-0">
 							{firstLine}
 						</span>
-						<code className="text-[10px] font-mono text-muted-foreground shrink-0">
-							{commit.sha.slice(0, 7)}
-						</code>
+						<div className="flex items-center gap-1.5 shrink-0">
+							<code className="text-[10px] font-mono text-muted-foreground">
+								{commit.sha.slice(0, 7)}
+							</code>
+							{commit.verification?.verified && (
+								<span className="inline-flex items-center px-1 rounded-sm border border-success/30 bg-success/10 text-success">
+									<span className="text-[8px] font-bold">
+										Verified
+									</span>
+								</span>
+							)}
+						</div>
 						<span className="text-[10px] text-muted-foreground shrink-0">
 							<TimeAgo date={commit.created_at} />
 						</span>
@@ -701,11 +712,10 @@ function StateChangeEvent({ entry }: { entry: StateChangeEntry }) {
 							href={`/users/${entry.user.login}`}
 							className="flex items-center gap-1.5 hover:opacity-80 transition-opacity shrink-0"
 						>
-							<Image
+							<GithubAvatar
 								src={entry.user.avatar_url}
 								alt={entry.user.login}
-								width={16}
-								height={16}
+								size={16}
 								className="rounded-full"
 							/>
 							<span className="text-xs font-medium text-foreground/80 hover:underline">
@@ -761,11 +771,10 @@ function CrossReferenceEvent({
 							href={`/users/${entry.user.login}`}
 							className="flex items-center gap-1.5 hover:opacity-80 transition-opacity shrink-0"
 						>
-							<Image
+							<GithubAvatar
 								src={entry.user.avatar_url}
 								alt={entry.user.login}
-								width={16}
-								height={16}
+								size={16}
 								className="rounded-full"
 							/>
 							<span className="text-xs font-medium text-foreground/80 hover:underline">

@@ -85,6 +85,15 @@
 
 /* Default theme: Midnight (dark) */
 :root {
+	--font-geist-sans:
+		"Geist", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+		Roboto, "Helvetica Neue", Arial, sans-serif;
+	--font-geist-mono:
+		"Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+		"Liberation Mono", monospace;
+	--font-code:
+		"JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+		"Liberation Mono", monospace;
 	--radius-sm: 0.25rem;
 	--radius-md: 0.5rem;
 	--radius-lg: 0.75rem;
@@ -394,10 +403,10 @@ tr.diff-search-match-active > td {
 	border-left-color: var(--border) !important;
 }
 
-/* ── GitHub-style Markdown ── */
+/* ── GitHub-style Markdon ── */
 .ghmd {
 	font-size: 16px;
-	line-height: 1.5;
+	line-height: 1.6;
 	word-wrap: break-word;
 	overflow-wrap: break-word;
 	word-break: break-word;
@@ -445,6 +454,73 @@ tr.diff-search-match-active > td {
 .ghmd h2:first-child,
 .ghmd h3:first-child {
 	margin-top: 0;
+}
+
+/* Heading copy button */
+.ghmd .ghmd-heading-copy {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin-left: 6px;
+	margin-top: -2px;
+	vertical-align: middle;
+	border-radius: 4px;
+	border: none;
+	background: transparent;
+	color: var(--muted-foreground);
+	cursor: pointer;
+	opacity: 0;
+	transition:
+		opacity 0.15s,
+		color 0.15s;
+}
+.ghmd h1 > .ghmd-heading-copy {
+	width: 22px;
+	height: 22px;
+}
+.ghmd h1 > .ghmd-heading-copy svg {
+	width: 16px;
+	height: 16px;
+}
+.ghmd h2 > .ghmd-heading-copy {
+	width: 20px;
+	height: 20px;
+}
+.ghmd h2 > .ghmd-heading-copy svg {
+	width: 14px;
+	height: 14px;
+}
+.ghmd h3 > .ghmd-heading-copy {
+	width: 18px;
+	height: 18px;
+}
+.ghmd h3 > .ghmd-heading-copy svg {
+	width: 12px;
+	height: 12px;
+}
+.ghmd h4 > .ghmd-heading-copy,
+.ghmd h5 > .ghmd-heading-copy,
+.ghmd h6 > .ghmd-heading-copy {
+	width: 16px;
+	height: 16px;
+}
+.ghmd h4 > .ghmd-heading-copy svg,
+.ghmd h5 > .ghmd-heading-copy svg,
+.ghmd h6 > .ghmd-heading-copy svg {
+	width: 11px;
+	height: 11px;
+}
+.ghmd h1:hover > .ghmd-heading-copy,
+.ghmd h2:hover > .ghmd-heading-copy,
+.ghmd h3:hover > .ghmd-heading-copy,
+.ghmd h4:hover > .ghmd-heading-copy,
+.ghmd h5:hover > .ghmd-heading-copy,
+.ghmd h6:hover > .ghmd-heading-copy {
+	opacity: 0.6;
+}
+.ghmd .ghmd-heading-copy:hover {
+	opacity: 1 !important;
+	color: var(--foreground);
 }
 
 /* Paragraphs */
@@ -507,7 +583,7 @@ tr.diff-search-match-active > td {
 	margin: 0;
 	font-size: 85%;
 	white-space: break-spaces;
-	border-radius: 6px;
+	border-radius: var(--radius-sm);
 	font-family: var(--font-mono), ui-monospace, monospace;
 	background-color: var(--inline-code-bg);
 }
@@ -947,6 +1023,34 @@ tr.diff-search-match-active > td {
 }
 .ghmd.ghmd-sm ul,
 .ghmd.ghmd-sm ol {
+	margin-bottom: 0.75em;
+}
+
+/* Medium variant for PR overview */
+.ghmd.ghmd-md {
+	font-size: 14.5px;
+}
+.ghmd.ghmd-md h1 {
+	font-size: 1.25em;
+}
+.ghmd.ghmd-md h2 {
+	font-size: 1.1em;
+}
+.ghmd.ghmd-md h3 {
+	font-size: 1em;
+}
+.ghmd.ghmd-md pre {
+	font-size: 12px;
+	padding: 12px;
+}
+.ghmd.ghmd-md p {
+	margin-bottom: 0.75em;
+}
+.ghmd.ghmd-md p:last-child {
+	margin-bottom: 0;
+}
+.ghmd.ghmd-md ul,
+.ghmd.ghmd-md ol {
 	margin-bottom: 0.75em;
 }
 

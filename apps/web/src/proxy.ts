@@ -86,8 +86,8 @@ export default async function middleware(request: NextRequest) {
 	}
 
 	// /:owner/:repo/compare/base...head (GitHub Desktop / gh pr create) → /repos/:owner/:repo/pulls/new?base=&head=&title=&body=
-	if (rest[0] === "compare" && rest[1]) {
-		const range = rest[1];
+	if (rest[0] === "compare" && rest.length > 1) {
+		const range = rest.slice(1).join("/");
 		const dots = range.includes("...") ? "..." : range.includes("..") ? ".." : null;
 		const [baseBranch, headBranch] = dots ? range.split(dots) : [null, null];
 		if (baseBranch && headBranch) {
