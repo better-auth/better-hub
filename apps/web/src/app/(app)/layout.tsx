@@ -17,6 +17,7 @@ import { MutationEventProvider } from "@/components/shared/mutation-event-provid
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { OnboardingOverlay } from "@/components/onboarding/onboarding-overlay";
+import { CopyTeamAccessPrompt } from "@/components/repo/copy-team-access-prompt";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
 	const session = await getServerSession();
@@ -85,7 +86,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 										</Suspense>
 									</div>
 								</NavVisibilityProvider>
-								<OnboardingOverlay
+								<CopyTeamAccessPrompt />
+							<OnboardingOverlay
 									userName={
 										session?.githubUser
 											?.name ||

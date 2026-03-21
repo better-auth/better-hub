@@ -319,7 +319,182 @@ ${pageContextPrompt}`,
 				},
 			}),
 
-			// ─── Issue Actions ───────────────────────────────────────────────
+			// ─── Repo Team Actions ───────────────────────────────────────────
+		listRepoTeams: tool({
+			description:
+				"List teams with access to a repository. Returns a formatted table with team names and access levels.",
+			inputSchema: z.object({
+				owner: z
+					.string()
+					.describe("Organization or repository owner"),
+				repo: z.string().describe("Repository name"),
+			}),
+			execute: async ({ owner, repo }) => {
+				const { data } = await octokit.teams.listForRepo({
+					owner,
+					repo,
+					per_page: 100,
+				});
+				const permissionLabel = (p: string) => {
+					if (p === "pull") return "Read";
+					if (p === "push") return "Write";
+					return p.charAt(0).toUpperCase() + p.slice(1);
+				};
+				const teams = data.map((t) => ({
+					name: t.name,
+					slug: t.slug,
+					permission: permissionLabel(t.permission),
+					githubUrl: `https://github.com/orgs/${owner}/teams/${t.slug}`,
+				}));
+				const markdownTable =
+					teams.length === 0
+						? "_No teams have access to this repository._"
+						: `| Team | Access |\n|------|--------|\n` +
+							teams
+								.map(
+									(t) =>
+										`| [${t.name}](${t.githubUrl}) | ${t.permission} |`,
+								)
+								.join("\n");
+				return { teams, markdownTable };
+			},
+		}),
+
+		addTeamsToRepo: tool({
+			description:
+				"Add one or more teams to one or more repositories in an organization.",
+			inputSchema: z.object({
+				owner: z.string().describe("Organization name"),
+				repos: z
+					.array(z.string())
+					.describe("Target repository names"),
+				teams: z.array(
+					z.object({
+						slug: z.string().describe("Team slug"),
+						permission: z
+							.enum([
+								"pull",
+								"triage",
+								"push",
+								"maintain",
+								"admin",
+							])
+							.describe(
+								"Permission level: pull=read, push=write",
+							),
+					}),
+				),
+			}),
+			execute: async ({ owner, repos, teams }) => {
+				const results = await Promise.allSettled(
+					repos.flatMap((repo) =>
+						teams.map((team) =>
+							octokit.teams
+								.addOrUpdateRepoPermissionsInOrg({
+									org: owner,
+									team_slug: team.slug,
+									owner,
+									repo,
+									permission: team.permission,
+								})
+								.then(() => ({
+									repo,
+									team: team.slug,
+									success: true,
+								})),
+						),
+					),
+				);
+				const added = results
+					.filter((r) => r.status === "fulfilled")
+					.map((r) => (r as PromiseFulfilledResult<{ repo: string; team: string; success: boolean }>).value);
+				const errors = results
+					.filter((r) => r.status === "rejected")
+					.map((r) =>
+						String(
+							(r as PromiseRejectedResult).reason,
+						),
+					);
+				return { added, errors };
+			},
+		}),
+
+		copyRepoTeamAccess: tool({
+			description:
+				"Copy all team permissions from a source repository to one or more target repositories in the same organization.",
+			inputSchema: z.object({
+				owner: z.string().describe("Organization name"),
+				sourceRepo: z
+					.string()
+					.describe("Source repository to copy teams from"),
+				targetRepos: z
+					.array(z.string())
+					.describe("Target repositories to copy teams to"),
+			}),
+			execute: async ({ owner, sourceRepo, targetRepos }) => {
+				const { data: sourceTeams } =
+					await octokit.teams.listForRepo({
+						owner,
+						repo: sourceRepo,
+						per_page: 100,
+					});
+				if (sourceTeams.length === 0) {
+					return {
+						sourceTeams: [],
+						results: [],
+						message: `No teams found on ${owner}/${sourceRepo}.`,
+					};
+				}
+				const settled = await Promise.allSettled(
+					targetRepos.flatMap((repo) =>
+						sourceTeams.map((team) =>
+							octokit.teams
+								.addOrUpdateRepoPermissionsInOrg({
+									org: owner,
+									team_slug: team.slug,
+									owner,
+									repo,
+									permission: team.permission as
+										| "pull"
+										| "triage"
+										| "push"
+										| "maintain"
+										| "admin",
+								})
+								.then(() => ({
+									repo,
+									team: team.name,
+									permission: team.permission,
+									success: true,
+								})),
+						),
+					),
+				);
+				const results = settled.map((r) =>
+					r.status === "fulfilled"
+						? r.value
+						: {
+								repo: "Unknown",
+								team: "Unknown",
+								permission: "Unknown",
+								success: false,
+								error: String(
+									(r as PromiseRejectedResult).reason,
+								),
+							},
+				);
+				return {
+					sourceTeams: sourceTeams.map((t) => t.name),
+					results,
+					successCount: results.filter((r) => r.success)
+						.length,
+					errorCount: results.filter((r) => !r.success)
+						.length,
+				};
+			},
+		}),
+
+		// ─── Issue Actions ───────────────────────────────────────────────
 			createIssue: tool({
 				description:
 					"Create a new issue on a repository. Ask for title and body if not provided.",
