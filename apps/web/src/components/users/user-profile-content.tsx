@@ -1257,7 +1257,7 @@ export function UserProfileContent({
 									</div>
 
 									{/* Desktop: Inline layout */}
-									<div className="contents">
+									<div className="hidden sm:contents">
 										<FolderGit2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
 										<div className="flex-1 min-w-0">
 											<div className="flex items-center gap-2 flex-wrap">
