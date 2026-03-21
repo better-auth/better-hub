@@ -154,9 +154,7 @@ function injectCopyButtons(container: HTMLElement) {
  * Inject a copy button on every heading (h1-h6) inside the container.
  */
 function injectHeadingCopyButtons(container: HTMLElement) {
-	const headings = container.querySelectorAll<HTMLElement>(
-		"h1, h2, h3, h4, h5, h6",
-	);
+	const headings = container.querySelectorAll<HTMLElement>("h1, h2, h3, h4, h5, h6");
 	for (const heading of headings) {
 		if (heading.querySelector(".ghmd-heading-copy")) continue;
 
