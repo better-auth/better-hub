@@ -280,6 +280,7 @@ const COMMIT_TYPE_COLORS: Record<string, (s: string) => string> = {
 	build: pc.dim,
 	revert: pc.red,
 	add: pc.green,
+	update: pc.cyan,
 };
 
 function formatSubject(raw: string, bold: boolean): string {
@@ -295,7 +296,29 @@ function formatSubject(raw: string, bold: boolean): string {
 	}
 
 	if (raw.startsWith("Merge ")) {
-		return `${pc.dim("Merge")} ${pc.white(raw.slice(6))}`;
+		return `${pc.magentaBright("Merge")} ${pc.white(raw.slice(6))}`;
+	} else if (raw.toLowerCase().startsWith("update ")) {
+		return `${pc.cyan("Update")} ${pc.white(raw.slice(7))}`;
+	} else if (raw.toLowerCase().startsWith("delete ")) {
+		return `${pc.red("Delete")} ${pc.white(raw.slice(7))}`;
+	} else if (raw.toLowerCase().startsWith("remove ")) {
+		return `${pc.red("Remove")} ${pc.white(raw.slice(7))}`;
+	} else if (raw.toLowerCase().startsWith("revert ")) {
+		return `${pc.redBright("revert")} ${pc.white(raw.slice(7))}`;
+	} else if (raw.toLowerCase().startsWith("add ")) {
+		return `${pc.green("Add")} ${pc.white(raw.slice(4))}`;
+	} else if (raw.toLowerCase().startsWith("added ")) {
+		return `${pc.green("Added")} ${pc.white(raw.slice(6))}`;
+	} else if (raw.toLowerCase().startsWith("fix ")) {
+		return `${pc.red("Fix")} ${pc.white(raw.slice(4))}`;
+	} else if (raw.toLowerCase().startsWith("refactor ")) {
+		return `${pc.blue("Refactor")} ${pc.white(raw.slice(9))}`;
+	} else if (raw.toLowerCase().startsWith("chore ")) {
+		return `${pc.yellow("Chore")} ${pc.white(raw.slice(6))}`;
+	} else if (raw.toLowerCase().startsWith("create ")) {
+		return `${pc.green("Create")} ${pc.white(raw.slice(7))}`;
+	} else if (raw.toLowerCase().startsWith("init")) {
+		return `${pc.cyan(raw.split(" ")[0])}${pc.white(raw.slice(4))}`;
 	}
 
 	return bold ? pc.bold(pc.white(raw)) : pc.white(raw);
@@ -689,7 +712,6 @@ export const logCommand = new Command("log")
 			}
 
 			// Summary footer
-			log.message("");
 			outro(renderSummary(commits));
 		},
 	);
