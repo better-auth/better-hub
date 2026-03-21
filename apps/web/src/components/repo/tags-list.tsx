@@ -152,42 +152,48 @@ export function TagsList({
 						return (
 							<div
 								key={tag.name}
-								className="flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors group"
+								className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 px-4 py-3 hover:bg-muted/20 transition-colors group"
 							>
-								<Tag className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
+								<div className="flex items-center gap-3 min-w-0 flex-1">
+									<Tag className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
 
-								<div className="flex-1 min-w-0">
-									<div className="flex items-center gap-2 flex-wrap">
-										<Link
-											href={`/${owner}/${repo}/releases/${tag.name}`}
-											className="text-sm font-mono font-medium text-foreground truncate hover:underline hover:cursor-pointer"
-										>
-											{tag.name}
-										</Link>
-										{release &&
-											!release.draft && (
-												<>
-													{release.prerelease ? (
-														<span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-															<AlertCircle className="w-2.5 h-2.5" />
-															Pre-release
-														</span>
-													) : (
-														<span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-															<Rocket className="w-2.5 h-2.5" />
-															{release.name ||
-																release.tag_name}
-														</span>
-													)}
-												</>
-											)}
+									<div className="flex-1 min-w-0">
+										<div className="flex items-center gap-2 flex-wrap">
+											<Link
+												href={`/${owner}/${repo}/releases/${tag.name}`}
+												className="text-sm font-mono font-medium text-foreground truncate hover:underline hover:cursor-pointer"
+											>
+												{
+													tag.name
+												}
+											</Link>
+											{release &&
+												!release.draft && (
+													<>
+														{release.prerelease ? (
+															<span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+																<AlertCircle className="w-2.5 h-2.5" />
+																Pre-release
+															</span>
+														) : (
+															<span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 max-w-50 md:max-w-none">
+																<Rocket className="w-2.5 h-2.5 shrink-0" />
+																<span className="truncate md:truncate-none">
+																	{release.name ||
+																		release.tag_name}
+																</span>
+															</span>
+														)}
+													</>
+												)}
+										</div>
+										<p className="text-[11px] font-mono text-muted-foreground/50 mt-0.5">
+											{shortSha}
+										</p>
 									</div>
-									<p className="text-[11px] font-mono text-muted-foreground/50 mt-0.5">
-										{shortSha}
-									</p>
 								</div>
 
-								<div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+								<div className="flex items-center gap-1.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0 ml-9 md:ml-0">
 									{release && (
 										<a
 											href={
