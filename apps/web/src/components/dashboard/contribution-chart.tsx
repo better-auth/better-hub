@@ -236,7 +236,7 @@ export function ContributionChart({ data }: { data: ContributionData }) {
 						</div>
 
 						{/* Grid column */}
-						<div className="overflow-hidden">
+						<div className="min-w-0">
 							{/* Month labels — absolutely positioned so they don't clip */}
 							<div className="relative h-4 mb-px">
 								{visibleMonthPositions.map((m) => (
