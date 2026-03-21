@@ -15,12 +15,9 @@ import { useColorTheme } from "@/components/theme/theme-provider";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { GithubAvatar } from "@/components/shared/github-avatar";
+import { FileTypeIcon } from "@/components/shared/file-icon";
 import {
 	File,
-	FileText,
-	FilePlus2,
-	FileX2,
-	FileEdit,
 	ArrowRight,
 	ChevronLeft,
 	ChevronRight,
@@ -62,8 +59,15 @@ import { ClientMarkdown } from "@/components/shared/client-markdown";
 import { CheckStatusBadge } from "@/components/pr/check-status-badge";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { UserTooltip } from "@/components/shared/user-tooltip";
-import { getDiffPreferences, setSplitView, setWordWrap } from "@/lib/diff-preferences";
+import {
+	type DiffViewMode,
+	type DiffFontSize,
+	getDiffPreferences,
+	setSplitView,
+	setWordWrap,
+} from "@/lib/diff-preferences";
 import { DiffFileTree } from "./diff-file-tree";
+import { DiffTreeSettingsPopover } from "./diff-tree-settings";
 
 interface DiffFile {
 	filename: string;
@@ -170,14 +174,19 @@ export function PRDiffViewer({
 	const onAddContext = globalChat?.addCodeContext;
 	const searchParams = useSearchParams();
 
-	const { themeId } = useColorTheme();
+	const { themeId, storeThemes } = useColorTheme();
 	const initialThemeRef = useRef(themeId);
 	const [clientHighlightData, setClientHighlightData] =
 		useState<Record<string, Record<string, SyntaxToken[]>>>(highlightData);
 
+	const isMpTheme = themeId.startsWith("mp:");
+
 	useEffect(() => {
-		if (themeId === initialThemeRef.current) {
+		if (themeId === initialThemeRef.current && !isMpTheme) {
 			setClientHighlightData(highlightData);
+			return;
+		}
+		if (isMpTheme && storeThemes.length === 0) {
 			return;
 		}
 		let cancelled = false;
@@ -202,7 +211,7 @@ export function PRDiffViewer({
 		return () => {
 			cancelled = true;
 		};
-	}, [themeId, files, highlightData]);
+	}, [themeId, isMpTheme, storeThemes, files, highlightData]);
 
 	// Resolve initial index from ?file= query param
 	const [activeIndex, setActiveIndex] = useState(() => {
@@ -215,6 +224,15 @@ export function PRDiffViewer({
 	});
 	const [wordWrap, setWordWrapState] = useState(() => getDiffPreferences().wordWrap);
 	const [splitView, setSplitViewState] = useState(() => getDiffPreferences().splitView);
+	const [treeDefaultViewMode, setTreeDefaultViewMode] = useState<DiffViewMode>(
+		() => getDiffPreferences().defaultViewMode,
+	);
+	const [treeFontSize, setTreeFontSize] = useState<DiffFontSize>(
+		() => getDiffPreferences().fontSize,
+	);
+	const [showFolderDiffCount, setShowFolderDiffCount] = useState(
+		() => getDiffPreferences().showFolderDiffCount,
+	);
 	const [sidebarWidth, setSidebarWidth] = useState(300);
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 	const [isDragging, setIsDragging] = useState(false);
@@ -460,6 +478,19 @@ export function PRDiffViewer({
 										</span>
 									)}
 								</button>
+								<DiffTreeSettingsPopover
+									onSettingsChange={(p) => {
+										setTreeDefaultViewMode(
+											p.defaultViewMode,
+										);
+										setTreeFontSize(
+											p.fontSize,
+										);
+										setShowFolderDiffCount(
+											p.showFolderDiffCount,
+										);
+									}}
+								/>
 							</div>
 						</div>
 						{
@@ -498,6 +529,13 @@ export function PRDiffViewer({
 									}
 									onSetFilesViewed={
 										setFilesViewed
+									}
+									defaultViewMode={
+										treeDefaultViewMode
+									}
+									fontSize={treeFontSize}
+									showFolderDiffCount={
+										showFolderDiffCount
 									}
 								/>
 							) : sidebarMode === "commits" ? (
@@ -1186,8 +1224,6 @@ function SingleFileDiff({
 		? file.filename.slice(0, file.filename.lastIndexOf("/") + 1)
 		: "";
 	const name = file.filename.slice(dir.length);
-	const FileIcon = getFileIcon(file.status);
-
 	// Index comments by line number for quick lookup
 	const commentsByLine = new Map<string, ReviewComment[]>();
 	for (const c of fileComments) {
@@ -1387,11 +1423,10 @@ function SingleFileDiff({
 						)}
 					</button>
 
-					<FileIcon
-						className={cn(
-							"w-3.5 h-3.5 shrink-0",
-							getFileIconColor(file.status),
-						)}
+					<FileTypeIcon
+						name={name}
+						type="file"
+						className="w-3.5 h-3.5 shrink-0"
 					/>
 
 					<span className="text-xs font-mono truncate flex-1 min-w-0">
@@ -5227,38 +5262,6 @@ function ReviewStateBadge({ state }: { state: string }) {
 			);
 		default:
 			return null;
-	}
-}
-
-function getFileIcon(status: string) {
-	switch (status) {
-		case "added":
-			return FilePlus2;
-		case "removed":
-			return FileX2;
-		case "modified":
-			return FileEdit;
-		case "renamed":
-		case "copied":
-			return ArrowRight;
-		default:
-			return FileText;
-	}
-}
-
-function getFileIconColor(status: string) {
-	switch (status) {
-		case "added":
-			return "text-success";
-		case "removed":
-			return "text-destructive";
-		case "modified":
-			return "text-warning";
-		case "renamed":
-		case "copied":
-			return "text-info";
-		default:
-			return "text-muted-foreground/60";
 	}
 }
 

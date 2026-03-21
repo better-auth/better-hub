@@ -394,3 +394,47 @@ model PrOverviewAnalysis {
   @@index([owner, repo, pullNumber, headSha])
   @@map("pr_overview_analyses")
 }
+
+model CustomTheme {
+  id              String  @id @default(cuid())
+  slug            String  @unique
+  owner           String
+  repo            String
+  name            String
+  description     String
+  type            String
+  version         String  @default("1.0.0")
+  manifestJson    String
+  dataJson        String?
+  readmeHtml      String?
+  iconUrl         String?
+  license         String?
+  authorGithubId  String
+  authorName      String
+  authorAvatarUrl String?
+  downloads       Int     @default(0)
+  verified        Boolean @default(false)
+  featured        Boolean @default(false)
+  publishedAt     String
+  updatedAt       String
+  dataCachedAt    String?
+
+  installs UserThemeInstall[]
+
+  @@unique([owner, repo])
+  @@index([type])
+  @@index([downloads])
+  @@map("theme_store_extensions")
+}
+
+model UserThemeInstall {
+  userId        String
+  customThemeId String  @map("extensionId")
+  installedAt   String
+
+  customTheme CustomTheme @relation(fields: [customThemeId], references: [id], onDelete: Cascade)
+
+  @@id([userId, customThemeId])
+  @@index([userId])
+  @@map("user_theme_store_installs")
+}

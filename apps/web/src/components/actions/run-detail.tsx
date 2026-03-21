@@ -697,7 +697,7 @@ export function RunDetail({
 	}
 
 	return (
-		<div>
+		<div className="px-4">
 			{/* Sticky header */}
 			<div className="sticky -top-3 z-10 bg-background pt-3 pb-3">
 				{/* Back link */}

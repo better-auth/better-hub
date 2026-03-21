@@ -11,15 +11,18 @@ const KNOWN_ROUTES = [
 	"debug",
 	"extension",
 	"issues",
+	"theme-store",
 	"notifications",
 	"orgs",
 	"prompt",
+	"pulls",
 	"repos",
 	"search",
 	"stars",
 	"trending",
 	"users",
 	"_next",
+	"schemas",
 ];
 
 const nextConfig: NextConfig = {

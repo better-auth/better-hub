@@ -1,24 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
+import { APP_ROUTES } from "./app-routes";
 
 const publicPaths = ["/", "/api/auth", "/api/inngest"];
-
-const APP_ROUTES = new Set([
-	"dashboard",
-	"repos",
-	"issues",
-	"prs",
-	"stars",
-	"settings",
-	"search",
-	"trending",
-	"notifications",
-	"orgs",
-	"users",
-	"api",
-	"debug",
-	"_next",
-]);
 
 const GIT_SERVICES = new Set(["git-upload-pack", "git-receive-pack"]);
 

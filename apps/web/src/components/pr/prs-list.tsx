@@ -1311,7 +1311,7 @@ export function PRsList({
 	}, [canFetchMore, activeQuery]);
 
 	return (
-		<div>
+		<div className="px-2 sm:px-6">
 			{/* Toolbar */}
 			<div className="sticky top-0 z-10 bg-background pb-3 pt-4 before:content-[''] before:absolute before:left-0 before:right-0 before:bottom-full before:h-8 before:bg-background">
 				{/* Row 1: Search + Open/Closed + Sort */}

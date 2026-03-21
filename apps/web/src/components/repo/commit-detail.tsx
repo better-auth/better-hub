@@ -10,11 +10,6 @@ import { TimeAgo } from "@/components/ui/time-ago";
 import { parseCoAuthors, getCommitBody, getInitials } from "@/lib/commit-utils";
 import {
 	File,
-	FilePlus2,
-	FileX2,
-	FileEdit,
-	ArrowRight,
-	FileText,
 	ChevronLeft,
 	ChevronRight,
 	WrapText,
@@ -24,6 +19,7 @@ import {
 	Link2,
 } from "lucide-react";
 import { ResizeHandle } from "@/components/ui/resize-handle";
+import { FileTypeIcon } from "@/components/shared/file-icon";
 
 interface CommitFile {
 	filename: string;
@@ -72,35 +68,19 @@ interface CommitDetailProps {
 	highlightData: Record<string, Record<string, SyntaxToken[]>>;
 }
 
-function getFileIcon(status: string) {
+function getStatusDot(status: string): string | null {
 	switch (status) {
 		case "added":
-			return FilePlus2;
+			return "bg-success";
 		case "removed":
-			return FileX2;
+			return "bg-destructive";
 		case "modified":
-			return FileEdit;
+			return "bg-warning";
 		case "renamed":
 		case "copied":
-			return ArrowRight;
+			return "bg-info";
 		default:
-			return FileText;
-	}
-}
-
-function getFileIconColor(status: string) {
-	switch (status) {
-		case "added":
-			return "text-success";
-		case "removed":
-			return "text-destructive";
-		case "modified":
-			return "text-warning";
-		case "renamed":
-		case "copied":
-			return "text-info";
-		default:
-			return "text-muted-foreground/60";
+			return null;
 	}
 }
 
@@ -388,7 +368,7 @@ export function CommitDetail({ owner, repo, commit, highlightData }: CommitDetai
 										),
 									)
 								: "";
-							const Icon = getFileIcon(file.status);
+							const dot = getStatusDot(file.status);
 
 							return (
 								<button
@@ -403,14 +383,21 @@ export function CommitDetail({ owner, repo, commit, highlightData }: CommitDetai
 											: "hover:bg-muted/50",
 									)}
 								>
-									<Icon
-										className={cn(
-											"w-3 h-3 shrink-0",
-											getFileIconColor(
-												file.status,
-											),
+									<span className="relative shrink-0 w-3.5 h-3.5 inline-flex items-center justify-center">
+										<FileTypeIcon
+											name={name}
+											type="file"
+											className="w-3.5 h-3.5"
+										/>
+										{dot && (
+											<span
+												className={cn(
+													"absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ring-1 ring-background",
+													dot,
+												)}
+											/>
 										)}
-									/>
+									</span>
 									{dir && (
 										<span className="text-[9px] font-mono text-muted-foreground/50 truncate min-w-0">
 											{dir}/
@@ -535,16 +522,11 @@ function FileHeader({
 	onPrev: () => void;
 	onNext: () => void;
 }) {
-	const Icon = getFileIcon(file.status);
+	const name = file.filename.split("/").pop() || file.filename;
 
 	return (
 		<div className="shrink-0 flex items-center gap-2 px-3 py-1.5 border-b border-border bg-card/50">
-			<Icon
-				className={cn(
-					"w-3.5 h-3.5 shrink-0",
-					getFileIconColor(file.status),
-				)}
-			/>
+			<FileTypeIcon name={name} type="file" className="w-3.5 h-3.5 shrink-0" />
 			<span className="text-[12px] font-mono text-foreground truncate">
 				{file.filename}
 			</span>
@@ -781,14 +763,9 @@ function CommitDiffLineRow({
 												key={
 													ti
 												}
-												style={
-													{
-														"--shiki-light":
-															t.lightColor,
-														"--shiki-dark":
-															t.darkColor,
-													} as React.CSSProperties
-												}
+												style={{
+													color: `light-dark(${t.lightColor}, ${t.darkColor})`,
+												}}
 											>
 												{
 													t.text
@@ -929,12 +906,9 @@ function SyntaxSegmentedContent({
 							type === "remove" &&
 							"bg-diff-word-del rounded-[2px] px-[1px] -mx-[1px]",
 					)}
-					style={
-						{
-							"--shiki-light": r.lightColor,
-							"--shiki-dark": r.darkColor,
-						} as React.CSSProperties
-					}
+					style={{
+						color: `light-dark(${r.lightColor}, ${r.darkColor})`,
+					}}
 				>
 					{r.text}
 				</span>

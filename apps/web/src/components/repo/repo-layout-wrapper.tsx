@@ -48,11 +48,11 @@ export function RepoLayoutWrapper({
 	const [isDragging, setIsDragging] = useState(false);
 	const collapsed = sidebarWidth === 0;
 	const prevIsPrPageRef = useRef(isPrPage);
-	const [navbarSlot, setNavbarSlot] = useState<HTMLElement | null>(null);
+	const [repoNavSlot, setRepoNavSlot] = useState<HTMLElement | null>(null);
 
 	useEffect(() => {
-		const el = document.getElementById("navbar-breadcrumb");
-		setNavbarSlot(el);
+		const el = document.getElementById("repo-nav-breadcrumb");
+		setRepoNavSlot(el);
 	}, []);
 
 	useEffect(() => {
@@ -235,11 +235,11 @@ export function RepoLayoutWrapper({
 				{children}
 			</div>
 
-			{/* Portal breadcrumb to navbar when sidebar collapsed */}
+			{/* Portal breadcrumb to repo nav when sidebar collapsed */}
 			{collapsed &&
-				navbarSlot &&
+				repoNavSlot &&
 				createPortal(
-					<div className="hidden lg:flex items-center gap-1.5 ml-3 pl-3 ">
+					<div className="hidden lg:flex items-center gap-1.5 shrink-0">
 						<RepoBreadcrumb
 							owner={owner}
 							repoName={repo}
@@ -247,7 +247,7 @@ export function RepoLayoutWrapper({
 							ownerAvatarUrl={ownerAvatarUrl}
 						/>
 					</div>,
-					navbarSlot,
+					repoNavSlot,
 				)}
 		</div>
 	);
