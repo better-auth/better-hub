@@ -172,6 +172,7 @@ export default async function IssueDetailPage({
 	const descriptionEntry: IssueTimelineEntry = {
 		type: "description",
 		id: "description",
+		databaseId: issue.id,
 		user: issue.user,
 		body: issue.body || "",
 		bodyHtml: descriptionHtml,

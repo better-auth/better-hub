@@ -3,6 +3,9 @@
 import {
 	getDiscussionComments,
 	addDiscussionCommentViaGraphQL,
+	updateDiscussionViaGraphQL,
+	updateDiscussionCommentViaGraphQL,
+	deleteDiscussionCommentViaGraphQL,
 	invalidateRepoDiscussionsCache,
 	addDiscussionReaction,
 	removeDiscussionReaction,
@@ -58,6 +61,62 @@ export async function addDiscussionComment(
 	try {
 		const result = await addDiscussionCommentViaGraphQL(discussionId, body, replyToId);
 		if (!result) return { error: "Failed to add comment" };
+
+		await invalidateRepoDiscussionsCache(owner, repo);
+		revalidatePath(`/repos/${owner}/${repo}/discussions/${discussionNumber}`);
+		return { success: true };
+	} catch (e: unknown) {
+		return { error: getErrorMessage(e) };
+	}
+}
+
+export async function updateDiscussionBody(
+	owner: string,
+	repo: string,
+	discussionNumber: number,
+	discussionId: string,
+	body: string,
+): Promise<{ success?: boolean; error?: string }> {
+	try {
+		const result = await updateDiscussionViaGraphQL(discussionId, body);
+		if (!result) return { error: "Failed to update discussion" };
+
+		await invalidateRepoDiscussionsCache(owner, repo);
+		revalidatePath(`/repos/${owner}/${repo}/discussions/${discussionNumber}`);
+		return { success: true };
+	} catch (e: unknown) {
+		return { error: getErrorMessage(e) };
+	}
+}
+
+export async function updateDiscussionCommentBody(
+	owner: string,
+	repo: string,
+	discussionNumber: number,
+	commentId: string,
+	body: string,
+): Promise<{ success?: boolean; error?: string }> {
+	try {
+		const result = await updateDiscussionCommentViaGraphQL(commentId, body);
+		if (!result) return { error: "Failed to update comment" };
+
+		await invalidateRepoDiscussionsCache(owner, repo);
+		revalidatePath(`/repos/${owner}/${repo}/discussions/${discussionNumber}`);
+		return { success: true };
+	} catch (e: unknown) {
+		return { error: getErrorMessage(e) };
+	}
+}
+
+export async function deleteDiscussionComment(
+	owner: string,
+	repo: string,
+	discussionNumber: number,
+	commentId: string,
+): Promise<{ success?: boolean; error?: string }> {
+	try {
+		const result = await deleteDiscussionCommentViaGraphQL(commentId);
+		if (!result) return { error: "Failed to delete comment" };
 
 		await invalidateRepoDiscussionsCache(owner, repo);
 		revalidatePath(`/repos/${owner}/${repo}/discussions/${discussionNumber}`);
