@@ -1,5 +1,5 @@
 import { APIError, type GenericEndpointContext, type User } from "better-auth";
-import { storage } from ".";
+import { gitStorage } from "./git-storage";
 import type {
 	RepositoryMember,
 	Repository,
@@ -18,7 +18,7 @@ export const storageAdapter = (ctx: GenericEndpointContext) => {
 			description?: string | undefined;
 		}) => {
 			const adapter = ctx.context.adapter;
-			const repo = await storage.createRepo();
+			const repo = await gitStorage.createRepo();
 
 			const repositoryData: RepositoryInput = {
 				name: options.name,
@@ -86,6 +86,22 @@ export const storageAdapter = (ctx: GenericEndpointContext) => {
 				where: [{ field: "slug", value: slug }],
 			});
 			return repo;
+		},
+		findRepoBySlugForUser: async (slug: `${string}/${string}`, userId: string) => {
+			const adapter = ctx.context.adapter;
+			const repo = await adapter.findOne<Repository>({
+				model: "repository",
+				where: [{ field: "slug", value: slug }],
+			});
+			if (!repo) return null;
+			const member = await adapter.findOne({
+				model: "repositoryMember",
+				where: [
+					{ field: "userId", value: userId },
+					{ field: "repositoryId", value: repo.id },
+				],
+			});
+			return member ? repo : null;
 		},
 		deleteRepo: async (id: string) => {
 			const adapter = ctx.context.adapter;

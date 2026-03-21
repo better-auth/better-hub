@@ -15,12 +15,12 @@ There are two layers of URL rewriting, both achieving the same goal:
 
 The middleware handles specific GitHub URL patterns that require transformation beyond simple path prefixing:
 
-| GitHub URL | Better Hub Internal Route |
-|---|---|
-| `/:owner/:repo` | `/repos/:owner/:repo` |
-| `/:owner/:repo/pull/:number` | `/repos/:owner/:repo/pulls/:number` |
-| `/:owner/:repo/commit/:sha` | `/repos/:owner/:repo/commits/:sha` |
-| `/:owner/:repo/actions/runs/:runId` | `/repos/:owner/:repo/actions/:runId` |
+| GitHub URL                          | Better Hub Internal Route                   |
+| ----------------------------------- | ------------------------------------------- |
+| `/:owner/:repo`                     | `/repos/:owner/:repo`                       |
+| `/:owner/:repo/pull/:number`        | `/repos/:owner/:repo/pulls/:number`         |
+| `/:owner/:repo/commit/:sha`         | `/repos/:owner/:repo/commits/:sha`          |
+| `/:owner/:repo/actions/runs/:runId` | `/repos/:owner/:repo/actions/:runId`        |
 | `/:owner/:repo/compare/base...head` | `/repos/:owner/:repo/pulls/new?base=&head=` |
 
 The middleware uses `NextResponse.rewrite()` for transparent rewrites (URL stays the same in the browser) and `NextResponse.redirect()` for the compare URL (which changes the URL).
@@ -44,10 +44,12 @@ rewrites: {
 Both layers maintain a list of first-segment routes that should NOT be rewritten:
 
 **Middleware (`APP_ROUTES`)**:
-`dashboard`, `repos`, `issues`, `prs`, `stars`, `settings`, `search`, `trending`, `notifications`, `orgs`, `users`, `api`, `debug`, `_next`
+`dashboard`, `s`, `repos`, `issues`, `prs`, `stars`, `settings`, `search`, `trending`, `notifications`, `orgs`, `users`, `api`, `debug`, `_next`
+
+The `s` segment is reserved for **git storage** repositories (Better Hub–hosted repos) at `/s/:owner/:repo/...`, not GitHub-style `/:owner/:repo` rewrites.
 
 **Next.js Config (`KNOWN_ROUTES`)**:
-`api`, `dashboard`, `debug`, `extension`, `issues`, `notifications`, `orgs`, `prompt`, `repos`, `search`, `stars`, `trending`, `users`, `_next`
+`api`, `dashboard`, `debug`, `extension`, `issues`, `notifications`, `orgs`, `prompt`, `repos`, `s`, `search`, `stars`, `trending`, `users`, `_next`
 
 If the first URL segment matches a known route, the URL is passed through unmodified. Otherwise, it's assumed to be an `/:owner/:repo` pattern and gets rewritten.
 
@@ -81,31 +83,32 @@ The App Router uses route groups for layout organization:
 
 Key dynamic route segments:
 
-| Segment | Purpose |
-|---|---|
-| `[owner]` | GitHub user or organization login |
-| `[repo]` | Repository name |
-| `[number]` | Issue or PR number |
-| `[sha]` | Commit SHA |
-| `[...path]` | File or directory path (catch-all) |
-| `[runId]` | CI/CD workflow run ID |
-| `[jobId]` | CI/CD job ID |
-| `[tag]` | Release tag |
-| `[ghsaId]` | GitHub Security Advisory ID |
-| `[username]` | GitHub username |
-| `[org]` | Organization name |
-| `[id]` | Generic ID (prompt requests) |
-| `[...sub]` | Sub-pages (catch-all for PR tabs, new PR sub-views) |
+| Segment      | Purpose                                             |
+| ------------ | --------------------------------------------------- |
+| `[owner]`    | GitHub user or organization login                   |
+| `[repo]`     | Repository name                                     |
+| `[number]`   | Issue or PR number                                  |
+| `[sha]`      | Commit SHA                                          |
+| `[...path]`  | File or directory path (catch-all)                  |
+| `[runId]`    | CI/CD workflow run ID                               |
+| `[jobId]`    | CI/CD job ID                                        |
+| `[tag]`      | Release tag                                         |
+| `[ghsaId]`   | GitHub Security Advisory ID                         |
+| `[username]` | GitHub username                                     |
+| `[org]`      | Organization name                                   |
+| `[id]`       | Generic ID (prompt requests)                        |
+| `[...sub]`   | Sub-pages (catch-all for PR tabs, new PR sub-views) |
 
 ## Middleware Matcher
 
 ```typescript
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon\\.ico|[^/]+\\.[^/]+$).*)"],
+	matcher: ["/((?!api|_next/static|_next/image|favicon\\.ico|[^/]+\\.[^/]+$).*)"],
 };
 ```
 
 The middleware runs on all paths except:
+
 - `/api/*` (API routes handle their own auth)
 - `/_next/static/*` and `/_next/image/*` (static assets)
 - `/favicon.ico` and other root-level files with extensions

@@ -8,7 +8,7 @@ import {
 	slugSchema,
 } from "../zod-schema";
 import { storageMiddleware } from "../lib/middleware";
-import { storage } from "..";
+import { gitStorage } from "../git-storage";
 
 const body = z.object({
 	name: repositoryNameSchema,
@@ -46,7 +46,7 @@ export const createRepo = createAuthEndpoint(
 
 		const result = await adapter.createRepo(data);
 		if ("repository" in result) {
-			const repository = await storage.createRepo({
+			const repository = await gitStorage.createRepo({
 				id: result.repository.id,
 			});
 			const remoteURL = await repository.getRemoteURL({

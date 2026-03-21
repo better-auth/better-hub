@@ -54,6 +54,14 @@ The `(app)` route group wraps all authenticated pages with a shared layout that 
 ├── layout.tsx                 # Auth gate, navbar, Ghost chat, theme provider
 ├── dashboard/page.tsx         # User dashboard (activity feed, repos)
 ├── repos/page.tsx             # Repository listing
+├── s/[owner]/[repo]/          # Better Hub git storage (Pierre) — same chrome as GitHub repos
+│   ├── layout.tsx             # RepoLayoutWrapper, RepoNav (shared tabs), CodeContentWrapper, StorageRepoSidebar
+│   ├── page.tsx               # Overview placeholder (`/s/:owner/:repo`)
+│   ├── code/page.tsx          # Code tab (matches GitHub code page; FileList + README)
+│   ├── tree/[ref]/[[...path]]/# Directory listing
+│   ├── blob/[ref]/[...path]/  # File viewer
+│   └── commits, pulls, issues, prompts, actions, releases, tags, security, activity, insights, settings/
+│                              # Tab placeholders (empty)
 ├── repos/[owner]/[repo]/      # Repository detail (has its own layout)
 │   ├── layout.tsx             # Repo sidebar, nav tabs, file tree, branch selector
 │   ├── page.tsx               # Repo overview (README, file list)

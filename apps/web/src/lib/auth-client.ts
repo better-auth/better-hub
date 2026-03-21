@@ -10,7 +10,6 @@ export const authClient = createAuthClient({
 		inferAdditionalFields<typeof auth>(),
 		dashClient(),
 		sentinelClient(),
-		//@ts-expect-error - better-auth type issues
 		stripeClient({ subscription: true }),
 		deviceAuthorizationClient(),
 		storageClient(),

@@ -1,6 +1,6 @@
 import { createAuthEndpoint, sessionMiddleware } from "better-auth/api";
 import { storageMiddleware } from "../lib/middleware";
-import { storage } from "..";
+import { gitStorage } from "../git-storage";
 import * as z from "zod/v4";
 import { storageAdapter } from "../adapter";
 
@@ -31,7 +31,7 @@ export const deleteRepo = createAuthEndpoint(
 		}
 		await adapter.deleteRepo(ctx.body.id);
 		try {
-			await storage.deleteRepo({
+			await gitStorage.deleteRepo({
 				id: ctx.body.id,
 			});
 		} catch {

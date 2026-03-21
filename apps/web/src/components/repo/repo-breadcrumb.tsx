@@ -26,6 +26,8 @@ interface RepoBreadcrumbProps {
 	repoName: string;
 	ownerType: string;
 	ownerAvatarUrl?: string;
+	/** When set (e.g. `/s/owner/repo`), owner is non-link text and repo links here — no org repo switcher. */
+	repoBasePath?: string;
 }
 
 export function RepoBreadcrumb({
@@ -33,6 +35,7 @@ export function RepoBreadcrumb({
 	repoName,
 	ownerType,
 	ownerAvatarUrl,
+	repoBasePath,
 }: RepoBreadcrumbProps) {
 	const router = useRouter();
 	const [repos, setRepos] = useState<OrgRepo[] | null>(null);
@@ -42,7 +45,7 @@ export function RepoBreadcrumb({
 	const fetchedRef = useRef(false);
 	const inputRef = useRef<HTMLInputElement>(null);
 
-	const isOrg = ownerType === "Organization";
+	const isOrg = ownerType === "Organization" && !repoBasePath;
 
 	const fetchOrgRepos = useCallback(async () => {
 		if (fetchedRef.current) return;
@@ -97,12 +100,18 @@ export function RepoBreadcrumb({
 					className="rounded-sm border border-border"
 				/>
 			)}
-			<Link
-				href={`/${owner}`}
-				className="text-muted-foreground hover:text-foreground transition-colors tracking-tight"
-			>
-				{owner}
-			</Link>
+			{repoBasePath ? (
+				<span className="text-muted-foreground tracking-tight">
+					{owner}
+				</span>
+			) : (
+				<Link
+					href={`/${owner}`}
+					className="text-muted-foreground hover:text-foreground transition-colors tracking-tight"
+				>
+					{owner}
+				</Link>
+			)}
 			<span className="text-muted-foreground/30">/</span>
 			{isOrg ? (
 				<DropdownMenu onOpenChange={handleOpenChange}>
@@ -215,7 +224,7 @@ export function RepoBreadcrumb({
 				</DropdownMenu>
 			) : (
 				<Link
-					href={`/${owner}/${repoName}`}
+					href={repoBasePath ?? `/${owner}/${repoName}`}
 					className="font-medium text-foreground hover:text-foreground/80 transition-colors tracking-tight"
 				>
 					{repoName}

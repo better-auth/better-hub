@@ -15,6 +15,8 @@ interface RepoLayoutWrapperProps {
 	repo: string;
 	ownerType: string;
 	ownerAvatarUrl?: string;
+	/** Passed to collapsed breadcrumb (storage: `/s/owner/repo`). */
+	repoBasePath?: string;
 	initialCollapsed?: boolean;
 	initialWidth?: number;
 }
@@ -34,6 +36,7 @@ export function RepoLayoutWrapper({
 	initialWidth = DEFAULT_WIDTH,
 	ownerType,
 	ownerAvatarUrl,
+	repoBasePath,
 }: RepoLayoutWrapperProps) {
 	const pathname = usePathname();
 	const isPrPage = pathname.includes("/pulls/");
@@ -247,6 +250,7 @@ export function RepoLayoutWrapper({
 							repoName={repo}
 							ownerType={ownerType}
 							ownerAvatarUrl={ownerAvatarUrl}
+							repoBasePath={repoBasePath}
 						/>
 					</div>,
 					navbarSlot,

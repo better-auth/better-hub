@@ -14,9 +14,11 @@ interface FileListProps {
 	owner: string;
 	repo: string;
 	currentRef: string;
+	/** @default "github" — `storage` uses `/s/:owner/:repo/tree|blob/...` for hosted git repos */
+	linkBase?: "github" | "storage";
 }
 
-export function FileList({ items, owner, repo, currentRef }: FileListProps) {
+export function FileList({ items, owner, repo, currentRef, linkBase = "github" }: FileListProps) {
 	const sorted = [...items].sort((a, b) => {
 		if (a.type === "dir" && b.type !== "dir") return -1;
 		if (a.type !== "dir" && b.type === "dir") return 1;
@@ -33,13 +35,15 @@ export function FileList({ items, owner, repo, currentRef }: FileListProps) {
 		);
 	}
 
+	const pathPrefix = linkBase === "storage" ? `/s/${owner}/${repo}` : `/${owner}/${repo}`;
+
 	return (
 		<div className="border border-border divide-y divide-border rounded-md overflow-hidden">
 			{sorted.map((item) => {
 				const href =
 					item.type === "dir"
-						? `/${owner}/${repo}/tree/${currentRef}/${encodeFilePath(item.path)}`
-						: `/${owner}/${repo}/blob/${currentRef}/${encodeFilePath(item.path)}`;
+						? `${pathPrefix}/tree/${currentRef}/${encodeFilePath(item.path)}`
+						: `${pathPrefix}/blob/${currentRef}/${encodeFilePath(item.path)}`;
 
 				return (
 					<Link

@@ -5,6 +5,7 @@ const publicPaths = ["/", "/api/auth", "/api/inngest"];
 
 const APP_ROUTES = new Set([
 	"dashboard",
+	"s",
 	"repos",
 	"issues",
 	"prs",

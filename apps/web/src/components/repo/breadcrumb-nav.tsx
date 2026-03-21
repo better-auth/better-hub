@@ -4,22 +4,32 @@ import { encodeFilePath } from "@/lib/github-utils";
 interface BreadcrumbNavProps {
 	owner: string;
 	repo: string;
+	/** Defaults to `/${owner}/${repo}` */
+	repoBasePath?: string;
 	currentRef: string;
 	path: string;
 	isFile?: boolean;
 }
 
-export function BreadcrumbNav({ owner, repo, currentRef, path, isFile }: BreadcrumbNavProps) {
+export function BreadcrumbNav({
+	owner,
+	repo,
+	repoBasePath,
+	currentRef,
+	path,
+	isFile,
+}: BreadcrumbNavProps) {
 	if (!path) return null;
 
+	const base = repoBasePath ?? `/${owner}/${repo}`;
 	const segments = path.split("/").filter(Boolean);
 	const crumbs = segments.map((segment, i) => {
 		const partialPath = segments.slice(0, i + 1).join("/");
 		const isLast = i === segments.length - 1;
 		const href =
 			isLast && isFile
-				? `/${owner}/${repo}/blob/${currentRef}/${encodeFilePath(partialPath)}`
-				: `/${owner}/${repo}/tree/${currentRef}/${encodeFilePath(partialPath)}`;
+				? `${base}/blob/${currentRef}/${encodeFilePath(partialPath)}`
+				: `${base}/tree/${currentRef}/${encodeFilePath(partialPath)}`;
 
 		return { label: segment, href, isLast };
 	});
@@ -27,7 +37,7 @@ export function BreadcrumbNav({ owner, repo, currentRef, path, isFile }: Breadcr
 	return (
 		<nav className="flex items-center gap-1 text-xs font-mono overflow-x-auto">
 			<Link
-				href={`/${owner}/${repo}`}
+				href={base}
 				className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
 			>
 				{repo}

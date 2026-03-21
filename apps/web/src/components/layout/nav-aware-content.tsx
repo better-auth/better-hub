@@ -15,7 +15,7 @@ export function NavAwareContent({ children }: { children: React.ReactNode }) {
 					: "mt-10 lg:h-[calc(100dvh-var(--spacing)*10)]",
 			)}
 		>
-			{children}
+			<div className="flex min-h-0 flex-1 flex-col">{children}</div>
 		</div>
 	);
 }
