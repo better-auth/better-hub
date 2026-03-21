@@ -42,6 +42,7 @@ import {
 	fetchOverviewCommitActivity,
 	fetchOverviewEvents,
 	fetchOverviewCIStatus,
+	fetchCompareLinkStatus,
 } from "@/app/(app)/repos/[owner]/[repo]/overview-actions";
 
 // --- Shared UI primitives ---
@@ -228,6 +229,7 @@ function getEventDescription(event: RepoEvent): {
 	verb: string;
 	detail: string;
 	href: string | null;
+	compareBranch?: string;
 } {
 	const p = event.payload;
 	const repoName = event.repo?.name;
@@ -301,15 +303,18 @@ function getEventDescription(event: RepoEvent): {
 				href: pr?.number && base ? `${base}/pulls/${pr.number}` : null,
 			};
 		}
-		case "CreateEvent":
+		case "CreateEvent": {
+			const ref = p?.ref?.replace("/refs?/heads", "");
 			return {
-				verb: `created ${p?.ref_type ?? "branch"} ${p?.ref ?? ""}`,
+				verb: `created ${p?.ref_type ?? "branch"} ${ref ?? ""}`,
 				detail: "",
 				href:
-					p?.ref_type === "branch" && p?.ref && base
-						? `${base}/tree/${p.ref}`
+					p?.ref_type === "branch" && ref && base
+						? `${base}/tree/${ref}`
 						: null,
+				compareBranch: p?.ref_type === "branch" ? ref : undefined,
 			};
+		}
 		case "DeleteEvent":
 			return {
 				verb: `deleted ${p?.ref_type ?? "branch"} ${p?.ref ?? ""}`,
@@ -369,10 +374,58 @@ function filterSignificantEvents(events: RepoEvent[]): RepoEvent[] {
 }
 
 // --- Activity feed item ---
-function ActivityItem({ event }: { event: RepoEvent }) {
+function ActivityItem({
+	event,
+	compareBase,
+	compareHeadOwner,
+	baseOwner,
+	baseRepo,
+	headOwner,
+	headRepo,
+	baseBranch,
+}: {
+	event: RepoEvent;
+	compareBase: string;
+	compareHeadOwner: string | null;
+	baseOwner: string;
+	baseRepo: string;
+	headOwner: string;
+	headRepo: string;
+	baseBranch: string;
+}) {
 	const router = useRouter();
-	const { verb, detail, href } = getEventDescription(event);
-
+	const { verb, detail, href, compareBranch } = getEventDescription(event);
+	const shouldCheckCompare = !!compareBranch && compareBranch !== baseBranch;
+	const { data: compareStatus } = useQuery({
+		queryKey: [
+			"compare-link-status",
+			baseOwner,
+			baseRepo,
+			headOwner,
+			headRepo,
+			baseBranch,
+			compareBranch,
+		],
+		queryFn: () =>
+			compareBranch
+				? fetchCompareLinkStatus({
+						baseOwner,
+						baseRepo,
+						headOwner,
+						headRepo,
+						baseBranch,
+						headBranch: compareBranch,
+					})
+				: null,
+		enabled: shouldCheckCompare,
+		staleTime: 5 * 60 * 1000,
+		gcTime: 10 * 60 * 1000,
+	});
+	const canShowCompare =
+		shouldCheckCompare &&
+		!!compareStatus &&
+		compareStatus.aheadBy > 0 &&
+		!compareStatus.hasPr;
 	const content = (
 		<div
 			className={cn(
@@ -427,6 +480,20 @@ function ActivityItem({ event }: { event: RepoEvent }) {
 					<p className="text-[10px] font-mono text-muted-foreground/70 truncate mt-0.5">
 						{detail}
 					</p>
+				)}
+				{canShowCompare && (
+					<Link
+						href={`${compareBase}/pulls/new?head=${encodeURIComponent(
+							compareHeadOwner
+								? `${compareHeadOwner}:${compareBranch}`
+								: compareBranch,
+						)}`}
+						onClick={(e) => e.stopPropagation()}
+						className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 text-[10px] font-medium rounded-md border border-success/30 bg-success/10 text-success hover:bg-success/20 transition-colors"
+					>
+						<GitPullRequest className="w-3 h-3" />
+						Compare & pull request
+					</Link>
 				)}
 			</div>
 			<span
@@ -530,10 +597,24 @@ function ActivityFeed({
 	repoEvents,
 	commitActivity,
 	base,
+	compareBase,
+	compareHeadOwner,
+	baseOwner,
+	baseRepo,
+	headOwner,
+	headRepo,
+	baseBranch,
 }: {
 	repoEvents: RepoEvent[];
 	commitActivity?: CommitActivityWeek[];
 	base: string;
+	compareBase: string;
+	compareHeadOwner: string | null;
+	baseOwner: string;
+	baseRepo: string;
+	headOwner: string;
+	headRepo: string;
+	baseBranch: string;
 }) {
 	const events = filterSignificantEvents(repoEvents);
 	const visibleEvents = events.slice(0, ACTIVITY_COUNT);
@@ -555,7 +636,17 @@ function ActivityFeed({
 				<>
 					<div className="space-y-0.5 flex-1">
 						{visibleEvents.map((event, i) => (
-							<ActivityItem key={i} event={event} />
+							<ActivityItem
+								key={i}
+								event={event}
+								compareBase={compareBase}
+								compareHeadOwner={compareHeadOwner}
+								baseOwner={baseOwner}
+								baseRepo={baseRepo}
+								headOwner={headOwner}
+								headRepo={headRepo}
+								baseBranch={baseBranch}
+							/>
 						))}
 					</div>
 					{events.length > ACTIVITY_COUNT && (
@@ -600,6 +691,8 @@ interface RepoData {
 	forks_count?: number;
 	subscribers_count?: number;
 	watchers_count?: number;
+	fork?: boolean;
+	parent?: { full_name: string; owner: { login: string }; name: string } | null;
 }
 
 interface PRItem {
@@ -942,7 +1035,7 @@ export interface RepoOverviewProps {
 export function RepoOverview({
 	owner,
 	repo,
-	repoData: _repoData,
+	repoData,
 	isMaintainer,
 	openPRCount,
 	openIssueCount,
@@ -957,6 +1050,14 @@ export function RepoOverview({
 }: RepoOverviewProps) {
 	const base = `/${owner}/${repo}`;
 	const branch = defaultBranch ?? "main";
+	const isFork = !!repoData.fork;
+	const parent = repoData.parent;
+	const baseOwner = isFork && parent ? parent.owner.login : owner;
+	const baseRepo = isFork && parent ? parent.name : repo;
+	const headOwner = owner;
+	const headRepo = repo;
+	const compareBase = isFork && parent ? `/${baseOwner}/${baseRepo}` : base;
+	const compareHeadOwner = isFork && parent ? owner : null;
 
 	const { data: openPRs = [], isFetched: prsFetched } = useQuery({
 		queryKey: ["overview-prs", owner, repo],
@@ -1122,6 +1223,13 @@ export function RepoOverview({
 							repoEvents={repoEvents ?? []}
 							commitActivity={commitActivity}
 							base={base}
+							compareBase={compareBase}
+							compareHeadOwner={compareHeadOwner}
+							baseOwner={baseOwner}
+							baseRepo={baseRepo}
+							headOwner={headOwner}
+							headRepo={headRepo}
+							baseBranch={branch}
 						/>
 
 						<SortableList

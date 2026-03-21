@@ -775,7 +775,7 @@ export function UserProfileContent({
 
 				{/* Contribution chart with year timeline */}
 				{contributions && (
-					<div className="shrink-0 mb-4 border border-border rounded-md p-4 bg-card/50">
+					<div className="shrink-0 mb-4 border border-border rounded-md p-4 bg-card/50 overflow-hidden">
 						{/* Year timeline */}
 						{contributions.contributionYears &&
 							contributions.contributionYears.length >
