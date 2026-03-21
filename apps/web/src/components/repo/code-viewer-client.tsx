@@ -1004,7 +1004,7 @@ export function CodeViewerClient({
 						onMouseUp={handleMouseUp}
 					>
 						<div
-							className="code-content"
+							className="code-content px-3"
 							dangerouslySetInnerHTML={{
 								__html: currentHtml,
 							}}

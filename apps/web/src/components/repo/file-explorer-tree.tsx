@@ -13,6 +13,8 @@ interface FileExplorerTreeProps {
 	tree: FileTreeNode[];
 	owner: string;
 	repo: string;
+	/** Defaults to `/${owner}/${repo}` */
+	repoBasePath?: string;
 	defaultBranch: string;
 }
 
@@ -45,13 +47,11 @@ function buildSearchIndex(nodes: FileTreeNode[]): SearchEntry[] {
 
 function FileSearchBar({
 	searchIndex,
-	owner,
-	repo,
+	repoBasePath,
 	defaultBranch,
 }: {
 	searchIndex: SearchEntry[];
-	owner: string;
-	repo: string;
+	repoBasePath: string;
 	defaultBranch: string;
 }) {
 	const router = useRouter();
@@ -116,10 +116,10 @@ function FileSearchBar({
 			setInputValue("");
 			setSuggestions([]);
 			router.push(
-				`/${owner}/${repo}/blob/${defaultBranch}/${encodeFilePath(filePath)}`,
+				`${repoBasePath}/blob/${defaultBranch}/${encodeFilePath(filePath)}`,
 			);
 		},
-		[router, owner, repo, defaultBranch],
+		[router, repoBasePath, defaultBranch],
 	);
 
 	const handleKeyDown = useCallback(
@@ -223,22 +223,52 @@ function FileSearchBar({
 
 // ── Main component ──────────────────────────────────────────────────
 
-export function FileExplorerTree({ tree, owner, repo, defaultBranch }: FileExplorerTreeProps) {
+function refAndSubpathFromCodePath(
+	pathname: string,
+	base: string,
+	fallbackRef: string,
+): { ref: string; filePath: string | null } {
+	for (const kind of ["blob", "tree"] as const) {
+		const prefix = `${base}/${kind}/`;
+		if (!pathname.startsWith(prefix)) continue;
+		const rest = pathname.slice(prefix.length);
+		const slash = rest.indexOf("/");
+		const ref = slash === -1 ? rest : rest.slice(0, slash);
+		const tail = slash === -1 ? "" : rest.slice(slash + 1);
+		if (!ref) continue;
+		try {
+			return {
+				ref,
+				filePath: tail ? decodeURIComponent(tail) : null,
+			};
+		} catch {
+			return { ref, filePath: tail || null };
+		}
+	}
+	return { ref: fallbackRef, filePath: null };
+}
+
+export function FileExplorerTree({
+	tree,
+	owner,
+	repo,
+	repoBasePath,
+	defaultBranch,
+}: FileExplorerTreeProps) {
 	const pathname = usePathname();
+	const base = repoBasePath ?? `/${owner}/${repo}`;
 	const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
 
 	const searchIndex = useMemo(() => buildSearchIndex(tree), [tree]);
 
+	const pathRef = useMemo(
+		() => refAndSubpathFromCodePath(pathname, base, defaultBranch).ref,
+		[pathname, base, defaultBranch],
+	);
+
 	const currentPath = useMemo(() => {
-		const base = `/${owner}/${repo}`;
-		const blobPrefix = `${base}/blob/${defaultBranch}/`;
-		const treePrefix = `${base}/tree/${defaultBranch}/`;
-		if (pathname.startsWith(blobPrefix))
-			return decodeURIComponent(pathname.slice(blobPrefix.length));
-		if (pathname.startsWith(treePrefix))
-			return decodeURIComponent(pathname.slice(treePrefix.length));
-		return null;
-	}, [pathname, owner, repo, defaultBranch]);
+		return refAndSubpathFromCodePath(pathname, base, defaultBranch).filePath;
+	}, [pathname, base, defaultBranch]);
 
 	useEffect(() => {
 		if (!currentPath) return;
@@ -264,9 +294,8 @@ export function FileExplorerTree({ tree, owner, repo, defaultBranch }: FileExplo
 		<div className="flex flex-col h-full">
 			<FileSearchBar
 				searchIndex={searchIndex}
-				owner={owner}
-				repo={repo}
-				defaultBranch={defaultBranch}
+				repoBasePath={base}
+				defaultBranch={pathRef}
 			/>
 			<div className="flex-1 overflow-y-auto overflow-x-hidden py-1">
 				{tree.map((node) => (
@@ -274,9 +303,8 @@ export function FileExplorerTree({ tree, owner, repo, defaultBranch }: FileExplo
 						key={node.path}
 						node={node}
 						depth={0}
-						owner={owner}
-						repo={repo}
-						defaultBranch={defaultBranch}
+						repoBasePath={base}
+						defaultBranch={pathRef}
 						currentPath={currentPath}
 						expandedPaths={expandedPaths}
 						onToggle={toggleExpand}
@@ -292,8 +320,7 @@ export function FileExplorerTree({ tree, owner, repo, defaultBranch }: FileExplo
 interface TreeNodeProps {
 	node: FileTreeNode;
 	depth: number;
-	owner: string;
-	repo: string;
+	repoBasePath: string;
 	defaultBranch: string;
 	currentPath: string | null;
 	expandedPaths: Set<string>;
@@ -303,8 +330,7 @@ interface TreeNodeProps {
 const TreeNode = memo(function TreeNode({
 	node,
 	depth,
-	owner,
-	repo,
+	repoBasePath,
 	defaultBranch,
 	currentPath,
 	expandedPaths,
@@ -360,8 +386,7 @@ const TreeNode = memo(function TreeNode({
 								key={child.path}
 								node={child}
 								depth={depth + 1}
-								owner={owner}
-								repo={repo}
+								repoBasePath={repoBasePath}
 								defaultBranch={defaultBranch}
 								currentPath={currentPath}
 								expandedPaths={expandedPaths}
@@ -376,7 +401,7 @@ const TreeNode = memo(function TreeNode({
 
 	return (
 		<Link
-			href={`/${owner}/${repo}/blob/${defaultBranch}/${encodeFilePath(node.path)}`}
+			href={`${repoBasePath}/blob/${defaultBranch}/${encodeFilePath(node.path)}`}
 			prefetch={true}
 			className={cn(
 				"flex items-center gap-1.5 py-[3px] pr-2 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors relative",

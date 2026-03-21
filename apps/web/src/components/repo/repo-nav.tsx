@@ -11,6 +11,10 @@ import { useNavVisibility } from "@/components/shared/nav-visibility-provider";
 interface RepoNavProps {
 	owner: string;
 	repo: string;
+	/** URL prefix for this repo, e.g. `/owner/repo` (GitHub) or `/s/owner/repo` (storage). */
+	basePath?: string;
+	/** When false, skip live PR/issue count adjustments (storage repos). @default true */
+	subscribeToRepoMutations?: boolean;
 	openIssuesCount?: number;
 	openPrsCount?: number;
 	activeRunsCount?: number;
@@ -24,6 +28,8 @@ interface RepoNavProps {
 export function RepoNav({
 	owner,
 	repo,
+	basePath,
+	subscribeToRepoMutations = true,
 	openIssuesCount,
 	openPrsCount,
 	activeRunsCount,
@@ -34,7 +40,7 @@ export function RepoNav({
 	showPeopleTab,
 }: RepoNavProps) {
 	const pathname = usePathname();
-	const base = `/${owner}/${repo}`;
+	const base = basePath ?? `/${owner}/${repo}`;
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [indicator, setIndicator] = useState({ left: 0, width: 0 });
 	const [hasAnimated, setHasAnimated] = useState(false);
@@ -45,20 +51,22 @@ export function RepoNav({
 	}, [openPrsCount, openIssuesCount, promptRequestsCount]);
 
 	useMutationSubscription(
-		[
-			"pr:merged",
-			"pr:closed",
-			"pr:reopened",
-			"issue:closed",
-			"issue:reopened",
-			"issue:created",
-			"prompt:created",
-			"prompt:accepted",
-			"prompt:closed",
-			"prompt:reopened",
-		],
+		subscribeToRepoMutations
+			? [
+					"pr:merged",
+					"pr:closed",
+					"pr:reopened",
+					"issue:closed",
+					"issue:reopened",
+					"issue:created",
+					"prompt:created",
+					"prompt:accepted",
+					"prompt:closed",
+					"prompt:reopened",
+				]
+			: [],
 		(event: MutationEvent) => {
-			if (!isRepoEvent(event, owner, repo)) return;
+			if (!subscribeToRepoMutations || !isRepoEvent(event, owner, repo)) return;
 			setCountAdjustments((prev) => {
 				switch (event.type) {
 					case "pr:merged":

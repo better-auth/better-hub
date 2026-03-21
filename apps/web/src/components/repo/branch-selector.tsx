@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 interface BranchSelectorProps {
 	owner: string;
 	repo: string;
+	/** Defaults to `/${owner}/${repo}` */
+	repoBasePath?: string;
 	currentRef: string;
 	branches: { name: string }[];
 	tags: { name: string }[];
@@ -19,6 +21,7 @@ interface BranchSelectorProps {
 export function BranchSelector({
 	owner,
 	repo,
+	repoBasePath,
 	currentRef,
 	branches,
 	tags,
@@ -26,6 +29,7 @@ export function BranchSelector({
 	pathType = "tree",
 	defaultBranch,
 }: BranchSelectorProps) {
+	const base = repoBasePath ?? `/${owner}/${repo}`;
 	const [open, setOpen] = useState(false);
 	const [search, setSearch] = useState("");
 	const [tab, setTab] = useState<"branches" | "tags">("branches");
@@ -52,9 +56,9 @@ export function BranchSelector({
 		setSearch("");
 		const pathSuffix = currentPath ? `/${currentPath}` : "";
 		if (currentPath) {
-			router.push(`/${owner}/${repo}/${pathType}/${ref}${pathSuffix}`);
+			router.push(`${base}/${pathType}/${ref}${pathSuffix}`);
 		} else {
-			router.push(`/${owner}/${repo}/tree/${ref}`);
+			router.push(`${base}/tree/${ref}`);
 		}
 	}
 
