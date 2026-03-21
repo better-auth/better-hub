@@ -70,7 +70,15 @@ function formatJoinedDate(value: string | null): string | null {
 	});
 }
 
-export function OrgDetailContent({ org, repos }: { org: OrgDetails; repos: OrgRepo[] }) {
+export function OrgDetailContent({
+	org,
+	repos,
+	canCreateRepo = false,
+}: {
+	org: OrgDetails;
+	repos: OrgRepo[];
+	canCreateRepo?: boolean;
+}) {
 	const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
 	const [filter, setFilter] = useQueryState(
 		"filter",
@@ -271,7 +279,7 @@ export function OrgDetailContent({ org, repos }: { org: OrgDetails; repos: OrgRe
 				</button>
 
 				<div className="flex items-center gap-2 ml-auto">
-					<CreateRepoDialog org={org.login} />
+					{canCreateRepo && <CreateRepoDialog org={org.login} />}
 					<span className="text-[11px] text-muted-foreground/50 font-mono tabular-nums">
 						{filtered.length}
 						{filtered.length !== repos.length &&
