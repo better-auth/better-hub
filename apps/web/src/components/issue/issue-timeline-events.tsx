@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/shared/github-image";
 import { CheckCircle2, GitCommitHorizontal, GitPullRequest, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";

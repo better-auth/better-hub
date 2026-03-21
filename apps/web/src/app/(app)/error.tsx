@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/auth-client";
+import { GITHUB_WEB_URL } from "@/lib/github-config";
 
 function parseRateLimitFromDigest(message: string) {
 	// The error message is serialized by Next.js, try to detect rate limit
@@ -326,7 +327,7 @@ function RateLimitUI({ reset }: { reset: () => void }) {
 										: "Sign in"}
 							</button>
 							<a
-								href="https://github.com/settings/tokens/new?scopes=repo,read:user,user:email,read:org,notifications&description=Better+GitHub"
+								href={`${GITHUB_WEB_URL}/settings/tokens/new?scopes=repo,read:user,user:email,read:org,notifications&description=Better+GitHub`}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"

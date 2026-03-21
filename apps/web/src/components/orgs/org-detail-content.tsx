@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useQueryState, parseAsStringLiteral, parseAsString } from "nuqs";
-import Image from "next/image";
+import Image from "@/components/shared/github-image";
 import Link from "next/link";
 import {
 	ArrowUpDown,

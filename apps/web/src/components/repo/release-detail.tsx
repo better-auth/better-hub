@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/shared/github-image";
 import {
 	ArrowLeft,
 	ArrowRight,

@@ -8,6 +8,7 @@ import {
 	invalidateAllPRBundlesForRepo,
 	getRepoBranches,
 } from "@/lib/github";
+import { GITHUB_GRAPHQL_URL } from "@/lib/github-config";
 import { getErrorMessage } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { invalidateRepoCache } from "@/lib/repo-data-cache-vc";
@@ -220,7 +221,7 @@ export async function markPRReadyForReview(owner: string, repo: string, pullNumb
 	if (!token) return { error: "Not authenticated" };
 
 	try {
-		const idResponse = await fetch("https://api.github.com/graphql", {
+		const idResponse = await fetch(GITHUB_GRAPHQL_URL, {
 			method: "POST",
 			headers: {
 				Authorization: `Bearer ${token}`,
@@ -241,7 +242,7 @@ export async function markPRReadyForReview(owner: string, repo: string, pullNumb
 			return { error: "Could not find pull request" };
 		}
 
-		const response = await fetch("https://api.github.com/graphql", {
+		const response = await fetch(GITHUB_GRAPHQL_URL, {
 			method: "POST",
 			headers: {
 				Authorization: `Bearer ${token}`,
@@ -469,7 +470,7 @@ export async function resolveReviewThread(
 	if (!token) return { error: "Not authenticated" };
 
 	try {
-		const response = await fetch("https://api.github.com/graphql", {
+		const response = await fetch(GITHUB_GRAPHQL_URL, {
 			method: "POST",
 			headers: {
 				Authorization: `Bearer ${token}`,
@@ -505,7 +506,7 @@ export async function unresolveReviewThread(
 	if (!token) return { error: "Not authenticated" };
 
 	try {
-		const response = await fetch("https://api.github.com/graphql", {
+		const response = await fetch(GITHUB_GRAPHQL_URL, {
 			method: "POST",
 			headers: {
 				Authorization: `Bearer ${token}`,

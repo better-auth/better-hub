@@ -6,6 +6,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { ReactiveCodeBlocks } from "@/components/shared/reactive-code-blocks";
+import { GITHUB_WEB_URL } from "@/lib/github-config";
 
 interface Advisory {
 	ghsaId: string;
@@ -124,7 +125,7 @@ export function SecurityView({
 		isOwner ? "all" : "published",
 	);
 
-	const baseUrl = `https://github.com/${owner}/${repo}/security`;
+	const baseUrl = `${GITHUB_WEB_URL}/${owner}/${repo}/security`;
 
 	const filteredAdvisories =
 		advisoryTab === "all"
@@ -567,7 +568,7 @@ function PolicySection({
 	owner: string;
 	repo: string;
 }) {
-	const policyUrl = `https://github.com/${owner}/${repo}/security/policy`;
+	const policyUrl = `${GITHUB_WEB_URL}/${owner}/${repo}/security/policy`;
 
 	return (
 		<section className="border border-border flex flex-col min-h-0 flex-1">

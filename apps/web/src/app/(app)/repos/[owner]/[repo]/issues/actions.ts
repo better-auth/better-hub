@@ -1,6 +1,7 @@
 "use server";
 
 import { getAuthenticatedUser, getOctokit, invalidateRepoIssuesCache } from "@/lib/github";
+import { GITHUB_RAW_URL } from "@/lib/github-config";
 import { getErrorMessage } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { invalidateRepoCache } from "@/lib/repo-data-cache-vc";
@@ -600,7 +601,7 @@ export async function uploadImage(
 
 				return {
 					success: true,
-					url: `https://raw.githubusercontent.com/${owner}/${repo}/${targetBranch}/${path}`,
+					url: `${GITHUB_RAW_URL}/${owner}/${repo}/${targetBranch}/${path}`,
 				};
 			} catch (err: any) {
 				if (err.status === 422) {
@@ -608,7 +609,7 @@ export async function uploadImage(
 					const fallbackBranch = branch ?? "main";
 					return {
 						success: true,
-						url: `https://raw.githubusercontent.com/${owner}/${repo}/${fallbackBranch}/${path}`,
+						url: `${GITHUB_RAW_URL}/${owner}/${repo}/${fallbackBranch}/${path}`,
 					};
 				}
 				if (err.status === 404 && attempt < 15) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { githubAvatarUrl } from "@/components/shared/github-avatar";
 import {
 	LogOut,
 	Trash2,
@@ -18,6 +19,7 @@ import { SCOPE_GROUPS, scopesToGroupIds } from "@/lib/github-scopes";
 import type { UserSettings } from "@/lib/user-settings-store";
 import type { GitHubProfile } from "../settings-dialog";
 import { PermissionBadge } from "@/components/shared/permission-badge";
+import { GITHUB_WEB_URL } from "@/lib/github-config";
 
 interface AccountTabProps {
 	user: {
@@ -87,8 +89,8 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 		for (const g of SCOPE_GROUPS) {
 			if (selected.has(g.id)) scopes.push(...g.scopes);
 		}
-		signIn.social({
-			provider: "github",
+		signIn.oauth2({
+			providerId: "github",
 			callbackURL: "/dashboard",
 			scopes,
 		});
@@ -131,7 +133,7 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 					<div className="relative shrink-0">
 						{user.image ? (
 							<img
-								src={user.image}
+								src={githubAvatarUrl(user.image)}
 								alt={user.name}
 								className="w-[72px] h-[72px] rounded-full object-cover"
 							/>
@@ -149,7 +151,7 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 								{user.name}
 							</span>
 							<a
-								href={`https://github.com/${githubProfile.login}`}
+								href={`${GITHUB_WEB_URL}/${githubProfile.login}`}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="text-muted-foreground hover:text-muted-foreground transition-colors"

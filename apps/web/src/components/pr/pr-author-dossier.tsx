@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import type { ScoreResult } from "@/lib/contributor-score";
 import { UserTooltip } from "@/components/shared/user-tooltip";
+import { GITHUB_WEB_URL } from "@/lib/github-config";
 
 interface AuthorOrg {
 	login: string;
@@ -301,7 +302,7 @@ export function PRAuthorDossier({
 												key={
 													o.login
 												}
-												href={`https://github.com/${o.login}`}
+												href={`${GITHUB_WEB_URL}/${o.login}`}
 												target="_blank"
 												rel="noopener noreferrer"
 												title={

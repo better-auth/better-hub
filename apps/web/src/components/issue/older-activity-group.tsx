@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import Image from "@/components/shared/github-image";
 import { ChevronRight, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 

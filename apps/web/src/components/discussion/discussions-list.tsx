@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect, useCallback, useTransition } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/shared/github-image";
 import { MessageCircle, CheckCircle2, ArrowUp, MessageSquare, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";

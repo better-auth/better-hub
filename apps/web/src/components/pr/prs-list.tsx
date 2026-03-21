@@ -50,6 +50,7 @@ import { useServerInitialData } from "@/hooks/use-server-initial-data";
 import { UserTooltip } from "@/components/shared/user-tooltip";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ResizeHandle } from "@/components/ui/resize-handle";
+import { GITHUB_WEB_URL } from "@/lib/github-config";
 
 interface PRUser {
 	login: string;
@@ -197,7 +198,7 @@ function PRContextMenu({
 
 	const prUrl = `/${owner}/${repo}/pulls/${pr.number}`;
 	const fullUrl = typeof window !== "undefined" ? `${window.location.origin}${prUrl}` : prUrl;
-	const githubUrl = `https://github.com/${owner}/${repo}/pull/${pr.number}`;
+	const githubUrl = `${GITHUB_WEB_URL}/${owner}/${repo}/pull/${pr.number}`;
 	const isMerged = !!pr.merged_at;
 	const isOpen = pr.state === "open";
 	const isClosed = pr.state === "closed" && !isMerged;

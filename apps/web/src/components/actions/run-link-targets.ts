@@ -1,3 +1,5 @@
+import { GITHUB_WEB_URL } from "@/lib/github-config";
+
 interface RepoOwnerRef {
 	login?: string | null;
 }
@@ -66,7 +68,7 @@ export function getRunLinkTargets(
 
 	if (headSha) {
 		if (prNumber) {
-			commitHref = `https://github.com/${owner}/${repo}/pull/${prNumber}/commits/${headSha}`;
+			commitHref = `${GITHUB_WEB_URL}/${owner}/${repo}/pull/${prNumber}/commits/${headSha}`;
 		} else {
 			commitHref = `/${owner}/${repo}/commit/${headSha}`;
 		}

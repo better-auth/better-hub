@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
+import Image from "@/components/shared/github-image";
 import Link from "next/link";
 import { Loader2, ArrowLeftRight, ArrowLeft, Copy, Check } from "lucide-react";
 import { cn } from "@/lib/utils";

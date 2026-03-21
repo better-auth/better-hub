@@ -1,5 +1,5 @@
 import { createAuthClient } from "better-auth/react";
-import { inferAdditionalFields } from "better-auth/client/plugins";
+import { inferAdditionalFields, genericOAuthClient } from "better-auth/client/plugins";
 import { auth } from "./auth";
 import { dashClient, sentinelClient } from "@better-auth/infra/client";
 import { stripeClient } from "@better-auth/stripe/client";
@@ -7,6 +7,7 @@ import { stripeClient } from "@better-auth/stripe/client";
 export const authClient = createAuthClient({
 	plugins: [
 		inferAdditionalFields<typeof auth>(),
+		genericOAuthClient(),
 		dashClient(),
 		sentinelClient(),
 		stripeClient({ subscription: true }),

@@ -12,6 +12,7 @@ import { cn, safeRedirect } from "@/lib/utils";
 import { CheckIcon, ChevronDown, Info, LockIcon, PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { GITHUB_WEB_URL } from "@/lib/github-config";
 
 export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 	const router = useRouter();
@@ -48,8 +49,8 @@ export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 		for (const g of SCOPE_GROUPS) {
 			if (selected.has(g.id)) scopes.push(...g.scopes);
 		}
-		signIn.social({
-			provider: "github",
+		signIn.oauth2({
+			providerId: "github",
 			callbackURL: safeRedirect(redirectTo),
 			scopes,
 		});
@@ -216,7 +217,7 @@ export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 								className="w-full bg-transparent border border-foreground/15 rounded-md px-3 py-2.5 text-sm text-foreground placeholder:text-foreground/25 focus:outline-none focus:border-foreground/30 transition-colors font-mono"
 							/>
 							<a
-								href="https://github.com/settings/tokens/new"
+								href={`${GITHUB_WEB_URL}/settings/tokens/new`}
 								target="_blank"
 								className="ms-auto text-xs text-foreground/30 hover:text-muted-foreground focus-visible:text-foreground inline-flex items-center gap-1 transition-colors cursor-pointer"
 							>

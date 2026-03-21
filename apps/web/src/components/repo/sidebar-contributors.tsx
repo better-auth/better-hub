@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Image from "@/components/shared/github-image";
 import { useQuery } from "@tanstack/react-query";
 import { Users } from "lucide-react";
 import { revalidateContributorAvatars } from "@/app/(app)/repos/[owner]/[repo]/readme-actions";

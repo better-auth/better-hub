@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/shared/github-image";
 import {
 	Play,
 	GitBranch,

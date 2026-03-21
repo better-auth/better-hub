@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Tag, Download, ExternalLink, Rocket, AlertCircle, Loader2 } from "lucide-react";
 import { ListSearchInput } from "@/components/shared/list-controls";
 import { fetchTagsPage } from "@/app/(app)/repos/[owner]/[repo]/tags/actions";
+import { GITHUB_WEB_URL } from "@/lib/github-config";
 
 type RepoTag = {
 	name: string;
@@ -225,7 +226,7 @@ export function TagsList({
 										tar.gz
 									</a>
 									<a
-										href={`https://github.com/${owner}/${repo}/releases/tag/${encodeURIComponent(tag.name)}`}
+										href={`${GITHUB_WEB_URL}/${owner}/${repo}/releases/tag/${encodeURIComponent(tag.name)}`}
 										data-no-github-intercept
 										target="_blank"
 										rel="noopener noreferrer"

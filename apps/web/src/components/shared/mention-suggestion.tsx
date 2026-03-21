@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { createPortal } from "react-dom";
-import Image from "next/image";
+import Image from "@/components/shared/github-image";
 import { cn } from "@/lib/utils";
 import type { SuggestionProps, SuggestionKeyDownProps } from "@tiptap/suggestion";
 

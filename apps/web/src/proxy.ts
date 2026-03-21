@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
+import { GITHUB_WEB_URL } from "@/lib/github-config";
 
 const publicPaths = ["/", "/api/auth", "/api/inngest"];
 
@@ -33,7 +34,7 @@ export default async function middleware(request: NextRequest) {
 	const isPackRequest = GIT_SERVICES.has(repoPath);
 
 	if (segments.length >= 3 && (isInfoRefsRequest || isPackRequest)) {
-		const githubUrl = new URL(`https://github.com${pathname}`);
+		const githubUrl = new URL(`${GITHUB_WEB_URL}${pathname}`);
 		githubUrl.search = request.nextUrl.search;
 		return NextResponse.redirect(githubUrl, 307);
 	}

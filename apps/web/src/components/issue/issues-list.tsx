@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useTransition, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/shared/github-image";
 import {
 	CircleDot,
 	CheckCircle2,

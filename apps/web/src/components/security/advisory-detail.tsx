@@ -2,7 +2,7 @@
 
 import { ArrowLeft, ExternalLink, User } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/shared/github-image";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { ReactiveCodeBlocks } from "@/components/shared/reactive-code-blocks";

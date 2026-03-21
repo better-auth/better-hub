@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/shared/github-image";
 import { RotateCcw } from "lucide-react";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";
 import { EditableIssueDescription } from "@/components/issue/editable-issue-description";

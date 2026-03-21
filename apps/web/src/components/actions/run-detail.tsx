@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useState, useCallback, useRef } from "react";
-import Image from "next/image";
+import Image from "@/components/shared/github-image";
 import Link from "next/link";
 import {
 	GitBranch,

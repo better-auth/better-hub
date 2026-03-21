@@ -4,7 +4,7 @@ import { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import { useQueryState, parseAsString, parseAsStringLiteral } from "nuqs";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/shared/github-image";
 import {
 	FolderGit2,
 	Star,

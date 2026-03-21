@@ -1,3 +1,5 @@
+import { GITHUB_HOSTNAME } from "./github-config";
+
 export const LANGUAGE_COLORS: Record<string, string> = {
 	TypeScript: "#3178c6",
 	JavaScript: "#f1e05a",
@@ -239,7 +241,7 @@ function parsePositiveInt(value: string | undefined): number | null {
 export function parseGitHubUrl(htmlUrl: string): ParsedGitHubUrl | null {
 	try {
 		const url = new URL(htmlUrl);
-		if (url.hostname !== "github.com") return null;
+		if (url.hostname !== GITHUB_HOSTNAME) return null;
 
 		const parts = url.pathname.split("/").filter(Boolean);
 		if (parts.length === 0) return null;

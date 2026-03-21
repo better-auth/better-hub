@@ -54,6 +54,7 @@ import {
 	getPinnedUrlsForRepo,
 } from "@/app/(app)/repos/[owner]/[repo]/pin-actions";
 import { SELECTABLE_MODELS } from "@/lib/billing/ai-models";
+import { GITHUB_WEB_URL } from "@/lib/github-config";
 
 interface SearchRepo {
 	id: number;
@@ -914,14 +915,14 @@ export function CommandMenu() {
 				name: "New Repository",
 				description: "Create a new repo on GitHub",
 				keywords: ["create", "init", "start", "add repo"],
-				action: () => window.open("https://github.com/new", "_blank"),
+				action: () => window.open(`${GITHUB_WEB_URL}/new`, "_blank"),
 				icon: FolderGit2,
 			},
 			{
 				name: "Open GitHub",
 				description: "Go to github.com",
 				keywords: ["website", "external", "browser"],
-				action: () => window.open("https://github.com", "_blank"),
+				action: () => window.open(GITHUB_WEB_URL, "_blank"),
 				icon: ExternalLink,
 			},
 			{
@@ -1394,7 +1395,7 @@ export function CommandMenu() {
 		});
 		items.push({
 			id: "account-profile",
-			action: () => window.open(`https://github.com/${activeLogin}`, "_blank"),
+			action: () => window.open(`${GITHUB_WEB_URL}/${activeLogin}`, "_blank"),
 			keepOpen: false,
 		});
 		items.push({
@@ -2649,7 +2650,7 @@ export function CommandMenu() {
 																		runCommand(
 																			() =>
 																				window.open(
-																					`https://github.com/${activeLogin}`,
+																					`${GITHUB_WEB_URL}/${activeLogin}`,
 																					"_blank",
 																				),
 																		)

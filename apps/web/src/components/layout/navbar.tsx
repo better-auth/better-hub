@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { githubAvatarUrl } from "@/components/shared/github-avatar";
 import {
 	LogOut,
 	ExternalLink,
@@ -37,6 +38,7 @@ import { cn } from "@/lib/utils";
 import { NotificationSheet } from "@/components/layout/notification-sheet";
 import { $Session } from "@/lib/auth";
 import type { NotificationItem } from "@/lib/github-types";
+import { GITHUB_WEB_URL } from "@/lib/github-config";
 
 interface AppNavbarProps {
 	session: $Session;
@@ -136,10 +138,10 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 									}
 								>
 									<img
-										src={
+										src={githubAvatarUrl(
 											session.user
-												.image
-										}
+												.image,
+										)}
 										alt={
 											session.user
 												.name ||
@@ -157,11 +159,11 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 								<div className="px-3 py-3 bg-muted/30 dark:bg-white/[0.02]">
 									<div className="flex items-start gap-3">
 										<img
-											src={
+											src={githubAvatarUrl(
 												session
 													.user
-													.image
-											}
+													.image,
+											)}
 											alt=""
 											className="w-9 h-9 rounded-full shrink-0 border border-border/40"
 										/>
@@ -318,7 +320,7 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 										<DropdownMenuItem
 											onClick={() =>
 												window.open(
-													`https://github.com/${gh.login}`,
+													`${GITHUB_WEB_URL}/${gh.login}`,
 													"_blank",
 												)
 											}
