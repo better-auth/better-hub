@@ -77,7 +77,7 @@ export function PRHeader({
 	return (
 		<div className="pb-3 mb-0">
 			{/* Title + actions */}
-			<div className="flex items-start gap-3 mb-2.5">
+			<div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 mb-2.5">
 				<EditablePRTitle
 					title={title}
 					number={number}
@@ -301,7 +301,7 @@ export function PRHeader({
 								<span>#{ref.number}</span>
 								<span
 									className={cn(
-										"max-w-[200px] truncate",
+										"max-w-50 truncate",
 										isLocal
 											? "text-muted-foreground/70"
 											: "text-muted-foreground/50",
