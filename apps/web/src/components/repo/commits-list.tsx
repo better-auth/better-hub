@@ -18,9 +18,9 @@ import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { ResizeHandle } from "@/components/ui/resize-handle";
 import {
-	fetchCommitsByDate,
-	fetchCommitsPage,
-	fetchCommitDetail,
+	fetchCommitsByDate as defaultFetchCommitsByDate,
+	fetchCommitsPage as defaultFetchCommitsPage,
+	fetchCommitDetail as defaultFetchCommitDetail,
 	type CommitDetailData,
 } from "@/app/(app)/repos/[owner]/[repo]/commits/actions";
 import { useMutationSubscription } from "@/hooks/use-mutation-subscription";
@@ -38,7 +38,7 @@ const MIN_SHEET_WIDTH = 400;
 const MAX_SHEET_WIDTH_RATIO = 0.9;
 
 // Types
-type Commit = {
+export type Commit = {
 	sha: string;
 	commit: {
 		message: string;
@@ -57,12 +57,47 @@ type Commit = {
 	html_url: string;
 };
 
+export type CommitsListCursorPagination = {
+	initialNextCursor: string | null;
+	initialHasMore: boolean;
+	fetchByBranch: (
+		owner: string,
+		repo: string,
+		branch: string,
+		since?: string,
+		until?: string,
+	) => Promise<{ commits: Commit[]; nextCursor: string | null; hasMore: boolean }>;
+	fetchMore: (
+		owner: string,
+		repo: string,
+		branch: string,
+		cursor: string,
+		since?: string,
+		until?: string,
+	) => Promise<{ commits: Commit[]; nextCursor: string | null; hasMore: boolean }>;
+	fetchCommitDetail: (
+		owner: string,
+		repo: string,
+		sha: string,
+		branch?: string,
+	) => Promise<{
+		commit: CommitDetailData | null;
+		highlightData: Record<string, Record<string, SyntaxToken[]>>;
+	}>;
+};
+
 interface CommitsListProps {
 	owner: string;
 	repo: string;
 	commits: Commit[];
 	defaultBranch: string;
 	branches: { name: string }[];
+	/** e.g. `/s/owner/repo` for Code.Storage repos */
+	repoBasePath?: string;
+	/** Cursor-based pagination (Pierre); omit for GitHub page-based pagination */
+	cursorPagination?: CommitsListCursorPagination;
+	/** Hide date inputs when the backend does not support since/until */
+	enableDateFilter?: boolean;
 }
 
 // Utility functions
@@ -233,6 +268,7 @@ function CommitsToolbar({
 	since,
 	until,
 	hasDateFilter,
+	showDateFilters,
 	onBranchChange,
 	onSearchChange,
 	onSinceChange,
@@ -246,6 +282,7 @@ function CommitsToolbar({
 	since: string;
 	until: string;
 	hasDateFilter: boolean;
+	showDateFilters: boolean;
 	onBranchChange: (branch: string) => void;
 	onSearchChange: (search: string) => void;
 	onSinceChange: (since: string) => void;
@@ -283,28 +320,32 @@ function CommitsToolbar({
 					<line x1="21" y1="21" x2="16.65" y2="16.65" />
 				</svg>
 			</div>
-			<input
-				type="date"
-				value={since}
-				onChange={(e) => onSinceChange(e.target.value)}
-				title="Since date"
-				className="h-9 rounded-md border border-border bg-background px-3 font-mono text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-			/>
-			<input
-				type="date"
-				value={until}
-				onChange={(e) => onUntilChange(e.target.value)}
-				title="Until date"
-				className="h-9 rounded-md border border-border bg-background px-3 font-mono text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-			/>
-			{hasDateFilter && (
-				<button
-					onClick={onClearDates}
-					title="Clear date filters"
-					className="h-9 rounded-md border border-border bg-background px-3 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
-				>
-					✕
-				</button>
+			{showDateFilters && (
+				<>
+					<input
+						type="date"
+						value={since}
+						onChange={(e) => onSinceChange(e.target.value)}
+						title="Since date"
+						className="h-9 rounded-md border border-border bg-background px-3 font-mono text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+					/>
+					<input
+						type="date"
+						value={until}
+						onChange={(e) => onUntilChange(e.target.value)}
+						title="Until date"
+						className="h-9 rounded-md border border-border bg-background px-3 font-mono text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+					/>
+					{hasDateFilter && (
+						<button
+							onClick={onClearDates}
+							title="Clear date filters"
+							className="h-9 rounded-md border border-border bg-background px-3 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
+						>
+							✕
+						</button>
+					)}
+				</>
 			)}
 		</div>
 	);
@@ -314,6 +355,7 @@ function CommitRow({
 	commit,
 	owner,
 	repo,
+	repoLinkBase,
 	isFirst,
 	isExpanded,
 	copiedSha,
@@ -325,6 +367,7 @@ function CommitRow({
 	commit: Commit;
 	owner: string;
 	repo: string;
+	repoLinkBase: string;
 	isFirst: boolean;
 	isExpanded: boolean;
 	copiedSha: string | null;
@@ -380,7 +423,7 @@ function CommitRow({
 					<div className="flex items-center gap-1">
 						{isMobile === undefined || isMobile ? (
 							<Link
-								href={`/${owner}/${repo}/commits/${commit.sha}`}
+								href={`${repoLinkBase}/commits/${commit.sha}`}
 								className={titleClassName}
 							>
 								{firstLine}
@@ -477,6 +520,7 @@ function CommitDateGroup({
 	commits,
 	owner,
 	repo,
+	repoLinkBase,
 	expandedShas,
 	copiedSha,
 	isMobile,
@@ -488,6 +532,7 @@ function CommitDateGroup({
 	commits: Commit[];
 	owner: string;
 	repo: string;
+	repoLinkBase: string;
 	expandedShas: Set<string>;
 	copiedSha: string | null;
 	isMobile: boolean | undefined;
@@ -507,6 +552,7 @@ function CommitDateGroup({
 						commit={commit}
 						owner={owner}
 						repo={repo}
+						repoLinkBase={repoLinkBase}
 						isFirst={i === 0}
 						isExpanded={expandedShas.has(commit.sha)}
 						copiedSha={copiedSha}
@@ -526,6 +572,7 @@ function CommitDetailSheet({
 	onOpenChange,
 	owner,
 	repo,
+	repoBasePath,
 	selectedCommitSha,
 	commitDetail,
 	highlightData,
@@ -540,6 +587,7 @@ function CommitDetailSheet({
 	onOpenChange: (open: boolean) => void;
 	owner: string;
 	repo: string;
+	repoBasePath: string;
 	selectedCommitSha: string | null;
 	commitDetail: CommitDetailData | null;
 	highlightData: Record<string, Record<string, SyntaxToken[]>>;
@@ -574,7 +622,7 @@ function CommitDetailSheet({
 				<div className="absolute top-4 right-4 z-10 flex items-center gap-2">
 					{selectedCommitSha && (
 						<Link
-							href={`/${owner}/${repo}/commits/${selectedCommitSha}`}
+							href={`${repoBasePath}/commits/${selectedCommitSha}`}
 							title="Open full page"
 							className="rounded-sm p-1 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
 						>
@@ -600,6 +648,7 @@ function CommitDetailSheet({
 					<CommitDetail
 						owner={owner}
 						repo={repo}
+						repoBasePath={repoBasePath}
 						commit={commitDetail}
 						highlightData={highlightData}
 					/>
@@ -619,7 +668,21 @@ function CommitDetailSheet({
 const PER_PAGE = 30;
 
 // Main component
-export function CommitsList({ owner, repo, commits, defaultBranch, branches }: CommitsListProps) {
+export function CommitsList({
+	owner,
+	repo,
+	commits,
+	defaultBranch,
+	branches,
+	repoBasePath: repoBasePathProp,
+	cursorPagination,
+	enableDateFilter = true,
+}: CommitsListProps) {
+	const repoLinkBase = repoBasePathProp ?? `/${owner}/${repo}`;
+	const initialCommitsRef = useRef(commits);
+	const initialNextCursorRef = useRef(cursorPagination?.initialNextCursor ?? null);
+	const initialHasMoreRef = useRef(cursorPagination?.initialHasMore ?? false);
+
 	// Filter state
 	const [search, setSearch] = useState("");
 	const [since, setSince] = useState("");
@@ -628,9 +691,14 @@ export function CommitsList({ owner, repo, commits, defaultBranch, branches }: C
 	const [displayedCommits, setDisplayedCommits] = useState<Commit[]>(commits);
 	const [isPending, startTransition] = useTransition();
 
-	// Infinite scroll state
+	// Infinite scroll state (GitHub: page; storage: cursor)
 	const [page, setPage] = useState(1);
-	const [hasMore, setHasMore] = useState(commits.length >= PER_PAGE);
+	const [nextCursor, setNextCursor] = useState<string | null>(
+		cursorPagination?.initialNextCursor ?? null,
+	);
+	const [hasMore, setHasMore] = useState(
+		cursorPagination ? cursorPagination.initialHasMore : commits.length >= PER_PAGE,
+	);
 	const [isLoadingMore, setIsLoadingMore] = useState(false);
 	const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -663,27 +731,57 @@ export function CommitsList({ owner, repo, commits, defaultBranch, branches }: C
 		}
 	}, []);
 
-	// Infinite scroll: load next page
+	// Infinite scroll: load next page (GitHub) or next cursor page (storage)
 	const loadMore = useCallback(async () => {
 		if (isLoadingMore || !hasMore) return;
 		setIsLoadingMore(true);
-		const nextPage = page + 1;
-		const result = await fetchCommitsPage(
-			owner,
-			repo,
-			nextPage,
-			currentBranch,
-			since || undefined,
-			until || undefined,
-		);
-		const newCommits = result as Commit[];
-		if (newCommits.length < PER_PAGE) {
-			setHasMore(false);
+		if (cursorPagination) {
+			if (!nextCursor) {
+				setHasMore(false);
+				setIsLoadingMore(false);
+				return;
+			}
+			const result = await cursorPagination.fetchMore(
+				owner,
+				repo,
+				currentBranch,
+				nextCursor,
+				since || undefined,
+				until || undefined,
+			);
+			setDisplayedCommits((prev) => [...prev, ...result.commits]);
+			setNextCursor(result.nextCursor);
+			setHasMore(result.hasMore);
+		} else {
+			const nextPage = page + 1;
+			const result = await defaultFetchCommitsPage(
+				owner,
+				repo,
+				nextPage,
+				currentBranch,
+				since || undefined,
+				until || undefined,
+			);
+			const newCommits = result as Commit[];
+			if (newCommits.length < PER_PAGE) {
+				setHasMore(false);
+			}
+			setDisplayedCommits((prev) => [...prev, ...newCommits]);
+			setPage(nextPage);
 		}
-		setDisplayedCommits((prev) => [...prev, ...newCommits]);
-		setPage(nextPage);
 		setIsLoadingMore(false);
-	}, [isLoadingMore, hasMore, page, owner, repo, currentBranch, since, until]);
+	}, [
+		isLoadingMore,
+		hasMore,
+		page,
+		owner,
+		repo,
+		currentBranch,
+		since,
+		until,
+		cursorPagination,
+		nextCursor,
+	]);
 
 	// IntersectionObserver for infinite scroll
 	useEffect(() => {
@@ -734,7 +832,27 @@ export function CommitsList({ owner, repo, commits, defaultBranch, branches }: C
 	const fetchCommits = useCallback(
 		(branch: string, newSince?: string, newUntil?: string) => {
 			startTransition(async () => {
-				const result = await fetchCommitsByDate(
+				if (cursorPagination) {
+					const result = await cursorPagination.fetchByBranch(
+						owner,
+						repo,
+						branch,
+						newSince
+							? new Date(newSince).toISOString()
+							: undefined,
+						newUntil
+							? new Date(
+									newUntil + "T23:59:59",
+								).toISOString()
+							: undefined,
+					);
+					setDisplayedCommits(result.commits);
+					setNextCursor(result.nextCursor);
+					setHasMore(result.hasMore);
+					setPage(1);
+					return;
+				}
+				const result = await defaultFetchCommitsByDate(
 					owner,
 					repo,
 					newSince ? new Date(newSince).toISOString() : undefined,
@@ -749,7 +867,7 @@ export function CommitsList({ owner, repo, commits, defaultBranch, branches }: C
 				setHasMore(data.length >= PER_PAGE);
 			});
 		},
-		[owner, repo],
+		[owner, repo, cursorPagination],
 	);
 
 	// Subscribe to mutations
@@ -771,55 +889,77 @@ export function CommitsList({ owner, repo, commits, defaultBranch, branches }: C
 		(branch: string) => {
 			setCurrentBranch(branch);
 			if (branch === defaultBranch && !since && !until) {
-				setDisplayedCommits(commits);
+				setDisplayedCommits(initialCommitsRef.current);
 				setPage(1);
-				setHasMore(commits.length >= PER_PAGE);
+				if (cursorPagination) {
+					setNextCursor(initialNextCursorRef.current);
+					setHasMore(initialHasMoreRef.current);
+				} else {
+					setHasMore(initialCommitsRef.current.length >= PER_PAGE);
+				}
 			} else {
 				fetchCommits(branch, since, until);
 			}
 		},
-		[defaultBranch, since, until, commits, fetchCommits],
+		[defaultBranch, since, until, fetchCommits, cursorPagination],
 	);
 
 	const handleSinceChange = useCallback(
 		(newSince: string) => {
 			setSince(newSince);
 			if (!newSince && !until && currentBranch === defaultBranch) {
-				setDisplayedCommits(commits);
+				setDisplayedCommits(initialCommitsRef.current);
 				setPage(1);
-				setHasMore(commits.length >= PER_PAGE);
+				if (cursorPagination) {
+					setNextCursor(initialNextCursorRef.current);
+					setHasMore(initialHasMoreRef.current);
+				} else {
+					setHasMore(initialCommitsRef.current.length >= PER_PAGE);
+				}
 			} else {
 				fetchCommits(currentBranch, newSince, until);
 			}
 		},
-		[until, currentBranch, defaultBranch, commits, fetchCommits],
+		[until, currentBranch, defaultBranch, fetchCommits, cursorPagination],
 	);
 
 	const handleUntilChange = useCallback(
 		(newUntil: string) => {
 			setUntil(newUntil);
 			if (!since && !newUntil && currentBranch === defaultBranch) {
-				setDisplayedCommits(commits);
+				setDisplayedCommits(initialCommitsRef.current);
 				setPage(1);
-				setHasMore(commits.length >= PER_PAGE);
+				if (cursorPagination) {
+					setNextCursor(initialNextCursorRef.current);
+					setHasMore(initialHasMoreRef.current);
+				} else {
+					setHasMore(initialCommitsRef.current.length >= PER_PAGE);
+				}
 			} else {
 				fetchCommits(currentBranch, since, newUntil);
 			}
 		},
-		[since, currentBranch, defaultBranch, commits, fetchCommits],
+		[since, currentBranch, defaultBranch, fetchCommits, cursorPagination],
 	);
 
 	const clearDates = useCallback(() => {
 		setSince("");
 		setUntil("");
 		if (currentBranch === defaultBranch) {
-			setDisplayedCommits(commits);
+			setDisplayedCommits(initialCommitsRef.current);
 			setPage(1);
-			setHasMore(commits.length >= PER_PAGE);
+			if (cursorPagination) {
+				setNextCursor(initialNextCursorRef.current);
+				setHasMore(initialHasMoreRef.current);
+			} else {
+				setHasMore(initialCommitsRef.current.length >= PER_PAGE);
+			}
 		} else {
 			fetchCommits(currentBranch);
 		}
-	}, [currentBranch, defaultBranch, commits, fetchCommits]);
+	}, [currentBranch, defaultBranch, fetchCommits, cursorPagination]);
+
+	const fetchDetailFn = cursorPagination?.fetchCommitDetail ?? defaultFetchCommitDetail;
 
 	const handleCommitClick = useCallback(
 		async (sha: string) => {
@@ -829,12 +969,12 @@ export function CommitsList({ owner, repo, commits, defaultBranch, branches }: C
 			setCommitDetail(null);
 			setHighlightData({});
 
-			const result = await fetchCommitDetail(owner, repo, sha);
+			const result = await fetchDetailFn(owner, repo, sha, currentBranch);
 			setCommitDetail(result.commit);
 			setHighlightData(result.highlightData);
 			setIsLoadingDetail(false);
 		},
-		[owner, repo],
+		[owner, repo, currentBranch, fetchDetailFn],
 	);
 
 	const copySha = useCallback((sha: string) => {
@@ -871,6 +1011,7 @@ export function CommitsList({ owner, repo, commits, defaultBranch, branches }: C
 				since={since}
 				until={until}
 				hasDateFilter={hasDateFilter}
+				showDateFilters={enableDateFilter}
 				onBranchChange={handleBranchChange}
 				onSearchChange={setSearch}
 				onSinceChange={handleSinceChange}
@@ -897,6 +1038,7 @@ export function CommitsList({ owner, repo, commits, defaultBranch, branches }: C
 					commits={dateCommits}
 					owner={owner}
 					repo={repo}
+					repoLinkBase={repoLinkBase}
 					expandedShas={expandedShas}
 					copiedSha={copiedSha}
 					isMobile={isMobile}
@@ -923,6 +1065,7 @@ export function CommitsList({ owner, repo, commits, defaultBranch, branches }: C
 				onOpenChange={setSheetOpen}
 				owner={owner}
 				repo={repo}
+				repoBasePath={repoLinkBase}
 				selectedCommitSha={selectedCommitSha}
 				commitDetail={commitDetail}
 				highlightData={highlightData}

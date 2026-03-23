@@ -5,6 +5,7 @@ import { RepoNav } from "@/components/repo/repo-nav";
 import { CodeContentWrapper } from "@/components/repo/code-content-wrapper";
 import { StorageRepoSidebar } from "@/components/repo/storage-repo-sidebar";
 import { getServerSession } from "@/lib/auth";
+import { getUser } from "@/lib/github";
 import { getMemberStorageRepository, getStorageGitMeta } from "@/lib/storage-git";
 import { buildStorageFileTree } from "@/lib/storage-file-tree";
 import {
@@ -26,12 +27,36 @@ export default async function StorageRepoLayout({
 	const session = await getServerSession();
 	if (!session?.user) notFound();
 
-	const [record, gitMeta] = await Promise.all([
+	const [record, gitMeta, ownerProfile] = await Promise.all([
 		getMemberStorageRepository(owner, repoName, session.user.id),
 		getStorageGitMeta(owner, repoName),
+		getUser(owner),
 	]);
 	if (!record) notFound();
 	if (!gitMeta) notFound();
+
+	const gh = session.githubUser;
+	const ghLogin = gh && typeof gh.login === "string" ? gh.login : null;
+	const avatarFromMatchingSession =
+		gh &&
+		typeof gh.avatar_url === "string" &&
+		ghLogin?.toLowerCase() === owner.toLowerCase()
+			? gh.avatar_url
+			: undefined;
+
+	let ownerAvatarUrl =
+		(typeof ownerProfile?.avatar_url === "string"
+			? ownerProfile.avatar_url
+			: undefined) ?? avatarFromMatchingSession;
+
+	if (!ownerAvatarUrl && typeof session.user.image === "string") {
+		ownerAvatarUrl = session.user.image;
+	}
+	if (!ownerAvatarUrl) {
+		ownerAvatarUrl = `https://github.com/identicons/${encodeURIComponent(owner)}.png`;
+	}
+
+	const ownerType = ownerProfile?.type === "Organization" ? "Organization" : "User";
 
 	const initialBranches = gitMeta.branches;
 
@@ -57,7 +82,8 @@ export default async function StorageRepoLayout({
 			<RepoLayoutWrapper
 				owner={owner}
 				repo={repoName}
-				ownerType="User"
+				ownerType={ownerType}
+				ownerAvatarUrl={ownerAvatarUrl}
 				repoBasePath={repoBasePath}
 				initialCollapsed={sidebarState?.collapsed}
 				initialWidth={sidebarState?.width}
@@ -65,6 +91,8 @@ export default async function StorageRepoLayout({
 					<StorageRepoSidebar
 						owner={owner}
 						repoName={record.name}
+						ownerType={ownerType}
+						ownerAvatarUrl={ownerAvatarUrl}
 						description={record.description ?? null}
 						visibility={visibility}
 						defaultBranch={gitMeta.defaultBranch}

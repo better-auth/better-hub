@@ -8,6 +8,11 @@ export const storageClient = () => {
 		pathMethods: {
 			"/storage/clone-repo": "POST",
 			"/storage/delete-repo": "POST",
+			"/storage/repo/commit-detail": "GET",
+			"/storage/repo/commits": "GET",
+			"/storage/repo/file": "GET",
+			"/storage/repo/git-meta": "GET",
+			"/storage/repo/list-directory": "GET",
 		},
 	} satisfies BetterAuthClientPlugin;
 };

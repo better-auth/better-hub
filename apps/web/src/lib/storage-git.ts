@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { isAPIError } from "better-auth/api";
 import { auth } from "./auth";
 import { prisma } from "@/lib/db";
+import type { CommitDetailData } from "@/app/(app)/repos/[owner]/[repo]/commits/actions";
 
 export type StorageListItem = {
 	name: string;
@@ -79,6 +80,74 @@ export async function listStorageDirectory(
 			},
 			headers: h,
 		});
+	} catch (e) {
+		if (isAPIError(e) && e.statusCode === 404) return null;
+		throw e;
+	}
+}
+
+export type StorageCommitListRow = {
+	sha: string;
+	commit: {
+		message: string;
+		author: { name?: string | null; date?: string | null } | null;
+	};
+	author: Record<string, never> | null;
+	html_url: string;
+};
+
+export type StorageCommitsListResult = {
+	commits: StorageCommitListRow[];
+	nextCursor: string | null;
+	hasMore: boolean;
+};
+
+export async function listStorageCommits(
+	owner: string,
+	repo: string,
+	options: { branch?: string; cursor?: string; limit?: number },
+): Promise<StorageCommitsListResult | null> {
+	const slug = storageSlug(owner, repo);
+	const h = await headers();
+	const query: {
+		slug: `${string}/${string}`;
+		branch?: string;
+		cursor?: string;
+		limit?: number;
+	} = { slug };
+	if (options.branch !== undefined) query.branch = options.branch;
+	if (options.cursor !== undefined) query.cursor = options.cursor;
+	if (options.limit !== undefined) query.limit = options.limit;
+	try {
+		return await auth.api.repoCommits({
+			query,
+			headers: h,
+		});
+	} catch (e) {
+		if (isAPIError(e) && e.statusCode === 404) return null;
+		throw e;
+	}
+}
+
+export async function getStorageCommitDetailPayload(
+	owner: string,
+	repo: string,
+	sha: string,
+	branch?: string,
+): Promise<CommitDetailData | null> {
+	const slug = storageSlug(owner, repo);
+	const h = await headers();
+	const query: {
+		slug: `${string}/${string}`;
+		sha: string;
+		branch?: string;
+	} = { slug, sha };
+	if (branch !== undefined) query.branch = branch;
+	try {
+		return (await auth.api.repoCommitDetail({
+			query,
+			headers: h,
+		})) as CommitDetailData;
 	} catch (e) {
 		if (isAPIError(e) && e.statusCode === 404) return null;
 		throw e;

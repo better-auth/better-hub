@@ -11,7 +11,6 @@ export const backfillGithubLogin = async (ctx: GenericEndpointContext): Promise<
 
 	if (!returned || !("session" in returned)) return;
 	if ((returned.user as any).githubLogin) return;
-	console.log(11111111, "Missing githubLogin", returned.user);
 
 	const userId = returned.user.id;
 	const reqHeaders = ctx.headers;

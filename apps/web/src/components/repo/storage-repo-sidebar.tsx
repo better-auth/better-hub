@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { HardDrive } from "lucide-react";
-import { RepoBreadcrumb } from "@/components/repo/repo-breadcrumb";
-import { RepoBadge } from "@/components/repo/repo-badge";
+import { RepoSidebarIdentity } from "@/components/repo/repo-sidebar-identity";
 
 export function StorageRepoSidebar({
 	owner,
 	repoName,
+	ownerType,
+	ownerAvatarUrl,
 	description,
 	visibility,
 	defaultBranch,
@@ -13,6 +13,8 @@ export function StorageRepoSidebar({
 }: {
 	owner: string;
 	repoName: string;
+	ownerType: string;
+	ownerAvatarUrl: string;
 	description: string | null;
 	visibility: "public" | "private";
 	defaultBranch: string;
@@ -24,29 +26,15 @@ export function StorageRepoSidebar({
 
 	return (
 		<aside className="hidden lg:flex shrink-0 overflow-y-auto pt-0 pr-2 pl-4 pb-4 flex-col gap-5">
-			<div className="flex flex-col gap-2">
-				<RepoBreadcrumb
-					owner={owner}
-					repoName={repoName}
-					ownerType="User"
-					repoBasePath={repoBasePath}
-				/>
-				<div className="w-32 aspect-square rounded-lg border border-border bg-muted/40 flex items-center justify-center">
-					<HardDrive
-						className="w-10 h-10 text-muted-foreground/50"
-						aria-hidden
-					/>
-				</div>
-				{description ? (
-					<p className="text-xs text-muted-foreground leading-relaxed">
-						{description}
-					</p>
-				) : null}
-				<div className="flex flex-wrap gap-1.5">
-					{badges.map((b, i) => (
-						<RepoBadge key={i} type={b.type} style="dashed" />
-					))}
-				</div>
+			<RepoSidebarIdentity
+				owner={owner}
+				repoName={repoName}
+				ownerType={ownerType}
+				ownerAvatarUrl={ownerAvatarUrl}
+				description={description}
+				badges={badges}
+				repoBasePath={repoBasePath}
+			>
 				<p className="text-[11px] text-muted-foreground/60 font-mono">
 					Better Hub{" "}
 					<Link
@@ -56,7 +44,7 @@ export function StorageRepoSidebar({
 						git storage
 					</Link>
 				</p>
-			</div>
+			</RepoSidebarIdentity>
 
 			<div className="flex flex-col gap-2">
 				<span className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground/70">
