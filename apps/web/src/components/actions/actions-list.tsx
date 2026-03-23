@@ -588,9 +588,9 @@ export function ActionsList({
 	}
 
 	return (
-		<div>
+		<div className="">
 			{/* Sticky header + filters — always visible */}
-			<div className="sticky -top-3 z-10 bg-background pt-3 pb-2">
+			<div className="sticky -top-3 z-10 bg-background pt-3pb-2">
 				{/* Filter bar — hidden during comparison */}
 				{!showCompare && (
 					<>

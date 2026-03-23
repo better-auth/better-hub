@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ChevronDown, ChevronUp, ArrowRight, FilePlus2, FileX2, FileEdit } from "lucide-react";
+import { ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
+import { FileTypeIcon } from "@/components/shared/file-icon";
 import { cn } from "@/lib/utils";
 import { parseDiffPatch, type DiffLine } from "@/lib/github-utils";
 import type { SyntaxToken } from "@/lib/shiki";
@@ -13,19 +14,6 @@ interface DiffFile {
 	deletions: number;
 	patch?: string;
 	previous_filename?: string;
-}
-
-function FileStatusIcon({ status }: { status: string }) {
-	switch (status) {
-		case "added":
-			return <FilePlus2 className="w-3.5 h-3.5 text-green-500" />;
-		case "removed":
-			return <FileX2 className="w-3.5 h-3.5 text-red-500" />;
-		case "renamed":
-			return <ArrowRight className="w-3.5 h-3.5 text-yellow-500" />;
-		default:
-			return <FileEdit className="w-3.5 h-3.5 text-blue-500" />;
-	}
 }
 
 function DiffStats({ additions, deletions }: { additions: number; deletions: number }) {
@@ -84,7 +72,11 @@ function FileDiffView({
 				) : (
 					<ChevronUp className="w-3 h-3 text-muted-foreground/40 shrink-0" />
 				)}
-				<FileStatusIcon status={file.status} />
+				<FileTypeIcon
+					name={file.filename.split("/").pop() || file.filename}
+					type="file"
+					className="w-3.5 h-3.5 shrink-0"
+				/>
 				<span className="text-[12px] font-mono truncate flex-1">
 					{file.previous_filename ? (
 						<>

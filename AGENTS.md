@@ -2,6 +2,15 @@
 
 Better Hub is a reimagined GitHub UI for code collaboration, built by the Better Auth team. It is a Next.js 16 / React 19 monorepo that proxies the GitHub API, adds AI features (Ghost assistant), and provides a faster, keyboard-driven experience for repos, PRs, issues, and CI/CD.
 
+## Production
+
+- Live site: https://better-hub.com
+
+## Design
+
+- Match the design language of the rest of the app.
+- Prefer skeleton UI over loading spinners for loading states.
+
 ## How to Use These Docs
 
 The `agent-docs/` directory contains detailed documentation organized by topic. Start with the section most relevant to your task. If you need a broad understanding, read **architecture/overview.md** first.

@@ -36,6 +36,11 @@ import {
 	Eye,
 	Pin,
 	Square,
+	FolderTree,
+	File,
+	FileCode,
+	FileJson,
+	FileType,
 } from "lucide-react";
 import { formatForDisplay } from "@tanstack/react-hotkeys";
 import { signOut } from "@/lib/auth-client";
@@ -44,6 +49,8 @@ import { getLanguageColor } from "@/lib/github-utils";
 import { useGlobalChatOptional } from "@/components/shared/global-chat-provider";
 import { getRecentViews, type RecentViewItem } from "@/lib/recent-views";
 import { useColorTheme } from "@/components/theme/theme-provider";
+import { useIconTheme } from "@/components/theme-store/icon-theme-provider";
+import type { IconMapping } from "@/lib/theme-store-types";
 import { BORDER_RADIUS_PRESETS, type BorderRadiusPreset } from "@/lib/themes/border-radius";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { useMutationSubscription } from "@/hooks/use-mutation-subscription";
@@ -117,6 +124,7 @@ type Mode =
 	| "commands"
 	| "search"
 	| "theme"
+	| "icon-theme"
 	| "radius"
 	| "accounts"
 	| "settings"
@@ -143,7 +151,9 @@ export function CommandMenu() {
 		toggleMode,
 		setBorderRadius,
 		themes: colorThemes,
+		storeThemes: installedColorThemes,
 	} = useColorTheme();
+	const { activeIconThemeId, installedIconThemes, setActiveIconTheme } = useIconTheme();
 	const { emit } = useMutationEvents();
 
 	// Recently viewed
@@ -396,6 +406,7 @@ export function CommandMenu() {
 			{ name: "Repositories", path: "/repos", icon: FolderGit2 },
 			{ name: "PRs", path: "/prs", icon: GitPullRequest },
 			{ name: "Search Code", path: "/search", icon: Search },
+			{ name: "Theme Store", path: "/theme-store", icon: Palette },
 		],
 		[],
 	);
@@ -863,6 +874,21 @@ export function CommandMenu() {
 				keepOpen: true,
 			},
 			{
+				name: "Change File Icons",
+				description: "Switch file icon theme",
+				keywords: [
+					"icons",
+					"files",
+					"folder",
+					"icon theme",
+					"file icons",
+					"lucide",
+				],
+				action: () => switchMode("icon-theme"),
+				icon: FolderTree,
+				keepOpen: true,
+			},
+			{
 				name: "Set Border Radius",
 				description: "Adjust corner rounding",
 				keywords: [
@@ -1217,7 +1243,7 @@ export function CommandMenu() {
 	]);
 
 	// --- Theme mode items ---
-	const { regularThemes, brandedThemes } = useMemo(() => {
+	const { installedThemes, regularThemes, brandedThemes } = useMemo(() => {
 		const filterFn = (t: (typeof colorThemes)[0]) => {
 			if (!search.trim()) return true;
 			const s = search.toLowerCase();
@@ -1227,8 +1253,13 @@ export function CommandMenu() {
 			);
 		};
 
+		const installed: typeof colorThemes = [];
 		const regular: typeof colorThemes = [];
 		const branded: typeof colorThemes = [];
+
+		for (const theme of installedColorThemes) {
+			if (filterFn(theme)) installed.push(theme);
+		}
 
 		for (const theme of colorThemes) {
 			if (!filterFn(theme)) continue;
@@ -1239,16 +1270,20 @@ export function CommandMenu() {
 			}
 		}
 
-		return { regularThemes: regular, brandedThemes: branded };
-	}, [mode, search, colorThemes]);
+		return {
+			installedThemes: installed,
+			regularThemes: regular,
+			brandedThemes: branded,
+		};
+	}, [mode, search, colorThemes, installedColorThemes]);
 
 	const themeItems = useMemo(() => {
-		return [...regularThemes, ...brandedThemes].map((t) => ({
+		return [...installedThemes, ...regularThemes, ...brandedThemes].map((t) => ({
 			id: `theme-${t.id}`,
 			action: () => setColorTheme(t.id),
 			keepOpen: true,
 		}));
-	}, [regularThemes, brandedThemes, setColorTheme]);
+	}, [installedThemes, regularThemes, brandedThemes, setColorTheme]);
 
 	// --- Radius mode items ---
 	const RADIUS_OPTIONS: { id: BorderRadiusPreset; label: string; description: string }[] = [
@@ -1275,6 +1310,42 @@ export function CommandMenu() {
 			keepOpen: true,
 		}));
 	}, [filteredRadiusOptions, setBorderRadius]);
+
+	// --- Icon theme mode items ---
+	const filteredIconThemes = useMemo(() => {
+		if (!search.trim()) return installedIconThemes;
+		const s = search.toLowerCase();
+		return installedIconThemes.filter(
+			(t) =>
+				t.name.toLowerCase().includes(s) ||
+				t.description.toLowerCase().includes(s),
+		);
+	}, [search, installedIconThemes]);
+
+	const showDefaultIconOption = useMemo(() => {
+		if (!search.trim()) return true;
+		const s = search.toLowerCase();
+		return "default".includes(s) || "built-in".includes(s) || "lucide".includes(s);
+	}, [search]);
+
+	const iconThemeItems = useMemo(() => {
+		const items: { id: string; action: () => void; keepOpen: boolean }[] = [];
+		if (showDefaultIconOption) {
+			items.push({
+				id: "icon-theme-default",
+				action: () => setActiveIconTheme(null),
+				keepOpen: true,
+			});
+		}
+		for (const t of filteredIconThemes) {
+			items.push({
+				id: `icon-theme-${t.id}`,
+				action: () => setActiveIconTheme(t.id),
+				keepOpen: true,
+			});
+		}
+		return items;
+	}, [showDefaultIconOption, filteredIconThemes, setActiveIconTheme]);
 
 	// --- Accounts mode items ---
 	const handleSwitchAccount = useCallback(
@@ -1415,6 +1486,11 @@ export function CommandMenu() {
 		const items: { id: string; action: () => void; keepOpen: boolean }[] = [
 			{ id: "settings-theme", action: () => switchMode("theme"), keepOpen: true },
 			{
+				id: "settings-icon-theme",
+				action: () => switchMode("icon-theme"),
+				keepOpen: true,
+			},
+			{
 				id: "settings-radius",
 				action: () => switchMode("radius"),
 				keepOpen: true,
@@ -1490,15 +1566,17 @@ export function CommandMenu() {
 				? searchItems
 				: mode === "theme"
 					? themeItems
-					: mode === "radius"
-						? radiusItems
-						: mode === "accounts"
-							? accountItems
-							: mode === "settings"
-								? settingsItems
-								: mode === "model"
-									? modelItems
-									: fileItems;
+					: mode === "icon-theme"
+						? iconThemeItems
+						: mode === "radius"
+							? radiusItems
+							: mode === "accounts"
+								? accountItems
+								: mode === "settings"
+									? settingsItems
+									: mode === "model"
+										? modelItems
+										: fileItems;
 
 	useEffect(() => {
 		setSelectedIndex(0);
@@ -1510,7 +1588,7 @@ export function CommandMenu() {
 		prevModeRef.current = mode;
 
 		if (enteredThemeMode && !search.trim()) {
-			const allThemes = [...regularThemes, ...brandedThemes];
+			const allThemes = [...installedThemes, ...regularThemes, ...brandedThemes];
 			const currentThemeIndex = allThemes.findIndex(
 				(t) => t.id === currentThemeId,
 			);
@@ -1518,7 +1596,7 @@ export function CommandMenu() {
 				setSelectedIndex(currentThemeIndex);
 			}
 		}
-	}, [mode, search, regularThemes, brandedThemes, currentThemeId]);
+	}, [mode, search, installedThemes, regularThemes, brandedThemes, currentThemeId]);
 
 	useEffect(() => {
 		if (!listRef.current) return;
@@ -1533,12 +1611,13 @@ export function CommandMenu() {
 
 	const handleKeyDown = useCallback(
 		(e: React.KeyboardEvent) => {
-			// Tab cycles modes: commands → search → theme → radius → accounts → settings → commands
+			// Tab cycles modes
 			if (e.key === "Tab") {
 				e.preventDefault();
 				if (mode === "commands") switchMode("search");
 				else if (mode === "search") switchMode("theme");
-				else if (mode === "theme") switchMode("radius");
+				else if (mode === "theme") switchMode("icon-theme");
+				else if (mode === "icon-theme") switchMode("radius");
 				else if (mode === "radius") switchMode("accounts");
 				else if (mode === "accounts") switchMode("settings");
 				else switchMode("commands");
@@ -1555,8 +1634,11 @@ export function CommandMenu() {
 			// Backspace on empty goes back
 			if (e.key === "Backspace" && mode !== "commands" && !search) {
 				e.preventDefault();
-				// Sub-modes go back to settings, others go to commands
-				switchMode(mode === "model" ? "settings" : "commands");
+				switchMode(
+					mode === "model" || mode === "icon-theme"
+						? "settings"
+						: "commands",
+				);
 				return;
 			}
 
@@ -1637,6 +1719,8 @@ export function CommandMenu() {
 									<FileText className="size-4 text-muted-foreground/50 shrink-0" />
 								) : mode === "theme" ? (
 									<Palette className="size-4 text-muted-foreground/50 shrink-0" />
+								) : mode === "icon-theme" ? (
+									<FolderTree className="size-4 text-muted-foreground/50 shrink-0" />
 								) : mode === "radius" ? (
 									<Square className="size-4 text-muted-foreground/50 shrink-0" />
 								) : mode === "accounts" ? (
@@ -1668,18 +1752,21 @@ export function CommandMenu() {
 													  "theme"
 													? "Search themes..."
 													: mode ===
-														  "radius"
-														? "Select border radius..."
+														  "icon-theme"
+														? "Search icon themes..."
 														: mode ===
-															  "accounts"
-															? "Filter accounts..."
+															  "radius"
+															? "Select border radius..."
 															: mode ===
-																  "settings"
-																? "Configuration..."
+																  "accounts"
+																? "Filter accounts..."
 																: mode ===
-																	  "model"
-																	? "Search models..."
-																	: "Type a command..."
+																	  "settings"
+																	? "Configuration..."
+																	: mode ===
+																		  "model"
+																		? "Search models..."
+																		: "Type a command..."
 									}
 									className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground py-3 text-sm outline-none"
 								/>
@@ -2318,6 +2405,75 @@ export function CommandMenu() {
 												</span>
 											</button>
 										</div>
+										{installedThemes.length >
+											0 && (
+											<CommandGroup title="Installed Themes">
+												{installedThemes.map(
+													(
+														theme,
+													) => {
+														const idx =
+															getNextIndex();
+														const isActive =
+															currentThemeId ===
+															theme.id;
+														const variant =
+															theme[
+																currentMode
+															];
+														return (
+															<CommandItemButton
+																key={
+																	theme.id
+																}
+																index={
+																	idx
+																}
+																selected={
+																	selectedIndex ===
+																	idx
+																}
+																onClick={() =>
+																	setColorTheme(
+																		theme.id,
+																	)
+																}
+															>
+																<span className="flex items-center gap-1 shrink-0">
+																	<span
+																		className="w-3 h-3 rounded-full border border-border/40"
+																		style={{
+																			backgroundColor:
+																				variant.bgPreview,
+																		}}
+																	/>
+																	<span
+																		className="w-3 h-3 rounded-full border border-border/40"
+																		style={{
+																			backgroundColor:
+																				variant.accentPreview,
+																		}}
+																	/>
+																</span>
+																<span className="text-[13px] text-foreground flex-1">
+																	{
+																		theme.name
+																	}
+																</span>
+																<span className="text-[11px] text-muted-foreground hidden sm:block">
+																	{
+																		theme.description
+																	}
+																</span>
+																{isActive && (
+																	<Check className="size-3.5 text-success shrink-0" />
+																)}
+															</CommandItemButton>
+														);
+													},
+												)}
+											</CommandGroup>
+										)}
 										{regularThemes.length >
 											0 && (
 											<CommandGroup title="Themes">
@@ -2448,6 +2604,8 @@ export function CommandMenu() {
 											</CommandGroup>
 										)}
 										{hasQuery &&
+											installedThemes.length ===
+												0 &&
 											regularThemes.length ===
 												0 &&
 											brandedThemes.length ===
@@ -2533,6 +2691,176 @@ export function CommandMenu() {
 												<div className="py-8 text-center text-sm text-muted-foreground/70">
 													No
 													options
+													match
+													&quot;
+													{
+														search
+													}
+													&quot;
+												</div>
+											)}
+									</>
+								) : mode === "icon-theme" ? (
+									/* Icon theme mode */
+									<>
+										<CommandGroup title="File Icons">
+											{showDefaultIconOption &&
+												(() => {
+													const idx =
+														getNextIndex();
+													const isActive =
+														activeIconThemeId ===
+														null;
+													return (
+														<IconThemeItem
+															key="icon-default"
+															index={
+																idx
+															}
+															selected={
+																selectedIndex ===
+																idx
+															}
+															isActive={
+																isActive
+															}
+															name="Default"
+															description="Built-in Lucide icons"
+															onClick={() =>
+																setActiveIconTheme(
+																	null,
+																)
+															}
+														/>
+													);
+												})()}
+											{filteredIconThemes.map(
+												(
+													theme,
+												) => {
+													const idx =
+														getNextIndex();
+													const isActive =
+														activeIconThemeId ===
+														theme.id;
+													let previewUrls: string[] =
+														[];
+													try {
+														if (
+															theme.dataJson
+														) {
+															const mapping =
+																JSON.parse(
+																	theme.dataJson,
+																) as IconMapping;
+															if (
+																mapping.baseURL &&
+																mapping.fileIcons
+															) {
+																const base =
+																	mapping.baseURL.endsWith(
+																		"/",
+																	)
+																		? mapping.baseURL
+																		: `${mapping.baseURL}/`;
+																const samples =
+																	[
+																		"typescript",
+																		"javascript",
+																		"react",
+																		"json",
+																		"html",
+																		"css",
+																		"python",
+																		"markdown",
+																	];
+																const seen =
+																	new Set<string>();
+																for (const s of samples) {
+																	if (
+																		seen.size >=
+																		8
+																	)
+																		break;
+																	const match =
+																		mapping.fileIcons.find(
+																			(
+																				d,
+																			) =>
+																				d.name.toLowerCase() ===
+																					s ||
+																				d.fileExtensions?.some(
+																					(
+																						e,
+																					) =>
+																						e.toLowerCase() ===
+																						s,
+																				),
+																		);
+																	if (
+																		match &&
+																		!seen.has(
+																			match.name,
+																		)
+																	) {
+																		seen.add(
+																			match.name,
+																		);
+																		previewUrls.push(
+																			`${base}${match.name}.svg`,
+																		);
+																	}
+																}
+															}
+														}
+													} catch {
+														/* ignore */
+													}
+													return (
+														<IconThemeItem
+															key={
+																theme.id
+															}
+															index={
+																idx
+															}
+															selected={
+																selectedIndex ===
+																idx
+															}
+															isActive={
+																isActive
+															}
+															name={
+																theme.name
+															}
+															description={
+																theme.description
+															}
+															iconUrl={
+																theme.iconUrl
+															}
+															previewUrls={
+																previewUrls
+															}
+															onClick={() =>
+																setActiveIconTheme(
+																	theme.id,
+																)
+															}
+														/>
+													);
+												},
+											)}
+										</CommandGroup>
+										{hasQuery &&
+											!showDefaultIconOption &&
+											filteredIconThemes.length ===
+												0 && (
+												<div className="py-8 text-center text-sm text-muted-foreground/70">
+													No
+													icon
+													themes
 													match
 													&quot;
 													{
@@ -3046,6 +3374,52 @@ export function CommandMenu() {
 											{(() => {
 												const idx =
 													getNextIndex();
+												const iconLabel =
+													activeIconThemeId ===
+													null
+														? "Default"
+														: (installedIconThemes.find(
+																(
+																	t,
+																) =>
+																	t.id ===
+																	activeIconThemeId,
+															)
+																?.name ??
+															"Custom");
+												return (
+													<CommandItemButton
+														key="settings-icon-theme"
+														index={
+															idx
+														}
+														selected={
+															selectedIndex ===
+															idx
+														}
+														onClick={() =>
+															switchMode(
+																"icon-theme",
+															)
+														}
+													>
+														<FolderTree className="size-3.5 text-muted-foreground/50 shrink-0" />
+														<span className="text-[13px] text-foreground flex-1">
+															File
+															Icons
+														</span>
+														<span className="text-[11px] text-muted-foreground hidden sm:block">
+															{
+																iconLabel
+															}
+														</span>
+														<ChevronRight className="size-3 text-muted-foreground/30 shrink-0" />
+													</CommandItemButton>
+												);
+											})()}
+											{(() => {
+												const idx =
+													getNextIndex();
 												const radiusLabel =
 													currentBorderRadius
 														.charAt(
@@ -3545,6 +3919,89 @@ function CommandGroup({ title, children }: { title: string; children: React.Reac
 			</div>
 			{children}
 		</div>
+	);
+}
+
+const DEFAULT_PREVIEW_ICONS = [
+	{ Icon: FileCode, color: "#3178c6" },
+	{ Icon: FileCode, color: "#f1e05a" },
+	{ Icon: FileJson, color: "#a8a8a8" },
+	{ Icon: FileType, color: "#e34c26" },
+	{ Icon: FileCode, color: "#3572a5" },
+	{ Icon: File, color: "#563d7c" },
+];
+
+function IconThemeItem({
+	index,
+	selected,
+	isActive,
+	name,
+	description,
+	iconUrl,
+	previewUrls,
+	onClick,
+}: {
+	index: number;
+	selected: boolean;
+	isActive: boolean;
+	name: string;
+	description: string;
+	iconUrl?: string | null;
+	previewUrls?: string[];
+	onClick: () => void;
+}) {
+	const isDefault = !iconUrl && !previewUrls;
+	return (
+		<button
+			onClick={onClick}
+			data-index={index}
+			className={cn(
+				"w-full flex items-start gap-3 px-4 py-2.5 text-left transition-colors duration-100 cursor-pointer",
+				"hover:bg-accent dark:hover:bg-white/3 focus:outline-none",
+				selected && "bg-accent dark:bg-white/3",
+			)}
+		>
+			{iconUrl ? (
+				<img
+					src={iconUrl}
+					alt=""
+					className="size-5 rounded shrink-0 mt-0.5"
+				/>
+			) : (
+				<File className="size-4 text-muted-foreground/50 shrink-0 mt-0.5" />
+			)}
+			<div className="flex-1 min-w-0">
+				<div className="flex items-center gap-2">
+					<span className="text-[13px] text-foreground shrink-0">
+						{name}
+					</span>
+					<span className="text-[11px] text-muted-foreground truncate hidden sm:block">
+						{description}
+					</span>
+				</div>
+				<div className="flex items-center gap-1.5 mt-1">
+					{isDefault
+						? DEFAULT_PREVIEW_ICONS.map((item, i) => (
+								<item.Icon
+									key={i}
+									className="size-4 shrink-0"
+									style={{
+										color: item.color,
+									}}
+								/>
+							))
+						: previewUrls?.map((url, i) => (
+								<img
+									key={i}
+									src={url}
+									alt=""
+									className="size-4 shrink-0"
+								/>
+							))}
+				</div>
+			</div>
+			{isActive && <Check className="size-3.5 text-success shrink-0 mt-1" />}
+		</button>
 	);
 }
 

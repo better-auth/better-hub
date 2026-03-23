@@ -1,12 +1,12 @@
 "use client";
 
 import { RepoBreadcrumb } from "@/components/repo/repo-breadcrumb";
-import { useState, useCallback, useRef, useTransition, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { PanelLeft } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { setRepoSidebarState } from "./repo-sidebar-actions";
+import { REPO_SIDEBAR_COOKIE } from "./repo-sidebar-constants";
 
 interface RepoLayoutWrapperProps {
 	sidebar: React.ReactNode;
@@ -25,7 +25,7 @@ const DEFAULT_WIDTH = 340;
 const MAX_WIDTH = 400;
 const MIN_WIDTH = 200;
 const SNAP_THRESHOLD = 120;
-const SPRING = { type: "spring" as const, stiffness: 500, damping: 35 };
+const SPRING = { type: "spring" as const, stiffness: 500, damping: 45 };
 
 export function RepoLayoutWrapper({
 	sidebar,
@@ -49,14 +49,13 @@ export function RepoLayoutWrapper({
 	const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
 	const isDraggingRef = useRef(false);
 	const [isDragging, setIsDragging] = useState(false);
-	const [, startTransition] = useTransition();
 	const collapsed = sidebarWidth === 0;
 	const prevIsPrPageRef = useRef(isPrPage);
-	const [navbarSlot, setNavbarSlot] = useState<HTMLElement | null>(null);
+	const [repoNavSlot, setRepoNavSlot] = useState<HTMLElement | null>(null);
 
 	useEffect(() => {
-		const el = document.getElementById("navbar-breadcrumb");
-		setNavbarSlot(el);
+		const el = document.getElementById("repo-nav-breadcrumb");
+		setRepoNavSlot(el);
 	}, []);
 
 	useEffect(() => {
@@ -70,9 +69,8 @@ export function RepoLayoutWrapper({
 	}, [isPrPage, sidebarWidth]);
 
 	const persistState = useCallback((isCollapsed: boolean, width: number) => {
-		startTransition(() => {
-			setRepoSidebarState(isCollapsed, width);
-		});
+		const maxAge = 60 * 60 * 24 * 365;
+		document.cookie = `${REPO_SIDEBAR_COOKIE}=${JSON.stringify({ collapsed: isCollapsed, width })};path=/;max-age=${maxAge};samesite=lax`;
 	}, []);
 
 	const handleExpand = useCallback(() => {
@@ -202,10 +200,10 @@ export function RepoLayoutWrapper({
 			<AnimatePresence>
 				{!collapsed && (
 					<motion.div
-						className="hidden lg:flex shrink-0 flex-col items-center"
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						exit={{ opacity: 0 }}
+						className="hidden lg:flex shrink-0 flex-col items-center overflow-hidden"
+						initial={{ opacity: 0, width: "auto" }}
+						animate={{ opacity: 1, width: "auto" }}
+						exit={{ opacity: 0, width: 0 }}
 						transition={{ duration: 0.15 }}
 					>
 						<div
@@ -240,11 +238,11 @@ export function RepoLayoutWrapper({
 				{children}
 			</div>
 
-			{/* Portal breadcrumb to navbar when sidebar collapsed */}
+			{/* Portal breadcrumb to repo nav when sidebar collapsed */}
 			{collapsed &&
-				navbarSlot &&
+				repoNavSlot &&
 				createPortal(
-					<div className="hidden lg:flex items-center gap-1.5 ml-3 pl-3 ">
+					<div className="hidden lg:flex items-center gap-1.5 shrink-0">
 						<RepoBreadcrumb
 							owner={owner}
 							repoName={repo}
@@ -253,7 +251,7 @@ export function RepoLayoutWrapper({
 							repoBasePath={repoBasePath}
 						/>
 					</div>,
-					navbarSlot,
+					repoNavSlot,
 				)}
 		</div>
 	);

@@ -5,12 +5,12 @@ import {
 	Check,
 	Loader2,
 	Sparkles,
-	FileCode2,
 	ChevronDown,
 	RefreshCw,
 	AlertCircle,
 	TextSearch,
 } from "lucide-react";
+import { FileTypeIcon } from "@/components/shared/file-icon";
 import { cn } from "@/lib/utils";
 import { useOverviewActive } from "./pr-detail-layout";
 import { parseDiffPatch } from "@/lib/github-utils";
@@ -314,7 +314,18 @@ function ChangeGroupCard({
 								{file.snippet && (
 									<div className="px-2">
 										<div className="flex items-center gap-2.5 border-t border-x border-foreground/20! px-3 pt-2 bg-[var(--code-bg)] pb-4 -mb-2 rounded-t-md">
-											<FileCode2 className="w-4 h-4 text-muted-foreground shrink-0" />
+											<FileTypeIcon
+												name={
+													file.filename
+														.split(
+															"/",
+														)
+														.pop() ||
+													file.filename
+												}
+												type="file"
+												className="w-4 h-4 shrink-0"
+											/>
 											<span className="font-mono flex items-center flex-1 min-w-0 overflow-hidden">
 												<span
 													className="truncate cursor-pointer hover:underline decoration-border underline-offset-4"

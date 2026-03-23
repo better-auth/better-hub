@@ -1,0 +1,189 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"$id": "https://better-hub.com/schemas/icon-theme-data.schema.json",
+	"title": "Better Hub Icon Theme Data",
+	"description": "Schema for the icon mapping data file referenced by the \"main\" field in better-hub-extension.json. Defines which SVG icons map to which file extensions, filenames, and folders.",
+	"type": "object",
+	"required": ["baseURL"],
+	"additionalProperties": false,
+	"anyOf": [
+		{ "required": ["fileIcons"] },
+		{ "required": ["folderIcons"] },
+		{ "required": ["defaultFile"] },
+		{ "required": ["defaultFolder"] },
+		{ "required": ["defaultFolderOpen"] }
+	],
+	"properties": {
+		"$schema": {
+			"type": "string",
+			"description": "URL or relative path to this JSON schema for editor validation."
+		},
+		"baseURL": {
+			"type": "string",
+			"minLength": 1,
+			"format": "uri",
+			"description": "Full base URL that icon names are resolved against. The icon name + \".svg\" is appended to form the final URL (e.g. \"https://raw.githubusercontent.com/user/repo/HEAD/icons/\" → \"...icons/typescript.svg\")."
+		},
+		"defaultFile": {
+			"type": "string",
+			"description": "Icon name used as the fallback for files that don't match any fileIcons entry."
+		},
+		"defaultFolder": {
+			"type": "string",
+			"description": "Icon name used as the fallback for closed folders that don't match any folderIcons entry."
+		},
+		"defaultFolderOpen": {
+			"type": "string",
+			"description": "Icon name used as the fallback for open folders that don't match any folderIcons entry."
+		},
+		"fileIcons": {
+			"type": "array",
+			"description": "Array of file icon definitions mapping icon names to file extensions and/or exact filenames.",
+			"items": {
+				"$ref": "#/definitions/fileIconDefinition"
+			}
+		},
+		"folderIcons": {
+			"type": "array",
+			"description": "Array of folder icon definitions mapping icon names to folder names.",
+			"items": {
+				"$ref": "#/definitions/folderIconDefinition"
+			}
+		}
+	},
+	"definitions": {
+		"fileIconDefinition": {
+			"type": "object",
+			"required": ["name"],
+			"additionalProperties": false,
+			"anyOf": [
+				{ "required": ["fileExtensions"] },
+				{ "required": ["fileNames"] }
+			],
+			"properties": {
+				"name": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Icon name — joined with baseURL to form the SVG URL (e.g. \"typescript\" → baseURL + \"typescript.svg\")."
+				},
+				"fileExtensions": {
+					"type": "array",
+					"items": { "type": "string", "minLength": 1 },
+					"minItems": 1,
+					"uniqueItems": true,
+					"description": "File extensions this icon applies to, without the leading dot (e.g. [\"ts\", \"tsx\", \"mts\"])."
+				},
+				"fileNames": {
+					"type": "array",
+					"items": { "type": "string", "minLength": 1 },
+					"minItems": 1,
+					"uniqueItems": true,
+					"description": "Exact filenames this icon applies to (e.g. [\"Dockerfile\", \".gitignore\", \"package.json\"])."
+				}
+			}
+		},
+		"folderIconDefinition": {
+			"type": "object",
+			"required": ["name", "folderNames"],
+			"additionalProperties": false,
+			"properties": {
+				"name": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Icon name — joined with baseURL to form the SVG URL (e.g. \"folder-src\" → baseURL + \"folder-src.svg\")."
+				},
+				"folderNames": {
+					"type": "array",
+					"items": { "type": "string", "minLength": 1 },
+					"minItems": 1,
+					"uniqueItems": true,
+					"description": "Folder names this icon applies to (e.g. [\"src\", \"source\"])."
+				}
+			}
+		}
+	},
+	"examples": [
+		{
+			"$schema": "https://better-hub.com/schemas/icon-theme-data.schema.json",
+			"baseURL": "https://raw.githubusercontent.com/user/my-icon-theme/HEAD/icons/",
+			"defaultFile": "file",
+			"defaultFolder": "folder",
+			"defaultFolderOpen": "folder-open",
+			"fileIcons": [
+				{
+					"name": "typescript",
+					"fileExtensions": ["ts", "tsx", "mts", "cts"]
+				},
+				{
+					"name": "javascript",
+					"fileExtensions": ["js", "jsx", "mjs", "cjs"]
+				},
+				{
+					"name": "json",
+					"fileExtensions": ["json", "jsonc", "json5"]
+				},
+				{
+					"name": "markdown",
+					"fileExtensions": ["md", "mdx"]
+				},
+				{
+					"name": "docker",
+					"fileNames": [
+						"Dockerfile",
+						"docker-compose.yml",
+						"docker-compose.yaml"
+					]
+				},
+				{
+					"name": "git",
+					"fileNames": [".gitignore", ".gitattributes", ".gitmodules"]
+				},
+				{
+					"name": "package",
+					"fileNames": ["package.json"]
+				},
+				{
+					"name": "lock",
+					"fileNames": [
+						"package-lock.json",
+						"yarn.lock",
+						"pnpm-lock.yaml",
+						"bun.lockb"
+					]
+				}
+			],
+			"folderIcons": [
+				{
+					"name": "folder-src",
+					"folderNames": ["src", "source", "lib"]
+				},
+				{
+					"name": "folder-test",
+					"folderNames": [
+						"test",
+						"tests",
+						"__tests__",
+						"spec",
+						"specs"
+					]
+				},
+				{
+					"name": "folder-node",
+					"folderNames": ["node_modules"]
+				},
+				{
+					"name": "folder-config",
+					"folderNames": ["config", "configs", ".config"]
+				},
+				{
+					"name": "folder-public",
+					"folderNames": ["public", "static", "assets"]
+				},
+				{
+					"name": "folder-component",
+					"folderNames": ["components", "ui"]
+				}
+			]
+		}
+	]
+}

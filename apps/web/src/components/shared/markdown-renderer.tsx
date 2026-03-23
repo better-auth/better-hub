@@ -39,6 +39,8 @@ const sanitizeSchema: typeof defaultSchema = {
 			["data*"],
 			// Allow class for styling
 			"className",
+			// Allow align attribute (common in GitHub READMEs for centering)
+			"align",
 		],
 		img: [...(defaultSchema.attributes?.img ?? []), "loading", "decoding"],
 		video: [
@@ -311,8 +313,10 @@ function markBadgeParagraphs(html: string): string {
 		/<p(\s[^>]*)?>(([\s]*(?:<br\s*\/?>[\s]*)*(?:<a\s[^>]*>\s*<img\s[^>]*\/?>\s*<\/a>|<img\s[^>]*\/?>)[\s]*(?:<br\s*\/?>[\s]*)*)+)<\/p>/gi,
 		(_match, attrs, content) => {
 			const existing = attrs || "";
+			if (/align\s*=/i.test(existing)) {
+				return _match;
+			}
 			if (/class\s*=\s*"/i.test(existing)) {
-				// Append to existing class attribute
 				const newAttrs = existing.replace(
 					/class\s*=\s*"/i,
 					'class="ghmd-badges ',

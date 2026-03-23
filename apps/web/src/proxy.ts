@@ -1,25 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
+import { APP_ROUTES } from "./app-routes";
 
 const publicPaths = ["/", "/api/auth", "/api/inngest"];
-
-const APP_ROUTES = new Set([
-	"dashboard",
-	"s",
-	"repos",
-	"issues",
-	"prs",
-	"stars",
-	"settings",
-	"search",
-	"trending",
-	"notifications",
-	"orgs",
-	"users",
-	"api",
-	"debug",
-	"_next",
-]);
 
 const GIT_SERVICES = new Set(["git-upload-pack", "git-receive-pack"]);
 
@@ -87,8 +70,8 @@ export default async function middleware(request: NextRequest) {
 	}
 
 	// /:owner/:repo/compare/base...head (GitHub Desktop / gh pr create) → /repos/:owner/:repo/pulls/new?base=&head=&title=&body=
-	if (rest[0] === "compare" && rest[1]) {
-		const range = rest[1];
+	if (rest[0] === "compare" && rest.length > 1) {
+		const range = rest.slice(1).join("/");
 		const dots = range.includes("...") ? "..." : range.includes("..") ? ".." : null;
 		const [baseBranch, headBranch] = dots ? range.split(dots) : [null, null];
 		if (baseBranch && headBranch) {

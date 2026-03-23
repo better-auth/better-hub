@@ -51,12 +51,35 @@ export const DEFAULT_MODE: "dark" | "light" = "dark";
 
 const themeMap = new Map(themes.map((t) => [t.id, t]));
 
+const storeThemes: ThemeDefinition[] = [];
+
 export function listThemes(): ThemeDefinition[] {
 	return themes;
 }
 
+export function listStoreThemes(): ThemeDefinition[] {
+	return storeThemes;
+}
+
+export function listAllThemes(): ThemeDefinition[] {
+	return [...themes, ...storeThemes];
+}
+
 export function getTheme(id: string): ThemeDefinition | undefined {
 	return themeMap.get(id);
+}
+
+export function registerStoreTheme(theme: ThemeDefinition): void {
+	if (themeMap.has(theme.id)) return;
+	themeMap.set(theme.id, theme);
+	storeThemes.push(theme);
+}
+
+export function clearStoreThemes(): void {
+	for (const t of storeThemes) {
+		themeMap.delete(t.id);
+	}
+	storeThemes.length = 0;
 }
 
 export function getThemeVariant(id: string, mode: "dark" | "light"): ThemeVariant | undefined {
@@ -68,6 +91,13 @@ export function migrateLegacyThemeId(
 	legacyId: string,
 ): { themeId: string; mode: "dark" | "light" } | undefined {
 	return LEGACY_THEME_MAP[legacyId];
+}
+
+const RAW_HSL_RE = /^\d+(\.\d+)?\s+\d+(\.\d+)?%\s+\d+(\.\d+)?%/;
+
+function normalizeCssColor(value: string): string {
+	if (RAW_HSL_RE.test(value)) return `hsl(${value})`;
+	return value;
 }
 
 export function applyTheme(themeId: string, mode: "dark" | "light"): void {
@@ -89,7 +119,7 @@ export function applyTheme(themeId: string, mode: "dark" | "light"): void {
 	}
 
 	for (const key of allKeys) {
-		el.style.setProperty(key, variant.colors[key]);
+		el.style.setProperty(key, normalizeCssColor(variant.colors[key]));
 	}
 
 	if (mode === "dark") {
