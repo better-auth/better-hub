@@ -132,6 +132,16 @@ function buildRules(host) {
 				resourceTypes: ["main_frame"],
 			},
 		},
+		{
+			id: 251,
+			priority: 5,
+			action: { type: "allow" },
+			condition: {
+				regexFilter:
+					"^https://github\\.com/[^/]+/[^/]+/releases/download/.+",
+				resourceTypes: ["main_frame"],
+			},
+		},
 
 		{
 			id: 101,

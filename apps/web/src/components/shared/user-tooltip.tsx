@@ -12,7 +12,7 @@ import {
 	Calendar,
 	Bot,
 } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { UserProfile } from "@/app/api/user-profile/route";
 
@@ -242,19 +242,21 @@ export function UserTooltip({
 			}}
 		>
 			<TooltipTrigger asChild>{children}</TooltipTrigger>
-			<TooltipContent
-				side={side}
-				align={align}
-				className={cn("p-4", isError && "p-3")}
-			>
-				{isLoading && <UserTooltipSkeleton />}
-				{isError && (
-					<span className="text-xs text-destructive">
-						Failed to load user
-					</span>
-				)}
-				{profile && <UserTooltipContent profile={profile} />}
-			</TooltipContent>
+			<TooltipPortal>
+				<TooltipContent
+					side={side}
+					align={align}
+					className={cn("p-4", isError && "p-3")}
+				>
+					{isLoading && <UserTooltipSkeleton />}
+					{isError && (
+						<span className="text-xs text-destructive">
+							Failed to load user
+						</span>
+					)}
+					{profile && <UserTooltipContent profile={profile} />}
+				</TooltipContent>
+			</TooltipPortal>
 		</Tooltip>
 	);
 }

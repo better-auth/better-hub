@@ -95,7 +95,7 @@ export function SettingsDialog({
 				<VisuallyHidden.Root>
 					<DialogTitle>Settings</DialogTitle>
 				</VisuallyHidden.Root>
-				<div className="flex flex-col max-h-[85vh] min-h-104 overflow-hidden">
+				<div className="flex flex-col max-h-[85vh] min-h-[26rem]">
 					{settings && !isError ? (
 						<SettingsContent
 							key={initialTab}
@@ -118,7 +118,7 @@ export function SettingsDialog({
 										onClick={() =>
 											void refetch()
 										}
-										className="border border-border px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/50 dark:hover:bg-white/4 transition-colors cursor-pointer"
+										className="border border-border px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/50 dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
 									>
 										Retry
 									</button>
