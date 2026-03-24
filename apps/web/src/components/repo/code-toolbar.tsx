@@ -25,9 +25,13 @@ interface EnrichedBranch {
 interface CodeToolbarProps {
 	owner: string;
 	repo: string;
+	/** Defaults to `/${owner}/${repo}` — used for GitHub clone/ZIP URLs. */
+	repoBasePath?: string;
 	currentRef: string;
 	branches: EnrichedBranch[];
 	defaultBranch: string;
+	/** @default true — set false for hosted storage (no GitHub clone UI). */
+	showCloneControls?: boolean;
 	onDeleteBranch?: (
 		owner: string,
 		repo: string,
@@ -38,9 +42,11 @@ interface CodeToolbarProps {
 export function CodeToolbar({
 	owner,
 	repo,
+	repoBasePath,
 	currentRef,
 	branches,
 	defaultBranch,
+	showCloneControls = true,
 	onDeleteBranch,
 }: CodeToolbarProps) {
 	const [showClone, setShowClone] = useState(false);
@@ -52,6 +58,7 @@ export function CodeToolbar({
 	const [isPending, startTransition] = useTransition();
 	const [cloneProtocol, setCloneProtocol] = useState<"https" | "ssh">("https");
 
+	const isGithubPath = !repoBasePath || repoBasePath === `/${owner}/${repo}`;
 	const cloneUrl =
 		cloneProtocol === "https"
 			? `https://github.com/${owner}/${repo}.git`
@@ -272,32 +279,34 @@ export function CodeToolbar({
 					)}
 				</div>
 
-				<div className="ml-auto flex items-center">
-					<div className="flex items-center rounded-md border border-border overflow-hidden divide-x divide-border">
-						<button
-							onClick={() => {
-								setShowClone(!showClone);
-								setShowBranches(false);
-							}}
-							className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/5 transition-colors cursor-pointer"
-						>
-							<Copy className="w-3 h-3" />
-							Clone
-						</button>
-						<a
-							href={zipUrl}
-							data-no-github-intercept
-							className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/5 transition-colors"
-						>
-							<Download className="w-3 h-3" />
-							ZIP
-						</a>
+				{showCloneControls && isGithubPath && (
+					<div className="ml-auto flex items-center">
+						<div className="flex items-center rounded-md border border-border overflow-hidden divide-x divide-border">
+							<button
+								onClick={() => {
+									setShowClone(!showClone);
+									setShowBranches(false);
+								}}
+								className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/5 transition-colors cursor-pointer"
+							>
+								<Copy className="w-3 h-3" />
+								Clone
+							</button>
+							<a
+								href={zipUrl}
+								data-no-github-intercept
+								className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-white/5 transition-colors"
+							>
+								<Download className="w-3 h-3" />
+								ZIP
+							</a>
+						</div>
 					</div>
-				</div>
+				)}
 			</div>
 
 			{/* Clone dropdown */}
-			{showClone && (
+			{showCloneControls && isGithubPath && showClone && (
 				<>
 					<div
 						className="fixed inset-0 z-40"

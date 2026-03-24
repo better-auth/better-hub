@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { GitFork, Eye, Scale, HardDrive, LinkIcon } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
@@ -13,7 +12,7 @@ import { SidebarLanguages } from "@/components/repo/sidebar-languages";
 import { SidebarContributors } from "@/components/repo/sidebar-contributors";
 
 import { LatestCommitSection } from "@/components/repo/latest-commit-section";
-import { RepoBreadcrumb } from "@/components/repo/repo-breadcrumb";
+import { RepoSidebarIdentity } from "@/components/repo/repo-sidebar-identity";
 import type { ContributorAvatarsData } from "@/lib/repo-data-cache";
 import type { ForkSyncStatus } from "@/lib/github";
 
@@ -97,37 +96,15 @@ export function RepoSidebar({
 	return (
 		<>
 			{/* Desktop sidebar */}
-			<aside className="hidden lg:flex shrink-0 overflow-y-auto pt-0 pr-2 pl-8 pb-4 flex-col gap-5">
-				{/* Name + Avatar + Description + Badges */}
-				<div className="flex flex-col gap-2">
-					<RepoBreadcrumb
-						owner={owner}
-						repoName={repoName}
-						ownerType={ownerType}
-						ownerAvatarUrl={avatarUrl}
-					/>
-					<Image
-						src={avatarUrl}
-						alt=""
-						width={160}
-						height={160}
-						className="w-32 aspect-square rounded-lg"
-					/>
-					{description && (
-						<p className="text-xs text-muted-foreground leading-relaxed">
-							{description}
-						</p>
-					)}
-					<div className="flex flex-wrap gap-1.5">
-						{badges.map((b, i) => (
-							<RepoBadge
-								key={i}
-								type={b.type}
-								href={b.href}
-								style="dashed"
-							/>
-						))}
-					</div>
+			<aside className="hidden lg:flex shrink-0 overflow-y-auto pt-0 pr-2 pl-4 pb-4 flex-col gap-5">
+				<RepoSidebarIdentity
+					owner={owner}
+					repoName={repoName}
+					ownerType={ownerType}
+					ownerAvatarUrl={avatarUrl}
+					description={description}
+					badges={badges}
+				>
 					{fork && parent && (
 						<p className="text-[11px] text-muted-foreground/60">
 							Forked from{" "}
@@ -148,7 +125,7 @@ export function RepoSidebar({
 							parentFullName={parent?.fullName}
 						/>
 					)}
-				</div>
+				</RepoSidebarIdentity>
 
 				{!isEmptyRepo && (
 					<LatestCommitSection

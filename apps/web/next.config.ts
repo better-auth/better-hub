@@ -8,6 +8,7 @@ import type { NextConfig } from "next";
 const KNOWN_ROUTES = [
 	"api",
 	"dashboard",
+	"s",
 	"debug",
 	"extension",
 	"issues",

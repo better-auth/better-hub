@@ -6,9 +6,11 @@ import {
 	getUserOrgTopRepos,
 	getContributionData,
 	getUserEvents,
+	getUserProfileReadme,
 } from "@/lib/github";
 import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { UserProfileContent } from "@/components/users/user-profile-content";
+import { UserProfileReadmePanel } from "@/components/users/user-profile-readme-panel";
 import { ExternalLink, User } from "lucide-react";
 
 function UnknownUserPage({ username }: { username: string }) {
@@ -74,6 +76,7 @@ export default async function UserProfilePage({
 	let contributionData: Awaited<ReturnType<typeof getContributionData>> = null;
 	let orgTopRepos: Awaited<ReturnType<typeof getUserOrgTopRepos>> = [];
 	let activityEvents: Awaited<ReturnType<typeof getUserEvents>> = [];
+	let profileReadme: Awaited<ReturnType<typeof getUserProfileReadme>> = null;
 
 	try {
 		userData = await getUser(username);
@@ -89,13 +92,19 @@ export default async function UserProfilePage({
 	if (!isBot) {
 		try {
 			const resolvedLogin = userData.login;
-			const [reposResult, orgsResult, contributionsResult, eventsResult] =
-				await Promise.allSettled([
-					getUserPublicRepos(resolvedLogin, 100),
-					getUserPublicOrgs(resolvedLogin),
-					getContributionData(resolvedLogin),
-					getUserEvents(resolvedLogin, 100),
-				]);
+			const [
+				reposResult,
+				orgsResult,
+				contributionsResult,
+				eventsResult,
+				profileReadmeResult,
+			] = await Promise.allSettled([
+				getUserPublicRepos(resolvedLogin, 100),
+				getUserPublicOrgs(resolvedLogin),
+				getContributionData(resolvedLogin),
+				getUserEvents(resolvedLogin, 100),
+				getUserProfileReadme(resolvedLogin),
+			]);
 
 			if (reposResult.status === "fulfilled") reposData = reposResult.value;
 			if (orgsResult.status === "fulfilled") orgsData = orgsResult.value;
@@ -104,6 +113,9 @@ export default async function UserProfilePage({
 			}
 			if (eventsResult.status === "fulfilled")
 				activityEvents = eventsResult.value;
+			if (profileReadmeResult.status === "fulfilled") {
+				profileReadme = profileReadmeResult.value;
+			}
 
 			// Fetch top repos from the user's orgs (for scoring)
 			if (orgsData.length > 0) {
@@ -116,8 +128,20 @@ export default async function UserProfilePage({
 		}
 	}
 
+	const hasProfileReadme = profileReadme !== null;
+
 	return (
 		<UserProfileContent
+			hasProfileReadme={hasProfileReadme}
+			profileReadmePanel={
+				profileReadme ? (
+					<UserProfileReadmePanel
+						login={userData.login}
+						content={profileReadme.content}
+						branch={profileReadme.defaultBranch}
+					/>
+				) : null
+			}
 			user={{
 				login: userData.login,
 				name: userData.name ?? null,

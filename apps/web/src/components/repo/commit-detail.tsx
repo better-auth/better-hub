@@ -64,6 +64,8 @@ interface CommitData {
 interface CommitDetailProps {
 	owner: string;
 	repo: string;
+	/** e.g. `/s/owner/repo` for Code.Storage repos; default `/${owner}/${repo}` */
+	repoBasePath?: string;
 	commit: CommitData;
 	highlightData: Record<string, Record<string, SyntaxToken[]>>;
 }
@@ -89,7 +91,14 @@ const DEFAULT_SIDEBAR_WIDTH = 300;
 const MIN_SIDEBAR_WIDTH = 140;
 const MAX_SIDEBAR_WIDTH = 1000;
 
-export function CommitDetail({ owner, repo, commit, highlightData }: CommitDetailProps) {
+export function CommitDetail({
+	owner,
+	repo,
+	repoBasePath,
+	commit,
+	highlightData,
+}: CommitDetailProps) {
+	const base = repoBasePath ?? `/${owner}/${repo}`;
 	const [activeIndex, setActiveIndex] = useState(0);
 	const [wordWrap, setWordWrap] = useState(true);
 	const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
@@ -153,7 +162,7 @@ export function CommitDetail({ owner, repo, commit, highlightData }: CommitDetai
 	};
 
 	const copyLink = () => {
-		const url = `${window.location.origin}/${owner}/${repo}/commits/${commit.sha}`;
+		const url = `${window.location.origin}${base}/commits/${commit.sha}`;
 		navigator.clipboard.writeText(url);
 		setCopiedLink(true);
 		setTimeout(() => setCopiedLink(false), 2000);
@@ -306,7 +315,7 @@ export function CommitDetail({ owner, repo, commit, highlightData }: CommitDetai
 							{commit.parents.map((p) => (
 								<Link
 									key={p.sha}
-									href={`/${owner}/${repo}/commits/${p.sha}`}
+									href={`${base}/commits/${p.sha}`}
 									className="font-mono text-[11px] text-info hover:underline"
 								>
 									{p.sha.slice(0, 7)}

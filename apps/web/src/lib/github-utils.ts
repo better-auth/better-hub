@@ -489,6 +489,21 @@ function computeWordDiff(
 	return { oldSegments, newSegments };
 }
 
+/** Lines git emits before hunks; not file content. `---`/`+++` must be skipped before +/- hunk lines. */
+function isUnifiedDiffMetadataLine(line: string): boolean {
+	if (line.startsWith("diff --")) return true;
+	if (line.startsWith("index ")) return true;
+	if (/^(deleted|new) file mode \d+$/.test(line)) return true;
+	if (line.startsWith("old mode ") || line.startsWith("new mode ")) return true;
+	if (line.startsWith("similarity index ") || line.startsWith("dissimilarity index "))
+		return true;
+	if (line.startsWith("rename from ") || line.startsWith("rename to ")) return true;
+	if (line.startsWith("--- ") || line === "---") return true;
+	if (line.startsWith("+++ ") || line === "+++") return true;
+	if (line.startsWith("Binary files ") && line.endsWith(" differ")) return true;
+	return false;
+}
+
 export function parseDiffPatch(patch: string): DiffLine[] {
 	if (!patch) return [];
 	const lines = patch.split("\n");
@@ -497,6 +512,7 @@ export function parseDiffPatch(patch: string): DiffLine[] {
 	let newLine = 0;
 
 	for (const line of lines) {
+		if (isUnifiedDiffMetadataLine(line)) continue;
 		if (line.startsWith("@@")) {
 			const match = line.match(/@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
 			if (match) {

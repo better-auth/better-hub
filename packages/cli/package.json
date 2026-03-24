@@ -1,0 +1,35 @@
+{
+	"name": "@better-hub/cli",
+	"version": "0.1.0",
+	"description": "CLI for Better Hub — manage repos, auth, and more from your terminal",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/better-auth/better-hub.git",
+		"directory": "packages/cli"
+	},
+	"bin": {
+		"bh": "dist/index.js"
+	},
+	"files": [
+		"dist"
+	],
+	"type": "module",
+	"scripts": {
+		"dev": "bun run --watch src/index.ts --",
+		"build": "bun build src/index.ts --outdir dist --target node --format esm",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@clack/prompts": "^1.1.0",
+		"better-auth": "catalog:",
+		"commander": "^13.1.0",
+		"fzf": "^0.5.2",
+		"open": "^11.0.0",
+		"picocolors": "^1.1.1",
+		"terminal-link": "^5.0.0"
+	},
+	"devDependencies": {
+		"@types/node": "^25.3.0"
+	}
+}

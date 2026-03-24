@@ -18,10 +18,17 @@ import {
 interface CodeContentWrapperProps {
 	owner: string;
 	repo: string;
+	/** Defaults to `/${owner}/${repo}` */
+	repoBasePath?: string;
 	defaultBranch: string;
 	tree: FileTreeNode[] | null;
 	initialBranches?: { name: string }[] | null;
 	initialTags?: { name: string }[] | null;
+	/**
+	 * When false, branch/tag lists are not refreshed from GitHub (storage repos).
+	 * Blob/tree chrome omits GitHub clone/ZIP.
+	 */
+	githubIntegrations?: boolean;
 	children: React.ReactNode;
 }
 
@@ -32,11 +39,14 @@ function CloneDownloadButtons({
 	owner,
 	repo,
 	currentRef,
+	show,
 }: {
 	owner: string;
 	repo: string;
 	currentRef: string;
+	show: boolean;
 }) {
+	if (!show) return null;
 	const [showClone, setShowClone] = useState(false);
 	const [copied, setCopied] = useState(false);
 	const [cloneProtocol, setCloneProtocol] = useState<"https" | "ssh">("https");
@@ -144,14 +154,16 @@ function CloneDownloadButtons({
 export function CodeContentWrapper({
 	owner,
 	repo,
+	repoBasePath,
 	defaultBranch,
 	tree,
 	initialBranches,
 	initialTags,
+	githubIntegrations = true,
 	children,
 }: CodeContentWrapperProps) {
 	const pathname = usePathname();
-	const base = `/${owner}/${repo}`;
+	const base = repoBasePath ?? `/${owner}/${repo}`;
 
 	const isCodeRoute =
 		pathname === `${base}/code` ||
@@ -164,7 +176,7 @@ export function CodeContentWrapper({
 		initialData: initialBranches ?? undefined,
 		staleTime: 5 * 60 * 1000,
 		gcTime: 10 * 60 * 1000,
-		enabled: isCodeRoute,
+		enabled: githubIntegrations && isCodeRoute,
 	});
 
 	const { data: tags = [] } = useQuery({
@@ -173,7 +185,7 @@ export function CodeContentWrapper({
 		initialData: initialTags ?? undefined,
 		staleTime: 5 * 60 * 1000,
 		gcTime: 10 * 60 * 1000,
-		enabled: isCodeRoute,
+		enabled: githubIntegrations && isCodeRoute,
 	});
 
 	// Detail routes (e.g. /pulls/123, /issues/5, /people/username) manage their own scrolling
@@ -296,6 +308,7 @@ export function CodeContentWrapper({
 								tree={tree}
 								owner={owner}
 								repo={repo}
+								repoBasePath={base}
 								defaultBranch={defaultBranch}
 							/>
 						</div>
@@ -321,6 +334,7 @@ export function CodeContentWrapper({
 						<BranchSelector
 							owner={owner}
 							repo={repo}
+							repoBasePath={base}
 							currentRef={currentRef}
 							branches={branches}
 							tags={tags}
@@ -330,6 +344,7 @@ export function CodeContentWrapper({
 						<BreadcrumbNav
 							owner={owner}
 							repo={repo}
+							repoBasePath={base}
 							currentRef={currentRef}
 							path={currentPath}
 							isFile={pathType === "blob"}
@@ -338,6 +353,7 @@ export function CodeContentWrapper({
 							owner={owner}
 							repo={repo}
 							currentRef={currentRef}
+							show={githubIntegrations}
 						/>
 					</div>
 				)}

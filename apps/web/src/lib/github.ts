@@ -999,10 +999,10 @@ async function fetchContributionsFromGitHub(token: string, username: string) {
 
 	let timelineWeeks = calendar.weeks ?? [];
 	if (historicalYears.length > 0) {
-		const historicalQuery = `
+		const buildHistoricalCalendarQuery = (years: readonly number[]) => `
 			query($username: String!) {
 				user(login: $username) {
-					${historicalYears
+					${years
 						.map(
 							(year) => `
 					y${year}: contributionsCollection(
@@ -1025,32 +1025,57 @@ async function fetchContributionsFromGitHub(token: string, username: string) {
 			}
 		`;
 
-		const historicalResponse = await fetch("https://api.github.com/graphql", {
-			method: "POST",
-			headers: {
-				Authorization: `Bearer ${token}`,
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				query: historicalQuery,
-				variables: { username },
-			}),
-		});
+		/** Fewer years per request avoids GitHub GraphQL gateway timeouts (504). */
+		const HISTORICAL_YEARS_PER_REQUEST = 4;
 
-		if (historicalResponse.ok) {
+		const mergedDays = new Map<
+			string,
+			{ contributionCount: number; date: string; color: string }
+		>();
+		for (const week of calendar.weeks ?? []) {
+			for (const day of week.contributionDays ?? []) {
+				if (!day?.date) continue;
+				mergedDays.set(day.date, day);
+			}
+		}
+
+		for (
+			let batchStart = 0;
+			batchStart < historicalYears.length;
+			batchStart += HISTORICAL_YEARS_PER_REQUEST
+		) {
+			const chunkYears = historicalYears.slice(
+				batchStart,
+				batchStart + HISTORICAL_YEARS_PER_REQUEST,
+			);
+			const historicalQuery = buildHistoricalCalendarQuery(chunkYears);
+
+			const postHistoricalFetch = () =>
+				fetch("https://api.github.com/graphql", {
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${token}`,
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						query: historicalQuery,
+						variables: { username },
+					}),
+				});
+
+			let historicalResponse = await postHistoricalFetch();
+			if (!historicalResponse.ok && historicalResponse.status === 504) {
+				historicalResponse = await postHistoricalFetch();
+			}
+
+			if (!historicalResponse.ok) {
+				continue;
+			}
+
 			const historicalJson = await historicalResponse.json();
 			const historicalUser = historicalJson.data?.user ?? {};
-			const mergedDays = new Map<
-				string,
-				{ contributionCount: number; date: string; color: string }
-			>();
-			for (const week of calendar.weeks ?? []) {
-				for (const day of week.contributionDays ?? []) {
-					if (!day?.date) continue;
-					mergedDays.set(day.date, day);
-				}
-			}
-			for (const year of historicalYears) {
+
+			for (const year of chunkYears) {
 				const yearWeeks =
 					historicalUser?.[`y${year}`]?.contributionCalendar?.weeks ??
 					[];
@@ -1062,24 +1087,25 @@ async function fetchContributionsFromGitHub(token: string, username: string) {
 					}
 				}
 			}
-			const orderedDays = [...mergedDays.values()].sort((a, b) =>
-				a.date.localeCompare(b.date),
-			);
-			const rebuiltWeeks: Array<{
-				contributionDays: Array<{
-					contributionCount: number;
-					date: string;
-					color: string;
-				}>;
-			}> = [];
-			for (let i = 0; i < orderedDays.length; i += 7) {
-				rebuiltWeeks.push({
-					contributionDays: orderedDays.slice(i, i + 7),
-				});
-			}
-			if (rebuiltWeeks.length > 0) {
-				timelineWeeks = rebuiltWeeks;
-			}
+		}
+
+		const orderedDays = [...mergedDays.values()].sort((a, b) =>
+			a.date.localeCompare(b.date),
+		);
+		const rebuiltWeeks: Array<{
+			contributionDays: Array<{
+				contributionCount: number;
+				date: string;
+				color: string;
+			}>;
+		}> = [];
+		for (let i = 0; i < orderedDays.length; i += 7) {
+			rebuiltWeeks.push({
+				contributionDays: orderedDays.slice(i, i + 7),
+			});
+		}
+		if (rebuiltWeeks.length > 0) {
+			timelineWeeks = rebuiltWeeks;
 		}
 	}
 
@@ -2683,7 +2709,7 @@ export async function getContributionData(username: string) {
 	const authCtx = await getGitHubAuthContext();
 	return readLocalFirstGitData({
 		authCtx,
-		cacheKey: buildContributionsCacheKey(username) + Date.now(),
+		cacheKey: buildContributionsCacheKey(username),
 		cacheType: "contributions",
 		fallback: null,
 		jobType: "contributions",
@@ -2962,6 +2988,26 @@ export async function getRepoReadme(owner: string, repo: string, ref?: string) {
 		fetchRemote: (octokit) =>
 			fetchRepoReadmeFromGitHub(octokit, owner, repo, normalizedRef || undefined),
 	});
+}
+
+/**
+ * GitHub profile README: public `login/login` repository owned by the user (not a fork) with a README.
+ */
+export async function getUserProfileReadme(login: string): Promise<{
+	content: string;
+	defaultBranch: string;
+} | null> {
+	const repo = await getRepo(login, login);
+	if (!repo || repo.private || repo.fork) return null;
+	const defaultBranch =
+		typeof repo.default_branch === "string" && repo.default_branch.length > 0
+			? repo.default_branch
+			: "main";
+	const readme = await getRepoReadme(login, login, defaultBranch);
+	if (!readme || typeof readme.content !== "string" || readme.content.trim().length === 0) {
+		return null;
+	}
+	return { content: readme.content, defaultBranch };
 }
 
 export async function getPullRequest(owner: string, repo: string, pullNumber: number) {

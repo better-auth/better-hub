@@ -3,7 +3,7 @@
 import {
 	ArrowRight,
 	Check,
-	Chrome,
+	Globe,
 	Download,
 	Flame,
 	Puzzle,
@@ -50,7 +50,7 @@ const STEPS = [
 		title: "Load the extension",
 		description:
 			'Click "Load unpacked" in the top-left area, then select the unzipped folder. The Better Hub extension will appear in your extensions list.',
-		icon: Chrome,
+		icon: Globe,
 	},
 	{
 		number: "06",
@@ -95,7 +95,7 @@ const FIREFOX_STEPS = [
 		title: "Load temporary add-on",
 		description:
 			'Click "Load Temporary Add-on" and select the manifest in the unzipped folder. The Better Hub extension will appear in your add-ons list.',
-		icon: Chrome,
+		icon: Globe,
 	},
 	{
 		number: "06",
@@ -143,7 +143,7 @@ export function ExtensionPageContent() {
 					{/* Extension icon */}
 					<div className="shrink-0 w-16 h-16 rounded-xl bg-gradient-to-br from-card to-muted border border-border flex items-center justify-center">
 						{browser === "chrome" ? (
-							<Chrome className="w-7 h-7 text-foreground/80" />
+							<Globe className="w-7 h-7 text-foreground/80" />
 						) : (
 							<Flame className="w-7 h-7 text-foreground/80" />
 						)}
@@ -172,7 +172,7 @@ export function ExtensionPageContent() {
 										: "bg-muted text-muted-foreground hover:bg-muted/80",
 								)}
 							>
-								<Chrome className="w-3 h-3" />
+								<Globe className="w-3 h-3" />
 								Chrome
 							</button>
 							<button

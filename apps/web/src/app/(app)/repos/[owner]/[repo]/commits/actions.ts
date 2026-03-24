@@ -104,6 +104,7 @@ export async function fetchCommitDetail(
 	owner: string,
 	repo: string,
 	sha: string,
+	_branch?: string,
 ): Promise<{
 	commit: CommitDetailData | null;
 	highlightData: Record<string, Record<string, SyntaxToken[]>>;

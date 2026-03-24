@@ -1,6 +1,7 @@
 "use client";
 
 import { ContributionChart } from "@/components/dashboard/contribution-chart";
+import { ContributionInsightCharts } from "@/components/users/contribution-insight-charts";
 import { RepoBadge } from "@/components/repo/repo-badge";
 import { XIcon } from "@/components/shared/icons/x-icon";
 import { TimeAgo } from "@/components/ui/time-ago";
@@ -14,6 +15,7 @@ import { cn, formatNumber } from "@/lib/utils";
 import {
 	Activity,
 	ArrowUpDown,
+	BookOpen,
 	Building2,
 	CalendarDays,
 	ChevronRight,
@@ -23,14 +25,24 @@ import {
 	Link2,
 	MapPin,
 	Search,
+	Flame,
 	Star,
 	Users,
 	X,
+	type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+	type ReactNode,
+} from "react";
 
 // !TODO: Last item in languages row should take up remaining space on mobile for a cleaner look
 // !TODO: Better input handling of contribution graph on mobile
@@ -92,7 +104,7 @@ const filterTypes = ["all", "sources", "forks", "archived"] as const;
 
 const sortTypes = ["updated", "name", "stars"] as const;
 
-const tabTypes = ["repositories", "activity"] as const;
+const profileTabTypes = ["readme", "repositories", "activity"] as const;
 
 function formatJoinedDate(value: string | null): string | null {
 	if (!value) return null;
@@ -102,6 +114,13 @@ function formatJoinedDate(value: string | null): string | null {
 		year: "numeric",
 		month: "short",
 	});
+}
+
+function previousUtcDateString(ymd: string): string {
+	const [y, m, d] = ymd.split("-").map(Number);
+	const dt = new Date(Date.UTC(y, m - 1, d));
+	dt.setUTCDate(dt.getUTCDate() - 1);
+	return dt.toISOString().slice(0, 10);
 }
 
 export interface OrgTopRepo {
@@ -119,6 +138,8 @@ export function UserProfileContent({
 	contributions,
 	activityEvents = [],
 	orgTopRepos = [],
+	hasProfileReadme = false,
+	profileReadmePanel = null,
 }: {
 	user: UserProfile;
 	repos: UserRepo[];
@@ -126,11 +147,21 @@ export function UserProfileContent({
 	contributions: ContributionData | null;
 	activityEvents?: ActivityEvent[];
 	orgTopRepos?: OrgTopRepo[];
+	hasProfileReadme?: boolean;
+	profileReadmePanel?: ReactNode;
 }) {
 	const [tab, setTab] = useQueryState(
 		"tab",
-		parseAsStringLiteral(tabTypes).withDefault("repositories"),
+		parseAsStringLiteral(profileTabTypes).withDefault(
+			hasProfileReadme ? "readme" : "repositories",
+		),
 	);
+
+	useEffect(() => {
+		if (!hasProfileReadme && tab === "readme") {
+			void setTab("repositories");
+		}
+	}, [hasProfileReadme, tab, setTab]);
 	const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
 	const [filter, setFilter] = useQueryState(
 		"filter",
@@ -146,6 +177,14 @@ export function UserProfileContent({
 
 	const currentYear = new Date().getFullYear();
 	const activeYear = selectedYear ?? currentYear;
+
+	const calendarMeasureRef = useRef<HTMLDivElement>(null);
+	const [activityYearStripMaxPx, setActivityYearStripMaxPx] = useState<number | null>(null);
+	const activityYearScrollRef = useRef<HTMLDivElement>(null);
+	const [activityYearCanScrollLeft, setActivityYearCanScrollLeft] = useState(false);
+	const [activityYearCanScrollRight, setActivityYearCanScrollRight] = useState(false);
+	const activityYearStripScrolledToEndRef = useRef(false);
+	const activityYearStripScrollProfileLoginRef = useRef<string | null>(null);
 
 	const filteredContributions = useMemo(() => {
 		if (!contributions) return null;
@@ -222,21 +261,23 @@ export function UserProfileContent({
 
 		const allDays = filteredContributions.weeks.flatMap((w) => w.contributionDays);
 		const activeDays = allDays.filter((d) => d.contributionCount > 0).length;
-		const maxDay = allDays.reduce(
-			(max, day) => (day.contributionCount > max.contributionCount ? day : max),
-			allDays[0] || { contributionCount: 0, date: "" },
-		);
 
-		// Calculate current streak (from today backwards)
+		// Current streak: walk backward from today; skip zero days until the last activity,
+		// then count consecutive days with contributions (matches “streak” when today is empty).
 		const today = new Date().toISOString().split("T")[0];
-		const sortedDaysDesc = [...allDays].sort((a, b) => b.date.localeCompare(a.date));
+		const countByDate = new Map(
+			allDays.map((day) => [day.date, day.contributionCount]),
+		);
+		let anchor = today;
+		while (countByDate.has(anchor) && (countByDate.get(anchor) ?? 0) === 0) {
+			anchor = previousUtcDateString(anchor);
+		}
 		let currentStreak = 0;
-		for (const day of sortedDaysDesc) {
-			if (day.date > today) continue;
-			if (day.contributionCount > 0) {
+		if (countByDate.has(anchor) && (countByDate.get(anchor) ?? 0) > 0) {
+			let d = anchor;
+			while (countByDate.has(d) && (countByDate.get(d) ?? 0) > 0) {
 				currentStreak++;
-			} else {
-				break;
+				d = previousUtcDateString(d);
 			}
 		}
 
@@ -255,19 +296,122 @@ export function UserProfileContent({
 
 		return {
 			activeDays,
-			totalDays: allDays.length,
-			maxDay,
 			currentStreak,
 			bestStreak,
-			avgPerActiveDay:
-				activeDays > 0
-					? Math.round(
-							filteredContributions.totalContributions /
-								activeDays,
-						)
-					: 0,
 		};
 	}, [filteredContributions]);
+
+	useLayoutEffect(() => {
+		if (!contributions || !filteredContributions) {
+			setActivityYearStripMaxPx(null);
+			return;
+		}
+		const el = calendarMeasureRef.current;
+		if (!el) {
+			setActivityYearStripMaxPx(null);
+			return;
+		}
+		const mq = window.matchMedia("(min-width: 1024px)");
+		const update = () => {
+			const w = Math.round(el.getBoundingClientRect().width);
+			setActivityYearStripMaxPx(mq.matches ? w : null);
+		};
+		update();
+		const ro = new ResizeObserver(update);
+		ro.observe(el);
+		mq.addEventListener("change", update);
+		return () => {
+			ro.disconnect();
+			mq.removeEventListener("change", update);
+		};
+	}, [contributions, filteredContributions, activeYear]);
+
+	const updateActivityYearScrollShadow = useCallback(() => {
+		const el = activityYearScrollRef.current;
+		if (!el) {
+			setActivityYearCanScrollLeft(false);
+			setActivityYearCanScrollRight(false);
+			return;
+		}
+		const { scrollLeft, clientWidth, scrollWidth } = el;
+		const epsilon = 2;
+		const maxScroll = scrollWidth - clientWidth;
+		setActivityYearCanScrollLeft(scrollLeft > epsilon);
+		setActivityYearCanScrollRight(
+			maxScroll > epsilon && scrollLeft < maxScroll - epsilon,
+		);
+	}, []);
+
+	useLayoutEffect(() => {
+		if (activityYearStripScrollProfileLoginRef.current !== user.login) {
+			activityYearStripScrollProfileLoginRef.current = user.login;
+			activityYearStripScrolledToEndRef.current = false;
+		}
+
+		updateActivityYearScrollShadow();
+		const el = activityYearScrollRef.current;
+		if (!el) return;
+
+		const tryScrollYearStripToEnd = () => {
+			if (activityYearStripScrolledToEndRef.current) {
+				return;
+			}
+			const years = contributions?.contributionYears;
+			if (!years || years.length <= 1) {
+				return;
+			}
+			if (el.scrollWidth <= el.clientWidth + 1) {
+				return;
+			}
+			el.scrollLeft = el.scrollWidth - el.clientWidth;
+			activityYearStripScrolledToEndRef.current = true;
+			updateActivityYearScrollShadow();
+		};
+
+		tryScrollYearStripToEnd();
+
+		const ro = new ResizeObserver(() => {
+			updateActivityYearScrollShadow();
+			tryScrollYearStripToEnd();
+		});
+		ro.observe(el);
+		return () => ro.disconnect();
+	}, [
+		user.login,
+		updateActivityYearScrollShadow,
+		contributions,
+		activityYearStripMaxPx,
+		activeYear,
+	]);
+
+	const contributionStatItems = useMemo(
+		(): {
+			key: string;
+			label: string;
+			value: string;
+			icon: LucideIcon;
+		}[] => [
+			{
+				key: "contributions",
+				label: "Contributions",
+				value: formatNumber(filteredContributions?.totalContributions ?? 0),
+				icon: Activity,
+			},
+			{
+				key: "active",
+				label: "Active days",
+				value: formatNumber(yearStats?.activeDays ?? 0),
+				icon: CalendarDays,
+			},
+			{
+				key: "streak",
+				label: "Longest streak",
+				value: formatNumber(yearStats?.bestStreak ?? 0),
+				icon: Flame,
+			},
+		],
+		[filteredContributions, yearStats],
+	);
 
 	const moreLanguagesRef = useRef<HTMLDivElement | null>(null);
 	const moreLanguagesMenuRef = useRef<HTMLDivElement | null>(null);
@@ -474,9 +618,9 @@ export function UserProfileContent({
 	}, [user, repos, orgs, contributions, totalStars, totalForks, orgTopRepos]);
 
 	return (
-		<div className="flex flex-col lg:flex-row gap-8 flex-1 min-h-0 pb-2">
+		<div className="flex flex-col lg:flex-row gap-8 flex-1 min-h-0 pb-2 px-4 sm:px-6 lg:px-8">
 			{/* ── Left sidebar ── */}
-			<aside className="shrink-0 lg:w-70 lg:sticky lg:top-4 lg:self-start px-2 lg:pl-4">
+			<aside className="shrink-0 lg:w-70 lg:sticky lg:top-4 lg:self-start">
 				{/* Avatar + identity */}
 				<div className="flex flex-col items-center lg:items-start">
 					<div className="relative group">
@@ -704,157 +848,244 @@ export function UserProfileContent({
 			</aside>
 
 			{/* ── Main content ── */}
-			<main className="flex-1 min-w-0 flex flex-col min-h-0 lg:overflow-y-auto px-2 lg:pr-4 pr-1">
-				{/* Overview stats header */}
-				<div className="shrink-0 mb-4">
-					<div className="flex items-center justify-between mb-3">
-						<h2 className="text-sm font-medium">
-							{activeYear} Overview
-						</h2>
-						{yearStats &&
-							(activeYear === currentYear
-								? yearStats.currentStreak > 0 && (
-										<div className="flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground">
-											<span className="w-2 h-2 rounded-full bg-(--contrib-3)" />
-											{
-												yearStats.currentStreak
-											}{" "}
-											day streak
+			<main className="flex-1 min-w-0 flex flex-col min-h-0 lg:overflow-y-auto">
+				{/* Contribution chart, year stats, and insight charts */}
+				<div className="shrink-0 mb-4 pt-5 sm:pt-6">
+					{contributions && filteredContributions ? (
+						<div className="grid w-full grid-cols-1 gap-4 xl:grid-cols-[max-content_minmax(22rem,1fr)] xl:items-stretch xl:gap-4">
+							{/* Calendar + year stats (one card); hugs width beside insights on xl */}
+							<div className="flex min-h-0 w-full max-w-full flex-col lg:w-max xl:h-full xl:min-h-0">
+								<div className="flex min-h-0 flex-1 flex-col overflow-x-hidden rounded-md border border-border bg-card/50 p-4">
+									{contributions.contributionYears &&
+										contributions
+											.contributionYears
+											.length >
+											1 && (
+											<div
+												className="relative mb-3 min-w-0"
+												style={
+													activityYearStripMaxPx !=
+													null
+														? {
+																maxWidth: activityYearStripMaxPx,
+															}
+														: undefined
+												}
+											>
+												<div
+													className={cn(
+														"pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-card/80 to-transparent transition-opacity duration-200",
+														activityYearCanScrollLeft
+															? "opacity-100"
+															: "opacity-0",
+													)}
+													aria-hidden
+												/>
+												<div
+													className={cn(
+														"pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-card/80 to-transparent transition-opacity duration-200",
+														activityYearCanScrollRight
+															? "opacity-100"
+															: "opacity-0",
+													)}
+													aria-hidden
+												/>
+												<div
+													ref={
+														activityYearScrollRef
+													}
+													className="no-scrollbar flex min-w-0 items-center gap-1 overflow-x-auto"
+													onScroll={
+														updateActivityYearScrollShadow
+													}
+												>
+													<span className="mr-2 shrink-0 text-[10px] font-mono uppercase tracking-wider text-muted-foreground/50">
+														Activity
+													</span>
+													<div className="flex shrink-0 items-center">
+														{[
+															...contributions.contributionYears,
+														]
+															.sort(
+																(
+																	a,
+																	b,
+																) =>
+																	a -
+																	b,
+															)
+															.map(
+																(
+																	year,
+																	index,
+																) => (
+																	<div
+																		key={
+																			year
+																		}
+																		className="flex items-center"
+																	>
+																		{index >
+																			0 && (
+																			<div className="mx-1 h-px w-3 bg-border" />
+																		)}
+																		<button
+																			type="button"
+																			onClick={() =>
+																				setSelectedYear(
+																					year ===
+																						currentYear
+																						? null
+																						: year,
+																				)
+																			}
+																			className={cn(
+																				"cursor-pointer rounded-sm px-2 py-1 text-[11px] font-mono transition-colors",
+																				activeYear ===
+																					year
+																					? "bg-muted/60 text-foreground dark:bg-white/6"
+																					: "text-muted-foreground hover:bg-muted/40 hover:text-foreground dark:hover:bg-white/3",
+																			)}
+																		>
+																			{
+																				year
+																			}
+																		</button>
+																	</div>
+																),
+															)}
+													</div>
+												</div>
+											</div>
+										)}
+									<div className="flex min-w-0 flex-col gap-3">
+										<div className="min-w-0 shrink-0">
+											<ContributionChart
+												calendarMeasureRef={
+													calendarMeasureRef
+												}
+												data={
+													filteredContributions
+												}
+												streak={
+													yearStats
+														? activeYear ===
+															currentYear
+															? yearStats.currentStreak >
+																0
+																? {
+																		kind: "current",
+																		count: yearStats.currentStreak,
+																	}
+																: null
+															: yearStats.bestStreak >
+																  0
+																? {
+																		kind: "best",
+																		count: yearStats.bestStreak,
+																	}
+																: null
+														: null
+												}
+											/>
 										</div>
-									)
-								: yearStats.bestStreak > 0 && (
-										<div className="flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground">
-											<span className="w-2 h-2 rounded-full bg-(--contrib-2)" />
-											{
-												yearStats.bestStreak
-											}{" "}
-											day best
-											streak
-										</div>
-									))}
-					</div>
-					<div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-						<div className="border border-border rounded-md p-3 bg-card/50">
-							<div className="text-lg font-semibold tabular-nums">
-								{formatNumber(
-									filteredContributions?.totalContributions ??
-										0,
-								)}
-							</div>
-							<div className="text-[10px] text-muted-foreground/60 font-mono uppercase tracking-wider mt-0.5">
-								Contributions
-							</div>
-						</div>
-						<div className="border border-border rounded-md p-3 bg-card/50">
-							<div className="text-lg font-semibold tabular-nums">
-								{yearStats?.activeDays ?? 0}
-							</div>
-							<div className="text-[10px] text-muted-foreground/60 font-mono uppercase tracking-wider mt-0.5">
-								Active Days
-							</div>
-						</div>
-						<div className="border border-border rounded-md p-3 bg-card/50">
-							<div className="text-lg font-semibold tabular-nums">
-								{yearStats?.avgPerActiveDay ?? 0}
-							</div>
-							<div className="text-[10px] text-muted-foreground/60 font-mono uppercase tracking-wider mt-0.5">
-								Avg per Day
-							</div>
-						</div>
-						<div className="border border-border rounded-md p-3 bg-card/50">
-							<div className="text-lg font-semibold tabular-nums">
-								{yearStats?.maxDay
-									?.contributionCount ?? 0}
-							</div>
-							<div className="text-[10px] text-muted-foreground/60 font-mono uppercase tracking-wider mt-0.5">
-								Best Day
-							</div>
-						</div>
-					</div>
-				</div>
-
-				{/* Contribution chart with year timeline */}
-				{contributions && (
-					<div className="shrink-0 mb-4 border border-border rounded-md p-4 bg-card/50 overflow-hidden">
-						{/* Year timeline */}
-						{contributions.contributionYears &&
-							contributions.contributionYears.length >
-								1 && (
-								<div className="mb-4 pb-3 border-b border-border">
-									<div className="flex items-center gap-1 overflow-x-auto">
-										<span className="text-[10px] text-muted-foreground/50 font-mono uppercase tracking-wider mr-2 shrink-0">
-											Activity
-										</span>
-										<div className="flex items-center">
-											{[
-												...contributions.contributionYears,
-											]
-												.sort(
-													(
-														a,
-														b,
-													) =>
-														a -
-														b,
-												)
-												.map(
-													(
-														year,
-														index,
-													) => (
+										<div className="grid w-full shrink-0 grid-cols-1 gap-2 border-t border-border/60 pt-3 min-[420px]:grid-cols-3">
+											{contributionStatItems.map(
+												(
+													s,
+												) => {
+													const Icon =
+														s.icon;
+													return (
 														<div
 															key={
-																year
+																s.key
 															}
-															className="flex items-center"
+															className="flex items-center gap-2 rounded-md bg-muted/35 px-2 py-1.5 dark:bg-white/[0.04]"
 														>
-															{index >
-																0 && (
-																<div className="w-3 mx-1 h-px bg-border" />
-															)}
-															<button
-																onClick={() =>
-																	setSelectedYear(
-																		year ===
-																			currentYear
-																			? null
-																			: year,
-																	)
-																}
-																className={cn(
-																	"px-2 py-1 text-[11px] font-mono rounded-sm transition-colors cursor-pointer",
-																	activeYear ===
-																		year
-																		? "bg-muted/60 dark:bg-white/6 text-foreground"
-																		: "text-muted-foreground hover:text-foreground hover:bg-muted/40 dark:hover:bg-white/3",
-																)}
-															>
-																{
-																	year
-																}
-															</button>
+															<div className="flex size-7 shrink-0 items-center justify-center rounded border border-border/60 bg-background/70 text-muted-foreground dark:bg-black/20">
+																<Icon
+																	className="size-3.5"
+																	strokeWidth={
+																		1.75
+																	}
+																	aria-hidden
+																/>
+															</div>
+															<div className="min-w-0 flex-1 leading-tight">
+																<div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground/65">
+																	{
+																		s.label
+																	}
+																</div>
+																<div className="mt-0.5 text-sm font-semibold tabular-nums tracking-tight">
+																	{
+																		s.value
+																	}
+																</div>
+															</div>
 														</div>
-													),
-												)}
+													);
+												},
+											)}
 										</div>
 									</div>
 								</div>
-							)}
-						{filteredContributions && (
-							<ContributionChart
-								data={filteredContributions}
-							/>
-						)}
-					</div>
-				)}
+							</div>
+
+							<div className="flex min-h-0 w-full min-w-0 flex-col xl:h-full">
+								<ContributionInsightCharts
+									weeks={
+										filteredContributions.weeks
+									}
+								/>
+							</div>
+						</div>
+					) : (
+						<div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
+							{contributionStatItems.map((s) => (
+								<div
+									key={s.key}
+									className="border border-border rounded-md bg-card/50 px-2.5 py-2"
+								>
+									<div className="text-sm font-semibold tabular-nums leading-none">
+										{s.value}
+									</div>
+									<div className="text-[9px] text-muted-foreground/60 font-mono uppercase tracking-wider mt-1">
+										{s.label}
+									</div>
+								</div>
+							))}
+						</div>
+					)}
+				</div>
 
 				{/* Tab switcher */}
 				<div className="shrink-0 mb-4">
 					<div className="flex items-center border border-border divide-x divide-border rounded-sm lg:w-fit">
+						{hasProfileReadme && (
+							<button
+								type="button"
+								onClick={() => setTab("readme")}
+								className={cn(
+									"flex-1 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer lg:rounded-l-md",
+									tab === "readme"
+										? "bg-muted/50 dark:bg-white/4 text-foreground"
+										: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
+								)}
+							>
+								<BookOpen className="w-3.5 h-3.5" />
+								README
+							</button>
+						)}
 						<button
+							type="button"
 							onClick={() => setTab("repositories")}
 							className={cn(
-								"flex-1 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer lg:rounded-l-md",
+								"flex-1 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
+								hasProfileReadme
+									? "lg:rounded-none"
+									: "lg:rounded-l-md",
 								tab === "repositories"
 									? "bg-muted/50 dark:bg-white/4 text-foreground"
 									: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
@@ -867,6 +1098,7 @@ export function UserProfileContent({
 							</span>
 						</button>
 						<button
+							type="button"
 							onClick={() => setTab("activity")}
 							className={cn(
 								"flex-1 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer lg:rounded-r-md",
@@ -881,13 +1113,15 @@ export function UserProfileContent({
 					</div>
 				</div>
 
+				{tab === "readme" && hasProfileReadme && profileReadmePanel}
+
 				{tab === "repositories" && (
 					<>
 						{/* Search & filters */}
 						<div className="shrink-0">
 							<div className="flex flex-col gap-2 lg:mb-3 sm:flex-row sm:items-center">
 								<div className="relative flex-1">
-									<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50" />
+									<Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground/50" />
 									<input
 										type="text"
 										placeholder="Find a repository..."
@@ -907,12 +1141,12 @@ export function UserProfileContent({
 													null,
 												);
 										}}
-										className="w-full bg-transparent border border-border pl-9 pr-4 py-2 text-base lg:text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground/20 focus:ring-[3px] focus:ring-ring/50 transition-colors rounded-none lg:rounded-md font-mono"
+										className="box-border h-8 w-full rounded-none border border-border bg-transparent pr-3 pl-8 font-mono text-sm leading-8 placeholder:text-muted-foreground transition-colors focus:border-foreground/20 focus:outline-none focus:ring-[3px] focus:ring-ring/50 lg:rounded-md"
 									/>
 								</div>
 
-								<div className="flex items-center gap-2 w-full justify-between sm:justify-start sm:w-auto">
-									<div className="flex items-center border border-border divide-x divide-border rounded-md shrink-0">
+								<div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
+									<div className="flex shrink-0 items-center divide-x divide-border rounded-md border border-border">
 										{(
 											[
 												[
@@ -947,11 +1181,11 @@ export function UserProfileContent({
 														)
 													}
 													className={cn(
-														"px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
+														"cursor-pointer px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider transition-colors",
 														filter ===
 															value
 															? "bg-muted/50 dark:bg-white/4 text-foreground"
-															: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
+															: "text-muted-foreground hover:bg-muted/60 hover:text-foreground/60 dark:hover:bg-white/3",
 													)}
 												>
 													{
@@ -977,7 +1211,7 @@ export function UserProfileContent({
 															: "updated",
 											)
 										}
-										className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground border border-border hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors cursor-pointer rounded-md shrink-0"
+										className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground/60 dark:hover:bg-white/3"
 									>
 										<ArrowUpDown className="w-3 h-3" />
 										{sort === "updated"

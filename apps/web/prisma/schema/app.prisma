@@ -1,116 +1,3 @@
-
-generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
-}
-
-datasource db {
-  provider = "postgresql"
-}
-
-model User {
-  id             String   @id
-  name           String
-  email          String
-  githubPat      String?
-  onboardingDone Boolean  @default(false)
-  emailVerified  Boolean
-  image          String?
-  createdAt      DateTime
-  updatedAt      DateTime
-
-  sessions   Session[]
-  accounts   Account[]
-  usageLogs    UsageLog[]
-  aiCallLogs   AiCallLog[]
-  creditLedger CreditLedger[]
-
-  aiMessageCount Int       @default(0)
-  lastActiveAt   DateTime?
-  role           String?
-  banned         Boolean?  @default(false)
-  banReason      String?
-  banExpires     DateTime?
-
-  stripeCustomerId String?
-
-  @@map("user")
-  @@index([githubPat, email])
-}
-
-model Session {
-  id        String   @id
-  expiresAt DateTime
-  token     String   @unique
-  createdAt DateTime
-  updatedAt DateTime
-  ipAddress String?
-  userAgent String?
-  userId    String
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  impersonatedBy String?
-
-  @@map("session")
-  @@index([userId, expiresAt])
-}
-
-model Account {
-  id                    String    @id
-  accountId             String
-  providerId            String
-  userId                String
-  accessToken           String?
-  refreshToken          String?
-  idToken               String?
-  accessTokenExpiresAt  DateTime?
-  refreshTokenExpiresAt DateTime?
-  scope                 String?
-  password              String?
-  createdAt             DateTime
-  updatedAt             DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("account")
-  @@index([userId, providerId])
-}
-
-model Verification {
-  id         String    @id
-  identifier String
-  value      String
-  expiresAt  DateTime
-  createdAt  DateTime?
-  updatedAt  DateTime?
-
-  @@map("verification")
-  @@index([identifier, expiresAt])
-}
-
-model Subscription {
-  id                   String    @id
-  plan                 String
-  referenceId          String
-  stripeCustomerId     String?
-  stripeSubscriptionId String?
-  status               String?   @default("incomplete")
-  periodStart          DateTime?
-  periodEnd            DateTime?
-  trialStart           DateTime?
-  trialEnd             DateTime?
-  cancelAtPeriodEnd    Boolean?  @default(false)
-  cancelAt             DateTime?
-  canceledAt           DateTime?
-  endedAt              DateTime?
-  seats                Int?
-  billingInterval      String?
-  stripeScheduleId     String?
-
-  @@map("subscription")
-}
-
 model GithubCacheEntry {
   userId    String
   cacheKey  String
@@ -263,14 +150,14 @@ model PinnedItem {
 }
 
 model UsageLog {
-  id              String   @id @default(cuid())
-  userId          String
-  taskType        String
-  costUsd         Decimal  @default(0) @db.Decimal(10, 6)
-  creditUsed      Decimal  @default(0) @db.Decimal(10, 6)
-  aiCallLogId     Int?     @unique
-  stripeReported  Boolean  @default(false)
-  createdAt       DateTime @default(now())
+  id             String   @id @default(cuid())
+  userId         String
+  taskType       String
+  costUsd        Decimal  @default(0) @db.Decimal(10, 6)
+  creditUsed     Decimal  @default(0) @db.Decimal(10, 6)
+  aiCallLogId    Int?     @unique
+  stripeReported Boolean  @default(false)
+  createdAt      DateTime @default(now())
 
   aiCallLog AiCallLog? @relation(fields: [aiCallLogId], references: [id])
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -319,13 +206,12 @@ model CreditLedger {
 
 model SpendingLimit {
   userId        String   @id
-  monthlyCapUsd Decimal  @db.Decimal(10, 2) @default(10.00)
+  monthlyCapUsd Decimal  @default(10.00) @db.Decimal(10, 2)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@map("spending_limit")
 }
-
 
 model PromptRequest {
   id             String  @id
@@ -349,7 +235,7 @@ model PromptRequest {
 }
 
 model PromptRequestComment {
-  id              String @id
+  id              String  @id
   promptRequestId String
   userId          String
   userLogin       String?
@@ -365,7 +251,7 @@ model PromptRequestComment {
 }
 
 model PromptRequestReaction {
-  id              String @id
+  id              String  @id
   promptRequestId String
   userId          String
   userLogin       String?
