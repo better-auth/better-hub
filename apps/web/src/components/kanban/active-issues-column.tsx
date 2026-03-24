@@ -121,7 +121,7 @@ export function ActiveIssuesColumn({
 	);
 
 	return (
-		<div className="flex flex-col w-72 shrink-0 outline-none">
+		<div className="flex flex-col w-72 shrink-0 min-h-0 outline-none">
 			<div className="flex items-center justify-between mb-2 px-1">
 				<h2 className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
 					<span className="text-blue-500">
@@ -138,7 +138,7 @@ export function ActiveIssuesColumn({
 			<div
 				ref={scrollRef}
 				className={cn(
-					"flex-1 min-h-[200px] p-2 rounded-lg border border-border/50",
+					"flex-1 min-h-0 p-2 rounded-lg border border-border/50",
 					"bg-blue-500/5 transition-colors overflow-y-auto",
 				)}
 			>

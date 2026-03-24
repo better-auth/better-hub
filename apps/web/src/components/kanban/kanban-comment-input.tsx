@@ -20,19 +20,19 @@ export function KanbanCommentInput({
 	onSubmit,
 	isSubmitting = false,
 	placeholder = "Leave a comment...",
-	rows = 3,
+	rows = 4,
 	variant = "default",
 }: KanbanCommentInputProps) {
 	const isCompact = variant === "compact";
 
 	return (
-		<div className="rounded-lg border border-border overflow-hidden">
+		<div className="rounded-none border-y border-x-0 border-border overflow-hidden">
 			<MarkdownEditor
 				value={value}
 				onChange={onChange}
 				placeholder={placeholder}
 				rows={rows}
-				className={cn("border-none", isCompact && "text-xs")}
+				className={cn("border-none rounded-none", isCompact && "text-xs")}
 				resizeYIndicator={false}
 				onKeyDown={(e) => {
 					if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {

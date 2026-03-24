@@ -34,6 +34,8 @@ export interface KanbanItem {
 	assigneeAvatar: string | null;
 	kanbanAssigneeLogin: string | null;
 	kanbanAssigneeAvatar: string | null;
+	authorLogin: string | null;
+	authorAvatar: string | null;
 	labels: KanbanLabel[];
 	issueCommentCount: number;
 	issueState: "open" | "closed";
@@ -56,6 +58,8 @@ function toKanbanItem(row: {
 	assigneeAvatar: string | null;
 	kanbanAssigneeLogin: string | null;
 	kanbanAssigneeAvatar: string | null;
+	authorLogin: string | null;
+	authorAvatar: string | null;
 	labels: string | null;
 	issueCommentCount: number;
 	issueState: string;
@@ -95,6 +99,8 @@ function toKanbanItem(row: {
 		assigneeAvatar: row.assigneeAvatar,
 		kanbanAssigneeLogin: row.kanbanAssigneeLogin,
 		kanbanAssigneeAvatar: row.kanbanAssigneeAvatar,
+		authorLogin: row.authorLogin,
+		authorAvatar: row.authorAvatar,
 		labels: parsedLabels,
 		issueCommentCount: row.issueCommentCount,
 		issueState: row.issueState as "open" | "closed",
@@ -113,6 +119,8 @@ export async function createKanbanItem(
 	issueBody: string | null,
 	assigneeLogin: string | null,
 	assigneeAvatar: string | null,
+	authorLogin: string | null,
+	authorAvatar: string | null,
 	labels: KanbanLabel[] = [],
 	issueCommentCount: number = 0,
 	issueState: "open" | "closed" = "open",
@@ -133,6 +141,8 @@ export async function createKanbanItem(
 			status: "backlog",
 			assigneeLogin,
 			assigneeAvatar,
+			authorLogin,
+			authorAvatar,
 			labels: JSON.stringify(labels),
 			issueCommentCount,
 			issueState,
@@ -237,6 +247,8 @@ export async function syncKanbanItemFromIssue(
 	issueBody: string | null,
 	assigneeLogin: string | null,
 	assigneeAvatar: string | null,
+	authorLogin: string | null,
+	authorAvatar: string | null,
 	labels: KanbanLabel[] = [],
 	issueCommentCount: number = 0,
 	issueState: "open" | "closed" = "open",
@@ -251,6 +263,8 @@ export async function syncKanbanItemFromIssue(
 			issueBody,
 			assigneeLogin,
 			assigneeAvatar,
+			authorLogin,
+			authorAvatar,
 			labels: JSON.stringify(labels),
 			issueCommentCount,
 			issueState,

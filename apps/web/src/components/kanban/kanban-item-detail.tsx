@@ -279,6 +279,34 @@ export function KanbanItemDetail({
 						</a>
 					</div>
 
+					<div className="flex md:hidden items-center gap-2">
+						{item.authorAvatar ? (
+							<Image
+								src={item.authorAvatar}
+								alt={item.authorLogin ?? "Author"}
+								width={20}
+								height={20}
+								className="rounded-full shrink-0"
+							/>
+						) : (
+							<div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center shrink-0">
+								<User className="w-3 h-3 text-muted-foreground/40" />
+							</div>
+						)}
+						{item.authorLogin ? (
+							<Link
+								href={`/users/${item.authorLogin}`}
+								className="text-[11px] text-muted-foreground/80 hover:text-foreground hover:underline truncate"
+							>
+								{item.authorLogin}
+							</Link>
+						) : (
+							<span className="text-[11px] text-muted-foreground/60">
+								Unknown
+							</span>
+						)}
+					</div>
+
 					{item.aiSummary && (
 						<div className="p-3 bg-muted/30 border border-border/50 rounded-md">
 							<p className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wide mb-1">
@@ -389,7 +417,7 @@ export function KanbanItemDetail({
 								onSubmit={handleAddComment}
 								isSubmitting={isSubmittingComment}
 								placeholder="Leave a comment for other maintainers..."
-								rows={4}
+								rows={5}
 								variant="default"
 							/>
 						)}
@@ -445,6 +473,44 @@ export function KanbanItemDetail({
 								))}
 							</DropdownMenuContent>
 						</DropdownMenu>
+					</div>
+
+					<div className="h-px bg-border/30" />
+
+					<div className="space-y-1.5">
+						<p className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-wider">
+							Author
+						</p>
+						<div className="flex items-center gap-2 min-w-0">
+							{item.authorAvatar ? (
+								<Image
+									src={item.authorAvatar}
+									alt={
+										item.authorLogin ??
+										"Author"
+									}
+									width={20}
+									height={20}
+									className="rounded-full shrink-0"
+								/>
+							) : (
+								<div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center shrink-0">
+									<User className="w-3 h-3 text-muted-foreground/40" />
+								</div>
+							)}
+							{item.authorLogin ? (
+								<Link
+									href={`/users/${item.authorLogin}`}
+									className="text-[11px] font-medium text-foreground hover:underline truncate"
+								>
+									{item.authorLogin}
+								</Link>
+							) : (
+								<span className="text-[11px] text-muted-foreground">
+									Unknown
+								</span>
+							)}
+						</div>
 					</div>
 
 					<div className="h-px bg-border/30" />

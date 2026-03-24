@@ -121,7 +121,7 @@ export function KanbanBoard({
 	const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
 	const [selectedItemId, setSelectedItemId] = useQueryState("item", {
 		defaultValue: "",
-		shallow: false,
+		shallow: true,
 	});
 	const [isSyncing, startSyncTransition] = useTransition();
 	const [focusedColumn, setFocusedColumn] = useState(0);
@@ -400,7 +400,7 @@ export function KanbanBoard({
 			className="flex flex-col flex-1 min-h-0 outline-none"
 			tabIndex={-1}
 		>
-			<div className="flex items-center justify-between mb-4">
+			<div className="flex shrink-0 items-center justify-between mb-4">
 				<h1 className="text-lg font-semibold">Kanban Board</h1>
 				<div className="flex items-center gap-2">
 					<button
@@ -441,7 +441,7 @@ export function KanbanBoard({
 			</div>
 
 			<DragDropContext onDragEnd={handleDragEnd}>
-				<div className="flex gap-4 flex-1 min-h-0 overflow-x-auto pb-4 outline-none">
+				<div className="flex gap-4 flex-1 min-h-0 overflow-x-auto overflow-y-hidden pb-4 outline-none">
 					{/* Active Issues Column */}
 					<Droppable
 						droppableId="active-issues"
@@ -515,7 +515,7 @@ export function KanbanBoard({
 											}
 											{...provided.droppableProps}
 											className={cn(
-												"flex-1 min-h-[200px] p-4 rounded-lg border border-border/50 outline-none",
+												"flex-1 min-h-0 overflow-y-auto p-4 rounded-lg border border-border/50 outline-none",
 												"bg-muted/20 transition-colors",
 												snapshot.isDraggingOver &&
 													"bg-muted/40 border-border",

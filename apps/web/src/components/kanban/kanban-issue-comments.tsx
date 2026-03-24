@@ -54,8 +54,12 @@ export function KanbanIssueComments({
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 	const [showScrollTop, setShowScrollTop] = useState(false);
 	const [showScrollBottom, setShowScrollBottom] = useState(false);
+	const [showScrollShadowTop, setShowScrollShadowTop] = useState(false);
+	const [showScrollShadowBottom, setShowScrollShadowBottom] = useState(false);
 
 	const isCompact = variant === "compact";
+
+	const SCROLL_SHADOW_EDGE_PX = 8;
 
 	const handleScroll = useCallback(() => {
 		const container = scrollContainerRef.current;
@@ -64,6 +68,10 @@ export function KanbanIssueComments({
 		const { scrollTop, scrollHeight, clientHeight } = container;
 		setShowScrollTop(scrollTop > 100);
 		setShowScrollBottom(scrollTop < scrollHeight - clientHeight - 100);
+		setShowScrollShadowTop(scrollTop > SCROLL_SHADOW_EDGE_PX);
+		setShowScrollShadowBottom(
+			scrollTop < scrollHeight - clientHeight - SCROLL_SHADOW_EDGE_PX,
+		);
 	}, []);
 
 	const scrollToTop = useCallback(() => {
@@ -82,9 +90,14 @@ export function KanbanIssueComments({
 		if (!container) return;
 
 		handleScroll();
-		container.addEventListener("scroll", handleScroll);
-		return () => container.removeEventListener("scroll", handleScroll);
-	}, [handleScroll, comments]);
+		container.addEventListener("scroll", handleScroll, { passive: true });
+		const ro = new ResizeObserver(handleScroll);
+		ro.observe(container);
+		return () => {
+			container.removeEventListener("scroll", handleScroll);
+			ro.disconnect();
+		};
+	}, [handleScroll, comments, isLoading]);
 
 	useEffect(() => {
 		let mounted = true;
@@ -196,263 +209,298 @@ export function KanbanIssueComments({
 			</div>
 
 			{/* Comments list */}
-			<div
-				ref={scrollContainerRef}
-				className="flex-1 overflow-y-auto p-3 space-y-3 relative"
-			>
-				{/* Floating scroll buttons */}
-				{(showScrollTop || showScrollBottom) && (
-					<div className="sticky top-2 z-10 flex justify-end pointer-events-none">
-						<div className="flex flex-col gap-1 pointer-events-auto">
-							{showScrollTop && (
-								<button
-									onClick={scrollToTop}
-									className="w-6 h-6 rounded-full bg-background/90 border border-border shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background transition-colors"
-									title="Scroll to top"
-								>
-									<ChevronUp className="w-3.5 h-3.5" />
-								</button>
-							)}
-							{showScrollBottom && (
-								<button
-									onClick={scrollToBottom}
-									className="w-6 h-6 rounded-full bg-background/90 border border-border shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background transition-colors"
-									title="Scroll to bottom"
-								>
-									<ChevronDown className="w-3.5 h-3.5" />
-								</button>
-							)}
-						</div>
-					</div>
-				)}
-				{isLoading && (
-					<>
-						{[1, 2, 3].map((i) => (
-							<div
-								key={i}
-								className={cn(
-									"border border-border/50 rounded-lg bg-background animate-pulse",
-									isCompact ? "p-3" : "p-4",
+			<div className="relative flex-1 min-h-0">
+				<div
+					className={cn(
+						"absolute top-0 left-0 right-0 h-6 z-10 pointer-events-none transition-opacity duration-200",
+						"bg-gradient-to-b from-background to-transparent",
+						showScrollShadowTop ? "opacity-100" : "opacity-0",
+					)}
+				/>
+				<div
+					className={cn(
+						"absolute bottom-0 left-0 right-0 h-6 z-10 pointer-events-none transition-opacity duration-200",
+						"bg-gradient-to-t from-background to-transparent",
+						showScrollShadowBottom
+							? "opacity-100"
+							: "opacity-0",
+					)}
+				/>
+				<div
+					ref={scrollContainerRef}
+					className="h-full overflow-y-auto p-3 space-y-3 relative"
+				>
+					{/* Floating scroll buttons */}
+					{(showScrollTop || showScrollBottom) && (
+						<div className="sticky top-2 z-10 flex justify-end pointer-events-none">
+							<div className="flex flex-col gap-1 pointer-events-auto">
+								{showScrollTop && (
+									<button
+										onClick={
+											scrollToTop
+										}
+										className="w-6 h-6 rounded-full bg-background/90 border border-border shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background transition-colors"
+										title="Scroll to top"
+									>
+										<ChevronUp className="w-3.5 h-3.5" />
+									</button>
 								)}
-							>
-								<div className="flex items-center gap-2">
-									<div
-										className="rounded-full bg-muted"
-										style={{
-											width: avatarSize,
-											height: avatarSize,
-										}}
-									/>
-									<div
-										className={cn(
-											"h-3 bg-muted rounded",
-											isCompact
-												? "w-20"
-												: "w-24",
-										)}
-									/>
-									<div
-										className={cn(
-											"bg-muted/60 rounded",
-											isCompact
-												? "h-2.5 w-12"
-												: "h-3 w-14",
-										)}
-									/>
-								</div>
+								{showScrollBottom && (
+									<button
+										onClick={
+											scrollToBottom
+										}
+										className="w-6 h-6 rounded-full bg-background/90 border border-border shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background transition-colors"
+										title="Scroll to bottom"
+									>
+										<ChevronDown className="w-3.5 h-3.5" />
+									</button>
+								)}
+							</div>
+						</div>
+					)}
+					{isLoading && (
+						<>
+							{[1, 2, 3].map((i) => (
 								<div
+									key={i}
 									className={cn(
-										"space-y-1.5 mt-2",
+										"border border-border/50 rounded-lg bg-background animate-pulse",
 										isCompact
-											? "pl-7"
-											: "pl-8",
+											? "p-3"
+											: "p-4",
 									)}
 								>
-									<div className="h-3 w-full bg-muted/50 rounded" />
-									<div className="h-3 w-3/4 bg-muted/50 rounded" />
+									<div className="flex items-center gap-2">
+										<div
+											className="rounded-full bg-muted"
+											style={{
+												width: avatarSize,
+												height: avatarSize,
+											}}
+										/>
+										<div
+											className={cn(
+												"h-3 bg-muted rounded",
+												isCompact
+													? "w-20"
+													: "w-24",
+											)}
+										/>
+										<div
+											className={cn(
+												"bg-muted/60 rounded",
+												isCompact
+													? "h-2.5 w-12"
+													: "h-3 w-14",
+											)}
+										/>
+									</div>
+									<div
+										className={cn(
+											"space-y-1.5 mt-2",
+											isCompact
+												? "pl-7"
+												: "pl-8",
+										)}
+									>
+										<div className="h-3 w-full bg-muted/50 rounded" />
+										<div className="h-3 w-3/4 bg-muted/50 rounded" />
+									</div>
 								</div>
-							</div>
-						))}
-					</>
-				)}
+							))}
+						</>
+					)}
 
-				{!isLoading && comments.length === 0 && (
-					<div className="flex flex-col items-center justify-center py-8 text-center">
-						<MessageCircle className="w-8 h-8 text-muted-foreground/20 mb-2" />
-						<p className="text-xs text-muted-foreground/50">
-							No comments on this issue
-						</p>
-						<p className="text-[10px] text-muted-foreground/40 mt-1">
-							Be the first to comment
-						</p>
-					</div>
-				)}
+					{!isLoading && comments.length === 0 && (
+						<div className="flex flex-col items-center justify-center py-8 text-center">
+							<MessageCircle className="w-8 h-8 text-muted-foreground/20 mb-2" />
+							<p className="text-xs text-muted-foreground/50">
+								No comments on this issue
+							</p>
+							<p className="text-[10px] text-muted-foreground/40 mt-1">
+								Be the first to comment
+							</p>
+						</div>
+					)}
 
-				{!isLoading &&
-					comments.map((comment) => (
-						<div
-							key={comment.id}
-							className={cn(
-								"border border-border/50 rounded-lg bg-background",
-								isCompact ? "p-3" : "p-4",
-								comment._optimisticStatus ===
-									"pending" && "opacity-60",
-								comment._optimisticStatus ===
-									"failed" &&
-									"border-red-500/50",
-							)}
-						>
+					{!isLoading &&
+						comments.map((comment) => (
 							<div
+								key={comment.id}
 								className={cn(
-									"flex items-center",
-									isCompact
-										? "gap-2"
-										: "gap-3",
+									"border border-border/50 rounded-lg bg-background",
+									isCompact ? "p-3" : "p-4",
+									comment._optimisticStatus ===
+										"pending" &&
+										"opacity-60",
+									comment._optimisticStatus ===
+										"failed" &&
+										"border-red-500/50",
 								)}
 							>
-								{comment.user?.avatar_url ? (
-									<Image
-										src={
-											comment.user
-												.avatar_url
-										}
-										alt={
-											comment.user
-												.login
-										}
-										width={avatarSize}
-										height={avatarSize}
-										className="rounded-full shrink-0"
-									/>
-								) : (
-									<div
-										className="rounded-full bg-muted shrink-0"
-										style={{
-											width: avatarSize,
-											height: avatarSize,
-										}}
-									/>
-								)}
-								<div className="flex items-center gap-1.5 flex-1 min-w-0">
-									{comment.user?.login ? (
-										<Link
-											href={`/users/${comment.user.login}`}
-											className={cn(
-												textSize,
-												"font-medium text-foreground hover:underline truncate",
-											)}
-										>
-											{
+								<div
+									className={cn(
+										"flex items-center",
+										isCompact
+											? "gap-2"
+											: "gap-3",
+									)}
+								>
+									{comment.user
+										?.avatar_url ? (
+										<Image
+											src={
+												comment
+													.user
+													.avatar_url
+											}
+											alt={
 												comment
 													.user
 													.login
 											}
-										</Link>
+											width={
+												avatarSize
+											}
+											height={
+												avatarSize
+											}
+											className="rounded-full shrink-0"
+										/>
 									) : (
-										<span
-											className={cn(
-												textSize,
-												"font-medium text-foreground truncate",
-											)}
-										>
-											ghost
-										</span>
+										<div
+											className="rounded-full bg-muted shrink-0"
+											style={{
+												width: avatarSize,
+												height: avatarSize,
+											}}
+										/>
 									)}
-									{comment.author_association &&
-										comment.author_association !==
-											"NONE" && (
-											<span className="text-[9px] px-1.5 py-0.5 border border-border/60 text-muted-foreground/50 rounded font-medium">
-												{comment.author_association.toLowerCase()}
+									<div className="flex items-center gap-1.5 flex-1 min-w-0">
+										{comment.user
+											?.login ? (
+											<Link
+												href={`/users/${comment.user.login}`}
+												className={cn(
+													textSize,
+													"font-medium text-foreground hover:underline truncate",
+												)}
+											>
+												{
+													comment
+														.user
+														.login
+												}
+											</Link>
+										) : (
+											<span
+												className={cn(
+													textSize,
+													"font-medium text-foreground truncate",
+												)}
+											>
+												ghost
 											</span>
 										)}
-									{comment._optimisticStatus ===
-									"pending" ? (
-										<span
-											className={cn(
-												timeSize,
-												"text-muted-foreground/40 italic",
+										{comment.author_association &&
+											comment.author_association !==
+												"NONE" && (
+												<span className="text-[9px] px-1.5 py-0.5 border border-border/60 text-muted-foreground/50 rounded font-medium">
+													{comment.author_association.toLowerCase()}
+												</span>
 											)}
-										>
-											posting...
-										</span>
-									) : comment._optimisticStatus ===
-									  "failed" ? (
-										<span
-											className={cn(
-												timeSize,
-												"text-red-400",
-											)}
-										>
-											failed
-										</span>
+										{comment._optimisticStatus ===
+										"pending" ? (
+											<span
+												className={cn(
+													timeSize,
+													"text-muted-foreground/40 italic",
+												)}
+											>
+												posting...
+											</span>
+										) : comment._optimisticStatus ===
+										  "failed" ? (
+											<span
+												className={cn(
+													timeSize,
+													"text-red-400",
+												)}
+											>
+												failed
+											</span>
+										) : (
+											<span
+												className={cn(
+													timeSize,
+													"text-muted-foreground/50 font-mono shrink-0",
+												)}
+											>
+												<TimeAgo
+													date={
+														comment.created_at
+													}
+												/>
+											</span>
+										)}
+									</div>
+								</div>
+
+								<div
+									className={cn(
+										"mt-1.5",
+										isCompact
+											? "pl-7"
+											: "pl-8",
+										textSize,
+									)}
+								>
+									{comment.bodyHtml ? (
+										<MarkdownCopyHandler>
+											<ReactiveCodeBlocks>
+												<MarkdownMentionTooltips>
+													<div
+														className={cn(
+															"ghmd",
+															isCompact &&
+																"ghmd-sm",
+														)}
+														dangerouslySetInnerHTML={{
+															__html: comment.bodyHtml,
+														}}
+													/>
+												</MarkdownMentionTooltips>
+											</ReactiveCodeBlocks>
+										</MarkdownCopyHandler>
+									) : comment.body ? (
+										<ClientMarkdown
+											content={
+												comment.body
+											}
+										/>
 									) : (
-										<span
-											className={cn(
-												timeSize,
-												"text-muted-foreground/50 font-mono shrink-0",
-											)}
-										>
-											<TimeAgo
-												date={
-													comment.created_at
-												}
-											/>
-										</span>
+										<p className="text-muted-foreground/30 italic">
+											No content
+										</p>
 									)}
 								</div>
 							</div>
-
-							<div
-								className={cn(
-									"mt-1.5",
-									isCompact ? "pl-7" : "pl-8",
-									textSize,
-								)}
-							>
-								{comment.bodyHtml ? (
-									<MarkdownCopyHandler>
-										<ReactiveCodeBlocks>
-											<MarkdownMentionTooltips>
-												<div
-													className={cn(
-														"ghmd",
-														isCompact &&
-															"ghmd-sm",
-													)}
-													dangerouslySetInnerHTML={{
-														__html: comment.bodyHtml,
-													}}
-												/>
-											</MarkdownMentionTooltips>
-										</ReactiveCodeBlocks>
-									</MarkdownCopyHandler>
-								) : comment.body ? (
-									<ClientMarkdown
-										content={
-											comment.body
-										}
-									/>
-								) : (
-									<p className="text-muted-foreground/30 italic">
-										No content
-									</p>
-								)}
-							</div>
-						</div>
-					))}
+						))}
+				</div>
 			</div>
 
 			{/* Comment input */}
 			{currentUser && (
-				<div className="shrink-0 p-3 border-t border-border bg-background">
-					<div className="rounded-lg border border-border overflow-hidden">
+				<div className="shrink-0 bg-background">
+					<div className="rounded-none border-y border-x-0 border-border overflow-hidden">
 						<MarkdownEditor
 							value={commentBody}
 							onChange={setCommentBody}
 							placeholder="Reply to issue..."
-							rows={3}
+							rows={5}
 							className={cn(
-								"border-none",
+								"border-none rounded-none",
 								isCompact && "text-xs",
 							)}
 							resizeYIndicator={false}
@@ -542,7 +590,7 @@ export function KanbanIssueComments({
 							</button>
 						</div>
 					</div>
-					<p className="text-[9px] text-muted-foreground/40 mt-1.5 text-center">
+					<p className="text-[9px] text-muted-foreground/40 mt-1.5 text-center px-3 pb-2">
 						This comment will be posted publicly on GitHub
 					</p>
 				</div>

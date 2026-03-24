@@ -183,6 +183,9 @@ export function CodeContentWrapper({
 		/\/issues\/\d+/.test(pathname) ||
 		/\/people\/[^/]+$/.test(pathname);
 
+	// Kanban: no outer vertical scroll; each column scrolls internally
+	const isKanbanRoute = pathname === `${base}/kanban`;
+
 	// Overview route: page frame stays fixed, only content sections scroll (lg only)
 	const isOverviewRoute = pathname === base;
 
@@ -347,14 +350,16 @@ export function CodeContentWrapper({
 						"flex-1 min-h-0",
 						isDetailRoute
 							? "flex flex-col overflow-hidden pl-4 mx-4"
-							: isOverviewRoute
-								? "flex flex-col overflow-y-auto pl-4 pb-4 pt-3 mx-4"
-								: cn(
-										"overflow-y-auto pl-4 pb-4",
-										isBlobOrTree
-											? ""
-											: "pt-3",
-									),
+							: isKanbanRoute
+								? "flex flex-col overflow-hidden pl-4 mx-4 pt-3 pb-4"
+								: isOverviewRoute
+									? "flex flex-col overflow-y-auto pl-4 pb-4 pt-3 mx-4"
+									: cn(
+											"overflow-y-auto pl-4 pb-4",
+											isBlobOrTree
+												? ""
+												: "pt-3",
+										),
 					)}
 					style={{
 						paddingRight:
