@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
-import { getDiscussion, getDiscussionComments, getAuthenticatedUser, getRepo } from "@/lib/github";
+import {
+	getDiscussion,
+	getDiscussionComments,
+	getAuthenticatedUser,
+	getRepo,
+	extractRepoPermissions,
+} from "@/lib/github";
 import { extractParticipants } from "@/lib/github-utils";
 import { renderMarkdownToHtml } from "@/components/shared/markdown-renderer";
 import { DiscussionHeader } from "@/components/discussion/discussion-header";
@@ -42,10 +48,11 @@ export default async function DiscussionDetailPage({
 	const { owner, repo, number: numStr } = await params;
 	const discussionNumber = parseInt(numStr, 10);
 
-	const [discussion, rawComments, currentUser] = await Promise.all([
+	const [discussion, rawComments, currentUser, repoData] = await Promise.all([
 		getDiscussion(owner, repo, discussionNumber),
 		getDiscussionComments(owner, repo, discussionNumber),
 		getAuthenticatedUser(),
+		getRepo(owner, repo),
 	]);
 
 	if (!discussion) {
@@ -119,6 +126,13 @@ export default async function DiscussionDetailPage({
 		upvoteCount: discussion.upvoteCount,
 		viewerHasUpvoted: discussion.viewerHasUpvoted,
 	};
+	const permissions = extractRepoPermissions(repoData ?? {});
+	const viewerHasWriteAccess = permissions.push || permissions.maintain || permissions.admin;
+	const currentUserLogin = (currentUser as { login?: string } | null)?.login;
+	const canEditDiscussion = !!(
+		currentUserLogin &&
+		(currentUserLogin === discussion.author?.login || viewerHasWriteAccess)
+	);
 
 	// Extract participants
 	const participants = extractParticipants([
@@ -169,6 +183,9 @@ export default async function DiscussionDetailPage({
 					discussionNumber={discussionNumber}
 					initialComments={commentsWithHtml}
 					descriptionEntry={descriptionEntry}
+					currentUserLogin={currentUserLogin}
+					viewerHasWriteAccess={viewerHasWriteAccess}
+					canEditDiscussion={canEditDiscussion}
 				/>
 			}
 			commentForm={

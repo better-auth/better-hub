@@ -35,7 +35,6 @@ import { PRCommentForm } from "@/components/pr/pr-comment-form";
 import { PRReviewForm } from "@/components/pr/pr-review-form";
 import { PRConflictResolver } from "@/components/pr/pr-conflict-resolver";
 import { PRAuthorDossier } from "@/components/pr/pr-author-dossier";
-import { PRChecksPanel } from "@/components/pr/pr-checks-panel";
 import { PROverviewPanel } from "@/components/pr/pr-overview-panel";
 import { ChatPageActivator } from "@/components/shared/chat-page-activator";
 import { TrackView } from "@/components/shared/track-view";
@@ -145,6 +144,7 @@ export default async function PRDetailPage({
 	const canWrite = permissions.push || permissions.admin || permissions.maintain;
 	const canTriage = canWrite || permissions.triage;
 	const isOpen = pr.state === "open" && !pr.merged_at;
+	const currentUserLogin = currentUser?.login;
 
 	// Start highlighting in parallel with second batch
 	const prFiles = (files ?? []) as GitHubPRFile[];
@@ -669,6 +669,8 @@ export default async function PRDetailPage({
 							owner={owner}
 							repo={repo}
 							pullNumber={pullNumber}
+							currentUserLogin={currentUserLogin}
+							viewerHasWriteAccess={canWrite}
 							checkStatus={
 								checkStatus && checkStatus.total > 0
 									? checkStatus
