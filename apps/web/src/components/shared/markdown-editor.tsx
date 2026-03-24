@@ -62,6 +62,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
 		ref,
 	) {
 		const lastReportedMd = useRef(value);
+		const isSyncingFromExternal = useRef(false);
 		const onKeyDownRef = useRef(onKeyDown);
 		onKeyDownRef.current = onKeyDown;
 
@@ -97,6 +98,9 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
 			],
 			content: value,
 			onUpdate: ({ editor }) => {
+				if (isSyncingFromExternal.current) {
+					return;
+				}
 				const md = (
 					editor.storage as unknown as Record<
 						string,
@@ -133,7 +137,9 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
 			if (!editor) return;
 			if (value !== lastReportedMd.current) {
 				lastReportedMd.current = value;
+				isSyncingFromExternal.current = true;
 				editor.commands.setContent(value);
+				isSyncingFromExternal.current = false;
 			}
 		}, [value, editor]);
 
@@ -371,9 +377,18 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
 				<div
 					style={{ minHeight, maxHeight: 400 }}
 					className={cn(
-						"overflow-auto",
+						"overflow-auto cursor-text [&_.ProseMirror]:min-h-full",
 						resizeYIndicator ? "resize-y" : "",
 					)}
+					onClick={(e) => {
+						// Focus editor when clicking anywhere in the container
+						if (
+							e.target === e.currentTarget ||
+							!editor?.isFocused
+						) {
+							editor?.commands.focus("end");
+						}
+					}}
 				>
 					<EditorContent editor={editor} />
 				</div>
