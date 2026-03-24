@@ -9,6 +9,7 @@ import {
 	getUserOrgTopRepos,
 	getContributionData,
 	getUserEvents,
+	getCanCreateRepoInOrg,
 } from "@/lib/github";
 
 /** Session-scoped; must not be statically shared across GitHub users. */
@@ -63,18 +64,22 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 
 	const actorType = (actorData as { type?: string }).type;
 	if (actorType === "Organization") {
-		const orgData = await getOrg(owner).catch(() => null);
+		const [orgData, reposData, canCreateRepo] = await Promise.all([
+			getOrg(owner).catch(() => null),
+			getOrgRepos(owner, {
+				perPage: 100,
+				sort: "updated",
+				type: "all",
+			}).catch(() => []),
+			getCanCreateRepoInOrg(owner),
+		]);
 		if (!orgData) {
 			notFound();
 		}
-		const reposData = await getOrgRepos(owner, {
-			perPage: 100,
-			sort: "updated",
-			type: "all",
-		}).catch(() => []);
 
 		return (
 			<OrgDetailContent
+				canCreateRepo={canCreateRepo}
 				org={{
 					login: orgData.login,
 					name: orgData.name ?? null,
