@@ -3,7 +3,7 @@
 import {
 	ArrowRight,
 	Check,
-	Chrome,
+	Globe,
 	Download,
 	ExternalLink,
 	Puzzle,
@@ -44,7 +44,7 @@ const QUICK_STEPS = [
 		detail: "Toggle in top-right",
 	},
 	{
-		icon: Chrome,
+		icon: Globe,
 		label: '"Load unpacked"',
 		detail: "Select the unzipped folder",
 	},
@@ -66,7 +66,7 @@ export function ExtensionInstallDialog({ open, onOpenChange }: ExtensionInstallD
 					<DialogHeader className="gap-1">
 						<div className="flex items-center gap-3">
 							<div className="w-9 h-9 rounded-lg bg-gradient-to-br from-card to-muted border border-border flex items-center justify-center shrink-0">
-								<Chrome className="w-4 h-4 text-foreground/80" />
+								<Globe className="w-4 h-4 text-foreground/80" />
 							</div>
 							<div>
 								<DialogTitle className="text-base">

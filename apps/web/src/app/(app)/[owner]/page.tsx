@@ -9,10 +9,12 @@ import {
 	getUserOrgTopRepos,
 	getContributionData,
 	getUserEvents,
+	getUserProfileReadme,
 } from "@/lib/github";
 import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { OrgDetailContent } from "@/components/orgs/org-detail-content";
 import { UserProfileContent } from "@/components/users/user-profile-content";
+import { UserProfileReadmePanel } from "@/components/users/user-profile-readme-panel";
 
 export async function generateMetadata({
 	params,
@@ -116,16 +118,23 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 	let contributionData: Awaited<ReturnType<typeof getContributionData>> = null;
 	let orgTopRepos: Awaited<ReturnType<typeof getUserOrgTopRepos>> = [];
 	let activityEvents: Awaited<ReturnType<typeof getUserEvents>> = [];
+	let profileReadme: Awaited<ReturnType<typeof getUserProfileReadme>> = null;
 
 	if (!isBot) {
 		try {
-			const [reposResult, orgsResult, contributionsResult, eventsResult] =
-				await Promise.allSettled([
-					getUserPublicRepos(userData.login, 100),
-					getUserPublicOrgs(userData.login),
-					getContributionData(userData.login),
-					getUserEvents(userData.login, 100),
-				]);
+			const [
+				reposResult,
+				orgsResult,
+				contributionsResult,
+				eventsResult,
+				profileReadmeResult,
+			] = await Promise.allSettled([
+				getUserPublicRepos(userData.login, 100),
+				getUserPublicOrgs(userData.login),
+				getContributionData(userData.login),
+				getUserEvents(userData.login, 100),
+				getUserProfileReadme(userData.login),
+			]);
 			if (reposResult.status === "fulfilled") reposData = reposResult.value;
 			if (orgsResult.status === "fulfilled") orgsData = orgsResult.value;
 			if (contributionsResult.status === "fulfilled") {
@@ -133,6 +142,9 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 			}
 			if (eventsResult.status === "fulfilled")
 				activityEvents = eventsResult.value;
+			if (profileReadmeResult.status === "fulfilled") {
+				profileReadme = profileReadmeResult.value;
+			}
 			if (orgsData.length > 0) {
 				orgTopRepos = await getUserOrgTopRepos(
 					orgsData.map((o) => o.login),
@@ -143,8 +155,20 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 		}
 	}
 
+	const hasProfileReadme = profileReadme !== null;
+
 	return (
 		<UserProfileContent
+			hasProfileReadme={hasProfileReadme}
+			profileReadmePanel={
+				profileReadme ? (
+					<UserProfileReadmePanel
+						login={userData.login}
+						content={profileReadme.content}
+						branch={profileReadme.defaultBranch}
+					/>
+				) : null
+			}
 			user={{
 				login: userData.login,
 				name: userData.name ?? null,

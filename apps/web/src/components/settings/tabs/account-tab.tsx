@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import {
 	LogOut,
 	Trash2,
-	Github,
 	Shield,
 	ExternalLink,
 	MapPin,
@@ -12,6 +11,7 @@ import {
 	Link as LinkIcon,
 	Calendar,
 } from "lucide-react";
+import { GithubIcon } from "@/components/shared/icons/github-icon";
 import { cn } from "@/lib/utils";
 import { signIn, signOut } from "@/lib/auth-client";
 import { SCOPE_GROUPS, scopesToGroupIds } from "@/lib/github-scopes";
@@ -137,7 +137,7 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 							/>
 						) : (
 							<div className="w-[72px] h-[72px] rounded-full bg-muted flex items-center justify-center">
-								<Github className="w-6 h-6 text-muted-foreground" />
+								<GithubIcon className="w-6 h-6 text-muted-foreground" />
 							</div>
 						)}
 					</div>
@@ -218,7 +218,7 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 					{/* GitHub */}
 					<div className="flex items-center justify-between py-2">
 						<div className="flex items-center gap-2">
-							<Github className="w-3.5 h-3.5 text-muted-foreground" />
+							<GithubIcon className="w-3.5 h-3.5 text-muted-foreground" />
 							<span className="text-xs font-mono">
 								GitHub
 							</span>
