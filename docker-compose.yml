@@ -3,6 +3,7 @@ services:
                 image: postgres:16-alpine
                 container_name: better-hub-postgres
                 restart: unless-stopped
+                command: postgres -c max_connections=300
                 environment:
                         POSTGRES_USER: postgres
                         POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}

@@ -173,6 +173,17 @@ function buildRules(host) {
 				resourceTypes: ["main_frame"],
 			},
 		},
+		// --- Allow release asset download URLs to prevent redirect loops ---
+		{
+			id: 251,
+			priority: 5,
+			action: { type: "allow" },
+			condition: {
+				regexFilter:
+					"^https://github\\.com/[^/]+/[^/]+/releases/download/.+",
+				resourceTypes: ["main_frame"],
+			},
+		},
 
 		// --- Specific path rewrites ---
 		{

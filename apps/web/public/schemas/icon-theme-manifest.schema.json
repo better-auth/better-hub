@@ -1,0 +1,61 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"$id": "https://better-hub.com/schemas/icon-theme-manifest.schema.json",
+	"title": "Better Hub Icon Theme Manifest",
+	"description": "Schema for the better-hub-extension.json manifest file when publishing an icon theme to the Better Hub marketplace.",
+	"type": "object",
+	"required": ["name", "description", "type", "main"],
+	"additionalProperties": false,
+	"properties": {
+		"$schema": {
+			"type": "string",
+			"description": "URL or relative path to this JSON schema for editor validation."
+		},
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"pattern": "^[a-zA-Z0-9_\\-\\s]+$",
+			"description": "Display name of the icon theme. Alphanumeric characters, underscores, hyphens, and spaces only."
+		},
+		"description": {
+			"type": "string",
+			"minLength": 1,
+			"description": "A short description of the icon theme shown in the marketplace."
+		},
+		"version": {
+			"type": "string",
+			"pattern": "^\\d+\\.\\d+\\.\\d+",
+			"default": "1.0.0",
+			"description": "Semantic version of the extension (e.g. \"1.0.0\"). Defaults to \"1.0.0\" if omitted."
+		},
+		"type": {
+			"const": "icon-theme",
+			"description": "Must be \"icon-theme\" for icon theme extensions."
+		},
+		"main": {
+			"type": "string",
+			"minLength": 1,
+			"description": "Relative path from the repo root to the icon mapping JSON data file (e.g. \"icons/icon-theme.json\")."
+		},
+		"icon": {
+			"type": "string",
+			"description": "Relative path from the repo root to an icon/logo image for the marketplace listing (e.g. \"icon.png\")."
+		},
+		"license": {
+			"type": "string",
+			"description": "SPDX license identifier (e.g. \"MIT\", \"Apache-2.0\")."
+		}
+	},
+	"examples": [
+		{
+			"$schema": "https://better-hub.com/schemas/icon-theme-manifest.schema.json",
+			"name": "My Icon Theme",
+			"description": "A beautiful file icon theme for Better Hub",
+			"version": "1.0.0",
+			"type": "icon-theme",
+			"main": "icons/icon-theme.json",
+			"icon": "icon.png",
+			"license": "MIT"
+		}
+	]
+}

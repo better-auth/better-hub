@@ -187,8 +187,8 @@ export function PromptList({ owner, repo, promptRequests }: PromptListProps) {
 			{/* Toolbar */}
 			<div className="sticky top-0 z-10 bg-background pb-3 pt-4 px-4 before:content-[''] before:absolute before:left-0 before:right-0 before:bottom-full before:h-8 before:bg-background">
 				{/* Row 1: Search + Sort + New */}
-				<div className="flex items-center gap-2 mb-3">
-					<div className="relative flex-1 max-w-sm">
+				<div className="flex flex-col md:flex-row md:items-center gap-2 mb-3">
+					<div className="relative w-full md:flex-1 md:max-w-sm">
 						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40" />
 						<input
 							type="text"
@@ -198,35 +198,37 @@ export function PromptList({ owner, repo, promptRequests }: PromptListProps) {
 							className="w-full h-8 bg-transparent border border-border rounded-sm pl-9 pr-4 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-foreground/20 transition-colors"
 						/>
 					</div>
-
-					<button
-						onClick={() =>
-							setSort(
-								sortCycle[
-									(sortCycle.indexOf(sort) +
-										1) %
-										sortCycle.length
-								],
-							)
-						}
-						className={cn(
-							"flex items-center gap-1.5 h-8 px-3 rounded-sm border text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
-							sort !== "newest"
-								? "border-foreground/20 bg-muted/50 dark:bg-white/4 text-foreground"
-								: "border-border text-muted-foreground/60 hover:text-foreground hover:bg-muted/40 dark:hover:bg-white/3",
-						)}
-					>
-						<ArrowUpDown className="w-3 h-3" />
-						{sortLabels[sort]}
-					</button>
-
-					<button
-						onClick={() => setSuggestDialogOpen(true)}
-						className="ml-auto flex items-center gap-1.5 h-8 px-3 text-xs font-medium bg-primary text-background rounded-sm hover:bg-primary/90 transition-colors cursor-pointer"
-					>
-						<Sparkles className="w-3 h-3" />
-						Suggest Prompt
-					</button>
+					<div className="flex items-center gap-2 md:contents">
+						<button
+							onClick={() =>
+								setSort(
+									sortCycle[
+										(sortCycle.indexOf(
+											sort,
+										) +
+											1) %
+											sortCycle.length
+									],
+								)
+							}
+							className={cn(
+								"flex items-center gap-1.5 h-8 px-3 rounded-sm border text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
+								sort !== "newest"
+									? "border-foreground/20 bg-muted/50 dark:bg-white/4 text-foreground"
+									: "border-border text-muted-foreground/60 hover:text-foreground hover:bg-muted/40 dark:hover:bg-white/3",
+							)}
+						>
+							<ArrowUpDown className="w-3 h-3" />
+							{sortLabels[sort]}
+						</button>
+						<button
+							onClick={() => setSuggestDialogOpen(true)}
+							className="ml-auto md:ml-auto flex items-center gap-1.5 h-8 px-3 text-xs font-medium bg-primary text-background rounded-sm hover:bg-primary/90 transition-colors cursor-pointer"
+						>
+							<Sparkles className="w-3 h-3" />
+							Suggest Prompt
+						</button>
+					</div>
 				</div>
 
 				{/* Row 2: Status tabs */}
@@ -257,7 +259,7 @@ export function PromptList({ owner, repo, promptRequests }: PromptListProps) {
 								{t.count}
 							</span>
 							{tab === t.key && (
-								<span className="absolute bottom-0 left-0 right-0 h-[2px] bg-foreground" />
+								<span className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground" />
 							)}
 						</button>
 					))}

@@ -179,8 +179,8 @@ export function SecurityView({
 							className={cn(
 								"w-full flex items-center gap-2 px-3 py-2 text-xs transition-colors cursor-pointer",
 								section === item.key
-									? "bg-muted/60 dark:bg-white/[0.04] text-foreground font-medium"
-									: "text-muted-foreground hover:text-foreground hover:bg-muted/30 dark:hover:bg-white/[0.02]",
+									? "bg-muted/60 dark:bg-white/4 text-foreground font-medium"
+									: "text-muted-foreground hover:text-foreground hover:bg-muted/30 dark:hover:bg-white/2",
 							)}
 						>
 							{item.icon}
@@ -208,13 +208,19 @@ export function SecurityView({
 			<div className="flex-1 min-w-0 flex flex-col min-h-0">
 				{/* Mobile selector */}
 				<div className="md:hidden shrink-0">
-					<div className="flex items-center gap-0 border-b border-border mb-4">
+					<div
+						className="flex items-center gap-0 border-b border-border mb-4 overflow-x-auto"
+						style={{
+							scrollbarWidth: "none",
+							msOverflowStyle: "none",
+						}}
+					>
 						{sidebarItems.map((item) => (
 							<button
 								key={item.key}
 								onClick={() => setSection(item.key)}
 								className={cn(
-									"flex items-center gap-1.5 px-3 py-2 text-[11px] font-mono uppercase tracking-wider border-b -mb-px transition-colors cursor-pointer",
+									"flex items-center gap-1.5 px-3 py-2 text-[11px] font-mono uppercase tracking-wider border-b -mb-px transition-colors cursor-pointer whitespace-nowrap",
 									section === item.key
 										? "border-b-foreground/50 text-foreground"
 										: "border-b-transparent text-muted-foreground hover:text-foreground/60",
@@ -418,7 +424,7 @@ function AdvisoriesSection({
 									}
 									href={`/${owner}/${repo}/security/advisories/${advisory.ghsaId}`}
 									className={cn(
-										"block px-4 py-3 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors border-l-2",
+										"block px-4 py-3 hover:bg-muted/50 dark:hover:bg-white/2 transition-colors border-l-2",
 										sev.border,
 									)}
 								>
@@ -547,7 +553,7 @@ function AlertListSection<T>({
 							href={getHref(alert) || href}
 							target="_blank"
 							rel="noopener noreferrer"
-							className="block px-4 py-2.5 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors"
+							className="block px-4 py-2.5 hover:bg-muted/50 dark:hover:bg-white/2 transition-colors"
 						>
 							{renderAlert(alert)}
 						</a>

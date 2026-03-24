@@ -6,6 +6,9 @@ import {
 	applyTheme,
 	getTheme,
 	listThemes,
+	listStoreThemes,
+	registerStoreTheme,
+	clearStoreThemes,
 	migrateLegacyThemeId,
 	STORAGE_KEY,
 	MODE_KEY,
@@ -13,6 +16,7 @@ import {
 	DEFAULT_MODE,
 	type ThemeDefinition,
 } from "@/lib/themes";
+import type { CustomThemeData } from "@/lib/theme-store-types";
 import {
 	applyBorderRadius,
 	getBorderRadiusPreset,
@@ -21,6 +25,7 @@ import {
 	DEFAULT_BORDER_RADIUS,
 	type BorderRadiusPreset,
 } from "@/lib/themes/border-radius";
+import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 
 interface ColorThemeContext {
 	/** Currently active theme id */
@@ -35,8 +40,10 @@ interface ColorThemeContext {
 	toggleMode: (e?: { clientX: number; clientY: number }) => void;
 	/** Set border radius preset */
 	setBorderRadius: (preset: BorderRadiusPreset) => void;
-	/** All themes */
+	/** Built-in themes */
 	themes: ThemeDefinition[];
+	/** Theme Store (installed) themes */
+	storeThemes: ThemeDefinition[];
 }
 
 const Ctx = createContext<ColorThemeContext | null>(null);
@@ -49,11 +56,28 @@ export function useColorTheme(): ColorThemeContext {
 
 const THEME_COOKIE_KEY = "color-theme";
 const MODE_COOKIE_KEY = "color-mode";
+const MP_THEME_DATA_COOKIE = "mp-theme-data";
+const MP_THEME_CACHE_KEY = "mp-theme-data";
 
 function setThemeCookies(themeId: string, mode: "dark" | "light") {
 	const maxAge = 365 * 24 * 60 * 60;
 	document.cookie = `${THEME_COOKIE_KEY}=${encodeURIComponent(themeId)};path=/;max-age=${maxAge};samesite=lax`;
 	document.cookie = `${MODE_COOKIE_KEY}=${mode};path=/;max-age=${maxAge};samesite=lax`;
+}
+
+function setMpThemeDataCookie(theme: ThemeDefinition) {
+	const maxAge = 365 * 24 * 60 * 60;
+	const payload = JSON.stringify({
+		dark: { colors: theme.dark.colors },
+		light: { colors: theme.light.colors },
+	});
+	document.cookie = `${MP_THEME_DATA_COOKIE}=${encodeURIComponent(payload)};path=/;max-age=${maxAge};samesite=lax`;
+	localStorage.setItem(MP_THEME_CACHE_KEY, payload);
+}
+
+function clearMpThemeDataCookie() {
+	document.cookie = `${MP_THEME_DATA_COOKIE}=;path=/;max-age=0`;
+	localStorage.removeItem(MP_THEME_CACHE_KEY);
 }
 
 function getStoredPreferences(): { themeId: string; mode: "dark" | "light" } {
@@ -84,6 +108,16 @@ function getStoredPreferences(): { themeId: string; mode: "dark" | "light" } {
 			localStorage.setItem(MODE_KEY, mode);
 			return { themeId: storedTheme, mode };
 		}
+		// Marketplace themes aren't registered yet at initial load — preserve
+		// the stored preference so the async fetch can apply it later.
+		if (storedTheme.startsWith("mp:")) {
+			const mode =
+				storedMode ??
+				(window.matchMedia?.("(prefers-color-scheme: dark)").matches
+					? "dark"
+					: "light");
+			return { themeId: storedTheme, mode };
+		}
 	}
 
 	const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? true;
@@ -93,15 +127,106 @@ function getStoredPreferences(): { themeId: string; mode: "dark" | "light" } {
 	return { themeId: DEFAULT_THEME_ID, mode };
 }
 
+function parseStoreTheme(ext: {
+	id: string;
+	slug: string;
+	name: string;
+	description: string;
+	dataJson: string | null;
+}): ThemeDefinition | null {
+	if (!ext.dataJson) return null;
+	try {
+		const data = JSON.parse(ext.dataJson) as CustomThemeData;
+		if (!data.dark?.colors || !data.light?.colors) return null;
+		return {
+			id: `mp:${ext.slug}`,
+			name: ext.name,
+			description: ext.description,
+			dark: data.dark,
+			light: data.light,
+		};
+	} catch {
+		return null;
+	}
+}
+
 export function ColorThemeProvider({ children }: { children: React.ReactNode }) {
 	const { setTheme: setNextTheme } = useTheme();
 	const [themeId, setThemeIdState] = useState(DEFAULT_THEME_ID);
 	const [mode, setModeState] = useState<"dark" | "light">(DEFAULT_MODE);
 	const [borderRadius, setBorderRadiusState] =
 		useState<BorderRadiusPreset>(DEFAULT_BORDER_RADIUS);
+	const [mpThemes, setMpThemes] = useState<ThemeDefinition[]>([]);
 	const syncedToDb = useRef(false);
+	const mpLoaded = useRef(false);
+	const { subscribe } = useMutationEvents();
 
 	const themes = listThemes();
+
+	const fetchInstalledThemes = useCallback(() => {
+		fetch("/api/theme-store/installed?type=theme")
+			.then((r) => (r.ok ? r.json() : []))
+			.then(
+				(
+					exts: Array<{
+						id: string;
+						slug: string;
+						name: string;
+						description: string;
+						dataJson: string | null;
+					}>,
+				) => {
+					clearStoreThemes();
+					const parsed: ThemeDefinition[] = [];
+					for (const ext of exts) {
+						const td = parseStoreTheme(ext);
+						if (td) {
+							registerStoreTheme(td);
+							parsed.push(td);
+						}
+					}
+					setMpThemes(parsed);
+
+					const stored = localStorage.getItem(STORAGE_KEY);
+					if (
+						stored &&
+						stored.startsWith("mp:") &&
+						getTheme(stored)
+					) {
+						const theme = getTheme(stored)!;
+						const storedMode =
+							(localStorage.getItem(MODE_KEY) as
+								| "dark"
+								| "light") || DEFAULT_MODE;
+						setThemeIdState(stored);
+						setModeState(storedMode);
+						applyTheme(stored, storedMode);
+						setThemeCookies(stored, storedMode);
+						setMpThemeDataCookie(theme);
+						setNextTheme(storedMode);
+					}
+				},
+			)
+			.catch(() => {});
+	}, [setNextTheme]);
+
+	useEffect(() => {
+		if (mpLoaded.current) return;
+		mpLoaded.current = true;
+		fetchInstalledThemes();
+	}, [fetchInstalledThemes]);
+
+	useEffect(() => {
+		return subscribe((event) => {
+			if (
+				(event.type === "customTheme:installed" ||
+					event.type === "customTheme:uninstalled") &&
+				event.themeType === "theme"
+			) {
+				fetchInstalledThemes();
+			}
+		});
+	}, [subscribe, fetchInstalledThemes]);
 
 	useEffect(() => {
 		const prefs = getStoredPreferences();
@@ -170,6 +295,11 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 				setThemeIdState(id);
 				applyTheme(id, mode);
 				setThemeCookies(id, mode);
+				if (id.startsWith("mp:")) {
+					setMpThemeDataCookie(theme);
+				} else {
+					clearMpThemeDataCookie();
+				}
 			});
 
 			fetch("/api/user-settings", {
@@ -226,6 +356,7 @@ export function ColorThemeProvider({ children }: { children: React.ReactNode }) 
 				toggleMode,
 				setBorderRadius: setBorderRadiusCallback,
 				themes,
+				storeThemes: mpThemes,
 			}}
 		>
 			{children}

@@ -46,8 +46,13 @@ export async function checkUsageLimit(
 
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
-		select: { stripeCustomerId: true },
+		select: { stripeCustomerId: true, role: true },
 	});
+
+	// Allow admins to bypass the usage limit
+	if (user?.role === "admin") {
+		return { allowed: true, current: 0, limit: 0 };
+	}
 
 	// 2. No Stripe customer — lazy migration
 	let stripeCustomerId = user?.stripeCustomerId ?? null;

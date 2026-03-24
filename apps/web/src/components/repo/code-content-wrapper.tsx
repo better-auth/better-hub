@@ -346,9 +346,9 @@ export function CodeContentWrapper({
 					className={cn(
 						"flex-1 min-h-0",
 						isDetailRoute
-							? "flex flex-col overflow-hidden pl-4"
+							? "flex flex-col overflow-hidden pl-4 mx-4"
 							: isOverviewRoute
-								? "flex flex-col overflow-y-auto pl-4 pb-4 pt-3"
+								? "flex flex-col overflow-y-auto pl-4 pb-4 pt-3 mx-4"
 								: cn(
 										"overflow-y-auto pl-4 pb-4",
 										isBlobOrTree

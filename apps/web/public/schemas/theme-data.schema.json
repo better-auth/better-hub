@@ -1,0 +1,250 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"$id": "https://better-hub.com/schemas/theme-data.schema.json",
+	"title": "Better Hub Color Theme Data",
+	"description": "Schema for the color theme data file referenced by the \"main\" field in better-hub-extension.json. Defines dark and light variants with HSL color tokens.",
+	"type": "object",
+	"required": ["dark", "light"],
+	"additionalProperties": false,
+	"properties": {
+		"$schema": {
+			"type": "string",
+			"description": "URL or relative path to this JSON schema for editor validation."
+		},
+		"dark": {
+			"$ref": "#/definitions/themeVariant",
+			"description": "Color variant used in dark mode."
+		},
+		"light": {
+			"$ref": "#/definitions/themeVariant",
+			"description": "Color variant used in light mode."
+		}
+	},
+	"definitions": {
+		"themeVariant": {
+			"type": "object",
+			"required": ["accentPreview", "bgPreview", "colors"],
+			"additionalProperties": false,
+			"properties": {
+				"accentPreview": {
+					"type": "string",
+					"description": "Hex color shown as the accent dot in the theme picker (e.g. \"#7c3aed\")."
+				},
+				"bgPreview": {
+					"type": "string",
+					"description": "Hex color shown as the background dot in the theme picker (e.g. \"#09090b\")."
+				},
+				"colors": {
+					"$ref": "#/definitions/themeColors",
+					"description": "Map of CSS custom property names to HSL values (without the hsl() wrapper)."
+				},
+				"syntax": {
+					"$ref": "#/definitions/shikiTheme",
+					"description": "Optional TextMate-style syntax highlighting theme for code blocks."
+				}
+			}
+		},
+		"themeColors": {
+			"type": "object",
+			"description": "CSS custom properties mapped to HSL values. Values are in the format \"H S% L%\" (e.g. \"0 0% 3.9%\").",
+			"required": [
+				"--background",
+				"--foreground",
+				"--card",
+				"--card-foreground",
+				"--primary",
+				"--primary-foreground",
+				"--secondary",
+				"--secondary-foreground",
+				"--muted",
+				"--muted-foreground",
+				"--accent",
+				"--accent-foreground",
+				"--border",
+				"--input",
+				"--ring",
+				"--destructive",
+				"--success",
+				"--warning",
+				"--scrollbar-thumb",
+				"--scrollbar-thumb-hover",
+				"--shader-bg",
+				"--shader-filter",
+				"--hero-border",
+				"--diff-add-bar",
+				"--diff-del-bar",
+				"--diff-mod-bar",
+				"--link",
+				"--info",
+				"--code-bg",
+				"--code-block-bg",
+				"--inline-code-bg",
+				"--line-gutter",
+				"--line-highlight",
+				"--search-highlight",
+				"--search-highlight-active",
+				"--selection-bg",
+				"--table-row-alt",
+				"--diff-add-bg",
+				"--diff-del-bg",
+				"--diff-add-text",
+				"--diff-del-text",
+				"--diff-add-gutter",
+				"--diff-del-gutter",
+				"--diff-word-add",
+				"--diff-word-del",
+				"--alert-note",
+				"--alert-tip",
+				"--alert-important",
+				"--alert-warning",
+				"--alert-caution",
+				"--contrib-0",
+				"--contrib-1",
+				"--contrib-2",
+				"--contrib-3",
+				"--contrib-4"
+			],
+			"additionalProperties": false,
+			"properties": {
+				"--background": { "type": "string" },
+				"--foreground": { "type": "string" },
+				"--card": { "type": "string" },
+				"--card-foreground": { "type": "string" },
+				"--primary": { "type": "string" },
+				"--primary-foreground": { "type": "string" },
+				"--secondary": { "type": "string" },
+				"--secondary-foreground": { "type": "string" },
+				"--muted": { "type": "string" },
+				"--muted-foreground": { "type": "string" },
+				"--accent": { "type": "string" },
+				"--accent-foreground": { "type": "string" },
+				"--border": { "type": "string" },
+				"--input": { "type": "string" },
+				"--ring": { "type": "string" },
+				"--destructive": { "type": "string" },
+				"--success": { "type": "string" },
+				"--warning": { "type": "string" },
+				"--scrollbar-thumb": { "type": "string" },
+				"--scrollbar-thumb-hover": { "type": "string" },
+				"--shader-bg": { "type": "string" },
+				"--shader-filter": { "type": "string" },
+				"--hero-border": { "type": "string" },
+				"--diff-add-bar": { "type": "string" },
+				"--diff-del-bar": { "type": "string" },
+				"--diff-mod-bar": { "type": "string" },
+				"--link": { "type": "string" },
+				"--info": { "type": "string" },
+				"--code-bg": { "type": "string" },
+				"--code-block-bg": { "type": "string" },
+				"--inline-code-bg": { "type": "string" },
+				"--line-gutter": { "type": "string" },
+				"--line-highlight": { "type": "string" },
+				"--search-highlight": { "type": "string" },
+				"--search-highlight-active": { "type": "string" },
+				"--selection-bg": { "type": "string" },
+				"--table-row-alt": { "type": "string" },
+				"--diff-add-bg": { "type": "string" },
+				"--diff-del-bg": { "type": "string" },
+				"--diff-add-text": { "type": "string" },
+				"--diff-del-text": { "type": "string" },
+				"--diff-add-gutter": { "type": "string" },
+				"--diff-del-gutter": { "type": "string" },
+				"--diff-word-add": { "type": "string" },
+				"--diff-word-del": { "type": "string" },
+				"--alert-note": { "type": "string" },
+				"--alert-tip": { "type": "string" },
+				"--alert-important": { "type": "string" },
+				"--alert-warning": { "type": "string" },
+				"--alert-caution": { "type": "string" },
+				"--contrib-0": { "type": "string" },
+				"--contrib-1": { "type": "string" },
+				"--contrib-2": { "type": "string" },
+				"--contrib-3": { "type": "string" },
+				"--contrib-4": { "type": "string" }
+			}
+		},
+		"shikiTheme": {
+			"type": "object",
+			"required": ["name", "type", "colors", "tokenColors"],
+			"additionalProperties": false,
+			"properties": {
+				"name": {
+					"type": "string",
+					"description": "Theme name used by the syntax highlighter."
+				},
+				"type": {
+					"enum": ["light", "dark"],
+					"description": "Whether this is a light or dark syntax theme."
+				},
+				"colors": {
+					"type": "object",
+					"additionalProperties": { "type": "string" },
+					"description": "Editor color overrides (e.g. \"editor.background\")."
+				},
+				"tokenColors": {
+					"type": "array",
+					"description": "TextMate token color rules.",
+					"items": {
+						"type": "object",
+						"required": ["scope", "settings"],
+						"properties": {
+							"scope": {
+								"oneOf": [
+									{ "type": "string" },
+									{
+										"type": "array",
+										"items": {
+											"type": "string"
+										}
+									}
+								],
+								"description": "TextMate scope selector(s)."
+							},
+							"settings": {
+								"type": "object",
+								"properties": {
+									"foreground": {
+										"type": "string"
+									},
+									"fontStyle": {
+										"type": "string"
+									}
+								},
+								"additionalProperties": false
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"examples": [
+		{
+			"$schema": "https://better-hub.com/schemas/theme-data.schema.json",
+			"dark": {
+				"accentPreview": "#7c3aed",
+				"bgPreview": "#09090b",
+				"colors": {
+					"--background": "0 0% 3.9%",
+					"--foreground": "0 0% 98%",
+					"--card": "0 0% 3.9%",
+					"--card-foreground": "0 0% 98%",
+					"--primary": "263.4 70% 50.4%",
+					"--primary-foreground": "210 20% 98%"
+				}
+			},
+			"light": {
+				"accentPreview": "#7c3aed",
+				"bgPreview": "#ffffff",
+				"colors": {
+					"--background": "0 0% 100%",
+					"--foreground": "0 0% 3.9%",
+					"--card": "0 0% 100%",
+					"--card-foreground": "0 0% 3.9%",
+					"--primary": "263.4 70% 50.4%",
+					"--primary-foreground": "0 0% 100%"
+				}
+			}
+		}
+	]
+}

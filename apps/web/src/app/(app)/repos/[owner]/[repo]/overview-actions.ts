@@ -7,6 +7,8 @@ import {
 	getRepoEvents,
 	getOctokit,
 	fetchCheckStatusForRef,
+	getCompareLinkStatus,
+	type CompareLinkStatus,
 	type CommitActivityWeek,
 	type CheckStatus,
 } from "@/lib/github";
@@ -129,4 +131,15 @@ export async function fetchOverviewCIStatus(
 	const result = await fetchCheckStatusForRef(octokit, owner, repo, defaultBranch);
 	if (result) await setCachedOverviewCI(owner, repo, result);
 	return result;
+}
+
+export async function fetchCompareLinkStatus(params: {
+	baseOwner: string;
+	baseRepo: string;
+	headOwner: string;
+	headRepo: string;
+	baseBranch: string;
+	headBranch: string;
+}): Promise<CompareLinkStatus | null> {
+	return getCompareLinkStatus(params);
 }

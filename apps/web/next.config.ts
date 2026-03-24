@@ -11,15 +11,18 @@ const KNOWN_ROUTES = [
 	"debug",
 	"extension",
 	"issues",
+	"theme-store",
 	"notifications",
 	"orgs",
 	"prompt",
+	"pulls",
 	"repos",
 	"search",
 	"stars",
 	"trending",
 	"users",
 	"_next",
+	"schemas",
 ];
 
 const nextConfig: NextConfig = {
@@ -30,8 +33,15 @@ const nextConfig: NextConfig = {
 			dynamic: 300,
 			static: 180,
 		},
+		// serverComponentsHmrCache: true,
+		imgOptTimeoutInSeconds: 3,
 	},
-	reactCompiler: true,
+	logging: {
+		fetches: {
+			fullUrl: true,
+		},
+	},
+	// reactCompiler: true,
 	images: {
 		...(process.env.NODE_ENV === "development" && {
 			dangerouslyAllowLocalIP: true,

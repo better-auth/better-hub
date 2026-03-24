@@ -1,11 +1,14 @@
 "use client";
 
-import { Moon, Sun, Check, Square } from "lucide-react";
+import { Moon, Sun, Check, Square, Store, Palette, File } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useColorTheme } from "@/components/theme/theme-provider";
+import { useIconTheme } from "@/components/theme-store/icon-theme-provider";
 import type { ThemeDefinition } from "@/lib/themes";
+import type { IconMapping, ThemeStoreDetail } from "@/lib/theme-store-types";
 import { BORDER_RADIUS_PRESETS, type BorderRadiusPreset } from "@/lib/themes/border-radius";
 import type { UserSettings } from "@/lib/user-settings-store";
+import Link from "next/link";
 
 interface GeneralTabProps {
 	settings: UserSettings;
@@ -78,6 +81,95 @@ function ThemeGrid({
 	);
 }
 
+const SAMPLE_ICON_NAMES = [
+	"typescript",
+	"javascript",
+	"react",
+	"json",
+	"html",
+	"css",
+	"markdown",
+	"python",
+	"git",
+	"folder",
+];
+
+function IconThemeCard({
+	ext,
+	isActive,
+	onSelect,
+}: {
+	ext: ThemeStoreDetail;
+	isActive: boolean;
+	onSelect: () => void;
+}) {
+	let mapping: IconMapping | null = null;
+	try {
+		if (ext.dataJson) mapping = JSON.parse(ext.dataJson) as IconMapping;
+	} catch {
+		/* ignore */
+	}
+
+	const previewNames: string[] = [];
+	if (mapping?.baseURL) {
+		const seen = new Set<string>();
+		for (const name of SAMPLE_ICON_NAMES) {
+			if (seen.size >= 6) break;
+			const match =
+				mapping.fileIcons?.find(
+					(d) =>
+						d.name.toLowerCase() === name ||
+						d.fileExtensions?.some((e) => e === name),
+				) ??
+				mapping.folderIcons?.find((d) => d.name.toLowerCase() === name);
+			if (match && !seen.has(match.name)) {
+				seen.add(match.name);
+				previewNames.push(match.name);
+			}
+		}
+		if (previewNames.length === 0 && mapping.defaultFile) {
+			previewNames.push(mapping.defaultFile);
+		}
+	}
+
+	return (
+		<button
+			onClick={onSelect}
+			className={cn(
+				"group relative w-full flex flex-col gap-2 border px-3 py-2.5 text-left transition-colors cursor-pointer",
+				isActive
+					? "border-foreground/30 bg-muted/50 dark:bg-white/4"
+					: "border-border hover:border-foreground/10 hover:bg-muted/30",
+			)}
+		>
+			<div className="flex items-center gap-2 min-w-0">
+				<div className="flex-1 min-w-0">
+					<span className="text-xs font-mono font-medium text-foreground truncate block">
+						{ext.name}
+					</span>
+					<span className="text-[10px] text-muted-foreground/60 block truncate">
+						{ext.description}
+					</span>
+				</div>
+				{isActive && <Check className="size-3.5 text-success shrink-0" />}
+			</div>
+
+			{mapping?.baseURL && previewNames.length > 0 && (
+				<div className="flex items-center gap-1.5">
+					{previewNames.map((name) => (
+						<img
+							key={name}
+							src={`${mapping!.baseURL.endsWith("/") ? mapping!.baseURL : `${mapping!.baseURL}/`}${name}.svg`}
+							alt={name}
+							className="w-4 h-4"
+						/>
+					))}
+				</div>
+			)}
+		</button>
+	);
+}
+
 const RADIUS_OPTIONS: { id: BorderRadiusPreset; label: string; description: string }[] = [
 	{ id: "default", label: "Default", description: "Sharp corners" },
 	{ id: "small", label: "Small", description: "Subtle rounding" },
@@ -90,8 +182,18 @@ export function GeneralTab({
 	onUpdate: _onUpdate,
 	onThemeTransition,
 }: GeneralTabProps) {
-	const { themeId, mode, borderRadius, setTheme, toggleMode, setBorderRadius, themes } =
-		useColorTheme();
+	const {
+		themeId,
+		mode,
+		borderRadius,
+		setTheme,
+		toggleMode,
+		setBorderRadius,
+		themes,
+		storeThemes,
+	} = useColorTheme();
+
+	const { activeIconThemeId, installedIconThemes, setActiveIconTheme } = useIconTheme();
 
 	const handleSetTheme = (id: string) => {
 		onThemeTransition?.();
@@ -171,6 +273,98 @@ export function GeneralTab({
 					mode={mode}
 					onSelect={handleSetTheme}
 				/>
+			</div>
+
+			{/* Marketplace themes */}
+			<div className="px-4 py-4">
+				<label className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+					<Store className="size-3" />
+					Installed Themes
+				</label>
+				{storeThemes.length > 0 ? (
+					<>
+						<p className="text-[11px] text-muted-foreground/60 mt-0.5 mb-3">
+							Themes installed from the theme store.
+						</p>
+						<ThemeGrid
+							themes={storeThemes}
+							activeId={themeId}
+							mode={mode}
+							onSelect={handleSetTheme}
+						/>
+					</>
+				) : (
+					<p className="text-[11px] text-muted-foreground/60 mt-0.5 mb-3">
+						No theme store themes installed.{" "}
+						<Link
+							href="/theme-store"
+							className="text-link hover:underline"
+						>
+							Browse theme store
+						</Link>
+					</p>
+				)}
+			</div>
+
+			{/* File Icon Theme */}
+			<div className="px-4 py-4">
+				<label className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+					<Palette className="size-3" />
+					File Icons
+				</label>
+				<p className="text-[11px] text-muted-foreground/60 mt-0.5 mb-3">
+					Choose a file icon theme for the file explorer and code
+					views.
+				</p>
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 w-full">
+					<button
+						onClick={() => setActiveIconTheme(null)}
+						className={cn(
+							"group relative w-full flex flex-col gap-2 border px-3 py-2.5 text-left transition-colors cursor-pointer",
+							activeIconThemeId === null
+								? "border-foreground/30 bg-muted/50 dark:bg-white/4"
+								: "border-border hover:border-foreground/10 hover:bg-muted/30",
+						)}
+					>
+						<div className="flex items-center gap-2 min-w-0">
+							<div className="flex-1 min-w-0">
+								<span className="text-xs font-mono font-medium text-foreground truncate block">
+									Default
+								</span>
+								<span className="text-[10px] text-muted-foreground/60 block truncate">
+									Built-in Lucide icons
+								</span>
+							</div>
+							{activeIconThemeId === null && (
+								<Check className="size-3.5 text-success shrink-0" />
+							)}
+						</div>
+						<div className="flex items-center gap-1.5 text-muted-foreground/50">
+							<File className="size-4" />
+							<File className="size-4" />
+							<File className="size-4" />
+						</div>
+					</button>
+					{installedIconThemes.map((ext) => (
+						<IconThemeCard
+							key={ext.id}
+							ext={ext}
+							isActive={activeIconThemeId === ext.id}
+							onSelect={() => setActiveIconTheme(ext.id)}
+						/>
+					))}
+				</div>
+				{installedIconThemes.length === 0 && (
+					<p className="text-[11px] text-muted-foreground/60 mt-3">
+						No additional icon themes installed.{" "}
+						<Link
+							href="/theme-store"
+							className="text-link hover:underline"
+						>
+							Browse theme store
+						</Link>
+					</p>
+				)}
 			</div>
 
 			{/* Border Radius */}

@@ -990,7 +990,7 @@ export function CodeViewerClient({
 					<div
 						ref={codeRef}
 						className={cn(
-							"code-viewer border border-border relative group/code",
+							"code-viewer border border-border overflow-hidden relative group/code",
 							wordWrap && "word-wrap",
 							searchOpen ? "rounded-b-md" : "rounded-md",
 							className,

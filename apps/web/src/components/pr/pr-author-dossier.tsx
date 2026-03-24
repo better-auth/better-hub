@@ -2,7 +2,7 @@
 
 import { useRef, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
-import Image from "next/image";
+import { GithubAvatar } from "@/components/shared/github-avatar";
 import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -112,7 +112,7 @@ function ScoreRing({ score }: { score: ScoreResult }) {
 	return (
 		<div
 			ref={triggerRef}
-			className="relative shrink-0"
+			className="relative shrink-0 mt-3"
 			onMouseEnter={handleMouseEnter}
 			onMouseLeave={() => setTooltipPos(null)}
 		>
@@ -245,7 +245,7 @@ export function PRAuthorDossier({
 			{/* Author summary row */}
 			<div className="flex items-center gap-2.5 px-1 py-1.5">
 				{score && <ScoreRing score={score} />}
-				<div className="flex-1 min-w-0 gap-0.5 flex flex-col justify-center h-10">
+				<div className="flex-1 min-w-0 flex flex-col justify-center h-10 pt-2">
 					{/* Top: User info */}
 					<div className="flex items-center gap-1.5">
 						<UserTooltip
@@ -257,11 +257,10 @@ export function PRAuthorDossier({
 								href={`/users/${author.login}`}
 								className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
 							>
-								<Image
+								<GithubAvatar
 									src={author.avatar_url}
 									alt={author.login}
-									width={20}
-									height={20}
+									size={20}
 									className="rounded-full shrink-0 border"
 								/>
 								<span className="text-[11px] font-medium text-foreground/80 truncate hover:underline">
@@ -310,17 +309,14 @@ export function PRAuthorDossier({
 												}
 												className="ring-1 ring-border hover:ring-foreground/20 rounded-sm transition-all"
 											>
-												<Image
+												<GithubAvatar
 													src={
 														o.avatar_url
 													}
 													alt={
 														o.login
 													}
-													width={
-														16
-													}
-													height={
+													size={
 														16
 													}
 													className="rounded-sm"
