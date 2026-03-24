@@ -94,10 +94,12 @@ type GitDataSyncJobType =
 	| "pr_bundle"
 	| "repo_discussions";
 
-// SECURITY: Only cache types that are safe to share across users belong here.
-// Any data from repos (issues, PRs, code, branches, etc.) is excluded because
-// private-repo data fetched by one authorized user would leak to others via
-// the shared cache, bypassing GitHub permission checks.
+// SECURITY: Only cache types whose responses are identical regardless of which
+// user fetched them belong here. Repo-level types are keyed by owner/repo so
+// they are only reachable when navigating to that specific repo.
+// viewer-dependent listings (user_public_repos, org_repos) are excluded because
+// the GitHub API returns different repos depending on the caller's access token,
+// and sharing those responses would leak private repository names.
 const SHAREABLE_CACHE_TYPES: ReadonlySet<string> = new Set([
 	"repo_branches",
 	"repo_tags",
@@ -116,11 +118,9 @@ const SHAREABLE_CACHE_TYPES: ReadonlySet<string> = new Set([
 	"repo_workflow_runs",
 	"repo_nav_counts",
 	"user_profile",
-	"user_public_repos",
 	"user_public_orgs",
 	"user_events",
 	"org",
-	"org_repos",
 	"org_members",
 	"trending_repos",
 ]);
@@ -341,7 +341,10 @@ function buildOrgReposCacheKey(
 	type: OrgRepoType,
 	perPage: number,
 ): string {
-	return `org_repos:${org.toLowerCase()}:${sort}:${type}:${perPage}`;
+	// v2: cache key rotated to invalidate entries that may contain private repo
+	// names leaked via the old shared cache. Safe to collapse back after all old
+	// keys have expired or been purged.
+	return `org_repos:v2:${org.toLowerCase()}:${sort}:${type}:${perPage}`;
 }
 
 function buildNotificationsCacheKey(perPage: number): string {
@@ -413,7 +416,10 @@ function buildUserProfileCacheKey(username: string): string {
 }
 
 function buildUserPublicReposCacheKey(username: string, perPage: number): string {
-	return `user_public_repos:${username.toLowerCase()}:${perPage}`;
+	// v2: cache key rotated to invalidate entries that may contain private repo
+	// names leaked via the old shared cache. Safe to collapse back after all old
+	// keys have expired or been purged.
+	return `user_public_repos:v2:${username.toLowerCase()}:${perPage}`;
 }
 
 function buildUserPublicOrgsCacheKey(username: string): string {
