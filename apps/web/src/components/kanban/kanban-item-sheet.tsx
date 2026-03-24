@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ClientMarkdown } from "@/components/shared/client-markdown";
+import { UserTooltip } from "@/components/shared/user-tooltip";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { KanbanCommentCard } from "./kanban-comment-card";
 import { KanbanCommentInput } from "./kanban-comment-input";
@@ -1264,46 +1265,55 @@ export function KanbanItemSheet({
 									<h4 className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
 										Author
 									</h4>
-									<div className="flex items-center gap-2">
-										{item.authorAvatar ? (
-											<Image
-												src={
-													item.authorAvatar
-												}
-												alt={
-													item.authorLogin ??
-													"Author"
-												}
-												width={
-													20
-												}
-												height={
-													20
-												}
-												className="rounded-full"
-											/>
-										) : (
-											<div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center">
-												<User className="w-2.5 h-2.5 text-muted-foreground/40" />
-											</div>
-										)}
-										<div className="min-w-0 flex-1">
-											{item.authorLogin ? (
-												<Link
-													href={`/users/${item.authorLogin}`}
-													className="text-[11px] text-foreground hover:underline truncate block"
-												>
+									{item.authorLogin ? (
+										<UserTooltip
+											username={
+												item.authorLogin
+											}
+											side="left"
+										>
+											<Link
+												href={`/users/${item.authorLogin}`}
+												className="flex items-center gap-2 min-w-0 w-full p-1.5 -m-1.5 rounded hover:bg-muted/50 transition-colors"
+											>
+												{item.authorAvatar ? (
+													<Image
+														src={
+															item.authorAvatar
+														}
+														alt={
+															item.authorLogin
+														}
+														width={
+															20
+														}
+														height={
+															20
+														}
+														className="rounded-full shrink-0"
+													/>
+												) : (
+													<div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center shrink-0">
+														<User className="w-2.5 h-2.5 text-muted-foreground/40" />
+													</div>
+												)}
+												<span className="text-[11px] text-foreground truncate hover:underline min-w-0">
 													{
 														item.authorLogin
 													}
-												</Link>
-											) : (
-												<p className="text-[11px] text-muted-foreground">
-													Unknown
-												</p>
-											)}
+												</span>
+											</Link>
+										</UserTooltip>
+									) : (
+										<div className="flex items-center gap-2">
+											<div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center">
+												<User className="w-2.5 h-2.5 text-muted-foreground/40" />
+											</div>
+											<p className="text-[11px] text-muted-foreground">
+												Unknown
+											</p>
 										</div>
-									</div>
+									)}
 								</div>
 
 								<div className="h-px bg-border/50" />

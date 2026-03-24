@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ClientMarkdown } from "@/components/shared/client-markdown";
+import { UserTooltip } from "@/components/shared/user-tooltip";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { KanbanCommentCard } from "./kanban-comment-card";
 import { KanbanCommentInput } from "./kanban-comment-input";
@@ -279,31 +280,47 @@ export function KanbanItemDetail({
 						</a>
 					</div>
 
-					<div className="flex md:hidden items-center gap-2">
-						{item.authorAvatar ? (
-							<Image
-								src={item.authorAvatar}
-								alt={item.authorLogin ?? "Author"}
-								width={20}
-								height={20}
-								className="rounded-full shrink-0"
-							/>
-						) : (
-							<div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center shrink-0">
-								<User className="w-3 h-3 text-muted-foreground/40" />
-							</div>
-						)}
+					<div className="flex md:hidden items-center gap-2 min-w-0">
 						{item.authorLogin ? (
-							<Link
-								href={`/users/${item.authorLogin}`}
-								className="text-[11px] text-muted-foreground/80 hover:text-foreground hover:underline truncate"
+							<UserTooltip
+								username={item.authorLogin}
+								side="bottom"
 							>
-								{item.authorLogin}
-							</Link>
+								<Link
+									href={`/users/${item.authorLogin}`}
+									className="flex items-center gap-2 min-w-0 hover:text-foreground transition-colors"
+								>
+									{item.authorAvatar ? (
+										<Image
+											src={
+												item.authorAvatar
+											}
+											alt={
+												item.authorLogin
+											}
+											width={20}
+											height={20}
+											className="rounded-full shrink-0"
+										/>
+									) : (
+										<div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center shrink-0">
+											<User className="w-3 h-3 text-muted-foreground/40" />
+										</div>
+									)}
+									<span className="text-[11px] text-muted-foreground/80 truncate hover:underline">
+										{item.authorLogin}
+									</span>
+								</Link>
+							</UserTooltip>
 						) : (
-							<span className="text-[11px] text-muted-foreground/60">
-								Unknown
-							</span>
+							<>
+								<div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center shrink-0">
+									<User className="w-3 h-3 text-muted-foreground/40" />
+								</div>
+								<span className="text-[11px] text-muted-foreground/60">
+									Unknown
+								</span>
+							</>
 						)}
 					</div>
 
@@ -481,36 +498,47 @@ export function KanbanItemDetail({
 						<p className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-wider">
 							Author
 						</p>
-						<div className="flex items-center gap-2 min-w-0">
-							{item.authorAvatar ? (
-								<Image
-									src={item.authorAvatar}
-									alt={
-										item.authorLogin ??
-										"Author"
-									}
-									width={20}
-									height={20}
-									className="rounded-full shrink-0"
-								/>
-							) : (
+						{item.authorLogin ? (
+							<UserTooltip
+								username={item.authorLogin}
+								side="left"
+							>
+								<Link
+									href={`/users/${item.authorLogin}`}
+									className="flex items-center gap-2 min-w-0 rounded-md hover:bg-muted/50 -mx-1 px-1 py-0.5 transition-colors"
+								>
+									{item.authorAvatar ? (
+										<Image
+											src={
+												item.authorAvatar
+											}
+											alt={
+												item.authorLogin
+											}
+											width={20}
+											height={20}
+											className="rounded-full shrink-0"
+										/>
+									) : (
+										<div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center shrink-0">
+											<User className="w-3 h-3 text-muted-foreground/40" />
+										</div>
+									)}
+									<span className="text-[11px] font-medium text-foreground truncate hover:underline min-w-0">
+										{item.authorLogin}
+									</span>
+								</Link>
+							</UserTooltip>
+						) : (
+							<div className="flex items-center gap-2 min-w-0">
 								<div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center shrink-0">
 									<User className="w-3 h-3 text-muted-foreground/40" />
 								</div>
-							)}
-							{item.authorLogin ? (
-								<Link
-									href={`/users/${item.authorLogin}`}
-									className="text-[11px] font-medium text-foreground hover:underline truncate"
-								>
-									{item.authorLogin}
-								</Link>
-							) : (
 								<span className="text-[11px] text-muted-foreground">
 									Unknown
 								</span>
-							)}
-						</div>
+							</div>
+						)}
 					</div>
 
 					<div className="h-px bg-border/30" />
