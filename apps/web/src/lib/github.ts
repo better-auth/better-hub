@@ -98,6 +98,8 @@ type GitDataSyncJobType =
 // Any data from repos (issues, PRs, code, branches, etc.) is excluded because
 // private-repo data fetched by one authorized user would leak to others via
 // the shared cache, bypassing GitHub permission checks.
+// user_public_repos and org_repos are excluded: GitHub returns private repos when
+// the token matches the profile owner; see filterUserProfileReposForViewer.
 const SHAREABLE_CACHE_TYPES: ReadonlySet<string> = new Set([
 	"repo_branches",
 	"repo_tags",
@@ -116,11 +118,9 @@ const SHAREABLE_CACHE_TYPES: ReadonlySet<string> = new Set([
 	"repo_workflow_runs",
 	"repo_nav_counts",
 	"user_profile",
-	"user_public_repos",
 	"user_public_orgs",
 	"user_events",
 	"org",
-	"org_repos",
 	"org_members",
 	"trending_repos",
 ]);
@@ -1549,6 +1549,23 @@ async function enrichMissingRepoLanguagesFromGraphQL<
 }
 
 type UserPublicRepo = Awaited<ReturnType<Octokit["repos"]["listForUser"]>>["data"][number];
+
+/**
+ * User profile repo lists may include private repos when the GitHub token belongs to
+ * the profile subject. That payload must never be shown to other signed-in users
+ * (shared/per-user cache, or API quirks). Only the profile owner viewing their own
+ * profile keeps private entries.
+ */
+function filterUserProfileReposForViewer<T extends { private?: boolean }>(
+	repos: T[],
+	profileUsername: string,
+	viewerLogin: string | null | undefined,
+): T[] {
+	const subject = profileUsername.toLowerCase();
+	const viewer = viewerLogin?.toLowerCase() ?? null;
+	if (viewer === subject) return repos;
+	return repos.filter((r) => !r.private);
+}
 
 async function fetchUserPublicReposFromGitHub(
 	octokit: Octokit,
@@ -6436,9 +6453,14 @@ export async function getUser(username: string) {
 	});
 }
 
+/**
+ * Fetches repos for a GitHub user handle and strips private entries unless the
+ * signed-in viewer is that user. Use {@link getUserProfileRepositories} from
+ * profile routes so listings never bypass this logic.
+ */
 export async function getUserPublicRepos(username: string, perPage = 30) {
 	const authCtx = await getGitHubAuthContext();
-	return readLocalFirstGitData({
+	const repos = await readLocalFirstGitData({
 		authCtx,
 		cacheKey: buildUserPublicReposCacheKey(username, perPage),
 		cacheType: "user_public_repos",
@@ -6453,6 +6475,16 @@ export async function getUserPublicRepos(username: string, perPage = 30) {
 				authCtx?.token ?? null,
 			),
 	});
+	return filterUserProfileReposForViewer(repos, username, authCtx?.githubUser?.login);
+}
+
+/**
+ * Canonical entry for user profile pages (`/users/:login`, `/:login` when the
+ * actor is a user). Do not replace with `octokit.repos.listForUser` or
+ * `/api/user-repos` — those can leak private repo names across viewers.
+ */
+export async function getUserProfileRepositories(login: string, perPage = 100) {
+	return getUserPublicRepos(login, perPage);
 }
 
 export async function getUserPublicOrgs(username: string) {

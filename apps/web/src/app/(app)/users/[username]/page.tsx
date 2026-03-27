@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import {
 	getUser,
-	getUserPublicRepos,
+	getUserProfileRepositories,
 	getUserPublicOrgs,
 	getUserOrgTopRepos,
 	getContributionData,
 	getUserEvents,
 } from "@/lib/github";
+
+/** Session-scoped; must not be statically shared across GitHub users. */
+export const dynamic = "force-dynamic";
 import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { UserProfileContent } from "@/components/users/user-profile-content";
 import { ExternalLink, User } from "lucide-react";
@@ -69,7 +72,7 @@ export default async function UserProfilePage({
 	const { username } = await params;
 
 	let userData: Awaited<ReturnType<typeof getUser>> = null;
-	let reposData: Awaited<ReturnType<typeof getUserPublicRepos>> = [];
+	let reposData: Awaited<ReturnType<typeof getUserProfileRepositories>> = [];
 	let orgsData: Awaited<ReturnType<typeof getUserPublicOrgs>> = [];
 	let contributionData: Awaited<ReturnType<typeof getContributionData>> = null;
 	let orgTopRepos: Awaited<ReturnType<typeof getUserOrgTopRepos>> = [];
@@ -91,7 +94,7 @@ export default async function UserProfilePage({
 			const resolvedLogin = userData.login;
 			const [reposResult, orgsResult, contributionsResult, eventsResult] =
 				await Promise.allSettled([
-					getUserPublicRepos(resolvedLogin, 100),
+					getUserProfileRepositories(resolvedLogin, 100),
 					getUserPublicOrgs(resolvedLogin),
 					getContributionData(resolvedLogin),
 					getUserEvents(resolvedLogin, 100),

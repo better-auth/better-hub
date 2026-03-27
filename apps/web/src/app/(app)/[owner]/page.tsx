@@ -4,12 +4,15 @@ import {
 	getOrg,
 	getOrgRepos,
 	getUser,
-	getUserPublicRepos,
+	getUserProfileRepositories,
 	getUserPublicOrgs,
 	getUserOrgTopRepos,
 	getContributionData,
 	getUserEvents,
 } from "@/lib/github";
+
+/** Session-scoped; must not be statically shared across GitHub users. */
+export const dynamic = "force-dynamic";
 import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { OrgDetailContent } from "@/components/orgs/org-detail-content";
 import { UserProfileContent } from "@/components/users/user-profile-content";
@@ -111,7 +114,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 
 	const isBot = (userData as { type?: string }).type === "Bot";
 
-	let reposData: Awaited<ReturnType<typeof getUserPublicRepos>> = [];
+	let reposData: Awaited<ReturnType<typeof getUserProfileRepositories>> = [];
 	let orgsData: Awaited<ReturnType<typeof getUserPublicOrgs>> = [];
 	let contributionData: Awaited<ReturnType<typeof getContributionData>> = null;
 	let orgTopRepos: Awaited<ReturnType<typeof getUserOrgTopRepos>> = [];
@@ -121,7 +124,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 		try {
 			const [reposResult, orgsResult, contributionsResult, eventsResult] =
 				await Promise.allSettled([
-					getUserPublicRepos(userData.login, 100),
+					getUserProfileRepositories(userData.login, 100),
 					getUserPublicOrgs(userData.login),
 					getContributionData(userData.login),
 					getUserEvents(userData.login, 100),
