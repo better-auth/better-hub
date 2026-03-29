@@ -173,6 +173,7 @@ function CombinedFilterDropdown({
 	}[];
 }) {
 	const [open, setOpen] = useState(false);
+	const dropdownRef = useRef<HTMLButtonElement>(null);
 	const activeFilters = filters.filter((f) => f.options[0]?.value !== f.value);
 	const activeCount = activeFilters.length;
 
@@ -180,6 +181,7 @@ function CombinedFilterDropdown({
 		<div className="relative">
 			<div className="flex items-center gap-1.5">
 				<button
+					ref={dropdownRef}
 					onClick={() => setOpen(!open)}
 					className={cn(
 						"flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-mono border transition-colors cursor-pointer",
@@ -238,7 +240,21 @@ function CombinedFilterDropdown({
 						className="fixed inset-0 z-10"
 						onClick={() => setOpen(false)}
 					/>
-					<div className="absolute top-full left-0 mt-1 z-20 min-w-[260px] border border-border bg-background shadow-lg">
+					<div
+						className="fixed z-20 w-[calc(100vw-1rem)] max-w-65 max-h-[80vh] overflow-y-auto border border-border bg-background shadow-lg"
+						style={{
+							scrollbarWidth: "none",
+							msOverflowStyle: "none",
+							top:
+								(dropdownRef.current?.getBoundingClientRect()
+									.bottom ?? 0) + 4,
+							left: Math.min(
+								dropdownRef.current?.getBoundingClientRect()
+									.left ?? 0,
+								window.innerWidth - 260 - 8,
+							),
+						}}
+					>
 						{filters.map((filter, fi) => (
 							<div key={filter.label}>
 								{fi > 0 && (
