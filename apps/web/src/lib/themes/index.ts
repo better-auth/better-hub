@@ -17,6 +17,7 @@ import {
 	zinc,
 	catppuccin,
 	github,
+	helium,
 	rosePine,
 	LEGACY_THEME_MAP,
 } from "./themes";
@@ -39,6 +40,7 @@ const themes: ThemeDefinition[] = [
 	forest,
 	catppuccin,
 	github,
+	helium,
 	rosePine,
 ];
 
