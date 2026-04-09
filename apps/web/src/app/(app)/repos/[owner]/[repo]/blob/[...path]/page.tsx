@@ -8,11 +8,13 @@ import {
 } from "@/lib/github";
 import { parseRefAndPath, formatBytes, getLanguageFromFilename } from "@/lib/github-utils";
 import { CodeViewer } from "@/components/repo/code-viewer";
+import { NotebookViewer } from "@/components/repo/notebook-viewer";
 import { MarkdownRenderer } from "@/components/shared/markdown-renderer";
 import { MarkdownBlobView } from "@/components/repo/markdown-blob-view";
 import { File, Download } from "lucide-react";
 
 const MARKDOWN_EXTENSIONS = new Set(["md", "mdx", "markdown", "mdown", "mkd"]);
+const NOTEBOOK_EXTENSIONS = new Set(["ipynb"]);
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "svg", "webp", "ico", "bmp"]);
 
@@ -127,6 +129,7 @@ export default async function BlobPage({
 	}
 
 	const isMarkdown = MARKDOWN_EXTENSIONS.has(ext);
+	const isNotebook = NOTEBOOK_EXTENSIONS.has(ext);
 	const fileDir = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
 
 	if (isMarkdown) {
@@ -170,6 +173,14 @@ export default async function BlobPage({
 				repo={repo}
 				branch={ref}
 			/>
+		);
+	}
+
+	if (isNotebook) {
+		return (
+			<div className="border border-border rounded-md overflow-hidden">
+				<NotebookViewer content={file.content} />
+			</div>
 		);
 	}
 
