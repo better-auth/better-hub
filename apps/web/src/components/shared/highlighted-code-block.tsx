@@ -3,8 +3,14 @@
 import { useEffect, useState, memo } from "react";
 import { useColorTheme } from "@/components/theme/theme-provider";
 import { highlightCodeClient } from "@/lib/shiki-client";
+import { MermaidDiagram } from "@/components/shared/mermaid-diagram";
 
-export const HighlightedCodeBlock = memo(function HighlightedCodeBlock({
+export function HighlightedCodeBlock({ code, lang }: { code: string; lang: string }) {
+	if (lang === "mermaid") return <MermaidDiagram code={code} />;
+	return <HighlightedCodeBlockInner code={code} lang={lang} />;
+}
+
+const HighlightedCodeBlockInner = memo(function HighlightedCodeBlockInner({
 	code,
 	lang,
 }: {

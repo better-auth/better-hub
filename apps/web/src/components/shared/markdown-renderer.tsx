@@ -63,6 +63,7 @@ import { highlightCode } from "@/lib/shiki";
 import { toInternalUrl } from "@/lib/github-utils";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";
 import { ReactiveCodeBlocks } from "@/components/shared/reactive-code-blocks";
+import { MermaidBlocks } from "@/components/shared/mermaid-diagram";
 import { MarkdownMentionTooltips } from "@/components/shared/markdown-mention-tooltips";
 
 interface RepoContext {
@@ -459,12 +460,17 @@ export async function renderMarkdownToHtml(
 ): Promise<string> {
 	const codeBlocks: { code: string; lang: string; id: number }[] = [];
 	const installBlocks: { id: number; html: string }[] = [];
+	const mermaidBlocks: { code: string; id: number }[] = [];
 	let blockId = 0;
 
 	const processed = content.replace(
 		/```([\w+#.-]*)\n([\s\S]*?)```/g,
 		(_match, lang, code) => {
 			const id = blockId++;
+			if (lang === "mermaid") {
+				mermaidBlocks.push({ code: code.trimEnd(), id });
+				return `<div data-mermaid-block="${id}"></div>`;
+			}
 			const variants = getInstallVariants(code.trimEnd());
 			if (variants) {
 				installBlocks.push({
@@ -505,6 +511,11 @@ export async function renderMarkdownToHtml(
 
 	for (const block of installBlocks) {
 		html = html.replace(`<div data-install-block="${block.id}"></div>`, block.html);
+	}
+
+	for (const block of mermaidBlocks) {
+		const wrapped = `<div class="ghmd-mermaid" data-code="${escapeDataAttr(block.code)}"></div>`;
+		html = html.replace(`<div data-mermaid-block="${block.id}"></div>`, wrapped);
 	}
 
 	html = processAlerts(html);
@@ -563,12 +574,14 @@ export async function MarkdownRenderer({
 	return (
 		<MarkdownCopyHandler>
 			<ReactiveCodeBlocks>
-				<MarkdownMentionTooltips>
-					<div
-						className={`ghmd ${className || ""}`}
-						dangerouslySetInnerHTML={{ __html: html }}
-					/>
-				</MarkdownMentionTooltips>
+				<MermaidBlocks>
+					<MarkdownMentionTooltips>
+						<div
+							className={`ghmd ${className || ""}`}
+							dangerouslySetInnerHTML={{ __html: html }}
+						/>
+					</MarkdownMentionTooltips>
+				</MermaidBlocks>
 			</ReactiveCodeBlocks>
 		</MarkdownCopyHandler>
 	);
