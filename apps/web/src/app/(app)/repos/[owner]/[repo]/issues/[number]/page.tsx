@@ -1,4 +1,19 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+
+import { IssueAuthorDossier } from "@/components/issue/issue-author-dossier";
+import { IssueCommentForm } from "@/components/issue/issue-comment-form";
+import { IssueCommentsClient, type IssueComment } from "@/components/issue/issue-comments-client";
+import type { IssueTimelineEntry } from "@/components/issue/issue-conversation";
+import { IssueDetailLayout } from "@/components/issue/issue-detail-layout";
+import { IssueHeader } from "@/components/issue/issue-header";
+import { IssueParticipants } from "@/components/issue/issue-participants";
+import { IssueSidebar } from "@/components/issue/issue-sidebar";
+import { ChatPageActivator } from "@/components/shared/chat-page-activator";
+import { renderMarkdownToHtml } from "@/components/shared/markdown-renderer";
+import { TrackView } from "@/components/shared/track-view";
+import { auth } from "@/lib/auth";
 import {
 	getIssue,
 	getIssueComments,
@@ -8,23 +23,12 @@ import {
 	getAuthenticatedUser,
 	extractRepoPermissions,
 } from "@/lib/github";
-import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { extractParticipants } from "@/lib/github-utils";
-import { renderMarkdownToHtml } from "@/components/shared/markdown-renderer";
-import { IssueHeader } from "@/components/issue/issue-header";
-import { IssueDetailLayout } from "@/components/issue/issue-detail-layout";
-import { ChatPageActivator } from "@/components/shared/chat-page-activator";
-import type { IssueTimelineEntry } from "@/components/issue/issue-conversation";
-import { IssueCommentsClient, type IssueComment } from "@/components/issue/issue-comments-client";
-import { IssueCommentForm } from "@/components/issue/issue-comment-form";
-import { IssueSidebar } from "@/components/issue/issue-sidebar";
-import { IssueParticipants } from "@/components/issue/issue-participants";
-import { TrackView } from "@/components/shared/track-view";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { inngest } from "@/lib/inngest";
+import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { isItemPinned } from "@/lib/pinned-items-store";
+
+import { fetchIssueAuthorDossier } from "../issue-actions";
 
 export async function generateMetadata({
 	params,
@@ -104,6 +108,9 @@ export default async function IssueDetailPage({
 				`/${owner}/${repo}/issues/${issueNumber}`,
 			)
 		: Promise.resolve(false);
+	const authorDossierPromise = issue.user?.login
+		? fetchIssueAuthorDossier(owner, repo, issue.user.login)
+		: Promise.resolve(null);
 
 	// Fire-and-forget: embed issue content for semantic search
 	if (session?.user?.id) {
@@ -151,7 +158,10 @@ export default async function IssueDetailPage({
 				: Promise.resolve(""),
 		),
 	]);
-	const issuePinned = await pinnedPromise;
+	const [issuePinned, dossier] = await Promise.all([
+		pinnedPromise,
+		authorDossierPromise,
+	]);
 
 	// Determine permissions and user state
 	const permissions = extractRepoPermissions(repoData ?? {});
@@ -224,18 +234,34 @@ export default async function IssueDetailPage({
 					/>
 				}
 				timeline={
-					<IssueCommentsClient
-						owner={owner}
-						repo={repo}
-						issueNumber={issueNumber}
-						initialComments={commentsWithHtml}
-						descriptionEntry={descriptionEntry}
-						canEdit={canEditIssue}
-						issueTitle={issue.title}
-						currentUserLogin={currentUserLogin}
-						viewerHasWriteAccess={viewerHasWriteAccess}
-						timelineEvents={timelineEvents}
-					/>
+					<>
+						{dossier && (
+							<IssueAuthorDossier
+								author={dossier.author}
+								orgs={dossier.orgs}
+								topRepos={dossier.topRepos}
+								isOrgMember={dossier.isOrgMember}
+								score={dossier.score}
+								contributionCount={
+									dossier.contributionCount
+								}
+								repoActivity={dossier.repoActivity}
+								openedAt={issue.created_at}
+							/>
+						)}
+						<IssueCommentsClient
+							owner={owner}
+							repo={repo}
+							issueNumber={issueNumber}
+							initialComments={commentsWithHtml}
+							descriptionEntry={descriptionEntry}
+							canEdit={canEditIssue}
+							issueTitle={issue.title}
+							currentUserLogin={currentUserLogin}
+							viewerHasWriteAccess={viewerHasWriteAccess}
+							timelineEvents={timelineEvents}
+						/>
+					</>
 				}
 				commentForm={
 					<IssueCommentForm
