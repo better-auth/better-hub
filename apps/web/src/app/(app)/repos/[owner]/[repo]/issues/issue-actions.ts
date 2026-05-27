@@ -1,10 +1,17 @@
 "use server";
 
-import { getOctokit, getIssueComments, invalidateIssueCache } from "@/lib/github";
-import { renderMarkdownToHtml } from "@/components/shared/markdown-renderer";
-import { getErrorMessage } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
+
+import { renderMarkdownToHtml } from "@/components/shared/markdown-renderer";
+import {
+	getOctokit,
+	getIssueComments,
+	invalidateIssueCache,
+	getAuthorDossier,
+	type AuthorDossierResult,
+} from "@/lib/github";
 import { invalidateRepoCache } from "@/lib/repo-data-cache-vc";
+import { getErrorMessage } from "@/lib/utils";
 
 export async function fetchIssueComments(owner: string, repo: string, issueNumber: number) {
 	const comments = await getIssueComments(owner, repo, issueNumber);
@@ -20,6 +27,14 @@ export async function fetchIssueComments(owner: string, repo: string, issueNumbe
 		}),
 	);
 	return withHtml;
+}
+
+export async function fetchIssueAuthorDossier(
+	owner: string,
+	repo: string,
+	authorLogin: string,
+): Promise<AuthorDossierResult | null> {
+	return getAuthorDossier(owner, repo, authorLogin).catch(() => null);
 }
 
 export async function addIssueComment(
