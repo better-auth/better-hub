@@ -31,6 +31,7 @@ export const auth = betterAuth({
 	appName: "Better Hub",
 	database: prismaAdapter(prisma, {
 		provider: "postgresql",
+		debugLogs: true,
 	}),
 	experimental: {
 		joins: true,
@@ -38,7 +39,7 @@ export const auth = betterAuth({
 	plugins: [
 		dash({
 			activityTracking: {
-				enabled: true,
+				enabled: process.env.NODE_ENV !== "development",
 			},
 		}),
 		sentinel(),

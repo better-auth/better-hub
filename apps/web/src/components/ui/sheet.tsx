@@ -40,6 +40,8 @@ function SheetOverlay({
 interface SheetContentProps extends React.ComponentProps<typeof DialogPrimitive.Content> {
 	side?: "left" | "right" | "top" | "bottom";
 	showCloseButton?: boolean;
+	/** Merged into `SheetOverlay` (backdrop behind the sheet). */
+	overlayClassName?: string;
 }
 
 function SheetContent({
@@ -47,6 +49,7 @@ function SheetContent({
 	children,
 	side = "right",
 	showCloseButton = true,
+	overlayClassName,
 	...props
 }: SheetContentProps) {
 	const sideStyles = {
@@ -58,7 +61,7 @@ function SheetContent({
 
 	return (
 		<SheetPortal>
-			<SheetOverlay />
+			<SheetOverlay className={overlayClassName} />
 			<DialogPrimitive.Content
 				data-slot="sheet-content"
 				className={cn(
