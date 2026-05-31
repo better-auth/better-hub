@@ -1,4 +1,4 @@
-import { betterAuth } from "better-auth";
+import { betterAuth, type BetterAuthPlugin } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./db";
 import { Octokit } from "@octokit/rest";
@@ -15,16 +15,69 @@ import { getStripeClient, isStripeEnabled } from "./billing/stripe";
 import { grantSignupCredits } from "./billing/credit";
 import { patSignIn } from "./auth-plugins/pat-signin";
 
-async function getOctokitUser(token: string) {
-	const cached = await redis.get<ReturnType<(typeof octokit)["users"]["getAuthenticated"]>>(
-		`github_user:${token}`,
-	);
+type GitHubUserProfile = Awaited<ReturnType<Octokit["users"]["getAuthenticated"]>>["data"];
+type AuthSessionValue = NonNullable<Awaited<ReturnType<typeof auth.api.getSession>>>;
+type AuthGitHubUser = GitHubUserProfile & { accessToken: string };
+
+function asAuthPlugin(plugin: unknown): BetterAuthPlugin {
+	return plugin as BetterAuthPlugin;
+}
+
+async function getOctokitUser(token: string): Promise<GitHubUserProfile> {
+	const hash = await createHash("SHA-256", "base64").digest(token);
+	const cacheKey = `github_user:${hash}`;
+	const cached = await redis.get<GitHubUserProfile>(cacheKey);
 	if (cached) return cached;
 	const octokit = new Octokit({ auth: token });
 	const githubUser = await octokit.users.getAuthenticated();
-	const hash = await createHash("SHA-256", "base64").digest(token);
-	waitUntil(redis.set(`github_user:${hash}`, JSON.stringify(githubUser.data), { ex: 3600 }));
-	return githubUser;
+	waitUntil(redis.set(cacheKey, JSON.stringify(githubUser.data), { ex: 3600 }));
+	return githubUser.data;
+}
+
+function buildFallbackGitHubUser(session: AuthSessionValue, accessToken: string): AuthGitHubUser {
+	return {
+		id: 0,
+		login: "",
+		node_id: "",
+		avatar_url: session.user.image ?? "",
+		gravatar_id: "",
+		url: "",
+		html_url: "",
+		followers_url: "",
+		following_url: "",
+		gists_url: "",
+		starred_url: "",
+		subscriptions_url: "",
+		organizations_url: "",
+		repos_url: "",
+		events_url: "",
+		received_events_url: "",
+		type: "User",
+		site_admin: false,
+		name: session.user.name ?? "",
+		company: null,
+		blog: "",
+		location: null,
+		email: session.user.email ?? null,
+		hireable: null,
+		bio: null,
+		twitter_username: null,
+		notification_email: null,
+		public_repos: 0,
+		public_gists: 0,
+		followers: 0,
+		following: 0,
+		created_at: "",
+		updated_at: "",
+		private_gists: undefined,
+		total_private_repos: undefined,
+		owned_private_repos: undefined,
+		disk_usage: undefined,
+		collaborators: undefined,
+		two_factor_authentication: undefined,
+		plan: undefined,
+		accessToken,
+	};
 }
 
 export const auth = betterAuth({
@@ -46,36 +99,44 @@ export const auth = betterAuth({
 		patSignIn(),
 		...(isStripeEnabled
 			? [
-					stripe({
-						stripeClient: getStripeClient(),
-						stripeWebhookSecret:
-							process.env.STRIPE_WEBHOOK_SECRET!,
-						createCustomerOnSignUp: true,
-						onCustomerCreate: async ({ user }) => {
-							await grantSignupCredits(user.id);
-						},
-						subscription: {
-							enabled: true,
-							plans: [
-								{
-									name: "base",
-									priceId: process.env
-										.STRIPE_BASE_PRICE_ID!,
-									lineItems: [
-										{
-											price: process
-												.env
-												.STRIPE_METERED_PRICE_ID!,
-										},
-									],
-								},
-							],
-						},
-					}),
+					asAuthPlugin(
+						stripe({
+							stripeClient: getStripeClient(),
+							stripeWebhookSecret:
+								process.env.STRIPE_WEBHOOK_SECRET!,
+							createCustomerOnSignUp: true,
+							onCustomerCreate: async ({ user }) => {
+								await grantSignupCredits(user.id);
+							},
+							subscription: {
+								enabled: true,
+								plans: [
+									{
+										name: "base",
+										priceId: process.env
+											.STRIPE_BASE_PRICE_ID!,
+										lineItems: [
+											{
+												price: process
+													.env
+													.STRIPE_METERED_PRICE_ID!,
+											},
+										],
+									},
+								],
+							},
+						}),
+					),
 				]
 			: []),
 		...(process.env.VERCEL
-			? [oAuthProxy({ productionURL: "https://www.better-hub.com" })]
+			? [
+					asAuthPlugin(
+						oAuthProxy({
+							productionURL: "https://www.better-hub.com",
+						}),
+					),
+				]
 			: []),
 	],
 	user: {
@@ -135,51 +196,60 @@ export const auth = betterAuth({
 	},
 });
 
-export const getServerSession = cache(async () => {
-	try {
-		const { session, account } = await all({
-			async session() {
-				const session = await auth.api.getSession({
-					headers: await headers(),
-				});
-				return session;
-			},
-			async account() {
-				const session = await auth.api.getAccessToken({
-					headers: await headers(),
-					body: { providerId: "github" },
-				});
-				return session;
-			},
-		});
-		if (!session || !account?.accessToken) {
-			return null;
-		}
-		let githubUserData: Record<string, unknown> | null = null;
+export const getServerSession = cache(
+	async (): Promise<{
+		user: AuthSessionValue["user"];
+		session: AuthSessionValue;
+		githubUser: AuthGitHubUser;
+	} | null> => {
 		try {
-			const githubUser = await getOctokitUser(account.accessToken);
-			githubUserData = githubUser?.data ?? null;
-		} catch {
-			// GitHub API may be rate-limited; don't treat as unauthenticated.
-		}
-		if (!githubUserData) {
+			const { session, account } = await all({
+				async session() {
+					const session = await auth.api.getSession({
+						headers: await headers(),
+					});
+					return session;
+				},
+				async account() {
+					const session = await auth.api.getAccessToken({
+						headers: await headers(),
+						body: { providerId: "github" },
+					});
+					return session;
+				},
+			});
+			if (!session || !account?.accessToken) {
+				return null;
+			}
+			let githubUserData: GitHubUserProfile | null = null;
+			try {
+				const githubUser = await getOctokitUser(account.accessToken);
+				githubUserData = githubUser ?? null;
+			} catch {
+				// GitHub API may be rate-limited; don't treat as unauthenticated.
+			}
+			if (!githubUserData) {
+				return {
+					user: session.user,
+					session,
+					githubUser: buildFallbackGitHubUser(
+						session,
+						account.accessToken,
+					),
+				};
+			}
 			return {
 				user: session.user,
 				session,
-				githubUser: { accessToken: account.accessToken } as any,
+				githubUser: {
+					...githubUserData,
+					accessToken: account.accessToken,
+				} satisfies AuthGitHubUser,
 			};
+		} catch {
+			return null;
 		}
-		return {
-			user: session.user,
-			session,
-			githubUser: {
-				...githubUserData,
-				accessToken: account.accessToken,
-			},
-		};
-	} catch {
-		return null;
-	}
-});
+	},
+);
 
 export type $Session = NonNullable<Awaited<ReturnType<typeof getServerSession>>>;
