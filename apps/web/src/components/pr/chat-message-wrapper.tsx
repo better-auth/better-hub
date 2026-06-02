@@ -7,6 +7,11 @@ import { MessageActionsMenu } from "./message-actions-menu";
 import { useDeletedComments } from "./deleted-comments-context";
 import { MarkdownEditor } from "@/components/shared/markdown-editor";
 import { updateIssueComment } from "@/app/(app)/repos/[owner]/[repo]/issues/issue-actions";
+import {
+	deletePRComment,
+	updatePRComment,
+} from "@/app/(app)/repos/[owner]/[repo]/pulls/pr-actions";
+import { deleteIssueComment } from "@/app/(app)/repos/[owner]/[repo]/issues/issue-actions";
 
 type ChatMessageWrapperProps = {
 	headerContent: ReactNode;
@@ -16,7 +21,10 @@ type ChatMessageWrapperProps = {
 	repo: string;
 	commentId: number;
 	body: string;
+	authorLogin?: string | null;
+	authorType?: string | null;
 	canEdit?: boolean;
+	canDelete?: boolean;
 } & (
 	| { contentType: "pr"; pullNumber: number; issueNumber?: never }
 	| { contentType: "issue"; issueNumber: number; pullNumber?: never }
@@ -33,7 +41,10 @@ export function ChatMessageWrapper({
 	issueNumber,
 	commentId,
 	body,
+	authorLogin,
+	authorType,
 	canEdit = false,
+	canDelete = false,
 }: ChatMessageWrapperProps) {
 	const router = useRouter();
 	const [deleted, setDeleted] = useState(false);
@@ -45,7 +56,7 @@ export function ChatMessageWrapper({
 
 	if (deleted) return null;
 
-	const handleDelete = () => {
+	const handleDeleteSuccess = () => {
 		setDeleted(true);
 		deletedContext?.markDeleted();
 	};
@@ -65,13 +76,22 @@ export function ChatMessageWrapper({
 	const handleSave = () => {
 		setEditError(null);
 		startTransition(async () => {
-			const result = await updateIssueComment(
-				owner,
-				repo,
-				issueNumber!,
-				commentId,
-				editBody.trim(),
-			);
+			const result =
+				contentType === "pr"
+					? await updatePRComment(
+							owner,
+							repo,
+							pullNumber!,
+							commentId,
+							editBody.trim(),
+						)
+					: await updateIssueComment(
+							owner,
+							repo,
+							issueNumber!,
+							commentId,
+							editBody.trim(),
+						);
 			if (result.error) {
 				setEditError(result.error);
 			} else {
@@ -81,33 +101,40 @@ export function ChatMessageWrapper({
 		});
 	};
 
+	const commentUrl =
+		contentType === "pr"
+			? `https://github.com/${owner}/${repo}/pull/${pullNumber}#issuecomment-${commentId}`
+			: `https://github.com/${owner}/${repo}/issues/${issueNumber}#issuecomment-${commentId}`;
+
+	const handleDelete = async () => {
+		const result =
+			contentType === "pr"
+				? await deletePRComment(owner, repo, pullNumber!, commentId)
+				: await deleteIssueComment(owner, repo, issueNumber!, commentId);
+		if (result.error) {
+			alert(result.error);
+			return;
+		}
+		handleDeleteSuccess();
+	};
+
 	return (
 		<div className="group">
 			<div className="border border-border/60 rounded-lg overflow-hidden">
 				<div className="flex items-center gap-2 px-3 py-1.5 border-b border-border/60 bg-card/50">
 					{headerContent}
-					{contentType === "pr" ? (
-						<MessageActionsMenu
-							owner={owner}
-							repo={repo}
-							contentType="pr"
-							pullNumber={pullNumber}
-							commentId={commentId}
-							body={body}
-							onDelete={handleDelete}
-						/>
-					) : (
-						<MessageActionsMenu
-							owner={owner}
-							repo={repo}
-							contentType="issue"
-							issueNumber={issueNumber}
-							commentId={commentId}
-							body={body}
-							onDelete={handleDelete}
-							onEdit={canEdit ? handleEdit : undefined}
-						/>
-					)}
+					<MessageActionsMenu
+						commentUrl={commentUrl}
+						body={body}
+						reportContent={{
+							authorLogin,
+							authorType,
+						}}
+						canEdit={canEdit}
+						canDelete={canDelete}
+						onEdit={canEdit ? handleEdit : undefined}
+						onDelete={canDelete ? handleDelete : undefined}
+					/>
 				</div>
 
 				{isEditing ? (

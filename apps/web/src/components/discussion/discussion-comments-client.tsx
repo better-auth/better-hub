@@ -22,12 +22,18 @@ export function DiscussionCommentsClient({
 	discussionNumber,
 	initialComments,
 	descriptionEntry,
+	currentUserLogin,
+	viewerHasWriteAccess,
+	canEditDiscussion,
 }: {
 	owner: string;
 	repo: string;
 	discussionNumber: number;
 	initialComments: DiscussionComment[];
 	descriptionEntry: DescriptionEntry;
+	currentUserLogin?: string;
+	viewerHasWriteAccess?: boolean;
+	canEditDiscussion?: boolean;
 }) {
 	const { data: comments = initialComments } = useQuery({
 		queryKey: ["discussion-comments", owner, repo, discussionNumber],
@@ -37,5 +43,16 @@ export function DiscussionCommentsClient({
 		gcTime: 10 * 60 * 1000,
 	});
 
-	return <DiscussionConversation description={descriptionEntry} comments={comments} />;
+	return (
+		<DiscussionConversation
+			owner={owner}
+			repo={repo}
+			discussionNumber={discussionNumber}
+			description={descriptionEntry}
+			comments={comments}
+			currentUserLogin={currentUserLogin}
+			viewerHasWriteAccess={viewerHasWriteAccess}
+			canEditDiscussion={canEditDiscussion}
+		/>
+	);
 }
