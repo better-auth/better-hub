@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+// import Image from "next/image";
 import {
 	Loader2,
 	CornerDownLeft,
@@ -187,7 +187,7 @@ export function IssueCommentForm({
 	return (
 		<div className="space-y-3">
 			{/* Comment form */}
-			<div className="border border-border/60 rounded-md overflow-hidden">
+			<div className="border border-border/60 rounded-md">
 				<MarkdownEditor
 					ref={editorRef}
 					value={body}
