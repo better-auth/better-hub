@@ -1925,7 +1925,7 @@ function SingleFileDiff({
 					<button
 						onClick={onToggleSplit}
 						className={cn(
-							"p-0.5 rounded transition-colors cursor-pointer shrink-0",
+							"hidden md:flex lg:hidden xl:flex p-0.5 rounded transition-colors cursor-pointer shrink-0",
 							splitView
 								? "bg-accent text-foreground"
 								: "text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent/60",
