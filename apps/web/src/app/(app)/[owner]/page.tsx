@@ -9,6 +9,7 @@ import {
 	getUserOrgTopRepos,
 	getContributionData,
 	getUserEvents,
+	getUserStarredRepos,
 } from "@/lib/github";
 
 /** Session-scoped; must not be statically shared across GitHub users. */
@@ -119,23 +120,32 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 	let contributionData: Awaited<ReturnType<typeof getContributionData>> = null;
 	let orgTopRepos: Awaited<ReturnType<typeof getUserOrgTopRepos>> = [];
 	let activityEvents: Awaited<ReturnType<typeof getUserEvents>> = [];
+	let starredRepos: Awaited<ReturnType<typeof getUserStarredRepos>> = [];
 
 	if (!isBot) {
 		try {
-			const [reposResult, orgsResult, contributionsResult, eventsResult] =
-				await Promise.allSettled([
-					getUserProfileRepositories(userData.login, 100),
-					getUserPublicOrgs(userData.login),
-					getContributionData(userData.login),
-					getUserEvents(userData.login, 100),
-				]);
+			const [
+				reposResult,
+				orgsResult,
+				contributionsResult,
+				eventsResult,
+				starredResult,
+			] = await Promise.allSettled([
+				getUserProfileRepositories(userData.login, 100),
+				getUserPublicOrgs(userData.login),
+				getContributionData(userData.login),
+				getUserEvents(userData.login, 100),
+				getUserStarredRepos(userData.login, 100),
+			]);
+
 			if (reposResult.status === "fulfilled") reposData = reposResult.value;
 			if (orgsResult.status === "fulfilled") orgsData = orgsResult.value;
-			if (contributionsResult.status === "fulfilled") {
+			if (contributionsResult.status === "fulfilled")
 				contributionData = contributionsResult.value;
-			}
 			if (eventsResult.status === "fulfilled")
 				activityEvents = eventsResult.value;
+			if (starredResult.status === "fulfilled")
+				starredRepos = starredResult.value;
 			if (orgsData.length > 0) {
 				orgTopRepos = await getUserOrgTopRepos(
 					orgsData.map((o) => o.login),
@@ -193,6 +203,20 @@ export default async function OwnerPage({ params }: { params: Promise<{ owner: s
 				stargazers_count: r.stargazers_count,
 				forks_count: r.forks_count,
 				language: r.language,
+			}))}
+			starredRepos={starredRepos.map((repo) => ({
+				id: repo.id,
+				name: repo.name,
+				full_name: repo.full_name,
+				description: repo.description ?? null,
+				language: repo.language ?? null,
+				stargazers_count: repo.stargazers_count ?? 0,
+				forks_count: repo.forks_count ?? 0,
+				updated_at: repo.updated_at ?? null,
+				owner: {
+					login: repo.owner.login,
+					avatar_url: repo.owner.avatar_url,
+				},
 			}))}
 		/>
 	);

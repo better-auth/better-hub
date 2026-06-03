@@ -66,6 +66,21 @@ export interface UserRepo {
 	pushed_at: string | null;
 }
 
+export interface StarredRepo {
+	id: number;
+	name: string;
+	full_name: string;
+	description: string | null;
+	language: string | null;
+	stargazers_count: number;
+	forks_count: number;
+	updated_at: string | null;
+	owner: {
+		login: string;
+		avatar_url: string;
+	};
+}
+
 export interface UserOrg {
 	login: string;
 	avatar_url: string;
@@ -91,7 +106,7 @@ const filterTypes = ["all", "sources", "forks", "archived"] as const;
 
 const sortTypes = ["updated", "name", "stars"] as const;
 
-const tabTypes = ["repositories", "activity"] as const;
+const tabTypes = ["repositories", "starred", "activity"] as const;
 
 function formatJoinedDate(value: string | null): string | null {
 	if (!value) return null;
@@ -118,6 +133,7 @@ export function UserProfileContent({
 	contributions,
 	activityEvents = [],
 	orgTopRepos = [],
+	starredRepos = [],
 }: {
 	user: UserProfile;
 	repos: UserRepo[];
@@ -125,6 +141,7 @@ export function UserProfileContent({
 	contributions: ContributionData | null;
 	activityEvents?: ActivityEvent[];
 	orgTopRepos?: OrgTopRepo[];
+	starredRepos?: StarredRepo[];
 }) {
 	const [tab, setTab] = useQueryState(
 		"tab",
@@ -849,32 +866,50 @@ export function UserProfileContent({
 
 				{/* Tab switcher */}
 				<div className="shrink-0 mb-4">
-					<div className="flex items-center border border-border divide-x divide-border rounded-sm lg:w-fit">
+					<div className="flex items-center border border-border divide-x divide-border rounded-sm w-full lg:w-fit">
 						<button
 							onClick={() => setTab("repositories")}
 							className={cn(
-								"flex-1 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer lg:rounded-l-md",
+								"flex-1 lg:flex-none flex items-center justify-center gap-2 px-3 lg:px-4 py-2 text-[10px] sm:text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer rounded-l-sm lg:rounded-l-md",
 								tab === "repositories"
 									? "bg-muted/50 dark:bg-white/4 text-foreground"
 									: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
 							)}
 						>
-							<FolderGit2 className="w-3.5 h-3.5" />
-							Repositories
+							<FolderGit2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+							<span className="sm:hidden">Repos</span>
+							<span className="hidden sm:inline">
+								Repositories
+							</span>
 							<span className="text-muted-foreground/50 tabular-nums">
 								{repos.length}
 							</span>
 						</button>
 						<button
+							onClick={() => setTab("starred")}
+							className={cn(
+								"flex-1 lg:flex-none flex items-center justify-center gap-2 px-3 lg:px-4 py-2 text-[10px] sm:text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer",
+								tab === "starred"
+									? "bg-muted/50 dark:bg-white/4 text-foreground"
+									: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
+							)}
+						>
+							<Star className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+							Starred
+							<span className="text-muted-foreground/50 tabular-nums">
+								{starredRepos.length}
+							</span>
+						</button>
+						<button
 							onClick={() => setTab("activity")}
 							className={cn(
-								"flex-1 flex items-center justify-center gap-2 px-4 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer lg:rounded-r-md",
+								"flex-1 lg:flex-none flex items-center justify-center gap-2 px-3 lg:px-4 py-2 text-[10px] sm:text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer rounded-r-sm lg:rounded-r-md",
 								tab === "activity"
 									? "bg-muted/50 dark:bg-white/4 text-foreground"
 									: "text-muted-foreground hover:text-foreground/60 hover:bg-muted/60 dark:hover:bg-white/3",
 							)}
 						>
-							<Activity className="w-3.5 h-3.5" />
+							<Activity className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
 							Activity
 						</button>
 					</div>
@@ -1395,6 +1430,95 @@ export function UserProfileContent({
 							)}
 						</div>
 					</>
+				)}
+
+				{tab === "starred" && (
+					<div className="flex-1 min-h-[50dvh] lg:min-h-0 overflow-y-auto border border-border rounded-md divide-y divide-border">
+						{starredRepos.map((repo) => (
+							<Link
+								key={repo.id}
+								href={`/${repo.full_name}`}
+								className="group flex items-center gap-4 px-4 py-3 hover:bg-muted/60 dark:hover:bg-white/3 transition-colors"
+							>
+								<Image
+									src={repo.owner.avatar_url}
+									alt={repo.owner.login}
+									width={20}
+									height={20}
+									className="rounded-md shrink-0"
+								/>
+
+								<div className="flex-1 min-w-0">
+									<div className="flex items-baseline gap-1 font-mono">
+										<span className="text-[11px] text-muted-foreground/50">
+											{
+												repo
+													.owner
+													.login
+											}
+										</span>
+										<span className="text-[11px] text-muted-foreground/30">
+											/
+										</span>
+										<span className="text-sm text-foreground truncate">
+											{repo.name}
+										</span>
+									</div>
+									{repo.description && (
+										<p className="text-[11px] text-muted-foreground/60 mt-0.5 truncate">
+											{
+												repo.description
+											}
+										</p>
+									)}
+									<div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-1.5">
+										{repo.language && (
+											<span className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60 font-mono">
+												<span
+													className="w-2 h-2 rounded-full shrink-0"
+													style={{
+														backgroundColor:
+															getLanguageColor(
+																repo.language,
+															),
+													}}
+												/>
+												{
+													repo.language
+												}
+											</span>
+										)}
+										<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
+											<Star className="w-3 h-3" />
+											{formatNumber(
+												repo.stargazers_count,
+											)}
+										</span>
+										{repo.forks_count >
+											0 && (
+											<span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
+												<GitFork className="w-3 h-3" />
+												{formatNumber(
+													repo.forks_count,
+												)}
+											</span>
+										)}
+									</div>
+								</div>
+
+								<ChevronRight className="w-3 h-3 text-foreground/10 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+							</Link>
+						))}
+
+						{starredRepos.length === 0 && (
+							<div className="py-16 text-center">
+								<Star className="w-6 h-6 text-muted-foreground/20 mx-auto mb-3" />
+								<p className="text-xs text-muted-foreground/50 font-mono">
+									No starred repositories
+								</p>
+							</div>
+						)}
+					</div>
 				)}
 
 				{tab === "activity" && (

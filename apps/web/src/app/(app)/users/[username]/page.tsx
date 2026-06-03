@@ -6,6 +6,7 @@ import {
 	getUserOrgTopRepos,
 	getContributionData,
 	getUserEvents,
+	getUserStarredRepos,
 } from "@/lib/github";
 
 /** Session-scoped; must not be statically shared across GitHub users. */
@@ -24,7 +25,7 @@ function UnknownUserPage({ username }: { username: string }) {
 			</div>
 			<div>
 				<h1 className="text-base font-medium">{username}</h1>
-				<p className="text-xs text-muted-foreground/60 mt-1 max-w-[240px]">
+				<p className="text-xs text-muted-foreground/60 mt-1 max-w-60">
 					This account can&apos;t be viewed here. It may be a bot,
 					app, or mannequin account.
 				</p>
@@ -77,6 +78,7 @@ export default async function UserProfilePage({
 	let contributionData: Awaited<ReturnType<typeof getContributionData>> = null;
 	let orgTopRepos: Awaited<ReturnType<typeof getUserOrgTopRepos>> = [];
 	let activityEvents: Awaited<ReturnType<typeof getUserEvents>> = [];
+	let starredRepos: Awaited<ReturnType<typeof getUserStarredRepos>> = [];
 
 	try {
 		userData = await getUser(username);
@@ -92,13 +94,19 @@ export default async function UserProfilePage({
 	if (!isBot) {
 		try {
 			const resolvedLogin = userData.login;
-			const [reposResult, orgsResult, contributionsResult, eventsResult] =
-				await Promise.allSettled([
-					getUserProfileRepositories(resolvedLogin, 100),
-					getUserPublicOrgs(resolvedLogin),
-					getContributionData(resolvedLogin),
-					getUserEvents(resolvedLogin, 100),
-				]);
+			const [
+				reposResult,
+				orgsResult,
+				contributionsResult,
+				eventsResult,
+				starredResult,
+			] = await Promise.allSettled([
+				getUserProfileRepositories(resolvedLogin, 100),
+				getUserPublicOrgs(resolvedLogin),
+				getContributionData(resolvedLogin),
+				getUserEvents(resolvedLogin, 100),
+				getUserStarredRepos(resolvedLogin, 100),
+			]);
 
 			if (reposResult.status === "fulfilled") reposData = reposResult.value;
 			if (orgsResult.status === "fulfilled") orgsData = orgsResult.value;
@@ -107,6 +115,8 @@ export default async function UserProfilePage({
 			}
 			if (eventsResult.status === "fulfilled")
 				activityEvents = eventsResult.value;
+			if (starredResult.status === "fulfilled")
+				starredRepos = starredResult.value;
 
 			// Fetch top repos from the user's orgs (for scoring)
 			if (orgsData.length > 0) {
@@ -166,6 +176,20 @@ export default async function UserProfilePage({
 				stargazers_count: r.stargazers_count,
 				forks_count: r.forks_count,
 				language: r.language,
+			}))}
+			starredRepos={starredRepos.map((repo) => ({
+				id: repo.id,
+				name: repo.name,
+				full_name: repo.full_name,
+				description: repo.description ?? null,
+				language: repo.language ?? null,
+				stargazers_count: repo.stargazers_count ?? 0,
+				forks_count: repo.forks_count ?? 0,
+				updated_at: repo.updated_at ?? null,
+				owner: {
+					login: repo.owner.login,
+					avatar_url: repo.owner.avatar_url,
+				},
 			}))}
 		/>
 	);
