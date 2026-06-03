@@ -56,6 +56,7 @@ import { useGlobalChatOptional } from "@/components/shared/global-chat-provider"
 import { MarkdownEditor, type MarkdownEditorRef } from "@/components/shared/markdown-editor";
 import type { ReviewThread, CheckStatus } from "@/lib/github";
 import { ClientMarkdown } from "@/components/shared/client-markdown";
+import { ReactionDisplay, type Reactions } from "@/components/shared/reaction-display";
 import { CheckStatusBadge } from "@/components/pr/check-status-badge";
 import { useMutationEvents } from "@/components/shared/mutation-event-provider";
 import { UserTooltip } from "@/components/shared/user-tooltip";
@@ -88,6 +89,7 @@ interface ReviewComment {
 	original_line: number | null;
 	side: string | null;
 	created_at: string;
+	reactions?: Reactions;
 }
 
 interface ReviewSummary {
@@ -3506,6 +3508,22 @@ function InlineCommentDisplay({
 					) : (
 						<div className="px-3 py-2 text-sm text-foreground/70">
 							<ClientMarkdown content={comment.body} />
+							{owner && repo && (
+								<div className="pt-1">
+									<ReactionDisplay
+										reactions={
+											comment.reactions ??
+											{}
+										}
+										owner={owner}
+										repo={repo}
+										contentType="pullRequestReviewComment"
+										contentId={
+											comment.id
+										}
+									/>
+								</div>
+							)}
 						</div>
 					)}
 				</>

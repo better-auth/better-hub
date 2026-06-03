@@ -357,7 +357,12 @@ export function ReactionDisplay({
 
 	const getUsersForReaction = (key: string): ReactionWithId[] => {
 		if (!reactionUsers) return [];
-		return reactionUsers.filter((u) => u.content === key);
+		const seen = new Set<string>();
+		return reactionUsers.filter((u) => {
+			if (u.content !== key || seen.has(u.login)) return false;
+			seen.add(u.login);
+			return true;
+		});
 	};
 
 	const currentUserReactions = new Set(
@@ -425,15 +430,28 @@ export function ReactionDisplay({
 						content,
 					);
 					if (result.success && result.reactionId) {
-						setReactionUsers((prev) => [
-							...(prev ?? []),
-							{
-								id: result.reactionId!,
-								login: currentUser.login,
-								avatar_url: currentUser.avatar_url,
-								content,
-							},
-						]);
+						setReactionUsers((prev) => {
+							const existing = prev ?? [];
+							if (
+								existing.some(
+									(u) =>
+										u.login ===
+											currentUser.login &&
+										u.content ===
+											content,
+								)
+							)
+								return existing;
+							return [
+								...existing,
+								{
+									id: result.reactionId!,
+									login: currentUser.login,
+									avatar_url: currentUser.avatar_url,
+									content,
+								},
+							];
+						});
 					} else {
 						setOptimisticReactions((prev) => ({
 							...prev,
