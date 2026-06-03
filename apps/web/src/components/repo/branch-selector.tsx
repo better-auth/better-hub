@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GitBranch, Tag, ChevronDown, Search, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -29,6 +29,8 @@ export function BranchSelector({
 	const [open, setOpen] = useState(false);
 	const [search, setSearch] = useState("");
 	const [tab, setTab] = useState<"branches" | "tags">("branches");
+	const listRef = useRef<HTMLDivElement>(null);
+	const triggerRef = useRef<HTMLButtonElement>(null);
 	const router = useRouter();
 
 	const items = tab === "branches" ? branches : tags;
@@ -61,11 +63,12 @@ export function BranchSelector({
 	return (
 		<div className="relative">
 			<button
+				ref={triggerRef}
 				onClick={() => setOpen(!open)}
 				className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono border border-border hover:bg-muted/60 dark:hover:bg-white/3 transition-colors rounded-sm cursor-pointer"
 			>
 				<GitBranch className="w-3 h-3 text-muted-foreground/70" />
-				<span className="max-w-[120px] truncate">{currentRef}</span>
+				<span className="max-w-30 truncate">{currentRef}</span>
 				<ChevronDown className="w-3 h-3 text-muted-foreground/50" />
 			</button>
 
@@ -78,7 +81,17 @@ export function BranchSelector({
 							setSearch("");
 						}}
 					/>
-					<div className="absolute top-full left-0 mt-1 z-50 w-72 border border-border bg-card shadow-lg rounded-md">
+					<div
+						className="fixed z-50 w-72 border border-border bg-card shadow-lg rounded-md"
+						style={{
+							top:
+								(triggerRef.current?.getBoundingClientRect()
+									.bottom ?? 0) + 4,
+							left:
+								triggerRef.current?.getBoundingClientRect()
+									.left ?? 0,
+						}}
+					>
 						<div className="p-2 border-b border-border">
 							<div className="relative">
 								<Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground/50" />
@@ -99,7 +112,13 @@ export function BranchSelector({
 						</div>
 						<div className="flex border-b border-border">
 							<button
-								onClick={() => setTab("branches")}
+								onClick={() => {
+									setTab("branches");
+									listRef.current?.scrollTo(
+										0,
+										0,
+									);
+								}}
 								className={cn(
 									"flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-mono uppercase tracking-wider cursor-pointer -mb-px",
 									tab === "branches"
@@ -114,7 +133,13 @@ export function BranchSelector({
 								</span>
 							</button>
 							<button
-								onClick={() => setTab("tags")}
+								onClick={() => {
+									setTab("tags");
+									listRef.current?.scrollTo(
+										0,
+										0,
+									);
+								}}
 								className={cn(
 									"flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-mono uppercase tracking-wider cursor-pointer -mb-px",
 									tab === "tags"
@@ -129,7 +154,10 @@ export function BranchSelector({
 								</span>
 							</button>
 						</div>
-						<div className="max-h-60 overflow-y-auto">
+						<div
+							ref={listRef}
+							className="max-h-60 overflow-y-auto"
+						>
 							{filtered.map((item) => {
 								const isActive =
 									item.name === currentRef;
