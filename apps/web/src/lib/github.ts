@@ -2596,6 +2596,17 @@ export async function getOrg(org: string) {
 	});
 }
 
+export async function getCanCreateRepoInOrg(org: string): Promise<boolean> {
+	const octokit = await getOctokit();
+	if (!octokit) return false;
+	const res = await octokit.orgs.getMembershipForAuthenticatedUser({ org });
+	if (!res.data) return false;
+
+	const { role, permissions } = res.data;
+	if (role === "admin") return true;
+	return permissions?.can_create_repository === true;
+}
+
 export async function getNotifications(perPage = 20) {
 	const authCtx = await getGitHubAuthContext();
 	return readLocalFirstGitData({
