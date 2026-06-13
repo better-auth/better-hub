@@ -32,8 +32,8 @@ This repo publishes a multi-arch OCI image (`linux/amd64`, `linux/arm64`) to Git
 - Tags:
      - `latest` on pushes to `main`
      - branch/tag refs (for example `main`, `v1.2.3`)
-	- `pr-<number>` for pull request builds
-	- `sha-<commit>`
+     - `pr-<number>` for pull request builds
+     - `sha-<commit>`
 
 Pull and run:
 
