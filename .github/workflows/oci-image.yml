@@ -6,6 +6,7 @@ on:
       - main
     tags:
       - 'v*'
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -16,6 +17,10 @@ jobs:
   build-and-push:
     name: Build and Push Image
     runs-on: ubuntu-24.04
+    env:
+      # Push for branch/tag pushes, manual runs, and same-repo PRs. Fork PRs
+      # only get a read-only GITHUB_TOKEN, so those build without pushing.
+      CAN_PUSH: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -27,6 +32,9 @@ jobs:
         uses: docker/setup-buildx-action@v4
 
       - name: Log in to GHCR
+        # On PRs from forks the GITHUB_TOKEN is read-only and login to GHCR
+        # would fail, so only log in when we can actually push.
+        if: env.CAN_PUSH == 'true'
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -41,6 +49,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=tag
+            type=ref,event=pr
             type=sha,prefix=sha-
             type=raw,value=latest,enable={{is_default_branch}}
 
@@ -49,7 +58,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          push: true
+          push: ${{ env.CAN_PUSH == 'true' }}
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

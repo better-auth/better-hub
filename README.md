@@ -30,9 +30,9 @@ This repo publishes a multi-arch OCI image (`linux/amd64`, `linux/arm64`) to Git
 
 - Image: `ghcr.io/better-auth/better-hub`
 - Tags:
-	- `latest` on pushes to `main`
-	- branch/tag refs (for example `main`, `v1.2.3`)
-	- `sha-<commit>`
+     - `latest` on pushes to `main`
+     - branch/tag refs (for example `main`, `v1.2.3`)
+     - `sha-<commit>`
 
 Pull and run:
 
