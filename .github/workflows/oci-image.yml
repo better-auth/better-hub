@@ -9,6 +9,12 @@ on:
   pull_request:
   workflow_dispatch:
 
+# One in-flight run per ref (PR or branch); newer pushes cancel older runs.
+# Tag/release builds get a unique group so they are never cancelled.
+concurrency:
+  group: oci-image-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
 permissions:
   contents: read
   packages: write
