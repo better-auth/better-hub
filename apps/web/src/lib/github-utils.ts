@@ -1,3 +1,5 @@
+import { getGithubHost } from "./github-host-client";
+
 export const LANGUAGE_COLORS: Record<string, string> = {
 	TypeScript: "#3178c6",
 	JavaScript: "#f1e05a",
@@ -250,18 +252,8 @@ function parsePositiveInt(value: string | undefined): number | null {
 }
 
 /** Hostname of the active GitHub instance (also `github.com` by default). */
-const GITHUB_WEB_HOSTNAME = (
-	process.env.NEXT_PUBLIC_GITHUB_HOST ||
-	process.env.GITHUB_HOST ||
-	"github.com"
-)
-	.trim()
-	.toLowerCase()
-	.replace(/^https?:\/\//, "")
-	.replace(/\/+$/, "");
-
 export function isKnownGithubHostname(hostname: string): boolean {
-	return hostname === "github.com" || hostname === GITHUB_WEB_HOSTNAME;
+	return hostname === "github.com" || hostname === getGithubHost();
 }
 
 export function parseGitHubUrl(htmlUrl: string): ParsedGitHubUrl | null {

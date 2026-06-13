@@ -1,25 +1,25 @@
 "use client";
 
 import { authClient, signIn } from "./auth-client";
+import { getGithubHost, githubWebOrigin, isGithubEnterprise } from "./github-host-client";
 
 /**
  * Hostname of the configured GitHub instance, exposed to the client.
- * Defaults to `github.com` when `NEXT_PUBLIC_GITHUB_HOST` is unset.
+ *
+ * Resolved at **runtime** (see `github-host-client`), so a single prebuilt
+ * image can target any GitHub instance via the `GITHUB_HOST` env var.
  */
-export const GITHUB_HOST = (process.env.NEXT_PUBLIC_GITHUB_HOST || "github.com")
-	.trim()
-	.toLowerCase()
-	.replace(/^https?:\/\//, "")
-	.replace(/\/+$/, "");
+export const GITHUB_HOST = getGithubHost();
 
-export const IS_GITHUB_ENTERPRISE = GITHUB_HOST !== "github.com";
+export const IS_GITHUB_ENTERPRISE = isGithubEnterprise();
 
 /** Convenience: web URL for the active host (e.g. for "Open in GitHub" links). */
-export const GITHUB_WEB_URL = `https://${GITHUB_HOST}`;
+export const GITHUB_WEB_URL = githubWebOrigin();
 
 export function githubWebUrl(path = ""): string {
-	if (!path) return GITHUB_WEB_URL;
-	return `${GITHUB_WEB_URL}${path.startsWith("/") ? path : `/${path}`}`;
+	const origin = githubWebOrigin();
+	if (!path) return origin;
+	return `${origin}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
 /**
@@ -31,7 +31,7 @@ export function signInWithGitHub(opts: {
 	scopes: string[];
 	callbackURL?: string;
 }): Promise<unknown> {
-	if (IS_GITHUB_ENTERPRISE) {
+	if (isGithubEnterprise()) {
 		return authClient.signIn.oauth2({
 			providerId: "github",
 			callbackURL: opts.callbackURL,

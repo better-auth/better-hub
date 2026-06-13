@@ -7,6 +7,7 @@ import { cookies } from "next/headers";
 import "./globals.css";
 import { generateThemeScript } from "@/lib/theme-script";
 import { listThemes } from "@/lib/themes";
+import { getGithubHost } from "@/lib/github-host-client";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { SWRegister } from "@/components/pwa/sw-register";
 import { Analytics } from "@vercel/analytics/next";
@@ -112,6 +113,16 @@ export default async function RootLayout({
 				: {})}
 		>
 			<head>
+				{/*
+				 * Expose the runtime GitHub host to the client before hydration
+				 * so a single prebuilt image can target any instance via the
+				 * GITHUB_HOST env var (read here on the server at request time).
+				 */}
+				<script
+					dangerouslySetInnerHTML={{
+						__html: `window.__GITHUB_HOST__=${JSON.stringify(getGithubHost())};`,
+					}}
+				/>
 				{mpStyle && (
 					<style
 						dangerouslySetInnerHTML={{

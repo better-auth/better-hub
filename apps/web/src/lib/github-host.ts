@@ -8,8 +8,10 @@ import { Octokit } from "@octokit/rest";
  *  - `acme.ghe.com`             → GitHub Enterprise Cloud with Data Residency
  *  - `github.acme-corp.com`     → GitHub Enterprise Server (self-hosted)
  *
- * Set both `GITHUB_HOST` (server) and `NEXT_PUBLIC_GITHUB_HOST` (client) to the
- * same value so OAuth links rendered in the browser match what the server uses.
+ * Set `GITHUB_HOST` (server) to point at an instance. It is read at runtime and
+ * also injected to the client, so a single prebuilt image is configurable via
+ * this one var. `NEXT_PUBLIC_GITHUB_HOST` is optional (build-time bake) and,
+ * when set, should match `GITHUB_HOST`.
  */
 export const GITHUB_HOST = (
 	process.env.NEXT_PUBLIC_GITHUB_HOST ||
