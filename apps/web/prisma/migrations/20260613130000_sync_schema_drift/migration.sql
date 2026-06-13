@@ -1,12 +1,20 @@
--- AlterTable
-ALTER TABLE "user" ADD COLUMN     "stripeCustomerId" TEXT;
+-- Reconciles drift between prisma/migrations and schema.prisma. The billing,
+-- theme-store, and prompt-request models were previously applied to hosted
+-- databases via `prisma db push` and never captured as migrations, so a fresh
+-- `migrate deploy` produced a schema missing these columns/tables. Some of
+-- these objects may already exist on databases that were db-pushed or whose
+-- schema was mutated at runtime, so every statement here is written to be
+-- idempotent (IF NOT EXISTS / guarded constraints).
 
 -- AlterTable
-ALTER TABLE "user_settings" ADD COLUMN     "colorMode" TEXT NOT NULL DEFAULT 'dark',
-ALTER COLUMN "colorTheme" SET DEFAULT 'better-auth';
+ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "stripeCustomerId" TEXT;
+
+-- AlterTable
+ALTER TABLE "user_settings" ADD COLUMN IF NOT EXISTS "colorMode" TEXT NOT NULL DEFAULT 'dark';
+ALTER TABLE "user_settings" ALTER COLUMN "colorTheme" SET DEFAULT 'better-auth';
 
 -- CreateTable
-CREATE TABLE "subscription" (
+CREATE TABLE IF NOT EXISTS "subscription" (
     "id" TEXT NOT NULL,
     "plan" TEXT NOT NULL,
     "referenceId" TEXT NOT NULL,
@@ -29,7 +37,7 @@ CREATE TABLE "subscription" (
 );
 
 -- CreateTable
-CREATE TABLE "usage_logs" (
+CREATE TABLE IF NOT EXISTS "usage_logs" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "taskType" TEXT NOT NULL,
@@ -43,7 +51,7 @@ CREATE TABLE "usage_logs" (
 );
 
 -- CreateTable
-CREATE TABLE "ai_call_logs" (
+CREATE TABLE IF NOT EXISTS "ai_call_logs" (
     "id" SERIAL NOT NULL,
     "userId" TEXT NOT NULL,
     "provider" TEXT NOT NULL,
@@ -62,7 +70,7 @@ CREATE TABLE "ai_call_logs" (
 );
 
 -- CreateTable
-CREATE TABLE "credit_ledger" (
+CREATE TABLE IF NOT EXISTS "credit_ledger" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "amount" DECIMAL(10,6) NOT NULL,
@@ -75,7 +83,7 @@ CREATE TABLE "credit_ledger" (
 );
 
 -- CreateTable
-CREATE TABLE "spending_limit" (
+CREATE TABLE IF NOT EXISTS "spending_limit" (
     "userId" TEXT NOT NULL,
     "monthlyCapUsd" DECIMAL(10,2) NOT NULL DEFAULT 10.00,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -85,7 +93,7 @@ CREATE TABLE "spending_limit" (
 );
 
 -- CreateTable
-CREATE TABLE "prompt_requests" (
+CREATE TABLE IF NOT EXISTS "prompt_requests" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "userLogin" TEXT,
@@ -105,7 +113,7 @@ CREATE TABLE "prompt_requests" (
 );
 
 -- CreateTable
-CREATE TABLE "prompt_request_comments" (
+CREATE TABLE IF NOT EXISTS "prompt_request_comments" (
     "id" TEXT NOT NULL,
     "promptRequestId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -120,7 +128,7 @@ CREATE TABLE "prompt_request_comments" (
 );
 
 -- CreateTable
-CREATE TABLE "prompt_request_reactions" (
+CREATE TABLE IF NOT EXISTS "prompt_request_reactions" (
     "id" TEXT NOT NULL,
     "promptRequestId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -134,7 +142,7 @@ CREATE TABLE "prompt_request_reactions" (
 );
 
 -- CreateTable
-CREATE TABLE "pr_overview_analyses" (
+CREATE TABLE IF NOT EXISTS "pr_overview_analyses" (
     "id" TEXT NOT NULL,
     "owner" TEXT NOT NULL,
     "repo" TEXT NOT NULL,
@@ -148,7 +156,7 @@ CREATE TABLE "pr_overview_analyses" (
 );
 
 -- CreateTable
-CREATE TABLE "theme_store_extensions" (
+CREATE TABLE IF NOT EXISTS "theme_store_extensions" (
     "id" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "owner" TEXT NOT NULL,
@@ -176,7 +184,7 @@ CREATE TABLE "theme_store_extensions" (
 );
 
 -- CreateTable
-CREATE TABLE "user_theme_store_installs" (
+CREATE TABLE IF NOT EXISTS "user_theme_store_installs" (
     "userId" TEXT NOT NULL,
     "extensionId" TEXT NOT NULL,
     "installedAt" TEXT NOT NULL,
@@ -185,74 +193,88 @@ CREATE TABLE "user_theme_store_installs" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "usage_logs_aiCallLogId_key" ON "usage_logs"("aiCallLogId");
+CREATE UNIQUE INDEX IF NOT EXISTS "usage_logs_aiCallLogId_key" ON "usage_logs"("aiCallLogId");
 
 -- CreateIndex
-CREATE INDEX "usage_logs_userId_createdAt_idx" ON "usage_logs"("userId", "createdAt");
+CREATE INDEX IF NOT EXISTS "usage_logs_userId_createdAt_idx" ON "usage_logs"("userId", "createdAt");
 
 -- CreateIndex
-CREATE INDEX "usage_logs_stripeReported_createdAt_idx" ON "usage_logs"("stripeReported", "createdAt");
+CREATE INDEX IF NOT EXISTS "usage_logs_stripeReported_createdAt_idx" ON "usage_logs"("stripeReported", "createdAt");
 
 -- CreateIndex
-CREATE INDEX "ai_call_logs_userId_createdAt_idx" ON "ai_call_logs"("userId", "createdAt");
+CREATE INDEX IF NOT EXISTS "ai_call_logs_userId_createdAt_idx" ON "ai_call_logs"("userId", "createdAt");
 
 -- CreateIndex
-CREATE INDEX "credit_ledger_userId_expiresAt_idx" ON "credit_ledger"("userId", "expiresAt");
+CREATE INDEX IF NOT EXISTS "credit_ledger_userId_expiresAt_idx" ON "credit_ledger"("userId", "expiresAt");
 
 -- CreateIndex
-CREATE INDEX "prompt_requests_owner_repo_status_idx" ON "prompt_requests"("owner", "repo", "status");
+CREATE INDEX IF NOT EXISTS "prompt_requests_owner_repo_status_idx" ON "prompt_requests"("owner", "repo", "status");
 
 -- CreateIndex
-CREATE INDEX "prompt_requests_userId_idx" ON "prompt_requests"("userId");
+CREATE INDEX IF NOT EXISTS "prompt_requests_userId_idx" ON "prompt_requests"("userId");
 
 -- CreateIndex
-CREATE INDEX "prompt_request_comments_promptRequestId_createdAt_idx" ON "prompt_request_comments"("promptRequestId", "createdAt");
+CREATE INDEX IF NOT EXISTS "prompt_request_comments_promptRequestId_createdAt_idx" ON "prompt_request_comments"("promptRequestId", "createdAt");
 
 -- CreateIndex
-CREATE INDEX "prompt_request_comments_userId_idx" ON "prompt_request_comments"("userId");
+CREATE INDEX IF NOT EXISTS "prompt_request_comments_userId_idx" ON "prompt_request_comments"("userId");
 
 -- CreateIndex
-CREATE INDEX "prompt_request_reactions_promptRequestId_idx" ON "prompt_request_reactions"("promptRequestId");
+CREATE INDEX IF NOT EXISTS "prompt_request_reactions_promptRequestId_idx" ON "prompt_request_reactions"("promptRequestId");
 
 -- CreateIndex
-CREATE INDEX "prompt_request_reactions_userId_idx" ON "prompt_request_reactions"("userId");
+CREATE INDEX IF NOT EXISTS "prompt_request_reactions_userId_idx" ON "prompt_request_reactions"("userId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "prompt_request_reactions_promptRequestId_userId_content_key" ON "prompt_request_reactions"("promptRequestId", "userId", "content");
+CREATE UNIQUE INDEX IF NOT EXISTS "prompt_request_reactions_promptRequestId_userId_content_key" ON "prompt_request_reactions"("promptRequestId", "userId", "content");
 
 -- CreateIndex
-CREATE INDEX "pr_overview_analyses_owner_repo_pullNumber_headSha_idx" ON "pr_overview_analyses"("owner", "repo", "pullNumber", "headSha");
+CREATE INDEX IF NOT EXISTS "pr_overview_analyses_owner_repo_pullNumber_headSha_idx" ON "pr_overview_analyses"("owner", "repo", "pullNumber", "headSha");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "pr_overview_analyses_owner_repo_pullNumber_key" ON "pr_overview_analyses"("owner", "repo", "pullNumber");
+CREATE UNIQUE INDEX IF NOT EXISTS "pr_overview_analyses_owner_repo_pullNumber_key" ON "pr_overview_analyses"("owner", "repo", "pullNumber");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "theme_store_extensions_slug_key" ON "theme_store_extensions"("slug");
+CREATE UNIQUE INDEX IF NOT EXISTS "theme_store_extensions_slug_key" ON "theme_store_extensions"("slug");
 
 -- CreateIndex
-CREATE INDEX "theme_store_extensions_type_idx" ON "theme_store_extensions"("type");
+CREATE INDEX IF NOT EXISTS "theme_store_extensions_type_idx" ON "theme_store_extensions"("type");
 
 -- CreateIndex
-CREATE INDEX "theme_store_extensions_downloads_idx" ON "theme_store_extensions"("downloads");
+CREATE INDEX IF NOT EXISTS "theme_store_extensions_downloads_idx" ON "theme_store_extensions"("downloads");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "theme_store_extensions_owner_repo_key" ON "theme_store_extensions"("owner", "repo");
+CREATE UNIQUE INDEX IF NOT EXISTS "theme_store_extensions_owner_repo_key" ON "theme_store_extensions"("owner", "repo");
 
 -- CreateIndex
-CREATE INDEX "user_theme_store_installs_userId_idx" ON "user_theme_store_installs"("userId");
+CREATE INDEX IF NOT EXISTS "user_theme_store_installs_userId_idx" ON "user_theme_store_installs"("userId");
 
 -- AddForeignKey
-ALTER TABLE "usage_logs" ADD CONSTRAINT "usage_logs_aiCallLogId_fkey" FOREIGN KEY ("aiCallLogId") REFERENCES "ai_call_logs"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "usage_logs" ADD CONSTRAINT "usage_logs_aiCallLogId_fkey" FOREIGN KEY ("aiCallLogId") REFERENCES "ai_call_logs"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "usage_logs" ADD CONSTRAINT "usage_logs_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "usage_logs" ADD CONSTRAINT "usage_logs_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "ai_call_logs" ADD CONSTRAINT "ai_call_logs_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "ai_call_logs" ADD CONSTRAINT "ai_call_logs_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "credit_ledger" ADD CONSTRAINT "credit_ledger_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "credit_ledger" ADD CONSTRAINT "credit_ledger_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "user_theme_store_installs" ADD CONSTRAINT "user_theme_store_installs_extensionId_fkey" FOREIGN KEY ("extensionId") REFERENCES "theme_store_extensions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
+DO $$ BEGIN
+    ALTER TABLE "user_theme_store_installs" ADD CONSTRAINT "user_theme_store_installs_extensionId_fkey" FOREIGN KEY ("extensionId") REFERENCES "theme_store_extensions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
