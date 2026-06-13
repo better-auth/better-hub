@@ -249,10 +249,25 @@ function parsePositiveInt(value: string | undefined): number | null {
 	return parsed > 0 && parsed <= Number.MAX_SAFE_INTEGER ? parsed : null;
 }
 
+/** Hostname of the active GitHub instance (also `github.com` by default). */
+const GITHUB_WEB_HOSTNAME = (
+	process.env.NEXT_PUBLIC_GITHUB_HOST ||
+	process.env.GITHUB_HOST ||
+	"github.com"
+)
+	.trim()
+	.toLowerCase()
+	.replace(/^https?:\/\//, "")
+	.replace(/\/+$/, "");
+
+export function isKnownGithubHostname(hostname: string): boolean {
+	return hostname === "github.com" || hostname === GITHUB_WEB_HOSTNAME;
+}
+
 export function parseGitHubUrl(htmlUrl: string): ParsedGitHubUrl | null {
 	try {
 		const url = new URL(htmlUrl);
-		if (url.hostname !== "github.com") return null;
+		if (!isKnownGithubHostname(url.hostname)) return null;
 
 		const parts = url.pathname.split("/").filter(Boolean);
 		if (parts.length === 0) return null;

@@ -1,7 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./db";
-import { Octokit } from "@octokit/rest";
 import { redis } from "./redis";
 import { waitUntil } from "@vercel/functions";
 import { all } from "better-all";
@@ -9,18 +8,26 @@ import { headers } from "next/headers";
 import { cache } from "react";
 import { dash, sentinel } from "@better-auth/infra";
 import { createHash } from "@better-auth/utils/hash";
-import { admin, oAuthProxy } from "better-auth/plugins";
+import { admin, oAuthProxy, genericOAuth } from "better-auth/plugins";
 import { stripe } from "@better-auth/stripe";
 import { getStripeClient, isStripeEnabled } from "./billing/stripe";
 import { grantSignupCredits } from "./billing/credit";
 import { patSignIn } from "./auth-plugins/pat-signin";
+import {
+	createOctokit,
+	GITHUB_OAUTH_AUTHORIZE_URL,
+	GITHUB_OAUTH_TOKEN_URL,
+	GITHUB_USER_EMAILS_URL,
+	GITHUB_USER_INFO_URL,
+	IS_GITHUB_ENTERPRISE,
+} from "./github-host";
 
 async function getOctokitUser(token: string) {
 	const cached = await redis.get<ReturnType<(typeof octokit)["users"]["getAuthenticated"]>>(
 		`github_user:${token}`,
 	);
 	if (cached) return cached;
-	const octokit = new Octokit({ auth: token });
+	const octokit = createOctokit({ auth: token });
 	const githubUser = await octokit.users.getAuthenticated();
 	const hash = await createHash("SHA-256", "base64").digest(token);
 	waitUntil(redis.set(`github_user:${hash}`, JSON.stringify(githubUser.data), { ex: 3600 }));
@@ -77,6 +84,160 @@ export const auth = betterAuth({
 		...(process.env.VERCEL
 			? [oAuthProxy({ productionURL: "https://www.better-hub.com" })]
 			: []),
+		...(IS_GITHUB_ENTERPRISE
+			? [
+					genericOAuth({
+						config: [
+							{
+								providerId: "github",
+								clientId: process.env
+									.GITHUB_CLIENT_ID!,
+								clientSecret:
+									process.env
+										.GITHUB_CLIENT_SECRET!,
+								authorizationUrl:
+									GITHUB_OAUTH_AUTHORIZE_URL,
+								tokenUrl: GITHUB_OAUTH_TOKEN_URL,
+								userInfoUrl: GITHUB_USER_INFO_URL,
+								scopes: [
+									"read:user",
+									"user:email",
+									"public_repo",
+								],
+								// `profile` here is the OAuth2UserInfo returned from
+								// getUserInfo below, which we extend with `login`.
+								// Cast because genericOAuth's mapProfileToUser type
+								// doesn't know about our `githubLogin` additionalField.
+								mapProfileToUser: ((profile: {
+									login?: string;
+								}) => ({
+									githubLogin: profile.login,
+								})) as unknown as Parameters<
+									typeof genericOAuth
+								>[0]["config"][number]["mapProfileToUser"],
+								async getUserInfo(tokens) {
+									const token =
+										tokens.accessToken;
+									if (!token) return null;
+									const userRes = await fetch(
+										GITHUB_USER_INFO_URL,
+										{
+											headers: {
+												Authorization: `Bearer ${token}`,
+												Accept: "application/vnd.github+json",
+												"User-Agent":
+													"better-hub",
+											},
+										},
+									);
+									if (!userRes.ok)
+										return null;
+									const profile =
+										(await userRes.json()) as {
+											id?:
+												| number
+												| string;
+											login?: string;
+											name?:
+												| string
+												| null;
+											email?:
+												| string
+												| null;
+											avatar_url?: string;
+										};
+									let email: string | null =
+										profile.email ??
+										null;
+									let emailVerified = false;
+									try {
+										const emailsRes =
+											await fetch(
+												GITHUB_USER_EMAILS_URL,
+												{
+													headers: {
+														Authorization: `Bearer ${token}`,
+														Accept: "application/vnd.github+json",
+														"User-Agent":
+															"better-hub",
+													},
+												},
+											);
+										if (emailsRes.ok) {
+											const emails =
+												(await emailsRes.json()) as {
+													email: string;
+													primary: boolean;
+													verified: boolean;
+												}[];
+											const primary =
+												emails.find(
+													(
+														e,
+													) =>
+														e.primary &&
+														e.verified,
+												) ??
+												emails.find(
+													(
+														e,
+													) =>
+														e.verified,
+												) ??
+												emails[0];
+											if (
+												primary
+											) {
+												email =
+													email ??
+													primary.email;
+												emailVerified =
+													emails.find(
+														(
+															e,
+														) =>
+															e.email ===
+															email,
+													)
+														?.verified ??
+													false;
+											}
+										}
+									} catch {
+										// user:email scope might be missing on enterprise tokens
+									}
+									if (!email) return null;
+									// Cast: we attach `login` so mapProfileToUser can pick it up.
+									return {
+										id: String(
+											profile.id ??
+												"",
+										),
+										name:
+											(profile.name as string) ||
+											(profile.login as string) ||
+											"",
+										email,
+										image:
+											profile.avatar_url ??
+											undefined,
+										emailVerified,
+										login: profile.login,
+									} as unknown as Awaited<
+										ReturnType<
+											NonNullable<
+												Parameters<
+													typeof genericOAuth
+												>[0]["config"][number]["getUserInfo"]
+											>
+										>
+									>;
+								},
+							},
+						],
+					}),
+				]
+			: []),
 	],
 	user: {
 		additionalFields: {
@@ -100,19 +261,21 @@ export const auth = betterAuth({
 		//to update scopes
 		updateAccountOnSignIn: true,
 	},
-	socialProviders: {
-		github: {
-			clientId: process.env.GITHUB_CLIENT_ID!,
-			clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-			// Minimal default — the sign-in UI lets users opt into more
-			scope: ["read:user", "user:email", "public_repo"],
-			async mapProfileToUser(profile) {
-				return {
-					githubLogin: profile.login,
-				};
+	socialProviders: IS_GITHUB_ENTERPRISE
+		? {}
+		: {
+				github: {
+					clientId: process.env.GITHUB_CLIENT_ID!,
+					clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+					// Minimal default — the sign-in UI lets users opt into more
+					scope: ["read:user", "user:email", "public_repo"],
+					async mapProfileToUser(profile) {
+						return {
+							githubLogin: profile.login,
+						};
+					},
+				},
 			},
-		},
-	},
 	session: {
 		cookieCache: {
 			enabled: true,

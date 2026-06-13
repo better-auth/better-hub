@@ -1,5 +1,5 @@
-import { Octokit } from "@octokit/rest";
 import { z } from "zod";
+import { createOctokit } from "@/lib/github-host";
 import { scanCustomThemeRepo, ScanError } from "@/lib/extension-scanner";
 import {
 	publishCustomTheme,
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
 		);
 	}
 
-	const octokit = new Octokit({ auth: token });
+	const octokit = createOctokit({ auth: token });
 	const isAdmin = (serverSession.user as { role?: string }).role === "admin";
 	const authorGithubId = String(ghUser?.id ?? serverSession.user.id);
 

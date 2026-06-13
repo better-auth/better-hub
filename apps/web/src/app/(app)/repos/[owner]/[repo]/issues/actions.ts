@@ -7,6 +7,7 @@ import {
 	getRepoIssuesWithStats,
 	type IssuesPageResult,
 } from "@/lib/github";
+import { githubRawUrl } from "@/lib/github-host";
 import { getErrorMessage } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { invalidateRepoCache } from "@/lib/repo-data-cache-vc";
@@ -619,7 +620,7 @@ export async function uploadImage(
 
 				return {
 					success: true,
-					url: `https://raw.githubusercontent.com/${owner}/${repo}/${targetBranch}/${path}`,
+					url: githubRawUrl({ owner, repo, ref: targetBranch, path }),
 				};
 			} catch (err: any) {
 				if (err.status === 422) {
@@ -627,7 +628,12 @@ export async function uploadImage(
 					const fallbackBranch = branch ?? "main";
 					return {
 						success: true,
-						url: `https://raw.githubusercontent.com/${owner}/${repo}/${fallbackBranch}/${path}`,
+						url: githubRawUrl({
+							owner,
+							repo,
+							ref: fallbackBranch,
+							path,
+						}),
 					};
 				}
 				if (err.status === 404 && attempt < 15) {

@@ -36,6 +36,34 @@ cd apps/web && bunx prisma migrate dev && bunx prisma generate && cd ../..
 bun dev
 ```
 
+## GitHub Enterprise (GHES & ghe.com)
+
+Better Hub talks to GitHub.com by default. To point it at GitHub Enterprise
+Server (self-hosted) or GitHub Enterprise Cloud with Data Residency (`ghe.com`),
+add two env vars to `apps/web/.env` and create an OAuth App on that instance.
+
+```bash
+# Pick ONE of these forms, then set BOTH variables to the same value.
+#
+#   GitHub Enterprise Server (self-hosted):
+GITHUB_HOST=github.your-company.com
+NEXT_PUBLIC_GITHUB_HOST=github.your-company.com
+#
+#   GitHub Enterprise Cloud with Data Residency:
+# GITHUB_HOST=acme.ghe.com
+# NEXT_PUBLIC_GITHUB_HOST=acme.ghe.com
+```
+
+Create the OAuth App on your tenant's `/settings/developers` page (e.g.
+`https://acme.ghe.com/settings/developers`) and use these settings:
+
+- **Homepage URL:** `http://localhost:3000` (or your `BETTER_AUTH_URL`)
+- **Authorization callback URL:** `http://localhost:3000/api/auth/callback/github`
+
+Then put the client ID and secret into `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`
+and start the dev server as usual (`bun dev`). PAT sign-in also routes through
+the configured host, so tokens generated at `https://<host>/settings/tokens` work.
+
 ## Development Scripts
 
 Run from the repo root:

@@ -24,6 +24,23 @@ At Better Auth, we spend a lot of our time on GitHub. So we decided to build the
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, PR workflow, and code style guidelines.
 
+## OCI Image (GHCR)
+
+This repo publishes a multi-arch OCI image (`linux/amd64`, `linux/arm64`) to GitHub Container Registry.
+
+- Image: `ghcr.io/better-auth/better-hub`
+- Tags:
+	- `latest` on pushes to `main`
+	- branch/tag refs (for example `main`, `v1.2.3`)
+	- `sha-<commit>`
+
+Pull and run:
+
+```bash
+docker pull ghcr.io/better-auth/better-hub:latest
+docker run --rm -p 3000:3000 --env-file apps/web/.env ghcr.io/better-auth/better-hub:latest
+```
+
 ## License
 
 [MIT](LICENSE)

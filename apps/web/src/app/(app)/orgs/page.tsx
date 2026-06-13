@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getUserOrgs } from "@/lib/github";
+import { githubWebUrl } from "@/lib/github-host";
 import { OrgsContent, type OrgListItem } from "@/components/orgs/orgs-content";
 
 export const metadata: Metadata = {
@@ -14,7 +15,7 @@ export default async function OrgsPage() {
 		login: org.login,
 		avatar_url: org.avatar_url,
 		description: org.description,
-		html_url: `https://github.com/${org.login}`,
+		html_url: githubWebUrl(`/${org.login}`),
 	}));
 
 	orgs.sort((a, b) => a.login.localeCompare(b.login));

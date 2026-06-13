@@ -17,6 +17,7 @@ import { embedText } from "@/lib/mixedbread";
 import { rerankResults } from "@/lib/mixedbread";
 import { searchEmbeddings, type ContentType } from "@/lib/embedding-store";
 import { toAppUrl } from "@/lib/github-utils";
+import { GITHUB_HOST, githubWebUrl } from "@/lib/github-host";
 import { getUserSettings } from "@/lib/user-settings-store";
 import { checkUsageLimit } from "@/lib/billing/usage-limit";
 import { getBillingErrorCode } from "@/lib/billing/config";
@@ -2729,11 +2730,11 @@ The sandbox has git, node, npm, python, and common dev tools.
 					repoName = repo;
 
 					await sandbox.commands.run(
-						`git config --global credential.helper store && printf 'protocol=https\\nhost=github.com\\nusername=x-access-token\\npassword=%s\\n' '${githubToken.replace(/'/g, "'\\''")}' | git credential approve`,
+						`git config --global credential.helper store && printf 'protocol=https\\nhost=${GITHUB_HOST}\\nusername=x-access-token\\npassword=%s\\n' '${githubToken.replace(/'/g, "'\\''")}' | git credential approve`,
 					);
 
 					await sandbox.commands.run(
-						`git clone --depth 1 ${branch ? `-b ${branch}` : ""} https://github.com/${owner}/${repo}.git ${repoPath}`,
+						`git clone --depth 1 ${branch ? `-b ${branch}` : ""} ${githubWebUrl(`/${owner}/${repo}.git`)} ${repoPath}`,
 						{ timeoutMs: 300_000 },
 					);
 				} catch (e: unknown) {

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { GithubAvatar } from "@/components/shared/github-avatar";
+import { githubWebUrl } from "@/lib/github-signin";
 import {
 	GitPullRequest,
 	GitPullRequestClosed,
@@ -197,7 +198,7 @@ function PRContextMenu({
 
 	const prUrl = `/${owner}/${repo}/pulls/${pr.number}`;
 	const fullUrl = typeof window !== "undefined" ? `${window.location.origin}${prUrl}` : prUrl;
-	const githubUrl = `https://github.com/${owner}/${repo}/pull/${pr.number}`;
+	const githubUrl = githubWebUrl(`/${owner}/${repo}/pull/${pr.number}`);
 	const isMerged = !!pr.merged_at;
 	const isOpen = pr.state === "open";
 	const isClosed = pr.state === "closed" && !isMerged;

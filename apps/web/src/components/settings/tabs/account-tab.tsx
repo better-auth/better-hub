@@ -12,7 +12,8 @@ import {
 	Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { signIn, signOut } from "@/lib/auth-client";
+import { signOut } from "@/lib/auth-client";
+import { githubWebUrl, signInWithGitHub } from "@/lib/github-signin";
 import { SCOPE_GROUPS, scopesToGroupIds } from "@/lib/github-scopes";
 import type { UserSettings } from "@/lib/user-settings-store";
 import type { GitHubProfile } from "../settings-dialog";
@@ -87,8 +88,7 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 		for (const g of SCOPE_GROUPS) {
 			if (selected.has(g.id)) scopes.push(...g.scopes);
 		}
-		signIn.social({
-			provider: "github",
+		signInWithGitHub({
 			callbackURL: "/dashboard",
 			scopes,
 		});
@@ -149,7 +149,9 @@ export function AccountTab({ user, settings, onUpdate, githubProfile }: AccountT
 								{user.name}
 							</span>
 							<a
-								href={`https://github.com/${githubProfile.login}`}
+								href={githubWebUrl(
+									`/${githubProfile.login}`,
+								)}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="text-muted-foreground hover:text-muted-foreground transition-colors"

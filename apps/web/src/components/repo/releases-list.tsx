@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { fetchReleasesPage } from "@/app/(app)/repos/[owner]/[repo]/releases/actions";
 import Link from "next/link";
 import Image from "next/image";
+import { githubWebUrl } from "@/lib/github-signin";
 import {
 	Tag,
 	Download,
@@ -395,7 +396,7 @@ export function ReleasesList({
 					</p>
 				</div>
 				<a
-					href={`https://github.com/${owner}/${repo}/releases/new`}
+					href={githubWebUrl(`/${owner}/${repo}/releases/new`)}
 					data-no-github-intercept
 					target="_blank"
 					rel="noopener noreferrer"
@@ -419,7 +420,7 @@ export function ReleasesList({
 					{releases.length === 1 ? "release" : "releases"}
 				</h2>
 				<a
-					href={`https://github.com/${owner}/${repo}/releases`}
+					href={githubWebUrl(`/${owner}/${repo}/releases`)}
 					data-no-github-intercept
 					target="_blank"
 					rel="noopener noreferrer"

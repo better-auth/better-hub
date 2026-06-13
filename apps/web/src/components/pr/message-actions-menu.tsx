@@ -10,6 +10,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { deletePRComment } from "@/app/(app)/repos/[owner]/[repo]/pulls/pr-actions";
+import { githubWebUrl } from "@/lib/github-signin";
 import { deleteIssueComment } from "@/app/(app)/repos/[owner]/[repo]/issues/issue-actions";
 
 type MessageActionsMenuProps = {
@@ -41,7 +42,9 @@ export function MessageActionsMenu({
 
 	const number = contentType === "pr" ? pullNumber : issueNumber;
 	const urlType = contentType === "pr" ? "pull" : "issues";
-	const commentUrl = `https://github.com/${owner}/${repo}/${urlType}/${number}#issuecomment-${commentId}`;
+	const commentUrl = githubWebUrl(
+		`/${owner}/${repo}/${urlType}/${number}#issuecomment-${commentId}`,
+	);
 
 	useEffect(() => {
 		if (copied) {

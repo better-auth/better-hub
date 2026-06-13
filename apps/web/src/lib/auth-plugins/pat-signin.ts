@@ -1,9 +1,9 @@
 import { createAuthEndpoint } from "better-auth/api";
 import { setSessionCookie } from "better-auth/cookies";
 import { symmetricEncrypt } from "better-auth/crypto";
-import { Octokit } from "@octokit/rest";
 import { z } from "zod";
 import type { BetterAuthPlugin } from "better-auth";
+import { createOctokit } from "../github-host";
 
 export const patSignIn = (): BetterAuthPlugin => ({
 	id: "pat-signin",
@@ -27,7 +27,7 @@ export const patSignIn = (): BetterAuthPlugin => ({
 				const { internalAdapter, secret } = ctx.context;
 
 				// --- Validate PAT against GitHub ---
-				const octokit = new Octokit({ auth: pat });
+				const octokit = createOctokit({ auth: pat });
 				let githubUser: Awaited<
 					ReturnType<typeof octokit.users.getAuthenticated>
 				>["data"];

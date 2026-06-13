@@ -1,0 +1,16 @@
+.git
+.github
+.vscode
+node_modules
+**/node_modules
+.next
+**/.next
+.turbo
+dist
+coverage
+*.log
+
+# Local environment files must never be included in image builds.
+.env
+.env.*
+apps/web/.env

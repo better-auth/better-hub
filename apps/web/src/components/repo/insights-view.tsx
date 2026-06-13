@@ -8,6 +8,7 @@ import type {
 	WeeklyParticipation,
 	ContributorStats,
 } from "@/lib/github";
+import { githubWebUrl } from "@/lib/github-signin";
 
 // --- Language colors ---
 const LANG_COLORS: Record<string, string> = {
@@ -404,7 +405,9 @@ function ContributorsSection({ contributors }: { contributors: ContributorStats[
 							<img
 								src={
 									c.avatar_url ||
-									`https://github.com/${c.login}.png?size=32`
+									githubWebUrl(
+										`/${c.login}.png?size=32`,
+									)
 								}
 								alt={c.login}
 								width={20}

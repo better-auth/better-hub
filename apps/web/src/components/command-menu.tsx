@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, usePathname } from "next/navigation";
+import { GITHUB_HOST, GITHUB_WEB_URL, githubWebUrl } from "@/lib/github-signin";
 import {
 	LayoutDashboard,
 	FolderGit2,
@@ -940,14 +941,14 @@ export function CommandMenu() {
 				name: "New Repository",
 				description: "Create a new repo on GitHub",
 				keywords: ["create", "init", "start", "add repo"],
-				action: () => window.open("https://github.com/new", "_blank"),
+				action: () => window.open(githubWebUrl("/new"), "_blank"),
 				icon: FolderGit2,
 			},
 			{
 				name: "Open GitHub",
-				description: "Go to github.com",
+				description: `Go to ${GITHUB_HOST}`,
 				keywords: ["website", "external", "browser"],
-				action: () => window.open("https://github.com", "_blank"),
+				action: () => window.open(GITHUB_WEB_URL, "_blank"),
 				icon: ExternalLink,
 			},
 			{
@@ -1465,7 +1466,7 @@ export function CommandMenu() {
 		});
 		items.push({
 			id: "account-profile",
-			action: () => window.open(`https://github.com/${activeLogin}`, "_blank"),
+			action: () => window.open(githubWebUrl(`/${activeLogin}`), "_blank"),
 			keepOpen: false,
 		});
 		items.push({
@@ -2977,7 +2978,9 @@ export function CommandMenu() {
 																		runCommand(
 																			() =>
 																				window.open(
-																					`https://github.com/${activeLogin}`,
+																					githubWebUrl(
+																						`/${activeLogin}`,
+																					),
 																					"_blank",
 																				),
 																		)

@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/auth-client";
 import { GithubIcon } from "@/components/shared/icons/github-icon";
+import { githubWebUrl } from "@/lib/github-signin";
 
 function parseRateLimitFromDigest(message: string) {
 	// The error message is serialized by Next.js, try to detect rate limit
@@ -326,7 +327,9 @@ function RateLimitUI({ reset }: { reset: () => void }) {
 										: "Sign in"}
 							</button>
 							<a
-								href="https://github.com/settings/tokens/new?scopes=repo,read:user,user:email,read:org,notifications&description=Better+GitHub"
+								href={githubWebUrl(
+									"/settings/tokens/new?scopes=repo,read:user,user:email,read:org,notifications&description=Better+GitHub",
+								)}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"

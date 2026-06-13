@@ -13,9 +13,10 @@ export const dynamic = "force-dynamic";
 import { ogImageUrl, ogImages } from "@/lib/og/og-utils";
 import { UserProfileContent } from "@/components/users/user-profile-content";
 import { ExternalLink, User } from "lucide-react";
+import { githubWebUrl } from "@/lib/github-host";
 
 function UnknownUserPage({ username }: { username: string }) {
-	const githubUrl = `https://github.com/${encodeURIComponent(username)}`;
+	const githubUrl = githubWebUrl(`/${encodeURIComponent(username)}`);
 
 	return (
 		<div className="flex flex-col items-center justify-center py-20 gap-4 text-center">

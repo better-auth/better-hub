@@ -20,6 +20,7 @@ import dynamic from "next/dynamic";
 const CommandMenu = dynamic(() => import("@/components/command-menu").then((m) => m.CommandMenu));
 import { useColorTheme } from "@/components/theme/theme-provider";
 import { signOut } from "@/lib/auth-client";
+import { githubWebUrl } from "@/lib/github-signin";
 import {
 	DropdownMenu,
 	DropdownMenuTrigger,
@@ -338,7 +339,9 @@ export function AppNavbar({ session, notifications }: AppNavbarProps) {
 										<DropdownMenuItem
 											onClick={() =>
 												window.open(
-													`https://github.com/${gh.login}`,
+													githubWebUrl(
+														`/${gh.login}`,
+													),
 													"_blank",
 												)
 											}

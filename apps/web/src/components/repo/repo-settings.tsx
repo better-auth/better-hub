@@ -3,6 +3,7 @@
 import { useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { IS_GITHUB_ENTERPRISE, githubWebUrl } from "@/lib/github-signin";
 import {
 	AlertTriangle,
 	Archive,
@@ -600,8 +601,8 @@ export function RepoSettings({ owner, repo, repoData, branches }: RepoSettingsPr
 				/>
 			</SectionCard>
 
-			{/* ── Social Preview (public repos only) ── */}
-			{!repoData.private && (
+			{/* ── Social Preview (public repos only; only GitHub.com has the opengraph CDN) ── */}
+			{!repoData.private && !IS_GITHUB_ENTERPRISE && (
 				<SectionCard dashed>
 					<div className="flex items-center gap-4">
 						<div className="w-32 shrink-0 rounded border border-border/25 overflow-hidden bg-muted/20 dark:bg-white/[0.015]">
@@ -621,7 +622,9 @@ export function RepoSettings({ owner, repo, repoData, branches }: RepoSettingsPr
 								shared on social media
 							</p>
 							<a
-								href={`https://github.com/${owner}/${repo}/settings`}
+								href={githubWebUrl(
+									`/${owner}/${repo}/settings`,
+								)}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="inline-flex items-center gap-1 mt-2 text-[11px] text-muted-foreground/50 hover:text-foreground/70 transition-colors"

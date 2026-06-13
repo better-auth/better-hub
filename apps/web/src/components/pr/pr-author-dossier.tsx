@@ -8,6 +8,7 @@ import { ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimeAgo } from "@/components/ui/time-ago";
 import type { ScoreResult } from "@/lib/contributor-score";
+import { githubWebUrl } from "@/lib/github-signin";
 import { UserTooltip } from "@/components/shared/user-tooltip";
 
 interface AuthorOrg {
@@ -301,7 +302,9 @@ export function PRAuthorDossier({
 												key={
 													o.login
 												}
-												href={`https://github.com/${o.login}`}
+												href={githubWebUrl(
+													`/${o.login}`,
+												)}
 												target="_blank"
 												rel="noopener noreferrer"
 												title={

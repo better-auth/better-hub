@@ -61,6 +61,7 @@ const sanitizeSchema: typeof defaultSchema = {
 };
 import { highlightCode } from "@/lib/shiki";
 import { toInternalUrl } from "@/lib/github-utils";
+import { GITHUB_HOST } from "@/lib/github-host";
 import { MarkdownCopyHandler } from "@/components/shared/markdown-copy-handler";
 import { ReactiveCodeBlocks } from "@/components/shared/reactive-code-blocks";
 import { MarkdownMentionTooltips } from "@/components/shared/markdown-mention-tooltips";
@@ -516,8 +517,13 @@ export async function renderMarkdownToHtml(
 		html = resolveUrls(html, repoContext);
 	}
 
-	// Convert github.com links to internal app paths
-	html = html.replace(/<a\s+href="(https:\/\/github\.com\/[^"]+)"/gi, (_match, href) => {
+	// Convert github.com / enterprise host links to internal app paths
+	const hostPattern =
+		GITHUB_HOST === "github.com"
+			? "github\\.com"
+			: `(?:github\\.com|${GITHUB_HOST.replace(/\./g, "\\.")})`;
+	const ghLinkRegex = new RegExp(`<a\\s+href="(https://${hostPattern}/[^"]+)"`, "gi");
+	html = html.replace(ghLinkRegex, (_match, href) => {
 		const internal = toInternalUrl(href);
 		if (internal !== href) return `<a href="${internal}"`;
 		return _match;

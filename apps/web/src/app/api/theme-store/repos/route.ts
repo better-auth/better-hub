@@ -1,5 +1,5 @@
-import { Octokit } from "@octokit/rest";
 import { getServerSession } from "@/lib/auth";
+import { createOctokit } from "@/lib/github-host";
 
 export async function GET() {
 	const serverSession = await getServerSession();
@@ -20,7 +20,7 @@ export async function GET() {
 		);
 	}
 
-	const octokit = new Octokit({ auth: token });
+	const octokit = createOctokit({ auth: token });
 
 	try {
 		const repos = await octokit.paginate(

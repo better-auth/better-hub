@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGitHubToken } from "@/lib/github";
+import { githubRawUrl } from "@/lib/github-host";
 
 const MIME_TYPES: Record<string, string> = {
 	png: "image/png",
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
 		 * base64 content only for ≤1MB, raw format corrupts binary
 		 * @see https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28#get-repository-content
 		 * */
-		const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${ref}/${path}`;
+		const rawUrl = githubRawUrl({ owner, repo, ref, path });
 		const upstream = await fetch(rawUrl, {
 			headers: {
 				Authorization: `Bearer ${token}`,

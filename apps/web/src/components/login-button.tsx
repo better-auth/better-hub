@@ -6,7 +6,7 @@ import { KeyIcon } from "@/components/shared/icons/key-icon";
 import { LoadingSpinner } from "@/components/shared/icons/loading-spinner";
 import { PermissionBadge } from "@/components/shared/permission-badge";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { signIn } from "@/lib/auth-client";
+import { githubWebUrl, signInWithGitHub } from "@/lib/github-signin";
 import { SCOPE_GROUPS } from "@/lib/github-scopes";
 import { cn, safeRedirect } from "@/lib/utils";
 import { CheckIcon, ChevronDown, Info, LockIcon, PlusIcon } from "lucide-react";
@@ -48,8 +48,7 @@ export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 		for (const g of SCOPE_GROUPS) {
 			if (selected.has(g.id)) scopes.push(...g.scopes);
 		}
-		signIn.social({
-			provider: "github",
+		signInWithGitHub({
 			callbackURL: safeRedirect(redirectTo),
 			scopes,
 		});
@@ -216,7 +215,9 @@ export function LoginButton({ redirectTo }: { redirectTo?: string }) {
 								className="w-full bg-transparent border border-foreground/15 rounded-md px-3 py-2.5 text-sm text-foreground placeholder:text-foreground/25 focus:outline-none focus:border-foreground/30 transition-colors font-mono"
 							/>
 							<a
-								href="https://github.com/settings/tokens/new"
+								href={githubWebUrl(
+									"/settings/tokens/new",
+								)}
 								target="_blank"
 								className="ms-auto text-xs text-foreground/30 hover:text-muted-foreground focus-visible:text-foreground inline-flex items-center gap-1 transition-colors cursor-pointer"
 							>

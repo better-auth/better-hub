@@ -2,6 +2,24 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 /**
+ * Extra `next/image` remote-pattern hostnames for the configured GitHub
+ * Enterprise instance (when GITHUB_HOST is set to something other than
+ * github.com). Empty for GitHub.com because the defaults already cover it.
+ */
+function enterpriseGithubImagePatterns(): { protocol: "https"; hostname: string }[] {
+	const raw = (process.env.NEXT_PUBLIC_GITHUB_HOST || process.env.GITHUB_HOST || "")
+		.trim()
+		.toLowerCase()
+		.replace(/^https?:\/\//, "")
+		.replace(/\/+$/, "");
+	if (!raw || raw === "github.com") return [];
+	// Both GHES and ghe.com Data Residency serve the web UI, avatars
+	// (`/avatars/u/<id>`) and raw content (`/raw/...`) from the single tenant host,
+	// so the tenant host is the only pattern `next/image` needs.
+	return [{ protocol: "https", hostname: raw }];
+}
+
+/**
  * Known first-segment routes that should NOT be rewritten to /repos/...
  * Includes all top-level app routes, API routes, and Next.js internals.
  */
@@ -56,6 +74,7 @@ const nextConfig: NextConfig = {
 			{ protocol: "https", hostname: "repository-images.githubusercontent.com" },
 			{ protocol: "https", hostname: "better-hub.com" },
 			{ protocol: "https", hostname: "images.better-auth.com" },
+			...enterpriseGithubImagePatterns(),
 		],
 	},
 	async headers() {

@@ -1,9 +1,9 @@
-import { Octokit } from "@octokit/rest";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { getCustomThemeBySlug, unpublishCustomTheme, publishCustomTheme } from "@/lib/theme-store";
 import { getServerSession } from "@/lib/auth";
 import { scanCustomThemeRepo, ScanError } from "@/lib/extension-scanner";
+import { createOctokit } from "@/lib/github-host";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
 	const { slug } = await params;
@@ -73,7 +73,7 @@ export async function PATCH(_request: Request, { params }: { params: Promise<{ s
 		return Response.json({ error: "GitHub token not available" }, { status: 401 });
 	}
 
-	const octokit = new Octokit({ auth: token });
+	const octokit = createOctokit({ auth: token });
 
 	try {
 		const scan = await scanCustomThemeRepo(octokit, existing.owner, existing.repo);

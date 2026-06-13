@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { parseGitHubUrl, toInternalUrl } from "@/lib/github-utils";
+import { isKnownGithubHostname, parseGitHubUrl, toInternalUrl } from "@/lib/github-utils";
 
 export function GitHubLinkInterceptor({ children }: { children: React.ReactNode }) {
 	const router = useRouter();
@@ -24,10 +24,10 @@ export function GitHubLinkInterceptor({ children }: { children: React.ReactNode 
 			const href = anchor.href;
 			if (!href) return;
 
-			// Only intercept github.com links
+			// Only intercept links pointing at the active GitHub host (cloud or enterprise)
 			try {
 				const url = new URL(href);
-				if (url.hostname !== "github.com") return;
+				if (!isKnownGithubHostname(url.hostname)) return;
 			} catch {
 				return;
 			}

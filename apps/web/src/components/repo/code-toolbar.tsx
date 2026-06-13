@@ -12,6 +12,7 @@ import {
 	Loader2,
 	Monitor,
 } from "lucide-react";
+import { GITHUB_HOST, githubWebUrl } from "@/lib/github-signin";
 
 interface EnrichedBranch {
 	name: string;
@@ -54,10 +55,10 @@ export function CodeToolbar({
 
 	const cloneUrl =
 		cloneProtocol === "https"
-			? `https://github.com/${owner}/${repo}.git`
-			: `git@github.com:${owner}/${repo}.git`;
+			? githubWebUrl(`/${owner}/${repo}.git`)
+			: `git@${GITHUB_HOST}:${owner}/${repo}.git`;
 
-	const zipUrl = `https://github.com/${owner}/${repo}/archive/${currentRef}.zip`;
+	const zipUrl = githubWebUrl(`/${owner}/${repo}/archive/${currentRef}.zip`);
 
 	const filteredBranches = localBranches.filter((b) =>
 		b.name.toLowerCase().includes(branchSearch.toLowerCase()),
@@ -360,7 +361,7 @@ export function CodeToolbar({
 								</button>
 							</div>
 							<a
-								href={`x-github-client://openRepo/https://github.com/${owner}/${repo}`}
+								href={`x-github-client://openRepo/${githubWebUrl(`/${owner}/${repo}`)}`}
 								className="mt-3 pt-3 border-t border-border flex items-center gap-2 text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors"
 							>
 								<Monitor className="w-3.5 h-3.5" />

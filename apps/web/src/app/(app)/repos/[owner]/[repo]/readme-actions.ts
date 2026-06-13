@@ -1,6 +1,7 @@
 "use server";
 
 import { getOctokit, getGitHubToken } from "@/lib/github";
+import { githubRestUrl } from "@/lib/github-host";
 import { renderMarkdownToHtml } from "@/components/shared/markdown-renderer";
 import { setCachedReadmeHtml } from "@/lib/readme-cache";
 import {
@@ -190,10 +191,12 @@ export async function fetchUsedBy(owner: string, repo: string): Promise<UsedByDa
 		// Search in package.json dependencies for npm packages
 		const searchQuery = `"${packageName}" filename:package.json NOT repo:${owner}/${repo}`;
 		const res = await fetch(
-			`https://api.github.com/search/code?${new URLSearchParams({
-				q: searchQuery,
-				per_page: "30",
-			})}`,
+			githubRestUrl(
+				`/search/code?${new URLSearchParams({
+					q: searchQuery,
+					per_page: "30",
+				})}`,
+			),
 			{
 				headers: {
 					Authorization: `Bearer ${token}`,

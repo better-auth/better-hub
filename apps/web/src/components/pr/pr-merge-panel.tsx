@@ -3,6 +3,7 @@
 import { useState, useTransition, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useClickOutside } from "@/hooks/use-click-outside";
+import { githubWebUrl } from "@/lib/github-signin";
 import {
 	GitMerge,
 	ChevronDown,
@@ -593,7 +594,9 @@ export function PRMergePanel({
 								)}
 								<div className="border-t border-border/40 my-1" />
 								<a
-									href={`https://github.com/${owner}/${repo}/pull/${pullNumber}`}
+									href={githubWebUrl(
+										`/${owner}/${repo}/pull/${pullNumber}`,
+									)}
 									data-no-github-intercept="true"
 									target="_blank"
 									rel="noopener noreferrer"
