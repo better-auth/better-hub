@@ -106,12 +106,50 @@ export const GITHUB_AVATAR_URL =
 		: `https://${GITHUB_HOST}/avatars`;
 
 /**
+ * Map a GitHub avatar URL to a stable, same-origin proxy path on Enterprise.
+ *
+ * GHES / ghe.com Data Residency only serve avatars via short-lived signed
+ * `?token=` URLs (e.g. `https://<host>/avatars/u/<id>?token=…`). Those tokens
+ * expire after a few hours, yet the URLs get cached and persisted across the
+ * app (Redis, RSC cache, `user.image`, DB rows), so they 404 once stale.
+ * Routing avatars through `/api/avatar/u/<id>` lets the server mint a fresh
+ * signed URL on demand. Returns `null` when no numeric account id is present.
+ */
+export function avatarProxyPath(url: string | null | undefined): string | null {
+	if (!url) return null;
+	if (url.startsWith("/api/avatar/")) return url; // already proxied — idempotent
+	const idMatch = url.match(/\/u\/(\d+)/);
+	if (!idMatch) return null;
+	const sizeMatch = url.match(/[?&](?:s|size)=(\d+)/);
+	return `/api/avatar/u/${idMatch[1]}${sizeMatch ? `?s=${sizeMatch[1]}` : ""}`;
+}
+
+/**
+ * Stable avatar URL to persist for a known account id. On Enterprise this is
+ * the same-origin proxy path (never a tokenized URL); on GitHub.com the
+ * upstream avatar URL is stable so it passes through unchanged.
+ */
+export function persistedAvatarUrl(
+	id: string | number,
+	avatarUrl: string | null | undefined,
+): string | undefined {
+	if (IS_GITHUB_ENTERPRISE) return `/api/avatar/u/${id}`;
+	return avatarUrl ?? undefined;
+}
+
+/**
  * Absolutize an avatar URL. Some GitHub Enterprise responses return paths
- * like `/u/12345?v=4` without a host; those break `next/image`. Absolute
- * URLs and empty values pass through unchanged.
+ * like `/u/12345?v=4` without a host; those break `next/image`. On Enterprise,
+ * avatars are routed through the same-origin proxy (see `avatarProxyPath`) so
+ * short-lived signed URLs are resolved fresh server-side. Absolute URLs and
+ * empty values otherwise pass through unchanged.
  */
 export function resolveAvatarUrl(url: string | null | undefined): string {
 	if (!url) return "";
+	if (IS_GITHUB_ENTERPRISE) {
+		const proxied = avatarProxyPath(url);
+		if (proxied) return proxied;
+	}
 	if (/^https?:\/\//i.test(url) || url.startsWith("//")) return url;
 	if (url.startsWith("/")) return `${GITHUB_AVATAR_URL}${url}`;
 	return url;
@@ -134,7 +172,10 @@ export function normalizeAvatarUrls<T>(value: T): T {
 		const obj = value as Record<string, unknown>;
 		for (const key of Object.keys(obj)) {
 			const v = obj[key];
-			if (key === "avatar_url" && typeof v === "string") {
+			if (
+				(key === "avatar_url" || key === "avatarUrl") &&
+				typeof v === "string"
+			) {
 				obj[key] = resolveAvatarUrl(v);
 			} else if (v !== null && typeof v === "object") {
 				normalizeAvatarUrls(v);

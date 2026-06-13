@@ -20,6 +20,7 @@ import {
 	GITHUB_USER_EMAILS_URL,
 	GITHUB_USER_INFO_URL,
 	IS_GITHUB_ENTERPRISE,
+	persistedAvatarUrl,
 } from "./github-host";
 
 async function getOctokitUser(token: string) {
@@ -218,9 +219,11 @@ export const auth = betterAuth({
 											(profile.login as string) ||
 											"",
 										email,
-										image:
-											profile.avatar_url ??
-											undefined,
+										image: persistedAvatarUrl(
+											profile.id ??
+												"",
+											profile.avatar_url,
+										),
 										emailVerified,
 										login: profile.login,
 									} as unknown as Awaited<

@@ -3,7 +3,7 @@ import { setSessionCookie } from "better-auth/cookies";
 import { symmetricEncrypt } from "better-auth/crypto";
 import { z } from "zod";
 import type { BetterAuthPlugin } from "better-auth";
-import { createOctokit } from "../github-host";
+import { createOctokit, persistedAvatarUrl } from "../github-host";
 
 export const patSignIn = (): BetterAuthPlugin => ({
 	id: "pat-signin",
@@ -93,7 +93,10 @@ export const patSignIn = (): BetterAuthPlugin => ({
 						{
 							name: githubUser.name || githubUser.login,
 							email,
-							image: githubUser.avatar_url,
+							image: persistedAvatarUrl(
+								githubUser.id,
+								githubUser.avatar_url,
+							),
 							emailVerified: true,
 						},
 						{

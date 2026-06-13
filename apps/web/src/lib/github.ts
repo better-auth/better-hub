@@ -8,6 +8,7 @@ import {
 	githubRestUrl,
 	githubWebUrl,
 	normalizeAvatarUrls,
+	resolveAvatarUrl,
 } from "./github-host";
 import {
 	claimDueGithubSyncJobs,
@@ -3144,7 +3145,9 @@ export async function getPullRequestReviewThreads(
 
 		if (!response.ok) return [];
 		const json = await response.json();
-		const nodes = json.data?.repository?.pullRequest?.reviewThreads?.nodes ?? [];
+		const nodes = normalizeAvatarUrls(
+			json.data?.repository?.pullRequest?.reviewThreads?.nodes ?? [],
+		);
 
 		return nodes.map((thread: Record<string, unknown>) => ({
 			id: thread.id,
@@ -3541,6 +3544,10 @@ interface GQLPRNode {
 }
 
 function transformGraphQLPRBundle(node: GQLPRNode): PRBundleData {
+	// GraphQL bypasses the Octokit REST normalization hook, so rewrite any
+	// `avatarUrl` fields (Enterprise serves short-lived tokenized avatars) to
+	// the same-origin proxy before mapping. `normalizeAvatarUrls` mutates in place.
+	normalizeAvatarUrls(node);
 	const stateMap: Record<string, string> = {
 		OPEN: "open",
 		CLOSED: "closed",
@@ -4450,7 +4457,7 @@ function mapGQLAuthor(author: { login: string; avatarUrl: string; __typename?: s
 	return author
 		? {
 				login: author.login,
-				avatar_url: author.avatarUrl,
+				avatar_url: resolveAvatarUrl(author.avatarUrl),
 				type: author.__typename === "Bot" ? "Bot" : "User",
 			}
 		: null;
