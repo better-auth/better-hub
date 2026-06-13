@@ -251,9 +251,16 @@ function parsePositiveInt(value: string | undefined): number | null {
 	return parsed > 0 && parsed <= Number.MAX_SAFE_INTEGER ? parsed : null;
 }
 
-/** Hostname of the active GitHub instance (also `github.com` by default). */
+/**
+ * Whether a hostname belongs to the GitHub instance this app is configured for.
+ *
+ * Only the *active* host counts: on github.com that's `github.com`, but on an
+ * enterprise instance public `github.com` links are external (they point at a
+ * different system the app can't resolve), so they must not be rewritten to
+ * internal app routes.
+ */
 export function isKnownGithubHostname(hostname: string): boolean {
-	return hostname === "github.com" || hostname === getGithubHost();
+	return hostname === getGithubHost();
 }
 
 export function parseGitHubUrl(htmlUrl: string): ParsedGitHubUrl | null {

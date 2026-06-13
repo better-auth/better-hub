@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 import { APP_ROUTES } from "./app-routes";
-import { GITHUB_WEB_URL } from "./lib/github-host";
+// Use the dependency-free host helper (no @octokit/rest) so this middleware
+// stays Edge-runtime compatible and keeps the bundle small.
+import { githubWebOrigin } from "./lib/github-host-client";
 
 const publicPaths = ["/", "/api/auth", "/api/inngest"];
 
@@ -18,7 +20,7 @@ export default async function middleware(request: NextRequest) {
 	const isPackRequest = GIT_SERVICES.has(repoPath);
 
 	if (segments.length >= 3 && (isInfoRefsRequest || isPackRequest)) {
-		const githubUrl = new URL(`${GITHUB_WEB_URL}${pathname}`);
+		const githubUrl = new URL(`${githubWebOrigin()}${pathname}`);
 		githubUrl.search = request.nextUrl.search;
 		return NextResponse.redirect(githubUrl, 307);
 	}

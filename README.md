@@ -32,7 +32,8 @@ This repo publishes a multi-arch OCI image (`linux/amd64`, `linux/arm64`) to Git
 - Tags:
      - `latest` on pushes to `main`
      - branch/tag refs (for example `main`, `v1.2.3`)
-     - `sha-<commit>`
+	- `pr-<number>` for pull request builds
+	- `sha-<commit>`
 
 Pull and run:
 
@@ -41,6 +42,8 @@ docker pull ghcr.io/better-auth/better-hub:latest
 docker run --rm -p 3000:3000 --env-file apps/web/.env ghcr.io/better-auth/better-hub:latest
 ```
 
-## License
-
-[MIT](LICENSE)
+The image is configured entirely at **runtime** via environment variables — no
+rebuild needed. In particular, `GITHUB_HOST` is read on the server at request
+time and injected into the client, so the same prebuilt image works against
+GitHub.com or a GitHub Enterprise instance. (`NEXT_PUBLIC_GITHUB_HOST` is only
+needed if you build the image yourself and want the value baked into the bundle.)

@@ -517,11 +517,10 @@ export async function renderMarkdownToHtml(
 		html = resolveUrls(html, repoContext);
 	}
 
-	// Convert github.com / enterprise host links to internal app paths
-	const hostPattern =
-		GITHUB_HOST === "github.com"
-			? "github\\.com"
-			: `(?:github\\.com|${GITHUB_HOST.replace(/\./g, "\\.")})`;
+	// Convert links pointing at the configured GitHub host into internal app
+	// paths. Only the active host is rewritten: on an enterprise instance,
+	// public github.com links are external and must stay as-is.
+	const hostPattern = GITHUB_HOST.replace(/\./g, "\\.");
 	const ghLinkRegex = new RegExp(`<a\\s+href="(https://${hostPattern}/[^"]+)"`, "gi");
 	html = html.replace(ghLinkRegex, (_match, href) => {
 		const internal = toInternalUrl(href);
