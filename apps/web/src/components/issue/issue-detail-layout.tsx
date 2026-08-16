@@ -8,6 +8,9 @@ interface IssueDetailLayoutProps {
 	timeline: React.ReactNode;
 	commentForm?: React.ReactNode;
 	sidebar?: React.ReactNode;
+	contentGapClassName?: string;
+	mainScrollClassName?: string;
+	sidebarClassName?: string;
 }
 
 export function IssueDetailLayout({
@@ -15,6 +18,9 @@ export function IssueDetailLayout({
 	timeline,
 	commentForm,
 	sidebar,
+	contentGapClassName = "gap-6",
+	mainScrollClassName = "pr-4",
+	sidebarClassName = "w-[240px] xl:w-[280px] 2xl:w-[320px] pl-6",
 }: IssueDetailLayoutProps) {
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const [canScrollUp, setCanScrollUp] = useState(false);
@@ -44,7 +50,7 @@ export function IssueDetailLayout({
 		<div className="flex-1 min-h-0 flex flex-col">
 			<div className="shrink-0 pt-3">{header}</div>
 
-			<div className="flex-1 min-h-0 flex gap-6">
+			<div className={cn("flex-1 min-h-0 flex", contentGapClassName)}>
 				{/* Main thread */}
 				<div className="relative flex-1 min-w-0">
 					{/* Top shadow */}
@@ -63,7 +69,10 @@ export function IssueDetailLayout({
 					/>
 					<div
 						ref={scrollRef}
-						className="h-full overflow-y-auto pb-8 pl-1 pr-4"
+						className={cn(
+							"h-full overflow-y-auto pb-8 pl-1",
+							mainScrollClassName,
+						)}
 					>
 						<div>
 							{/* Mobile sidebar */}
@@ -86,7 +95,12 @@ export function IssueDetailLayout({
 
 				{/* Right sidebar */}
 				{sidebar && (
-					<div className="hidden lg:block w-[240px] xl:w-[280px] 2xl:w-[320px] shrink-0 border-l border-border/40 pl-6 overflow-y-auto pb-8">
+					<div
+						className={cn(
+							"hidden lg:block shrink-0 border-l border-border/40 overflow-y-auto pb-8",
+							sidebarClassName,
+						)}
+					>
 						<div className="space-y-5 pt-1">{sidebar}</div>
 					</div>
 				)}

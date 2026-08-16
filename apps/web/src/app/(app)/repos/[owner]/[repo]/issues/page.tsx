@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getRepoIssuesPage } from "@/lib/github";
 import { IssuesList } from "@/components/issue/issues-list";
-import { fetchIssuesByAuthor } from "./actions";
+import { fetchIssuesByAuthor, fetchIssuePage } from "./actions";
 
 export async function generateMetadata({
 	params,
@@ -19,7 +19,7 @@ export default async function IssuesListPage({
 }) {
 	const { owner, repo } = await params;
 
-	const { openIssues, closedIssues, openCount, closedCount } = await getRepoIssuesPage(
+	const { openIssues, openPageInfo, openCount, closedCount } = await getRepoIssuesPage(
 		owner,
 		repo,
 	);
@@ -28,8 +28,8 @@ export default async function IssuesListPage({
 		<IssuesList
 			owner={owner}
 			repo={repo}
-			openIssues={openIssues}
-			closedIssues={closedIssues}
+			initialOpenIssues={openIssues}
+			initialOpenPageInfo={openPageInfo}
 			openCount={openCount}
 			closedCount={closedCount}
 			onAuthorFilter={
@@ -37,6 +37,7 @@ export default async function IssuesListPage({
 					typeof IssuesList
 				>[0]["onAuthorFilter"]
 			}
+			onFetchIssuePage={fetchIssuePage}
 		/>
 	);
 }

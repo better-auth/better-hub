@@ -1,6 +1,12 @@
 "use server";
 
-import { getAuthenticatedUser, getOctokit, invalidateRepoIssuesCache } from "@/lib/github";
+import {
+	getAuthenticatedUser,
+	getOctokit,
+	invalidateRepoIssuesCache,
+	getRepoIssuesWithStats,
+	type IssuesPageResult,
+} from "@/lib/github";
 import { getErrorMessage } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { invalidateRepoCache } from "@/lib/repo-data-cache-vc";
@@ -28,6 +34,19 @@ export async function fetchIssuesByAuthor(owner: string, repo: string, author: s
 		open: openRes.data.items,
 		closed: closedRes.data.items,
 	};
+}
+
+export async function fetchIssuePage(
+	owner: string,
+	repo: string,
+	state: "open" | "closed",
+	cursor: string | null,
+): Promise<{ issues: IssuesPageResult["issues"]; pageInfo: IssuesPageResult["pageInfo"] }> {
+	const { issues, pageInfo } = await getRepoIssuesWithStats(owner, repo, state, {
+		perPage: 30,
+		cursor,
+	});
+	return { issues, pageInfo };
 }
 
 export interface IssueTemplate {
